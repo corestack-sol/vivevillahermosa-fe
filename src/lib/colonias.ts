@@ -98,7 +98,15 @@ export const COLONIAS_COORDS: ColoniaCoord[] = [
   // tener alias — sin coincidencia exacta, cae al texto de siempre, que sí
   // encuentra ambos por separado.
   { key: 'sector-carrizal', label: 'Sector Carrizal', municipio: 'Centro', lat: 17.9875, lng: -92.9421, radioKm: RADIO_COLONIA_KM },
-  { key: 'atasta', label: 'Atasta', municipio: 'Centro', lat: 17.9923, lng: -92.9178, radioKm: RADIO_COLONIA_KM },
+  // Corregida 2026-08-06: la coordenada anterior (17.9923, -92.9178) en
+  // realidad hace reverse-geocode a "Calle Venustiano Carranza, Centro" —
+  // una calle del centro de la ciudad a ~3.5km de la colonia real.
+  // Encontrado al revisar por qué una propiedad etiquetada "Atasta" se veía
+  // en el mapa cerca del malecón/centro, cuando la colonia real está al
+  // poniente. Nueva coordenada vía Nominatim: "Colonia Atasta de Serra"
+  // (place/neighbourhood, el mismo tipo de match que ya usa el resto del
+  // catálogo).
+  { key: 'atasta', label: 'Atasta', municipio: 'Centro', lat: 17.9846, lng: -92.9495, radioKm: RADIO_COLONIA_KM },
   // Corregida 2026-08-06: la coordenada anterior (17.9895, -92.9478) en
   // realidad hace reverse-geocode a "Calle Mariano Abasolo, Colonia Atasta
   // de Serra" — un lugar real, pero a ~2.1km del centro histórico
