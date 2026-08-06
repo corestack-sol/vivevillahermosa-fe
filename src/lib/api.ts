@@ -8,6 +8,24 @@ import zonesData from '@/data/zones.json';
 import agentsData from '@/data/agents.json';
 import statsData from '@/data/stats.json';
 
+// El JSON de muestra ya NO trae `lat`/`lng` reales — solo `latPublico`/
+// `lngPublico` (centroide de colonia o jitter amplio, precalculados una
+// vez, ver .tmp-migration/ en el historial de git y `getPuntoPublico` en
+// colonias.ts). Es a propósito: este archivo se importa también desde
+// componentes cliente (PropertyCard, SearchBar…), así que cualquier campo
+// que viva aquí termina en el bundle del navegador tal cual — antes de
+// este cambio, la coordenada exacta de cada propiedad viajaba a CUALQUIER
+// página que rendericé una tarjeta, sin importar qué prop se le pasara a
+// cada componente (enmascarar solo al construir los `markers` del mapa no
+// alcanzaba, porque el JSON crudo con las coordenadas reales igual quedaba
+// bundleado). Que el propio archivo fuente nunca tenga la coordenada real
+// es la única forma de que de verdad no llegue al navegador.
+type PropertySeed = Omit<Property, 'lat' | 'lng'>;
+interface PropertiesSeedResponse {
+  meta: PropertiesResponse['meta'];
+  data: PropertySeed[];
+}
+
 // ⚠️ BACKEND PENDIENTE (docs/BACKEND.md §3 — el backend real es ahora un
 // proyecto aparte, no Prisma dentro de este mismo archivo, ver el aviso de
 // arquitectura al inicio del documento): esta
@@ -42,11 +60,19 @@ function getAgentVerification(whatsapp?: string): boolean {
 }
 
 export function getAllProperties(): Property[] {
-  return (propertiesData as PropertiesResponse).data
+  return (propertiesData as PropertiesSeedResponse).data
     .filter((p) => p.activa)
     .map((p) => ({
       ...p,
       agente: { ...p.agente, verificado: getAgentVerification(p.agente.whatsapp) },
+      // `lat`/`lng` del tipo `Property` quedan aquí como alias del punto
+      // público — este archivo nunca tuvo ni tiene acceso a la coordenada
+      // real de una propiedad de muestra, así que no hay nada más preciso
+      // que copiar. Sigue siendo correcto usar `p.latPublico`/`p.lngPublico`
+      // explícitamente en componentes de mapa (más a prueba de futuro si
+      // algún día una propiedad SÍ trae coordenada real desde otro origen).
+      lat: p.latPublico,
+      lng: p.lngPublico,
     }));
 }
 

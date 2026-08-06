@@ -11,8 +11,8 @@ export function useMapMarkers(allProperties: Property[], filters?: SearchFilters
     return props.map((p) => ({
       id: p.id,
       slug: p.slug,
-      lat: p.lat,
-      lng: p.lng,
+      lat: p.latPublico,
+      lng: p.lngPublico,
       titulo: p.titulo,
       precio: p.precio,
       operacion: p.operacion,

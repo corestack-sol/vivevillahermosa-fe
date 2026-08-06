@@ -61,7 +61,7 @@ export function PropertyDetailView({ property, extras }: { property: Property; e
     priceCtx.precioPorM2 < priceCtx.promedioZona * 0.6;
 
   const singleMarker = [{
-    id: property.id, slug: property.slug, lat: property.lat, lng: property.lng,
+    id: property.id, slug: property.slug, lat: property.latPublico, lng: property.lngPublico,
     titulo: property.titulo, precio: property.precio, operacion: property.operacion,
     tipo: property.tipo, colonia: property.colonia, foto: property.fotos[0] ?? null,
     riesgoInundacion: property.riesgoInundacion,
@@ -170,7 +170,7 @@ export function PropertyDetailView({ property, extras }: { property: Property; e
               <div className="px-5 py-5">
                 <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400 mb-4">Ubicación</h2>
                 <div className="h-64 rounded-xl overflow-hidden border border-gray-100">
-                  <MapViewDynamic markers={singleMarker} center={[property.lat, property.lng]} zoom={14} approximate approximateRadius={350} />
+                  <MapViewDynamic markers={singleMarker} center={[property.latPublico, property.lngPublico]} zoom={14} approximate approximateRadius={350} />
                 </div>
                 <p className="flex items-center gap-1 text-[11px] text-gray-400 mt-2">
                   <ShieldCheck size={11} className="flex-shrink-0" />

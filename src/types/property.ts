@@ -67,6 +67,16 @@ export interface Property {
   direccion: string;
   lat: number;
   lng: number;
+  /**
+   * Punto que se le muestra a cualquier visitante que no sea el dueño —
+   * NUNCA la coordenada exacta de arriba. Lo calcula `getPuntoPublico`
+   * (src/lib/colonias.ts) una sola vez, del lado que arma los datos
+   * (getAllProperties en api.ts; al publicar/editar/importar en
+   * propiedadesLocales.ts y sus formularios) — nunca se lee directo del
+   * JSON de muestra ni se escribe a mano en un componente.
+   */
+  latPublico: number;
+  lngPublico: number;
   riesgoInundacion: FloodRisk;
   zonaEcologica: boolean;
   cercaDosoBocas: boolean;

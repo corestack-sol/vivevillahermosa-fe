@@ -1,5 +1,9 @@
 {
-  "meta": { "total": 24, "page": 1, "perPage": 12 },
+  "meta": {
+    "total": 24,
+    "page": 1,
+    "perPage": 12
+  },
   "data": [
     {
       "id": "prop-001",
@@ -17,18 +21,34 @@
       "mediosBanos": 1,
       "estacionamientos": 2,
       "antiguedad": 8,
-      "amenidades": ["Jardín", "Alberca", "Cuarto de servicio", "Cocina integral", "Estacionamiento techado"],
-      "fotos": ["/images/props/prop-001-1.jpg", "/images/props/prop-001-2.jpg", "/images/props/prop-001-3.jpg"],
+      "amenidades": [
+        "Jardín",
+        "Alberca",
+        "Cuarto de servicio",
+        "Cocina integral",
+        "Estacionamiento techado"
+      ],
+      "fotos": [
+        "/images/props/prop-001-1.jpg",
+        "/images/props/prop-001-2.jpg",
+        "/images/props/prop-001-3.jpg"
+      ],
       "municipio": "Centro",
       "colonia": "Tabasco 2000",
       "direccion": "Tabasco 2000, Villahermosa, Tabasco",
-      "lat": 17.9994,
-      "lng": -92.9316,
+      "latPublico": 17.9994,
+      "lngPublico": -92.9316,
       "riesgoInundacion": "bajo",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": true,
-      "agente": { "nombre": "María Hernández", "tel": "+52 993 123 4567", "email": "maria@Vive Villahermosa.mx", "foto": "/images/agents/agente-001.jpg", "whatsapp": "529931234567" },
+      "agente": {
+        "nombre": "María Hernández",
+        "tel": "+52 993 123 4567",
+        "email": "maria@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-001.jpg",
+        "whatsapp": "529931234567"
+      },
       "fechaPublicacion": "2026-06-01",
       "activa": true
     },
@@ -48,19 +68,39 @@
       "mediosBanos": 0,
       "estacionamientos": 1,
       "antiguedad": 12,
-      "amenidades": ["Patio", "Cochera", "Cisterna", "Cerca de escuelas"],
-      "servicios": ["wifi", "agua_cal", "parking", "patio", "gas"],
-      "fotos": ["/images/props/prop-002-1.jpg", "/images/props/prop-002-2.jpg"],
+      "amenidades": [
+        "Patio",
+        "Cochera",
+        "Cisterna",
+        "Cerca de escuelas"
+      ],
+      "servicios": [
+        "wifi",
+        "agua_cal",
+        "parking",
+        "patio",
+        "gas"
+      ],
+      "fotos": [
+        "/images/props/prop-002-1.jpg",
+        "/images/props/prop-002-2.jpg"
+      ],
       "municipio": "Centro",
       "colonia": "Gaviotas Norte",
       "direccion": "Gaviotas Norte, Villahermosa, Tabasco",
-      "lat": 18.0141,
-      "lng": -92.9312,
+      "latPublico": 18.0141,
+      "lngPublico": -92.9312,
       "riesgoInundacion": "bajo",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": true,
-      "agente": { "nombre": "Carlos Méndez", "tel": "+52 993 234 5678", "email": "carlos@Vive Villahermosa.mx", "foto": "/images/agents/agente-002.jpg", "whatsapp": "529932345678" },
+      "agente": {
+        "nombre": "Carlos Méndez",
+        "tel": "+52 993 234 5678",
+        "email": "carlos@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-002.jpg",
+        "whatsapp": "529932345678"
+      },
       "fechaPublicacion": "2026-06-05",
       "activa": true
     },
@@ -80,19 +120,45 @@
       "mediosBanos": 1,
       "estacionamientos": 1,
       "antiguedad": 3,
-      "amenidades": ["Amueblado", "Roof garden", "Gym", "Estacionamiento subterráneo", "Elevador"],
-      "servicios": ["ac", "wifi", "agua_cal", "parking", "amueblado", "cocina", "elevador", "gym", "seguridad", "terraza"],
-      "fotos": ["/images/props/prop-003-1.jpg", "/images/props/prop-003-2.jpg"],
+      "amenidades": [
+        "Amueblado",
+        "Roof garden",
+        "Gym",
+        "Estacionamiento subterráneo",
+        "Elevador"
+      ],
+      "servicios": [
+        "ac",
+        "wifi",
+        "agua_cal",
+        "parking",
+        "amueblado",
+        "cocina",
+        "elevador",
+        "gym",
+        "seguridad",
+        "terraza"
+      ],
+      "fotos": [
+        "/images/props/prop-003-1.jpg",
+        "/images/props/prop-003-2.jpg"
+      ],
       "municipio": "Centro",
       "colonia": "Fraccionamiento Carrizal",
       "direccion": "Fracci. Carrizal, Villahermosa, Tabasco",
-      "lat": 17.9875,
-      "lng": -92.9421,
+      "latPublico": 18.0141,
+      "lngPublico": -92.953,
       "riesgoInundacion": "bajo",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": true,
-      "agente": { "nombre": "Laura Torres", "tel": "+52 993 345 6789", "email": "laura@Vive Villahermosa.mx", "foto": "/images/agents/agente-003.jpg", "whatsapp": "529933456789" },
+      "agente": {
+        "nombre": "Laura Torres",
+        "tel": "+52 993 345 6789",
+        "email": "laura@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-003.jpg",
+        "whatsapp": "529933456789"
+      },
       "fechaPublicacion": "2026-06-10",
       "activa": true
     },
@@ -112,18 +178,30 @@
       "mediosBanos": 0,
       "estacionamientos": 0,
       "antiguedad": 0,
-      "amenidades": ["Todos los servicios", "Escrituras limpias", "Cerca refinería Dos Bocas"],
-      "fotos": ["/images/props/prop-004-1.jpg"],
+      "amenidades": [
+        "Todos los servicios",
+        "Escrituras limpias",
+        "Cerca refinería Dos Bocas"
+      ],
+      "fotos": [
+        "/images/props/prop-004-1.jpg"
+      ],
       "municipio": "Paraíso",
       "colonia": "Centro",
       "direccion": "Centro, Paraíso, Tabasco",
-      "lat": 18.3967,
-      "lng": -93.2136,
+      "latPublico": 18.3925010663778,
+      "lngPublico": -93.2140650947512,
       "riesgoInundacion": "medio",
       "zonaEcologica": false,
       "cercaDosoBocas": true,
       "featured": true,
-      "agente": { "nombre": "Roberto Jiménez", "tel": "+52 933 456 7890", "email": "roberto@Vive Villahermosa.mx", "foto": "/images/agents/agente-004.jpg", "whatsapp": "529334567890" },
+      "agente": {
+        "nombre": "Roberto Jiménez",
+        "tel": "+52 933 456 7890",
+        "email": "roberto@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-004.jpg",
+        "whatsapp": "529334567890"
+      },
       "fechaPublicacion": "2026-06-03",
       "activa": true
     },
@@ -143,18 +221,32 @@
       "mediosBanos": 1,
       "estacionamientos": 1,
       "antiguedad": 6,
-      "amenidades": ["WiFi incluido", "Contrato flexible", "Cerca de Dos Bocas", "Cocina equipada"],
-      "fotos": ["/images/props/prop-005-1.jpg", "/images/props/prop-005-2.jpg"],
+      "amenidades": [
+        "WiFi incluido",
+        "Contrato flexible",
+        "Cerca de Dos Bocas",
+        "Cocina equipada"
+      ],
+      "fotos": [
+        "/images/props/prop-005-1.jpg",
+        "/images/props/prop-005-2.jpg"
+      ],
       "municipio": "Paraíso",
       "colonia": "Colonia Ejidal",
       "direccion": "Col. Ejidal, Paraíso, Tabasco",
-      "lat": 18.4012,
-      "lng": -93.2098,
+      "latPublico": 18.397009408091346,
+      "lngPublico": -93.2103422663932,
       "riesgoInundacion": "medio",
       "zonaEcologica": false,
       "cercaDosoBocas": true,
       "featured": true,
-      "agente": { "nombre": "Ana Gutiérrez", "tel": "+52 933 567 8901", "email": "ana@Vive Villahermosa.mx", "foto": "/images/agents/agente-001.jpg", "whatsapp": "529335678901" },
+      "agente": {
+        "nombre": "Ana Gutiérrez",
+        "tel": "+52 933 567 8901",
+        "email": "ana@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-001.jpg",
+        "whatsapp": "529335678901"
+      },
       "fechaPublicacion": "2026-06-07",
       "activa": true
     },
@@ -174,18 +266,32 @@
       "mediosBanos": 0,
       "estacionamientos": 0,
       "antiguedad": 10,
-      "amenidades": ["Amueblado", "WiFi incluido", "Agua incluida", "Cocina compartida", "Cerca UJAT"],
-      "fotos": ["/images/props/prop-006-1.jpg"],
+      "amenidades": [
+        "Amueblado",
+        "WiFi incluido",
+        "Agua incluida",
+        "Cocina compartida",
+        "Cerca UJAT"
+      ],
+      "fotos": [
+        "/images/props/prop-006-1.jpg"
+      ],
       "municipio": "Centro",
       "colonia": "Atasta",
       "direccion": "Col. Atasta, Villahermosa, Tabasco",
-      "lat": 17.9923,
-      "lng": -92.9178,
+      "latPublico": 17.9923,
+      "lngPublico": -92.9178,
       "riesgoInundacion": "medio",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "María Hernández", "tel": "+52 993 123 4567", "email": "maria@Vive Villahermosa.mx", "foto": "/images/agents/agente-001.jpg", "whatsapp": "529931234567" },
+      "agente": {
+        "nombre": "María Hernández",
+        "tel": "+52 993 123 4567",
+        "email": "maria@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-001.jpg",
+        "whatsapp": "529931234567"
+      },
       "fechaPublicacion": "2026-06-12",
       "activa": true
     },
@@ -205,18 +311,31 @@
       "mediosBanos": 0,
       "estacionamientos": 0,
       "antiguedad": 20,
-      "amenidades": ["Ventanal de vidrio", "Bodega trasera", "Instalación 220V", "Alto tráfico"],
-      "fotos": ["/images/props/prop-007-1.jpg"],
+      "amenidades": [
+        "Ventanal de vidrio",
+        "Bodega trasera",
+        "Instalación 220V",
+        "Alto tráfico"
+      ],
+      "fotos": [
+        "/images/props/prop-007-1.jpg"
+      ],
       "municipio": "Centro",
       "colonia": "Centro Histórico",
       "direccion": "Centro Histórico, Villahermosa, Tabasco",
-      "lat": 17.9895,
-      "lng": -92.9478,
+      "latPublico": 17.9895,
+      "lngPublico": -92.9478,
       "riesgoInundacion": "alto",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "Carlos Méndez", "tel": "+52 993 234 5678", "email": "carlos@Vive Villahermosa.mx", "foto": "/images/agents/agente-002.jpg", "whatsapp": "529932345678" },
+      "agente": {
+        "nombre": "Carlos Méndez",
+        "tel": "+52 993 234 5678",
+        "email": "carlos@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-002.jpg",
+        "whatsapp": "529932345678"
+      },
       "fechaPublicacion": "2026-05-28",
       "activa": true
     },
@@ -236,18 +355,35 @@
       "mediosBanos": 2,
       "estacionamientos": 3,
       "antiguedad": 5,
-      "amenidades": ["Alberca", "Jacuzzi", "Roof garden", "Estudio", "Cuarto de servicio", "Seguridad 24/7", "Cocina gourmet"],
-      "fotos": ["/images/props/prop-008-1.jpg", "/images/props/prop-008-2.jpg"],
+      "amenidades": [
+        "Alberca",
+        "Jacuzzi",
+        "Roof garden",
+        "Estudio",
+        "Cuarto de servicio",
+        "Seguridad 24/7",
+        "Cocina gourmet"
+      ],
+      "fotos": [
+        "/images/props/prop-008-1.jpg",
+        "/images/props/prop-008-2.jpg"
+      ],
       "municipio": "Centro",
       "colonia": "Framboyanes",
       "direccion": "Framboyanes, Villahermosa, Tabasco",
-      "lat": 18.0056,
-      "lng": -92.9288,
+      "latPublico": 18.0056,
+      "lngPublico": -92.9288,
       "riesgoInundacion": "bajo",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "Laura Torres", "tel": "+52 993 345 6789", "email": "laura@Vive Villahermosa.mx", "foto": "/images/agents/agente-003.jpg", "whatsapp": "529933456789" },
+      "agente": {
+        "nombre": "Laura Torres",
+        "tel": "+52 993 345 6789",
+        "email": "laura@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-003.jpg",
+        "whatsapp": "529933456789"
+      },
       "fechaPublicacion": "2026-05-20",
       "activa": true
     },
@@ -267,18 +403,30 @@
       "mediosBanos": 0,
       "estacionamientos": 0,
       "antiguedad": 0,
-      "amenidades": ["Carretera pavimentada", "Servicios disponibles", "Escrituras limpias"],
-      "fotos": ["/images/props/prop-009-1.jpg"],
+      "amenidades": [
+        "Carretera pavimentada",
+        "Servicios disponibles",
+        "Escrituras limpias"
+      ],
+      "fotos": [
+        "/images/props/prop-009-1.jpg"
+      ],
       "municipio": "Comalcalco",
       "colonia": "Zona Rural Norte",
       "direccion": "Carretera Comalcalco, Tabasco",
-      "lat": 18.2744,
-      "lng": -93.2148,
+      "latPublico": 18.27025550865774,
+      "lngPublico": -93.21564839577572,
       "riesgoInundacion": "medio",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "Roberto Jiménez", "tel": "+52 933 456 7890", "email": "roberto@Vive Villahermosa.mx", "foto": "/images/agents/agente-004.jpg", "whatsapp": "529334567890" },
+      "agente": {
+        "nombre": "Roberto Jiménez",
+        "tel": "+52 933 456 7890",
+        "email": "roberto@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-004.jpg",
+        "whatsapp": "529334567890"
+      },
       "fechaPublicacion": "2026-06-08",
       "activa": true
     },
@@ -298,18 +446,31 @@
       "mediosBanos": 0,
       "estacionamientos": 1,
       "antiguedad": 1,
-      "amenidades": ["Casa nueva", "Patio", "Cisterna", "Vigilancia"],
-      "fotos": ["/images/props/prop-010-1.jpg"],
+      "amenidades": [
+        "Casa nueva",
+        "Patio",
+        "Cisterna",
+        "Vigilancia"
+      ],
+      "fotos": [
+        "/images/props/prop-010-1.jpg"
+      ],
       "municipio": "Nacajuca",
       "colonia": "El Bellote",
       "direccion": "El Bellote, Nacajuca, Tabasco",
-      "lat": 18.0687,
-      "lng": -93.0267,
+      "latPublico": 18.425,
+      "lngPublico": -93.1534,
       "riesgoInundacion": "medio",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "Ana Gutiérrez", "tel": "+52 933 567 8901", "email": "ana@Vive Villahermosa.mx", "foto": "/images/agents/agente-001.jpg", "whatsapp": "529335678901" },
+      "agente": {
+        "nombre": "Ana Gutiérrez",
+        "tel": "+52 933 567 8901",
+        "email": "ana@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-001.jpg",
+        "whatsapp": "529335678901"
+      },
       "fechaPublicacion": "2026-06-14",
       "activa": true
     },
@@ -329,18 +490,32 @@
       "mediosBanos": 1,
       "estacionamientos": 2,
       "antiguedad": 4,
-      "amenidades": ["Sala de juntas", "Estacionamiento incluido", "Elevador", "Generador", "Acceso controlado"],
-      "fotos": ["/images/props/prop-011-1.jpg"],
+      "amenidades": [
+        "Sala de juntas",
+        "Estacionamiento incluido",
+        "Elevador",
+        "Generador",
+        "Acceso controlado"
+      ],
+      "fotos": [
+        "/images/props/prop-011-1.jpg"
+      ],
       "municipio": "Centro",
       "colonia": "Tabasco 2000",
       "direccion": "Tabasco 2000, Villahermosa, Tabasco",
-      "lat": 18.0012,
-      "lng": -92.9334,
+      "latPublico": 17.9994,
+      "lngPublico": -92.9316,
       "riesgoInundacion": "bajo",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "Laura Torres", "tel": "+52 993 345 6789", "email": "laura@Vive Villahermosa.mx", "foto": "/images/agents/agente-003.jpg", "whatsapp": "529933456789" },
+      "agente": {
+        "nombre": "Laura Torres",
+        "tel": "+52 993 345 6789",
+        "email": "laura@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-003.jpg",
+        "whatsapp": "529933456789"
+      },
       "fechaPublicacion": "2026-05-25",
       "activa": true
     },
@@ -360,18 +535,32 @@
       "mediosBanos": 0,
       "estacionamientos": 5,
       "antiguedad": 7,
-      "amenidades": ["Altura 6 metros", "Portón eléctrico", "Piso concreto pulido", "Área de oficinas", "Acceso tráiler"],
-      "fotos": ["/images/props/prop-012-1.jpg"],
+      "amenidades": [
+        "Altura 6 metros",
+        "Portón eléctrico",
+        "Piso concreto pulido",
+        "Área de oficinas",
+        "Acceso tráiler"
+      ],
+      "fotos": [
+        "/images/props/prop-012-1.jpg"
+      ],
       "municipio": "Cárdenas",
       "colonia": "Zona Industrial",
       "direccion": "Zona Industrial, Cárdenas, Tabasco",
-      "lat": 18.0025,
-      "lng": -93.3698,
+      "latPublico": 17.999041488853614,
+      "lngPublico": -93.37234633648978,
       "riesgoInundacion": "bajo",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "Carlos Méndez", "tel": "+52 993 234 5678", "email": "carlos@Vive Villahermosa.mx", "foto": "/images/agents/agente-002.jpg", "whatsapp": "529932345678" },
+      "agente": {
+        "nombre": "Carlos Méndez",
+        "tel": "+52 993 234 5678",
+        "email": "carlos@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-002.jpg",
+        "whatsapp": "529932345678"
+      },
       "fechaPublicacion": "2026-06-02",
       "activa": true
     },
@@ -391,18 +580,31 @@
       "mediosBanos": 0,
       "estacionamientos": 1,
       "antiguedad": 25,
-      "amenidades": ["Patio amplio", "Cerca del parque", "Lavandería", "Servicios completos"],
-      "fotos": ["/images/props/prop-013-1.jpg"],
+      "amenidades": [
+        "Patio amplio",
+        "Cerca del parque",
+        "Lavandería",
+        "Servicios completos"
+      ],
+      "fotos": [
+        "/images/props/prop-013-1.jpg"
+      ],
       "municipio": "Cárdenas",
       "colonia": "Centro",
       "direccion": "Centro, Cárdenas, Tabasco",
-      "lat": 17.9925,
-      "lng": -93.3764,
+      "latPublico": 17.989084279668017,
+      "lngPublico": -93.3790092671868,
       "riesgoInundacion": "bajo",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "Roberto Jiménez", "tel": "+52 933 456 7890", "email": "roberto@Vive Villahermosa.mx", "foto": "/images/agents/agente-004.jpg", "whatsapp": "529334567890" },
+      "agente": {
+        "nombre": "Roberto Jiménez",
+        "tel": "+52 933 456 7890",
+        "email": "roberto@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-004.jpg",
+        "whatsapp": "529334567890"
+      },
       "fechaPublicacion": "2026-06-09",
       "activa": true
     },
@@ -422,18 +624,31 @@
       "mediosBanos": 1,
       "estacionamientos": 1,
       "antiguedad": 10,
-      "amenidades": ["Terraza privada", "Área verde", "Seguridad", "Buena inversión"],
-      "fotos": ["/images/props/prop-014-1.jpg"],
+      "amenidades": [
+        "Terraza privada",
+        "Área verde",
+        "Seguridad",
+        "Buena inversión"
+      ],
+      "fotos": [
+        "/images/props/prop-014-1.jpg"
+      ],
       "municipio": "Centro",
       "colonia": "Olmeca",
       "direccion": "Col. Olmeca, Villahermosa, Tabasco",
-      "lat": 17.9812,
-      "lng": -92.9502,
+      "latPublico": 17.9812,
+      "lngPublico": -92.9502,
       "riesgoInundacion": "medio",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "María Hernández", "tel": "+52 993 123 4567", "email": "maria@Vive Villahermosa.mx", "foto": "/images/agents/agente-001.jpg", "whatsapp": "529931234567" },
+      "agente": {
+        "nombre": "María Hernández",
+        "tel": "+52 993 123 4567",
+        "email": "maria@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-001.jpg",
+        "whatsapp": "529931234567"
+      },
       "fechaPublicacion": "2026-05-30",
       "activa": true
     },
@@ -454,18 +669,31 @@
       "estacionamientos": 1,
       "antiguedad": 4,
       "antiguedad_": 4,
-      "amenidades": ["2 plantas", "Fraccionamiento cerrado", "Vigilancia", "25 min de VH"],
-      "fotos": ["/images/props/prop-015-1.jpg"],
+      "amenidades": [
+        "2 plantas",
+        "Fraccionamiento cerrado",
+        "Vigilancia",
+        "25 min de VH"
+      ],
+      "fotos": [
+        "/images/props/prop-015-1.jpg"
+      ],
       "municipio": "Jalpa de Méndez",
       "colonia": "Fraccionamiento Las Palmas",
       "direccion": "Fracc. Las Palmas, Jalpa de Méndez, Tabasco",
-      "lat": 18.1534,
-      "lng": -93.0745,
+      "latPublico": 18.150072969329905,
+      "lngPublico": -93.07723551963423,
       "riesgoInundacion": "bajo",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "Ana Gutiérrez", "tel": "+52 933 567 8901", "email": "ana@Vive Villahermosa.mx", "foto": "/images/agents/agente-001.jpg", "whatsapp": "529335678901" },
+      "agente": {
+        "nombre": "Ana Gutiérrez",
+        "tel": "+52 933 567 8901",
+        "email": "ana@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-001.jpg",
+        "whatsapp": "529335678901"
+      },
       "fechaPublicacion": "2026-06-11",
       "activa": true
     },
@@ -485,18 +713,31 @@
       "mediosBanos": 0,
       "estacionamientos": 0,
       "antiguedad": 0,
-      "amenidades": ["Pozo de agua", "Pastizal mejorado", "Título agrario", "Acceso vehicular"],
-      "fotos": ["/images/props/prop-016-1.jpg"],
+      "amenidades": [
+        "Pozo de agua",
+        "Pastizal mejorado",
+        "Título agrario",
+        "Acceso vehicular"
+      ],
+      "fotos": [
+        "/images/props/prop-016-1.jpg"
+      ],
       "municipio": "Huimanguillo",
       "colonia": "Zona Rural",
       "direccion": "Ejido El Carmen, Huimanguillo, Tabasco",
-      "lat": 17.8384,
-      "lng": -93.3813,
+      "latPublico": 17.835118841161652,
+      "lngPublico": -93.38409121988774,
       "riesgoInundacion": "medio",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "Roberto Jiménez", "tel": "+52 933 456 7890", "email": "roberto@Vive Villahermosa.mx", "foto": "/images/agents/agente-004.jpg", "whatsapp": "529334567890" },
+      "agente": {
+        "nombre": "Roberto Jiménez",
+        "tel": "+52 933 456 7890",
+        "email": "roberto@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-004.jpg",
+        "whatsapp": "529334567890"
+      },
       "fechaPublicacion": "2026-06-01",
       "activa": true
     },
@@ -516,18 +757,33 @@
       "mediosBanos": 1,
       "estacionamientos": 2,
       "antiguedad": 6,
-      "amenidades": ["Alberca", "Jardín", "Fraccionamiento cerrado", "Seguridad 24/7", "Cuarto de servicio"],
-      "fotos": ["/images/props/prop-017-1.jpg", "/images/props/prop-017-2.jpg"],
+      "amenidades": [
+        "Alberca",
+        "Jardín",
+        "Fraccionamiento cerrado",
+        "Seguridad 24/7",
+        "Cuarto de servicio"
+      ],
+      "fotos": [
+        "/images/props/prop-017-1.jpg",
+        "/images/props/prop-017-2.jpg"
+      ],
       "municipio": "Centro",
       "colonia": "Sector Carrizal",
       "direccion": "Sector Carrizal, Villahermosa, Tabasco",
-      "lat": 17.9889,
-      "lng": -92.9389,
+      "latPublico": 17.9875,
+      "lngPublico": -92.9421,
       "riesgoInundacion": "bajo",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "Laura Torres", "tel": "+52 993 345 6789", "email": "laura@Vive Villahermosa.mx", "foto": "/images/agents/agente-003.jpg", "whatsapp": "529933456789" },
+      "agente": {
+        "nombre": "Laura Torres",
+        "tel": "+52 993 345 6789",
+        "email": "laura@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-003.jpg",
+        "whatsapp": "529933456789"
+      },
       "fechaPublicacion": "2026-06-04",
       "activa": true
     },
@@ -547,18 +803,30 @@
       "mediosBanos": 0,
       "estacionamientos": 0,
       "antiguedad": 15,
-      "amenidades": ["Servicios incluidos", "Cerca UJAT", "Cerca hospital"],
-      "fotos": ["/images/props/prop-018-1.jpg"],
+      "amenidades": [
+        "Servicios incluidos",
+        "Cerca UJAT",
+        "Cerca hospital"
+      ],
+      "fotos": [
+        "/images/props/prop-018-1.jpg"
+      ],
       "municipio": "Centro",
       "colonia": "Atasta",
       "direccion": "Col. Atasta, Villahermosa, Tabasco",
-      "lat": 17.9951,
-      "lng": -92.9203,
+      "latPublico": 17.9923,
+      "lngPublico": -92.9178,
       "riesgoInundacion": "medio",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "Carlos Méndez", "tel": "+52 993 234 5678", "email": "carlos@Vive Villahermosa.mx", "foto": "/images/agents/agente-002.jpg", "whatsapp": "529932345678" },
+      "agente": {
+        "nombre": "Carlos Méndez",
+        "tel": "+52 993 234 5678",
+        "email": "carlos@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-002.jpg",
+        "whatsapp": "529932345678"
+      },
       "fechaPublicacion": "2026-06-15",
       "activa": true
     },
@@ -578,18 +846,30 @@
       "mediosBanos": 0,
       "estacionamientos": 1,
       "antiguedad": 5,
-      "amenidades": ["Zona nueva", "Cerca plazas comerciales", "Acceso carretera"],
-      "fotos": ["/images/props/prop-019-1.jpg"],
+      "amenidades": [
+        "Zona nueva",
+        "Cerca plazas comerciales",
+        "Acceso carretera"
+      ],
+      "fotos": [
+        "/images/props/prop-019-1.jpg"
+      ],
       "municipio": "Centro",
       "colonia": "Col. del Parque",
       "direccion": "Col. del Parque, Villahermosa, Tabasco",
-      "lat": 17.9734,
-      "lng": -92.9267,
+      "latPublico": 17.9734,
+      "lngPublico": -92.9267,
       "riesgoInundacion": "medio",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "María Hernández", "tel": "+52 993 123 4567", "email": "maria@Vive Villahermosa.mx", "foto": "/images/agents/agente-001.jpg", "whatsapp": "529931234567" },
+      "agente": {
+        "nombre": "María Hernández",
+        "tel": "+52 993 123 4567",
+        "email": "maria@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-001.jpg",
+        "whatsapp": "529931234567"
+      },
       "fechaPublicacion": "2026-06-06",
       "activa": true
     },
@@ -609,18 +889,31 @@
       "mediosBanos": 1,
       "estacionamientos": 1,
       "antiguedad": 7,
-      "amenidades": ["Actualmente rentado", "Rendimiento 7.5%", "Zona financiera", "Contrato vigente"],
-      "fotos": ["/images/props/prop-020-1.jpg"],
+      "amenidades": [
+        "Actualmente rentado",
+        "Rendimiento 7.5%",
+        "Zona financiera",
+        "Contrato vigente"
+      ],
+      "fotos": [
+        "/images/props/prop-020-1.jpg"
+      ],
       "municipio": "Centro",
       "colonia": "Tabasco 2000",
       "direccion": "Tabasco 2000, Villahermosa, Tabasco",
-      "lat": 17.9978,
-      "lng": -92.9301,
+      "latPublico": 17.9994,
+      "lngPublico": -92.9316,
       "riesgoInundacion": "bajo",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "Laura Torres", "tel": "+52 993 345 6789", "email": "laura@Vive Villahermosa.mx", "foto": "/images/agents/agente-003.jpg", "whatsapp": "529933456789" },
+      "agente": {
+        "nombre": "Laura Torres",
+        "tel": "+52 993 345 6789",
+        "email": "laura@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-003.jpg",
+        "whatsapp": "529933456789"
+      },
       "fechaPublicacion": "2026-05-22",
       "activa": true
     },
@@ -640,18 +933,30 @@
       "mediosBanos": 0,
       "estacionamientos": 1,
       "antiguedad": 18,
-      "amenidades": ["Jardín con frutales", "Tranquila", "Cerca mercado"],
-      "fotos": ["/images/props/prop-021-1.jpg"],
+      "amenidades": [
+        "Jardín con frutales",
+        "Tranquila",
+        "Cerca mercado"
+      ],
+      "fotos": [
+        "/images/props/prop-021-1.jpg"
+      ],
       "municipio": "Comalcalco",
       "colonia": "Centro",
       "direccion": "Centro, Comalcalco, Tabasco",
-      "lat": 18.2751,
-      "lng": -93.2093,
+      "latPublico": 18.273296697140434,
+      "lngPublico": -93.21337261041755,
       "riesgoInundacion": "bajo",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "Roberto Jiménez", "tel": "+52 933 456 7890", "email": "roberto@Vive Villahermosa.mx", "foto": "/images/agents/agente-004.jpg", "whatsapp": "529334567890" },
+      "agente": {
+        "nombre": "Roberto Jiménez",
+        "tel": "+52 933 456 7890",
+        "email": "roberto@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-004.jpg",
+        "whatsapp": "529334567890"
+      },
       "fechaPublicacion": "2026-06-13",
       "activa": true
     },
@@ -671,18 +976,31 @@
       "mediosBanos": 0,
       "estacionamientos": 0,
       "antiguedad": 8,
-      "amenidades": ["WiFi incluido", "Agua y luz incluidos", "Lavadora compartida", "Cerca IMSS"],
-      "fotos": ["/images/props/prop-022-1.jpg"],
+      "amenidades": [
+        "WiFi incluido",
+        "Agua y luz incluidos",
+        "Lavadora compartida",
+        "Cerca IMSS"
+      ],
+      "fotos": [
+        "/images/props/prop-022-1.jpg"
+      ],
       "municipio": "Centro",
       "colonia": "Gil y Sáenz",
       "direccion": "Col. Gil y Sáenz, Villahermosa, Tabasco",
-      "lat": 17.9867,
-      "lng": -92.9356,
+      "latPublico": 17.9867,
+      "lngPublico": -92.9356,
       "riesgoInundacion": "alto",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "Ana Gutiérrez", "tel": "+52 933 567 8901", "email": "ana@Vive Villahermosa.mx", "foto": "/images/agents/agente-001.jpg", "whatsapp": "529335678901" },
+      "agente": {
+        "nombre": "Ana Gutiérrez",
+        "tel": "+52 933 567 8901",
+        "email": "ana@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-001.jpg",
+        "whatsapp": "529335678901"
+      },
       "fechaPublicacion": "2026-06-16",
       "activa": true
     },
@@ -702,18 +1020,31 @@
       "mediosBanos": 0,
       "estacionamientos": 0,
       "antiguedad": 15,
-      "amenidades": ["Vista al río", "Terraza con hamacas", "Potencial ecoturismo", "Zona costera"],
-      "fotos": ["/images/props/prop-023-1.jpg"],
+      "amenidades": [
+        "Vista al río",
+        "Terraza con hamacas",
+        "Potencial ecoturismo",
+        "Zona costera"
+      ],
+      "fotos": [
+        "/images/props/prop-023-1.jpg"
+      ],
       "municipio": "Centla",
       "colonia": "Frontera",
       "direccion": "Frontera, Centla, Tabasco",
-      "lat": 18.5322,
-      "lng": -92.6384,
+      "latPublico": 18.5322,
+      "lngPublico": -92.6461,
       "riesgoInundacion": "alto",
       "zonaEcologica": true,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "Carlos Méndez", "tel": "+52 993 234 5678", "email": "carlos@Vive Villahermosa.mx", "foto": "/images/agents/agente-002.jpg", "whatsapp": "529932345678" },
+      "agente": {
+        "nombre": "Carlos Méndez",
+        "tel": "+52 993 234 5678",
+        "email": "carlos@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-002.jpg",
+        "whatsapp": "529932345678"
+      },
       "fechaPublicacion": "2026-05-18",
       "activa": true
     },
@@ -733,18 +1064,31 @@
       "mediosBanos": 1,
       "estacionamientos": 1,
       "antiguedad": 9,
-      "amenidades": ["Cerca parques", "Zona escolar", "Bien conservado", "Estacionamiento asignado"],
-      "fotos": ["/images/props/prop-024-1.jpg"],
+      "amenidades": [
+        "Cerca parques",
+        "Zona escolar",
+        "Bien conservado",
+        "Estacionamiento asignado"
+      ],
+      "fotos": [
+        "/images/props/prop-024-1.jpg"
+      ],
       "municipio": "Centro",
       "colonia": "Gaviotas Sur",
       "direccion": "Gaviotas Sur, Villahermosa, Tabasco",
-      "lat": 18.0089,
-      "lng": -92.9278,
+      "latPublico": 18.0089,
+      "lngPublico": -92.9278,
       "riesgoInundacion": "bajo",
       "zonaEcologica": false,
       "cercaDosoBocas": false,
       "featured": false,
-      "agente": { "nombre": "María Hernández", "tel": "+52 993 123 4567", "email": "maria@Vive Villahermosa.mx", "foto": "/images/agents/agente-001.jpg", "whatsapp": "529931234567" },
+      "agente": {
+        "nombre": "María Hernández",
+        "tel": "+52 993 123 4567",
+        "email": "maria@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-001.jpg",
+        "whatsapp": "529931234567"
+      },
       "fechaPublicacion": "2026-06-17",
       "activa": true
     }

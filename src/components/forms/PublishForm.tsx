@@ -23,6 +23,7 @@ import { TermsModal } from './TermsModal';
 import { useToast } from '@/context/ToastContext';
 import { useAuth } from '@/context/AuthContext';
 import { crearPropiedad } from '@/lib/propiedadesLocales';
+import { getPuntoPublico } from '@/lib/colonias';
 import { generarIdLocal, generarSlugLocal } from '@/lib/idsLocales';
 import { resizeImageToDataUrl } from '@/lib/imageResize';
 import {
@@ -355,6 +356,9 @@ export function PublishForm() {
     }
 
     const centro = MUNICIPIO_CENTERS[data.municipio] ?? MUNICIPIO_CENTERS['Centro'];
+    const lat = coords?.lat ?? centro[0];
+    const lng = coords?.lng ?? centro[1];
+    const puntoPublico = getPuntoPublico(id, lat, lng, data.colonia);
 
     const property: Property = {
       id,
@@ -378,8 +382,10 @@ export function PublishForm() {
       municipio: data.municipio,
       colonia: data.colonia,
       direccion: '',
-      lat: coords?.lat ?? centro[0],
-      lng: coords?.lng ?? centro[1],
+      lat,
+      lng,
+      latPublico: puntoPublico.lat,
+      lngPublico: puntoPublico.lng,
       riesgoInundacion: data.riesgoInundacion,
       zonaEcologica: false,
       cercaDosoBocas: data.municipio === 'Paraíso',

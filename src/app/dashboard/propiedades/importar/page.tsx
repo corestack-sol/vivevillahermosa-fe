@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
 import { publishSchema, MUNICIPIO_CENTERS, construirAgenteContacto } from '@/lib/publishSchema';
 import { crearPropiedades } from '@/lib/propiedadesLocales';
+import { getPuntoPublico } from '@/lib/colonias';
 import { generarIdLocal, generarSlugLocal } from '@/lib/idsLocales';
 import type { Property } from '@/types/property';
 
@@ -55,6 +56,7 @@ function construirProperty(datos: Record<string, string>) {
   const data = parsed.data;
   const id = generarIdLocal();
   const centro = MUNICIPIO_CENTERS[data.municipio] ?? MUNICIPIO_CENTERS['Centro'];
+  const puntoPublico = getPuntoPublico(id, centro[0], centro[1], data.colonia);
   const property: Property = {
     id,
     slug: generarSlugLocal(data.titulo),
@@ -78,6 +80,8 @@ function construirProperty(datos: Record<string, string>) {
     direccion: '',
     lat: centro[0],
     lng: centro[1],
+    latPublico: puntoPublico.lat,
+    lngPublico: puntoPublico.lng,
     riesgoInundacion: data.riesgoInundacion,
     zonaEcologica: false,
     cercaDosoBocas: data.municipio === 'Paraíso',

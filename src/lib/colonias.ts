@@ -273,4 +273,57 @@ export function buscarColoniaEnTexto(texto: string): ColoniaCoord | undefined {
   return undefined;
 }
 
+/**
+ * Desplaza una coordenada real unos metros de forma determinista (mismo id
+ * → mismo desplazamiento siempre, para que un mapa no "salte" entre
+ * renders). Antes vivía dentro de MapView.tsx como único mecanismo de
+ * privacidad del mapa general — se movió aquí porque ahora también lo usa
+ * `getPuntoPublico` (abajo) como último recurso cuando no hay centroide de
+ * colonia verificado; MapView.tsx la sigue usando, pero solo para separar
+ * visualmente pines que ya comparten el mismo punto público (varias
+ * propiedades en una colonia se enmascaran al mismo centroide), no como la
+ * única protección — esa ahora es `getPuntoPublico`.
+ */
+export function jitterCoord(id: string, lat: number, lng: number, radiusMeters = 120): [number, number] {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  const angle = (hash % 360) * (Math.PI / 180);
+  const dist  = radiusMeters * (0.3 + ((hash >>> 8) % 70) / 100); // 30%–100% del radio
+  const dLat  = (dist * Math.cos(angle)) / 111_320;
+  const dLng  = (dist * Math.sin(angle)) / (111_320 * Math.cos((lat * Math.PI) / 180));
+  return [lat + dLat, lng + dLng];
+}
+
+/**
+ * Punto público de una propiedad — el único que debe llegar a un navegador
+ * que no sea el del dueño (mapa de búsqueda, ficha de detalle, tarjetas).
+ * Nunca es la coordenada exacta:
+ *  - Si la colonia está catalogada aquí (o en las colonias descubiertas),
+ *    es su centroide verificado — el mismo punto para cualquier propiedad
+ *    de esa colonia, así que nunca delata cuál calle o predio es.
+ *  - Si no está catalogada, es un desplazamiento amplio (500m) de la
+ *    coordenada real vía `jitterCoord` — menos preciso que un centroide
+ *    real, pero sigue sin ser el punto exacto.
+ * Debe calcularse UNA sola vez, del lado que arma los datos que se le
+ * entregan al navegador (`getAllProperties` en api.ts; al publicar/editar
+ * en propiedadesLocales.ts/PublishForm.tsx) — nunca al momento de dibujar
+ * el mapa, porque para entonces la coordenada real ya viajó al cliente sin
+ * necesidad (justo el problema que tenía el mecanismo anterior, que
+ * enmascaraba visualmente pero seguía recibiendo `lat`/`lng` reales en las
+ * props del mapa).
+ *
+ * Límite conocido: server-side (build/SSR de `getAllProperties`) solo se
+ * compara contra el catálogo estático de este archivo — las colonias
+ * descubiertas dinámicamente (`coloniasDescubiertasCache`) solo están
+ * disponibles en el navegador tras precargarlas, así que una propiedad en
+ * una colonia descubierta-pero-no-estática cae al jitter de 500m en vez de
+ * a su centroide real hasta que ese caso se resuelva server-side también.
+ */
+export function getPuntoPublico(id: string, lat: number, lng: number, colonia: string): { lat: number; lng: number } {
+  const match = matchColonia(colonia);
+  if (match) return { lat: match.lat, lng: match.lng };
+  const [jLat, jLng] = jitterCoord(id, lat, lng, 500);
+  return { lat: jLat, lng: jLng };
+}
+
 export { distanciaKm };

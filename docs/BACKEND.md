@@ -82,7 +82,10 @@ estacionamientos, antiguedad, amenidades (array), servicios (array, opcional),
 fotos (array de URLs — hoy son data URI base64 en el frontend, el backend nuevo debe recibir
   archivos y devolver URLs reales, no aceptar base64 gigante en el body),
 municipio (uno de los 17 valores de MUNICIPIO_OPTIONS, ver más abajo), colonia, direccion,
-lat, lng (coordenada EXACTA del pin — no aproximar en el backend, el frontend ya la aproxima al mostrarla),
+lat, lng (coordenada EXACTA del pin que colocó el dueño — PRIVADA, ver aviso de privacidad de ubicación
+  más abajo, justo antes de §2),
+latPublico, lngPublico (el único punto que se le puede devolver a alguien que no es el dueño — lo calcula
+  el backend al crear/editar, nunca el frontend, ver el mismo aviso),
 riesgoInundacion (bajo|medio|alto), zonaEcologica (bool), cercaDosoBocas (bool), featured (bool, default false),
 alertaFraude? ({ señales: string[] } — SOLO lo calcula el servidor, nunca aceptar del cliente),
 requiereModeracion (bool, default false), aceptaTerminosAt (datetime),
@@ -93,6 +96,16 @@ userId, createdAt, updatedAt
 
 **Los 17 municipios válidos** (`MUNICIPIO_OPTIONS` en `src/lib/publishSchema.ts` del frontend — validar `municipio` contra esta lista exacta, son sensibles a mayúsculas/acentos):
 `Centro, Cárdenas, Comalcalco, Paraíso, Nacajuca, Jalpa de Méndez, Huimanguillo, Centla, Macuspana, Tenosique, Cunduacán, Emiliano Zapata, Balancán, Jonuta, Tacotalpa, Teapa, Jalapa`
+
+> ⚠️ **Corrección 2026-08-06 — privacidad de ubicación, `lat`/`lng` vs `latPublico`/`lngPublico`.**
+> Una versión anterior de este documento decía "no aproximar `lat`/`lng` en el backend, el frontend ya lo hace al mostrarla" — **esa suposición era incorrecta** y quedó corregida en el frontend el mismo día (ver `src/lib/colonias.ts:getPuntoPublico`, `src/lib/api.ts`). El enmascaramiento que existía antes (un círculo/jitter dibujado en el mapa) era solo visual: la coordenada exacta seguía viajando completa a cualquier navegador — no solo en el mapa, sino en el bundle de JS de cualquier página con una tarjeta de propiedad, porque el archivo de datos estático se importa también desde componentes cliente. Abrir devtools bastaba para leer la dirección exacta de cualquier propiedad, sin sesión.
+>
+> **Lo que el backend nuevo debe replicar (no lo que decía la versión vieja de este documento):**
+> - `lat`/`lng` (coordenada real del pin) se guarda, pero es un dato **privado** — mismo nivel que el teléfono/correo de contacto (§10). Nunca debe salir en la respuesta de un endpoint público.
+> - Al crear o editar una propiedad (`POST`/`PATCH /propiedades`), el servidor calcula `latPublico`/`lngPublico` una sola vez: si la `colonia` declarada coincide con el catálogo de `ColoniaDescubierta`/colonias verificadas (§9), es el centroide de esa colonia; si no coincide con ninguna, es un desplazamiento amplio (~500m) de la coordenada real, determinista por `id` (mismo algoritmo que `jitterCoord` en `src/lib/colonias.ts` — trivial de portar, es una función pura sin dependencias de Next.js).
+> - `GET /propiedades` y `GET /propiedades/:id` (sin sesión, o con sesión de alguien que NO es el dueño) devuelven **solo** `latPublico`/`lngPublico` — el campo `lat`/`lng` real ni siquiera debe estar presente en el JSON de esa respuesta, no basta con "no usarlo en el frontend".
+> - `GET /propiedades/:id` cuando el `userId` de la sesión SÍ es el dueño, y `GET /propiedades/mias`, pueden incluir la coordenada real además de la pública — el dueño es quien la puso, verla no es una fuga.
+> - La plataforma **no necesita** un endpoint tipo "revelar ubicación exacta" (a diferencia del teléfono, que sí tiene uno, §10) — compartir la dirección real sigue siendo una decisión 100% manual del propietario, por WhatsApp, fuera de la plataforma. No hay que construir nada para ese flujo, solo no filtrar el dato por accidente.
 
 ---
 
@@ -130,11 +143,11 @@ Este es el módulo que no existe en ningún lado todavía — ni en Next.js ni e
 
 | Endpoint | Método | Auth | Qué hace |
 |---|---|---|---|
-| `/propiedades` | GET | No | Lista + filtros (municipio, tipo, operación, precio min/max, colonia, riesgoInundacion, texto libre) **+ paginación** (`page`/`perPage` o `limit`/`offset` — ver nota de paginación abajo). Solo `activa=true` y `estado='activa'`. |
-| `/propiedades/:id` | GET | **Opcional** | Por id o slug. Si no hay sesión o el `userId` de la sesión no coincide con el dueño → 404 si no está activa. Si el `userId` de la sesión SÍ coincide con el dueño → devolverla aunque esté pausada/vencida/vendida/rentada (así el dueño puede ver/gestionar su propia ficha pausada desde la URL pública, igual que hoy). |
+| `/propiedades` | GET | No | Lista + filtros (municipio, tipo, operación, precio min/max, colonia, riesgoInundacion, texto libre) **+ paginación** (`page`/`perPage` o `limit`/`offset` — ver nota de paginación abajo). Solo `activa=true` y `estado='activa'`. Cada propiedad trae `latPublico`/`lngPublico`, nunca `lat`/`lng` real (ver aviso de privacidad de ubicación en §1). |
+| `/propiedades/:id` | GET | **Opcional** | Por id o slug. Si no hay sesión o el `userId` de la sesión no coincide con el dueño → 404 si no está activa, y la respuesta trae `latPublico`/`lngPublico` únicamente. Si el `userId` de la sesión SÍ coincide con el dueño → devolverla aunque esté pausada/vencida/vendida/rentada (así el dueño puede ver/gestionar su propia ficha pausada desde la URL pública, igual que hoy), y esta vez sí puede incluir `lat`/`lng` real. |
 | `/propiedades/mias` | GET | Sí | Todas las del usuario en sesión, sin filtrar por estado (incluye pausadas/vencidas). |
 | `/propiedades` | POST | Sí | Crear. Ver validaciones obligatorias abajo. Rate limit sugerido: **10 publicaciones/día por usuario**, más 5/hora por IP como backstop contra creación de cuentas desechables. |
-| `/propiedades/:id` | PATCH | Sí (dueño) | Editar campos, cambiar `estado`, marcar `featured`. 403 si `userId` no coincide. **Si el body incluye cambios a `precio`, `descripcion`, `titulo` o `fotos`, repetir los pasos 1-4 de las validaciones de `POST` sobre los datos nuevos** — sin esto, alguien podría publicar algo limpio y editarlo después a una estafa sin que nada lo detecte. Si el body solo trae `estado`/`featured` (pausar/reactivar/destacar), no hace falta re-validar fraude. Rate limit sugerido: 20/hora por usuario. |
+| `/propiedades/:id` | PATCH | Sí (dueño) | Editar campos, cambiar `estado`, marcar `featured`. 403 si `userId` no coincide. **Si el body incluye cambios a `precio`, `descripcion`, `titulo` o `fotos`, repetir los pasos 1-4 de las validaciones de `POST` sobre los datos nuevos** — sin esto, alguien podría publicar algo limpio y editarlo después a una estafa sin que nada lo detecte. **Si cambia `colonia`, `lat` o `lng`, recalcular `latPublico`/`lngPublico`** (paso 7 de `POST`) — si no, un cambio de colonia deja el punto público apuntando al centroide viejo. Si el body solo trae `estado`/`featured` (pausar/reactivar/destacar), no hace falta re-validar fraude ni recalcular ubicación. Rate limit sugerido: 20/hora por usuario. |
 | `/propiedades/:id` | DELETE | Sí (dueño) | Soft-delete (`activa=false`), no borrar la fila. 403 si `userId` no coincide. Rate limit sugerido: 20/hora por usuario. |
 | `/propiedades/fotos` | POST | Sí | **Endpoint de subida separado, no parte del `POST /propiedades`** — recibe un archivo (`multipart/form-data`, un archivo por request, máx. 8MB de origen igual que hoy en `resizeImageToDataUrl`), lo sube a storage (Cloudinary/S3, ver §15) y devuelve `{ url }`. El frontend sube cada foto (hasta 6) por separado ANTES de armar el `POST /propiedades`, y manda el array de URLs ya subidas en `fotos`. Evita mezclar JSON + archivos binarios en un solo request y permite mostrar progreso por foto. |
 
@@ -145,7 +158,7 @@ Este es el módulo que no existe en ningún lado todavía — ni en Next.js ni e
 4. Si fraude alto o lenguaje discriminatorio → `requiereModeracion = true` en vez de publicar directo.
 5. Validar `municipio` contra los 17 valores de §1.
 6. Generar `id`/`slug` en el servidor — nunca aceptar uno que venga del cliente.
-7. Guardar `lat`/`lng` exactos (no aproximar aquí — el frontend ya lo hace al mostrar).
+7. Guardar `lat`/`lng` exactos (privados, ver el aviso de privacidad de ubicación en §1) **y** calcular `latPublico`/`lngPublico` aquí mismo, en el servidor — nunca aceptar `latPublico`/`lngPublico` que vengan en el body del request, son calculados, no datos de entrada.
 8. `fotos` en el body ya son URLs (ver el endpoint `/propiedades/fotos` de arriba) — validar que sean URLs del propio storage configurado, no aceptar URLs arbitrarias de otro dominio.
 9. Rate limit por usuario/IP (ver tabla de arriba).
 10. Al crear con éxito, disparar el matching de alertas (§5) con los datos ya persistidos, pasando el `id`/`slug` real (para que `Notificacion.propiedadId` deje de ser `null`).

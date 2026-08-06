@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { jitterCoord } from '@/lib/colonias';
 
 export interface MapMarker {
   id: string;
@@ -40,10 +41,13 @@ interface MapViewProps {
   onBoundsChange?: (bounds: MapBounds) => void;
   onMapReady?: (controls: MapControls) => void;
   /**
-   * Privacidad: si es true, no se dibuja un pin en la coordenada exacta de
-   * `markers` — solo un círculo de zona aproximada centrado en `center`.
-   * Úsalo en vistas públicas de una sola propiedad para no revelar la
-   * ubicación exacta del inmueble a cualquier visitante.
+   * Si es true, no se dibuja un pin — solo un círculo de zona aproximada
+   * centrado en `center`. Este componente ya no es la línea de defensa de
+   * privacidad: espera recibir en `markers`/`center` el punto PÚBLICO de
+   * cada propiedad (`property.latPublico`/`lngPublico`, ver
+   * `getPuntoPublico` en src/lib/colonias.ts), nunca `lat`/`lng` reales —
+   * ese enmascaramiento debe pasar antes, al armar los datos, para que la
+   * coordenada exacta ni siquiera llegue al navegador.
    */
   approximate?: boolean;
   approximateRadius?: number;
@@ -79,27 +83,6 @@ function pinHtml(color: string, dark: string, label: string, active: boolean): s
     <div style="background:${color};color:#fff;padding:5px 11px;border-radius:100px;font-size:11.5px;font-weight:800;white-space:nowrap;letter-spacing:0.2px;box-shadow:${shadow};line-height:1;font-family:Inter,system-ui,sans-serif;">${label}</div>
     <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid ${dark};margin-top:-1px;"></div>
   </div>`;
-}
-
-/**
- * Privacidad: desplaza cada pin unos metros de su coordenada real, de forma
- * determinista (mismo id → mismo desplazamiento siempre, para que el mapa no
- * "salte" entre renders). Antes, /mapa y el mini-mapa del home plotaban
- * `lat`/`lng` exactos de cada propiedad — cualquiera podía navegar el mapa
- * general y ubicar físicamente cada inmueble sin siquiera entrar a su ficha,
- * contradiciendo la política de "zona aproximada" que sí se aplicaba en la
- * página de detalle (prop `approximate`, más abajo). El desplazamiento es
- * pequeño (40–120 m) — suficiente para no revelar el predio exacto, sin
- * alejar el pin de su colonia real.
- */
-function jitterCoord(id: string, lat: number, lng: number, radiusMeters = 120): [number, number] {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  const angle = (hash % 360) * (Math.PI / 180);
-  const dist  = radiusMeters * (0.3 + ((hash >>> 8) % 70) / 100); // 30%–100% del radio
-  const dLat  = (dist * Math.cos(angle)) / 111_320;
-  const dLng  = (dist * Math.sin(angle)) / (111_320 * Math.cos((lat * Math.PI) / 180));
-  return [lat + dLat, lng + dLng];
 }
 
 function clusterHtml(count: number): string {

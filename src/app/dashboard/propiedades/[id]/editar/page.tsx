@@ -17,6 +17,7 @@ import {
   TIPO_OPTIONS, MUNICIPIO_OPTIONS, METODO_CONTACTO_OPTIONS,
 } from '@/lib/publishSchema';
 import type { Property } from '@/types/property';
+import { getPuntoPublico } from '@/lib/colonias';
 
 const OPERACION_OPTIONS = [
   { value: 'venta', label: 'Venta' },
@@ -91,6 +92,11 @@ export default function EditarPropiedadPage() {
   // precio/fotos/descripción cambian, no solo al publicar por primera vez).
   function onSubmit(data: PublishFormData) {
     if (!property) return;
+    // La colonia pudo cambiar aquí y no hay pin que reubicar en este
+    // formulario (no tiene MapPicker) — se recalcula el punto público sobre
+    // la coordenada real ya guardada, para que no se quede apuntando al
+    // centroide de la colonia vieja (ver getPuntoPublico en colonias.ts).
+    const puntoPublico = getPuntoPublico(property.id, property.lat, property.lng, data.colonia);
     editarPropiedad(property.id, {
       titulo: data.titulo,
       descripcion: data.descripcion,
@@ -103,6 +109,8 @@ export default function EditarPropiedadPage() {
       banos: data.banos ?? 0,
       municipio: data.municipio,
       colonia: data.colonia,
+      latPublico: puntoPublico.lat,
+      lngPublico: puntoPublico.lng,
       riesgoInundacion: data.riesgoInundacion,
       // No se usa `construirAgenteContacto` + spread de `property.agente` —
       // ese helper solo OMITE la clave que no aplica, no borra un valor
