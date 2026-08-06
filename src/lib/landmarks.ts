@@ -62,7 +62,10 @@ export const LANDMARKS_VERIFICADO_EN = '2026-08-04';
  * ⚠️ Direcciones verificadas por fuente pública; coordenadas exactas SOLO
  * cuando la fuente las dio en decimal (Galerías Tabasco, Altabrisa,
  * Aeropuerto VSA, ITVH, Zona Arqueológica Comalcalco, Plaza Sendero, Plaza
- * Cristal, Plaza Mallorca, Catedral del Señor de Tabasco) — el resto son una ubicación aproximada dentro de
+ * Cristal, Plaza Mallorca, Catedral del Señor de Tabasco, Palacio de
+ * Gobierno, Congreso del Estado, Museo Carlos Pellicer, Parque Juárez,
+ * Estadio Centenario 27 de Febrero, Mercado Pino Suárez — estas últimas 6
+ * vía Nominatim/OpenStreetMap, auditoría 2026-08-06) — el resto son una ubicación aproximada dentro de
  * la colonia/calle real, situada a mano por geografía conocida de la
  * ciudad, no un geocoder. Suficiente para un radio de "cerca de" de 1-5 km,
  * no para precisión de metros. Si algo se ve mal ubicado, ajustar aquí es el
@@ -92,6 +95,18 @@ export const LANDMARKS: Landmark[] = [
   { key: 'cicom', label: 'Zona CICOM', categoria: 'cultura', lat: 17.9800, lng: -92.9280, radioKm: 1.2 },
   { key: 'planetario', label: 'Planetario Tabasco 2000', categoria: 'cultura', lat: 18.0020, lng: -92.9300, radioKm: 1 },
   { key: 'yumka', label: 'Yumká', categoria: 'cultura', lat: 17.9377, lng: -92.8983, radioKm: 2 },
+  // Los siguientes 5 se agregaron el mismo día que 'catedral', misma
+  // auditoría — coordenadas exactas vía Nominatim/OpenStreetMap, no había
+  // ni un solo edificio de gobierno ni un solo espacio deportivo/museo
+  // catalogado antes de esto, pese a ser de los lugares más buscados de
+  // Villahermosa.
+  { key: 'palacio-gobierno', label: 'Palacio de Gobierno del Estado de Tabasco', categoria: 'cultura', lat: 17.9880, lng: -92.9195, radioKm: 1, aliases: ['palacio de gobierno', 'gobierno del estado'] },
+  { key: 'congreso-tabasco', label: 'Congreso del Estado de Tabasco', categoria: 'cultura', lat: 17.9871, lng: -92.9201, radioKm: 1, aliases: ['congreso del estado', 'congreso de tabasco'] },
+  { key: 'museo-carlos-pellicer', label: 'Museo Regional de Antropología Carlos Pellicer', categoria: 'cultura', lat: 17.9792, lng: -92.9234, radioKm: 1.2, aliases: ['museo carlos pellicer', 'museo de antropología', 'museo de antropologia'] },
+  { key: 'parque-juarez', label: 'Parque Juárez', categoria: 'cultura', lat: 17.9911, lng: -92.9176, radioKm: 1, aliases: ['parque juarez'] },
+  // Sin alias corto "estadio" — sería ambiguo si algún día se cataloga otro
+  // (mismo criterio que universidad-olmeca/sector-carrizal más arriba).
+  { key: 'estadio-centenario', label: 'Estadio Centenario 27 de Febrero', categoria: 'cultura', lat: 17.9767, lng: -92.9440, radioKm: 1.2, aliases: ['estadio centenario', 'estadio de los olmecas', 'ciudad deportiva', 'estadio de beisbol', 'estadio de béisbol'] },
 
   // Villahermosa (Centro) — educación
   { key: 'ujat', label: 'UJAT', categoria: 'educacion', lat: 17.9910, lng: -92.9170, radioKm: 1.5, aliases: ['universidad juárez autónoma de tabasco'] },
@@ -130,6 +145,12 @@ export const LANDMARKS: Landmark[] = [
   { key: 'plaza-sendero', label: 'Plaza Sendero', categoria: 'comercial', lat: 18.019117, lng: -92.912933, radioKm: 1.2 },
   { key: 'plaza-cristal', label: 'Plaza Cristal', categoria: 'comercial', lat: 17.965206, lng: -92.901093, radioKm: 1.2 },
   { key: 'plaza-mallorca', label: 'Plaza Mallorca', categoria: 'comercial', lat: 17.966936, lng: -92.965202, radioKm: 1.2 },
+  // Sin alias corto "pino suárez": ya es el alias de la colonia "José María
+  // Pino Suárez" en colonias.ts (lugar real distinto, a varios km de aquí)
+  // — mismo problema que ya se evitó con "olmeca"/"carrizal": un alias
+  // corto ambiguo entre un landmark y una colonia hace que ambos filtros se
+  // apliquen a la vez y no quede ningún resultado posible.
+  { key: 'mercado-pino-suarez', label: 'Mercado José María Pino Suárez', categoria: 'comercial', lat: 17.9964, lng: -92.9144, radioKm: 1, aliases: ['mercado pino suárez', 'mercado pino suarez'] },
 
   // Villahermosa (Centro) — transporte
   { key: 'aeropuerto-vsa', label: 'Aeropuerto de Villahermosa (VSA)', categoria: 'transporte', lat: 17.9970, lng: -92.8174, radioKm: 4, aliases: ['aeropuerto', 'vsa'] },

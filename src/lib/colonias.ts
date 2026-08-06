@@ -99,7 +99,17 @@ export const COLONIAS_COORDS: ColoniaCoord[] = [
   // encuentra ambos por separado.
   { key: 'sector-carrizal', label: 'Sector Carrizal', municipio: 'Centro', lat: 17.9875, lng: -92.9421, radioKm: RADIO_COLONIA_KM },
   { key: 'atasta', label: 'Atasta', municipio: 'Centro', lat: 17.9923, lng: -92.9178, radioKm: RADIO_COLONIA_KM },
-  { key: 'centro-historico', label: 'Centro Histórico', municipio: 'Centro', lat: 17.9895, lng: -92.9478, radioKm: RADIO_COLONIA_KM },
+  // Corregida 2026-08-06: la coordenada anterior (17.9895, -92.9478) en
+  // realidad hace reverse-geocode a "Calle Mariano Abasolo, Colonia Atasta
+  // de Serra" — un lugar real, pero a ~2.1km del centro histórico
+  // verdadero, y NADA que ver con esta colonia. Se descubrió al verificar
+  // por qué "cerca de la catedral de tabasco" no encontraba una propiedad
+  // que sí estaba ahí. Nueva coordenada: la Catedral del Señor de Tabasco
+  // (verificada vía Nominatim, ver 'catedral' en landmarks.ts), el ancla
+  // más defendible para "el centro histórico" de una ciudad mexicana — no
+  // se encontró un nodo de OSM etiquetado específicamente
+  // place/neighbourhood="Centro Histórico" para usar en su lugar.
+  { key: 'centro-historico', label: 'Centro Histórico', municipio: 'Centro', lat: 17.9896, lng: -92.9282, radioKm: RADIO_COLONIA_KM },
   { key: 'olmeca', label: 'Olmeca', municipio: 'Centro', lat: 17.9812, lng: -92.9502, radioKm: RADIO_COLONIA_KM },
   { key: 'gil-y-saenz', label: 'Gil y Sáenz', municipio: 'Centro', lat: 17.9867, lng: -92.9356, radioKm: RADIO_COLONIA_KM },
   { key: 'col-del-parque', label: 'Col. del Parque', municipio: 'Centro', lat: 17.9734, lng: -92.9267, radioKm: RADIO_COLONIA_KM },

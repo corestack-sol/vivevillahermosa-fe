@@ -24,7 +24,7 @@ const TIMEOUT_MS = 10_000;
 // texto de siempre (fail open), no se hace esperar a la persona por esto.
 const TIMEOUT_RESOLUCION_MS = 4_500;
 import { MUNICIPIO_OPTIONS } from './publishSchema';
-import { LANDMARKS, CATEGORIAS_GENERICAS } from './landmarks';
+import { LANDMARKS, CATEGORIAS_GENERICAS, getLandmark, distanciaKm } from './landmarks';
 import { COLONIAS_COORDS, matchColonia, buscarColoniaEnTexto } from './colonias';
 import { buscarColoniaDescubiertaPorNombre, descubrirColonia } from './coloniaDiscovery';
 import { registrarIntentoSospechoso } from './moderacionBusqueda';
@@ -748,7 +748,7 @@ Responde únicamente JSON: { "categoria": string | null } — el string debe ser
   }
 }
 
-export async function busquedaInteligente(query: string, userId?: string): Promise<ResultadoBusqueda> {
+async function busquedaInteligenteInterna(query: string, userId?: string): Promise<ResultadoBusqueda> {
   if (!openrouter) {
     console.warn('[ai] OPENROUTER_API_KEY no configurado — usando heurística para búsqueda inteligente');
     return busquedaInteligenteHeuristica(query);
@@ -794,7 +794,7 @@ export async function busquedaInteligente(query: string, userId?: string): Promi
     || CATEGORIAS_GENERICAS.some((cat) => cat.keywords.some((kw) => q.includes(kw)));
 
   const reglaLandmark = necesitaLandmarks
-    ? '\nREGLA 3 — para "landmark" específicamente: solo úsalo si el lugar mencionado coincide claramente con uno de los nombres/alias de la lista de abajo. NUNCA elijas el que "suene parecido" o esté en la misma categoría cuando no hay una coincidencia real — Tabasco tiene muchos lugares reales que NO están en esta lista, y confundir uno por otro manda a la persona a la zona equivocada. Si el lugar no coincide con ninguno, omite "landmark" por completo (y usa "categoriaLandmark" solo si sí describe el TIPO de lugar sin nombrarlo). "categoriaLandmark" NUNCA se infiere de a qué se PARECE o SUENA un nombre propio — solo de palabras que literalmente describen un tipo de lugar usadas como tales ("cerca de un hospital", "cerca de una escuela"). Si la palabra viene justo después de "col"/"colonia"/"fraccionamiento"/"sector", es el NOMBRE de una colonia (va en "colonia", nunca en "categoriaLandmark") sin importar a qué otra palabra se parezca — ej. "Magisterial" es una colonia real de Tabasco, NO una señal de "educacion" aunque recuerde a "magisterio".'
+    ? '\nREGLA 3 — para "landmark" específicamente: solo úsalo si el lugar mencionado coincide claramente con uno de los nombres/alias de la lista de abajo. NUNCA elijas el que "suene parecido" o esté en la misma categoría cuando no hay una coincidencia real — Tabasco tiene muchos lugares reales que NO están en esta lista, y confundir uno por otro manda a la persona a la zona equivocada. Si el lugar no coincide con ninguno, omite "landmark" por completo (y usa "categoriaLandmark" solo si sí describe el TIPO de lugar sin nombrarlo). "categoriaLandmark" NUNCA se infiere de a qué se PARECE o SUENA un nombre propio — solo de palabras que literalmente describen un tipo de lugar usadas como tales ("cerca de un hospital", "cerca de una escuela"). Si la palabra viene justo después de "col"/"colonia"/"fraccionamiento"/"sector", es el NOMBRE de una colonia (va en "colonia", nunca en "categoriaLandmark") sin importar a qué otra palabra se parezca — ej. "Magisterial" es una colonia real de Tabasco, NO una señal de "educacion" aunque recuerde a "magisterio". Si SÍ llenaste "landmark", NO agregues también "colonia" a partir de palabras que son parte del NOMBRE de ese mismo landmark — el nombre oficial de un lugar puede coincidir por casualidad con el de una colonia real pero distinta (ej. el "Mercado José María Pino Suárez" no está en la colonia "José María Pino Suárez", son dos lugares reales separados); usa "colonia" junto con "landmark" solo cuando la búsqueda nombra explícitamente una colonia APARTE del landmark ("cerca de la laguna, en Gaviotas" sí son dos lugares distintos).'
     : '';
 
   const camposLandmark = necesitaLandmarks
@@ -811,7 +811,8 @@ export async function busquedaInteligente(query: string, userId?: string): Promi
 - "renta cerca del parque Manuel Buelta" (nombre inventado, no está en la lista) → { "operacion": "renta", "lugarMencionado": "parque Manuel Buelta" } — NO agregues landmark solo porque menciona "parque" y algo de Tabasco; ese lugar específico no está catalogado, pero sí se guarda lo que escribió por si acaso se reconoce después.
 - "depa cerca del Ángeles" (sin decir "hospital", puede ser typo o forma corta) → { "tipo": "departamento", "lugarMencionado": "el Ángeles" } — no coincide claramente con ningún key ni alias, se guarda tal cual en vez de adivinar.
 - "casa cerca de una farmacia" → { "tipo": "casa", "lugarMencionado": "una farmacia" } — "farmacia" no es ninguna de las categorías de la lista, se guarda tal cual en vez de forzarla a "salud".
-- "muestrame propiedades cerca de la col magisterial" → { "colonia": "Magisterial" } — "Magisterial" es el NOMBRE de una colonia real (nota el "col" justo antes), no una señal de "categoriaLandmark":"educacion" aunque se parezca a "magisterio". Confundir el nombre de un lugar con una categoría por cómo suena es exactamente el error que REGLA 3 prohíbe.`
+- "muestrame propiedades cerca de la col magisterial" → { "colonia": "Magisterial" } — "Magisterial" es el NOMBRE de una colonia real (nota el "col" justo antes), no una señal de "categoriaLandmark":"educacion" aunque se parezca a "magisterio". Confundir el nombre de un lugar con una categoría por cómo suena es exactamente el error que REGLA 3 prohíbe.
+- "rentas cerca del mercado pino suarez" → { "operacion": "renta", "landmark": "mercado-pino-suarez" } — NO agregues también "colonia": "José María Pino Suárez". El mercado se llama así por la persona histórica, igual que la colonia, pero son dos lugares reales distintos a varios km uno del otro — agregar ambos filtros a la vez no puede dar ningún resultado (ninguna propiedad puede estar simultáneamente cerca de los dos).`
     : '';
 
   const prompt = `Convierte esta búsqueda en lenguaje natural de un portal inmobiliario de Tabasco, México, en filtros estructurados. Responde ÚNICAMENTE con un JSON con esta forma.
@@ -870,7 +871,14 @@ Búsqueda: "${query}"`;
     const texto = completion.choices[0]?.message?.content;
     if (!texto) return busquedaInteligenteHeuristica(query);
 
-    const parsed = JSON.parse(texto);
+    // A pesar de pedir `response_format: json_object`, en pruebas reales el
+    // modelo a veces igual envuelve la respuesta en una cerca de código
+    // markdown ("```json\n{...}\n```") — JSON.parse truena con eso tal
+    // cual, y la búsqueda entera caía al heurístico por un problema de
+    // formato, no de contenido. Se limpia antes de parsear en vez de
+    // perder la respuesta ya generada.
+    const textoLimpio = texto.trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    const parsed = JSON.parse(textoLimpio);
     const result: ResultadoBusqueda = {};
     if (MUNICIPIOS_VALIDOS.includes(parsed.municipio)) result.municipio = parsed.municipio;
     if (typeof parsed.colonia === 'string' && parsed.colonia.trim() && esColoniaValida(parsed.colonia.trim())) {
@@ -963,6 +971,48 @@ Búsqueda: "${query}"`;
     console.error('[ai] Error en búsqueda inteligente', err);
     return busquedaInteligenteHeuristica(query);
   }
+}
+
+/**
+ * Red de seguridad determinística: el prompt le pide a la IA que no combine
+ * "landmark" con una "colonia" que en realidad son solo palabras
+ * compartidas con el nombre del landmark (ver REGLA 3 y el ejemplo de
+ * "mercado pino suárez" en busquedaInteligenteInterna) — pero en pruebas
+ * reales el modelo a veces igual devuelve los dos (caso confirmado: "rentas
+ * cerca del mercado pino suarez" → landmark:"mercado-pino-suarez" Y
+ * colonia:"José María Pino Suárez" a la vez, dos lugares reales a más de
+ * 7km uno del otro, que entre ambos filtros dejaban 0 resultados aunque sí
+ * había propiedades cerca del mercado). Si los dos lugares están demasiado
+ * lejos para que una misma propiedad esté "cerca" de ambos a la vez, se
+ * descarta la colonia y se conserva el landmark — llegó validado contra una
+ * lista cerrada de keys (REGLA 3), mientras que "colonia" se extrae de
+ * forma más libre y es la señal menos confiable de las dos cuando entran en
+ * conflicto. `busquedaInteligenteHeuristica` (el respaldo sin IA) puede
+ * producir el mismo conflicto por su propia cuenta — coincidencia de texto
+ * literal contra el catálogo completo de colonias/landmarks, sin ningún
+ * cruce entre ambas listas — así que esto se aplica en el wrapper exportado
+ * de abajo, nunca solo dentro del camino feliz de OpenRouter, para cubrir
+ * los dos orígenes posibles del resultado.
+ */
+function resolverConflictoLandmarkColonia(result: ResultadoBusqueda): ResultadoBusqueda {
+  if (result.landmark && result.colonia) {
+    const landmark = getLandmark(result.landmark);
+    const colonia = matchColonia(result.colonia);
+    if (landmark && colonia) {
+      const distancia = distanciaKm(landmark.lat, landmark.lng, colonia.lat, colonia.lng);
+      if (distancia > landmark.radioKm + colonia.radioKm) {
+        const resto = { ...result };
+        delete resto.colonia;
+        return resto;
+      }
+    }
+  }
+  return result;
+}
+
+export async function busquedaInteligente(query: string, userId?: string): Promise<ResultadoBusqueda> {
+  const result = await busquedaInteligenteInterna(query, userId);
+  return resolverConflictoLandmarkColonia(result);
 }
 
 export interface DatosReporte {
