@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getPropertyById } from '@/lib/api';
+import { getAgenteContacto } from '@/lib/api';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 import { getSession } from '@/lib/auth';
 
@@ -33,11 +33,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!limited.ok) return rateLimitResponse(limited.resetAt);
 
   const { id } = await params;
-  const property = getPropertyById(id);
-  if (!property) {
+  const contacto = getAgenteContacto(id);
+  if (!contacto) {
     return NextResponse.json({ error: 'Propiedad no encontrada' }, { status: 404 });
   }
 
-  const { tel, email, whatsapp } = property.agente;
-  return NextResponse.json({ tel, email, whatsapp });
+  return NextResponse.json(contacto);
 }

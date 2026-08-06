@@ -64,7 +64,24 @@ export function getAllProperties(): Property[] {
     .filter((p) => p.activa)
     .map((p) => ({
       ...p,
-      agente: { ...p.agente, verificado: getAgentVerification(p.agente.whatsapp) },
+      // Mismo problema que ya se corrigió con lat/lng, aplicado a
+      // tel/email/whatsapp: este archivo se importa también desde
+      // componentes cliente (PropertyCard, SearchBar…), así que cualquier
+      // campo que viva en el `agente` que se devuelve aquí termina en el
+      // bundle del navegador de CUALQUIER página que muestre una tarjeta —
+      // sin sesión, sin pasar por el botón "revelar contacto". Confirmado
+      // en vivo: /propiedades sin iniciar sesión traía el teléfono/correo
+      // real de cada agente repetido una vez por cada una de sus
+      // propiedades. `agente.tel`/`email`/`whatsapp` se omiten a propósito
+      // (quedan `undefined`, el tipo ya los declara opcionales) — el único
+      // camino real para obtenerlos es `getAgenteContacto()` más abajo,
+      // usado exclusivamente por el endpoint gateado por sesión
+      // (GET /api/propiedades/[id]/contacto).
+      agente: {
+        nombre: p.agente.nombre,
+        foto: p.agente.foto,
+        verificado: getAgentVerification(p.agente.whatsapp),
+      },
       // `lat`/`lng` del tipo `Property` quedan aquí como alias del punto
       // público — este archivo nunca tuvo ni tiene acceso a la coordenada
       // real de una propiedad de muestra, así que no hay nada más preciso
@@ -74,6 +91,23 @@ export function getAllProperties(): Property[] {
       lat: p.latPublico,
       lng: p.lngPublico,
     }));
+}
+
+/**
+ * Único camino real para obtener el tel/email/whatsapp de contacto de una
+ * propiedad de muestra — lee directo del JSON crudo (`propertiesData`),
+ * nunca de `getAllProperties()`, que a propósito ya no los incluye (ver
+ * comentario ahí arriba). Debe usarse SOLO desde código que corre
+ * exclusivamente en el servidor y ya verificó sesión antes de llamarla
+ * (hoy, únicamente `GET /api/propiedades/[id]/contacto`) — nunca desde un
+ * componente cliente, ni siquiera indirectamente vía una función que
+ * también use el resultado para otra cosa.
+ */
+export function getAgenteContacto(id: string): Pick<Property['agente'], 'tel' | 'email' | 'whatsapp'> | undefined {
+  const seed = (propertiesData as PropertiesSeedResponse).data.find((p) => p.id === id || p.slug === id);
+  if (!seed) return undefined;
+  const { tel, email, whatsapp } = seed.agente;
+  return { tel, email, whatsapp };
 }
 
 export function getFeaturedProperties(): Property[] {
