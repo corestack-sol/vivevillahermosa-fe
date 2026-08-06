@@ -18,9 +18,15 @@ import { getSession } from '@/lib/auth';
  * en ese caso el frontend (AgentCard.tsx) simplemente no llama a este
  * endpoint para tel/whatsapp y dirige a ContactForm en su lugar.
  *
- * Rate limit por IP se mantiene además del login: una cuenta comprometida o
- * un usuario real automatizando requests no debería poder scrapear en lote
- * solo por estar autenticado.
+ * Límite por IP y por cuenta a la vez — no alcanza con solo uno de los dos.
+ * Confirmado con una prueba real (cuenta de prueba creada y borrada
+ * después): `X-Forwarded-For` es un header que cualquier cliente manda
+ * directo, sin proxy de confianza en frente que lo sobrescriba — variarlo
+ * en cada request le daba un bucket de rate limit nuevo cada vez (60/60
+ * solicitudes exitosas falsificando la IP, con la MISMA sesión). El límite
+ * por IP solo, aunque exista, no protegía nada frente a una sola cuenta con
+ * un script. El límite por `userId` no tiene ese problema: sale de un JWT
+ * firmado en el servidor, nadie puede falsificarlo desde el cliente.
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -29,8 +35,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 
   const ip = getClientIp(request);
-  const limited = checkRateLimit(`contacto:ip:${ip}`, 30, 10 * 60 * 1000);
-  if (!limited.ok) return rateLimitResponse(limited.resetAt);
+  const limitedPorIp = checkRateLimit(`contacto:ip:${ip}`, 30, 10 * 60 * 1000);
+  if (!limitedPorIp.ok) return rateLimitResponse(limitedPorIp.resetAt);
+
+  const limitedPorCuenta = checkRateLimit(`contacto:user:${session.userId}`, 30, 10 * 60 * 1000);
+  if (!limitedPorCuenta.ok) return rateLimitResponse(limitedPorCuenta.resetAt);
 
   const { id } = await params;
   const contacto = getAgenteContacto(id);
