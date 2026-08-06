@@ -64,8 +64,10 @@ export const LANDMARKS_VERIFICADO_EN = '2026-08-04';
  * Aeropuerto VSA, ITVH, Zona Arqueológica Comalcalco, Plaza Sendero, Plaza
  * Cristal, Plaza Mallorca, Catedral del Señor de Tabasco, Palacio de
  * Gobierno, Congreso del Estado, Museo Carlos Pellicer, Parque Juárez,
- * Estadio Centenario 27 de Febrero, Mercado Pino Suárez — estas últimas 6
- * vía Nominatim/OpenStreetMap, auditoría 2026-08-06) — el resto son una ubicación aproximada dentro de
+ * Estadio Centenario 27 de Febrero, Mercado Pino Suárez, Instituto Juárez,
+ * Centro de Convenciones, Casa de los Azulejos, Museo Papagayo, Plaza Las
+ * Américas — estas últimas 11 vía Nominatim/OpenStreetMap, auditoría
+ * 2026-08-06) — el resto son una ubicación aproximada dentro de
  * la colonia/calle real, situada a mano por geografía conocida de la
  * ciudad, no un geocoder. Suficiente para un radio de "cerca de" de 1-5 km,
  * no para precisión de metros. Si algo se ve mal ubicado, ajustar aquí es el
@@ -107,6 +109,17 @@ export const LANDMARKS: Landmark[] = [
   // Sin alias corto "estadio" — sería ambiguo si algún día se cataloga otro
   // (mismo criterio que universidad-olmeca/sector-carrizal más arriba).
   { key: 'estadio-centenario', label: 'Estadio Centenario 27 de Febrero', categoria: 'cultura', lat: 17.9767, lng: -92.9440, radioKm: 1.2, aliases: ['estadio centenario', 'estadio de los olmecas', 'ciudad deportiva', 'estadio de beisbol', 'estadio de béisbol'] },
+  // Segunda ronda de la misma auditoría (2026-08-06) — a partir de una tabla
+  // de referencia que compartió el usuario, verificada punto por punto
+  // contra Nominatim antes de agregar nada (no se copió tal cual). Un lugar
+  // de esa tabla, "Pirámide de Pemex" (Tabasco 2000), NO se agregó: no
+  // apareció con ninguna variante de búsqueda razonable en Nominatim, y
+  // adivinar su coordenada sería repetir el mismo error que causó el bug
+  // original de "Centro Histórico" en colonias.ts.
+  { key: 'instituto-juarez', label: 'Instituto Juárez', categoria: 'educacion', lat: 17.9889, lng: -92.9211, radioKm: 1, aliases: ['instituto juárez', 'instituto juarez'] },
+  { key: 'centro-convenciones', label: 'Centro de Convenciones Tabasco', categoria: 'cultura', lat: 17.9999, lng: -92.9465, radioKm: 1, aliases: ['centro de convenciones', 'convenciones'] },
+  { key: 'casa-azulejos', label: 'Casa de los Azulejos (Museo de Historia de Tabasco)', categoria: 'cultura', lat: 17.9884, lng: -92.9184, radioKm: 1, aliases: ['casa de los azulejos', 'museo de historia de tabasco'] },
+  { key: 'museo-papagayo', label: 'Museo Interactivo Papagayo', categoria: 'cultura', lat: 18.0059, lng: -92.9659, radioKm: 1.2, aliases: ['museo papagayo', 'papagayo'] },
 
   // Villahermosa (Centro) — educación
   { key: 'ujat', label: 'UJAT', categoria: 'educacion', lat: 17.9910, lng: -92.9170, radioKm: 1.5, aliases: ['universidad juárez autónoma de tabasco'] },
@@ -151,6 +164,7 @@ export const LANDMARKS: Landmark[] = [
   // corto ambiguo entre un landmark y una colonia hace que ambos filtros se
   // apliquen a la vez y no quede ningún resultado posible.
   { key: 'mercado-pino-suarez', label: 'Mercado José María Pino Suárez', categoria: 'comercial', lat: 17.9964, lng: -92.9144, radioKm: 1, aliases: ['mercado pino suárez', 'mercado pino suarez'] },
+  { key: 'plaza-las-americas', label: 'Plaza Las Américas', categoria: 'comercial', lat: 18.0144, lng: -92.9190, radioKm: 1.2, aliases: ['plaza las américas', 'plaza las americas', 'las américas', 'las americas'] },
 
   // Villahermosa (Centro) — transporte
   { key: 'aeropuerto-vsa', label: 'Aeropuerto de Villahermosa (VSA)', categoria: 'transporte', lat: 17.9970, lng: -92.8174, radioKm: 4, aliases: ['aeropuerto', 'vsa'] },
