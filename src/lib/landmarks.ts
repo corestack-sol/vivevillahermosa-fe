@@ -67,10 +67,11 @@ export const LANDMARKS_VERIFICADO_EN = '2026-08-04';
  * Estadio Centenario 27 de Febrero, Mercado Pino Suárez, Instituto Juárez,
  * Centro de Convenciones, Casa de los Azulejos, Museo Papagayo, Plaza Las
  * Américas, Central de Abastos, Mercado Gregorio Méndez, Mercado Florentino
- * Hernández, Central de Autobuses de Tabasco, Santuario de Cupilco — estas
- * últimas 16 vía Nominatim/OpenStreetMap, auditoría 2026-08-06; Tapijulapa
- * es solo a nivel pueblo, no se encontró el templo específico) — el resto
- * son una ubicación aproximada dentro de
+ * Hernández, Central de Autobuses de Tabasco, Santuario de Cupilco, Villa
+ * La Venta, Parque Estatal Agua Blanca, Boca del Cerro, Parroquia Santiago
+ * Apóstol de Teapa — estas últimas 20 vía Nominatim/OpenStreetMap,
+ * auditoría 2026-08-06; Tapijulapa es solo a nivel pueblo, no se encontró
+ * el templo específico) — el resto son una ubicación aproximada dentro de
  * la colonia/calle real, situada a mano por geografía conocida de la
  * ciudad, no un geocoder. Suficiente para un radio de "cerca de" de 1-5 km,
  * no para precisión de metros. Si algo se ve mal ubicado, ajustar aquí es el
@@ -213,16 +214,33 @@ export const LANDMARKS: Landmark[] = [
   // NotebookLM señaló que "Tapijulapa" ya se usa como sinónimo de toda la
   // zona turística de la sierra, no solo el templo — el alias queda así a
   // propósito.
-  { key: 'tapijulapa', label: 'Tapijulapa', categoria: 'cultura', lat: 17.4603, lng: -92.7788, radioKm: 2, aliases: ['templo de santiago apóstol', 'templo de tapijulapa'] },
+  //
+  // "templo de santiago apóstol" (sin más contexto) se quitó de los alias:
+  // hay OTRA iglesia real con el mismo nombre en Teapa (ver más abajo,
+  // 'parroquia-santiago-apostol-teapa'), verificada por separado — mismo
+  // problema de dos lugares reales que comparten nombre, otra vez.
+  { key: 'tapijulapa', label: 'Tapijulapa', categoria: 'cultura', lat: 17.4603, lng: -92.7788, radioKm: 2, aliases: ['templo de tapijulapa', 'santiago apóstol de tapijulapa'] },
 
   // Otros municipios — punto de referencia del centro urbano
   { key: 'cardenas-centro', label: 'centro de Cárdenas', categoria: 'centro', lat: 18.0037, lng: -93.3737, radioKm: 2.5 },
   { key: 'nacajuca-centro', label: 'centro de Nacajuca', categoria: 'centro', lat: 17.9936, lng: -93.0716, radioKm: 2.5 },
   { key: 'jalpa-centro', label: 'centro de Jalpa de Méndez', categoria: 'centro', lat: 18.1762, lng: -93.0656, radioKm: 2.5 },
   { key: 'huimanguillo-centro', label: 'centro de Huimanguillo', categoria: 'centro', lat: 17.8355, lng: -93.3826, radioKm: 2.5 },
+  // "La Venta" — la advertencia de ambigüedad más importante de esta ronda:
+  // Villa La Venta (aquí, pueblo real a ~130km de Villahermosa, verificado)
+  // NO es lo mismo que "Parque Museo La Venta" (Villahermosa, ya
+  // catalogado arriba). Ninguno de los dos lleva el alias corto "la venta"
+  // — exactamente el mismo criterio que ya se usa en todo este archivo
+  // para nombres compartidos entre dos lugares reales distintos.
+  { key: 'villa-la-venta', label: 'Villa La Venta', categoria: 'centro', lat: 18.0999, lng: -94.0457, radioKm: 3, aliases: ['villa la venta', 'la venta huimanguillo'] },
   { key: 'centla-centro', label: 'centro de Frontera (Centla)', categoria: 'centro', lat: 18.3892, lng: -92.5917, radioKm: 2.5 },
   { key: 'macuspana-centro', label: 'centro de Macuspana', categoria: 'centro', lat: 17.7633, lng: -92.5936, radioKm: 2.5 },
+  { key: 'agua-blanca', label: 'Parque Estatal Agua Blanca', categoria: 'cultura', lat: 17.6123, lng: -92.4590, radioKm: 2, aliases: ['agua blanca', 'cascadas de agua blanca'] },
   { key: 'tenosique-centro', label: 'centro de Tenosique', categoria: 'centro', lat: 17.4743, lng: -91.4241, radioKm: 2.5 },
+  // "Boca del Cerro" es tanto un puente/cañón como el nombre del poblado —
+  // dos nodos de OSM cercanos pero no idénticos (~6km entre sí); se usó el
+  // que corresponde al poblado real, no una carretera aislada.
+  { key: 'boca-del-cerro', label: 'Boca del Cerro', categoria: 'cultura', lat: 17.4532, lng: -91.4288, radioKm: 3, aliases: ['boca del cerro'] },
   // Los siguientes 7 faltaban por completo — de los 17 municipios que
   // reconoce la plataforma, estos eran los únicos siete sin ni un solo
   // landmark de referencia. Coordenadas de municipalities.json (mismo
@@ -235,6 +253,10 @@ export const LANDMARKS: Landmark[] = [
   { key: 'jonuta-centro', label: 'centro de Jonuta', categoria: 'centro', lat: 18.0839, lng: -92.1292, radioKm: 2.5 },
   { key: 'tacotalpa-centro', label: 'centro de Tacotalpa', categoria: 'centro', lat: 17.5972, lng: -92.8189, radioKm: 2.5 },
   { key: 'teapa-centro', label: 'centro de Teapa', categoria: 'centro', lat: 17.5428, lng: -92.9558, radioKm: 2.5 },
+  // Verificada vía Nominatim — iglesia real de Teapa, DISTINTA de la de
+  // Tapijulapa (ver nota junto a 'tapijulapa' más arriba). Alias con
+  // "teapa" explícito a propósito, nunca "santiago apóstol" solo.
+  { key: 'parroquia-santiago-apostol-teapa', label: 'Parroquia Santiago Apóstol (Teapa)', categoria: 'cultura', lat: 17.5488, lng: -92.9535, radioKm: 1, aliases: ['iglesia de teapa', 'parroquia de teapa', 'santiago apóstol de teapa'] },
   { key: 'jalapa-centro', label: 'centro de Jalapa', categoria: 'centro', lat: 17.7000, lng: -92.8000, radioKm: 2.5 },
 ];
 
