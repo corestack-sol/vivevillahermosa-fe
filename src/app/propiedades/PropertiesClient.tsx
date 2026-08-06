@@ -17,6 +17,7 @@ import { matchColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
 import { interpretarBusqueda } from '@/lib/interpretarBusqueda';
 import { aplicarOverridesPublicos, PROPIEDADES_LOCALES_EVENT } from '@/lib/propiedadesLocales';
 import { ESTADO_OVERRIDE_EVENT } from '@/lib/estadoOverrides';
+import { ExploreZonasCta } from '@/components/search/ExploreZonasCta';
 
 const PER_PAGE = 12;
 
@@ -316,18 +317,21 @@ export function PropertiesClient({ allProperties }: Props) {
                     ))}
                   </div>
                 ) : results.length === 0 ? (
-                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center justify-center py-20 px-6 text-center">
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center py-16 px-6">
                     <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mb-4">
                       <Search size={28} className="text-gray-300" strokeWidth={1.5} />
                     </div>
-                    <h3 className="font-heading font-bold text-gray-800 text-lg mb-2">Sin resultados</h3>
-                    <p className="text-gray-400 text-sm mb-6 max-w-sm leading-relaxed">
-                      No encontramos propiedades con esos filtros. Prueba quitando alguno — puede haber algo que no habías considerado.
+                    <h3 className="font-heading font-bold text-gray-800 text-lg mb-2 text-center">Sin resultados</h3>
+                    <p className="text-gray-400 text-sm mb-2 max-w-sm leading-relaxed text-center">
+                      No encontramos propiedades con esos filtros.
                     </p>
                     <button onClick={clearFilters}
-                      className="bg-brand hover:bg-brand-dark text-white font-semibold text-sm px-6 py-2.5 rounded-xl transition-colors">
-                      Ver todas las propiedades
+                      className="text-brand font-semibold text-sm hover:underline mb-8">
+                      Quitar filtros
                     </button>
+                    <div className="w-full max-w-lg">
+                      <ExploreZonasCta />
+                    </div>
                   </div>
                 ) : (
                   <>
