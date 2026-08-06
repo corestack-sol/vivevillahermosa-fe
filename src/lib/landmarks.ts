@@ -62,7 +62,7 @@ export const LANDMARKS_VERIFICADO_EN = '2026-08-04';
  * ⚠️ Direcciones verificadas por fuente pública; coordenadas exactas SOLO
  * cuando la fuente las dio en decimal (Galerías Tabasco, Altabrisa,
  * Aeropuerto VSA, ITVH, Zona Arqueológica Comalcalco, Plaza Sendero, Plaza
- * Cristal, Plaza Mallorca) — el resto son una ubicación aproximada dentro de
+ * Cristal, Plaza Mallorca, Catedral del Señor de Tabasco) — el resto son una ubicación aproximada dentro de
  * la colonia/calle real, situada a mano por geografía conocida de la
  * ciudad, no un geocoder. Suficiente para un radio de "cerca de" de 1-5 km,
  * no para precisión de metros. Si algo se ve mal ubicado, ajustar aquí es el
@@ -83,6 +83,12 @@ export const LANDMARKS: Landmark[] = [
   { key: 'parque-tabasco', label: 'Parque Tabasco', categoria: 'cultura', lat: 17.9928, lng: -92.9310, radioKm: 2, aliases: ['parque tomás garrido', 'parque tomas garrido', 'parque tomás garrido canabal'] },
   { key: 'parque-la-venta', label: 'Parque Museo La Venta', categoria: 'cultura', lat: 17.9887, lng: -92.9295, radioKm: 1.5, aliases: ['parque la venta', 'museo la venta'] },
   { key: 'malecon', label: 'Malecón de Villahermosa', categoria: 'cultura', lat: 17.9880, lng: -92.9460, radioKm: 1.5, aliases: ['malecón', 'malecon'] },
+  // Coordenada exacta vía Nominatim/OpenStreetMap (verificada 2026-08-06) —
+  // agregada después de que una búsqueda real ("cerca de la catedral de
+  // tabasco") diera 0 resultados: la IA no puede reconocer un landmark que
+  // no está en este catálogo, sin importar qué tan conocido sea en la vida
+  // real.
+  { key: 'catedral', label: 'Catedral del Señor de Tabasco', categoria: 'cultura', lat: 17.9896, lng: -92.9282, radioKm: 1, aliases: ['catedral', 'catedral de tabasco', 'catedral de villahermosa'] },
   { key: 'cicom', label: 'Zona CICOM', categoria: 'cultura', lat: 17.9800, lng: -92.9280, radioKm: 1.2 },
   { key: 'planetario', label: 'Planetario Tabasco 2000', categoria: 'cultura', lat: 18.0020, lng: -92.9300, radioKm: 1 },
   { key: 'yumka', label: 'Yumká', categoria: 'cultura', lat: 17.9377, lng: -92.8983, radioKm: 2 },
