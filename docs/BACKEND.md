@@ -51,7 +51,7 @@
 
 ## 1. Modelo de datos completo
 
-Transcrito de `prisma/schema.prisma` — el backend nuevo no tiene por qué usar Prisma, pero esta es la forma de datos que el frontend ya espera en cada respuesta. Los modelos 1-10 ya existen y funcionan hoy (dentro de Next.js); `Property` (11) es nuevo.
+> **`prisma/schema.prisma` (en la raíz de este mismo repo) es la fuente de verdad exacta — este resumen en prosa es solo para lectura rápida.** Ahí están los tipos precisos, `@default`, `@unique`, relaciones (`@relation`, `onDelete: Cascade`) e índices compuestos (`@@index`) tal cual, sin resumir. Los modelos 1-10 de abajo (`User` hasta `ColoniaDescubierta`) son una transcripción de los primeros ~225 líneas del archivo — ya existen y funcionan hoy dentro de Next.js. El modelo 11 (`Property`) es el sketch sugerido que está comentado (`//`) al final del mismo archivo — búscalo con `grep -n "MODELO Property" prisma/schema.prisma` — es nuevo, no existe como tabla real todavía en ningún lado. El backend nuevo no tiene por qué usar Prisma ni SQLite — pero esta es la forma de datos exacta que el frontend ya espera en cada respuesta, así que hay que replicarla, no reinventarla.
 
 **1. `User`**
 `id, email (único), password (nullable — vacío si es cuenta OAuth), nombre, rol ('buscador' | 'agente'), googleId? (único), facebookId? (único), avatar?, bloqueado (bool, default false), bloqueadoMotivo?, bloqueadoEn?, createdAt, updatedAt`
