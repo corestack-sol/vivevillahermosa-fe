@@ -191,6 +191,12 @@ export const COLONIAS_COORDS: ColoniaCoord[] = [
   { key: 'villa-de-las-flores', label: 'Villa de las Flores', municipio: 'Centro', lat: 18.0276, lng: -92.8994, radioKm: RADIO_COLONIA_KM },
   { key: 'villa-de-los-arcos', label: 'Villa de los Arcos', municipio: 'Centro', lat: 17.9764, lng: -92.9592, radioKm: RADIO_COLONIA_KM },
   { key: 'villa-de-los-trabajadores', label: 'Villa de los Trabajadores', municipio: 'Centro', lat: 17.9900, lng: -92.9604, radioKm: RADIO_COLONIA_KM },
+  // Verificada vía Nominatim (2026-08-06, misma auditoría de landmarks que
+  // originó "catedral" más arriba). Administrativamente es Nacajuca, no
+  // Centro — a propósito, aunque en la práctica ya se percibe como una
+  // colonia más de la zona conurbada de Villahermosa (fraccionamiento
+  // grande y consolidado, no un pueblo aparte).
+  { key: 'bosques-de-saloya', label: 'Bosques de Saloya', municipio: 'Nacajuca', lat: 18.0137, lng: -92.9598, radioKm: RADIO_COLONIA_KM },
 ];
 
 function normalizarBase(s: string): string {

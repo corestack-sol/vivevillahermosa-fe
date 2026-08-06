@@ -67,8 +67,10 @@ export const LANDMARKS_VERIFICADO_EN = '2026-08-04';
  * Estadio Centenario 27 de Febrero, Mercado Pino Suárez, Instituto Juárez,
  * Centro de Convenciones, Casa de los Azulejos, Museo Papagayo, Plaza Las
  * Américas, Central de Abastos, Mercado Gregorio Méndez, Mercado Florentino
- * Hernández — estas últimas 14 vía Nominatim/OpenStreetMap, auditoría
- * 2026-08-06) — el resto son una ubicación aproximada dentro de
+ * Hernández, Central de Autobuses de Tabasco, Santuario de Cupilco — estas
+ * últimas 16 vía Nominatim/OpenStreetMap, auditoría 2026-08-06; Tapijulapa
+ * es solo a nivel pueblo, no se encontró el templo específico) — el resto
+ * son una ubicación aproximada dentro de
  * la colonia/calle real, situada a mano por geografía conocida de la
  * ciudad, no un geocoder. Suficiente para un radio de "cerca de" de 1-5 km,
  * no para precisión de metros. Si algo se ve mal ubicado, ajustar aquí es el
@@ -178,15 +180,40 @@ export const LANDMARKS: Landmark[] = [
 
   // Villahermosa (Centro) — transporte
   { key: 'aeropuerto-vsa', label: 'Aeropuerto de Villahermosa (VSA)', categoria: 'transporte', lat: 17.9970, lng: -92.8174, radioKm: 4, aliases: ['aeropuerto', 'vsa'] },
-  { key: 'central-camionera', label: 'Central de Autobuses ADO', categoria: 'transporte', lat: 17.9910, lng: -92.9330, radioKm: 1.5, aliases: ['ado', 'central camionera', 'central de autobuses'] },
+  // "central de autobuses" (genérico, sin "ADO" ni "de Tabasco") se quitó
+  // de los alias: dejó de ser inequívoco al agregar 'central-autobuses-tabasco'
+  // más abajo — dos terminales reales distintas con nombre parecido, mismo
+  // problema que ya se evitó con "olmeca"/"carrizal"/"pino suárez".
+  { key: 'central-camionera', label: 'Central de Autobuses ADO', categoria: 'transporte', lat: 17.9910, lng: -92.9330, radioKm: 1.5, aliases: ['ado', 'central camionera'] },
+  // Verificada vía Nominatim — terminal real y DISTINTA de la ADO de arriba
+  // (rutas locales/segunda clase, no la misma empresa ni el mismo lugar).
+  // NotebookLM la llamó "Terminal de Autobuses de Tabasco" en la
+  // investigación que la originó; el nombre real tageado en OSM es este.
+  { key: 'central-autobuses-tabasco', label: 'Central de Autobuses de Tabasco', categoria: 'transporte', lat: 17.9999684, lng: -92.9186152, radioKm: 1.5, aliases: ['central de autobuses de tabasco', 'terminal de segunda', 'central de segunda'] },
 
   // Comalcalco
   { key: 'zona-arqueologica-comalcalco', label: 'Zona Arqueológica de Comalcalco', categoria: 'cultura', lat: 18.2792, lng: -93.2010, radioKm: 2, aliases: ['zona arqueológica comalcalco', 'ruinas de comalcalco'] },
   { key: 'comalcalco-centro', label: 'centro de Comalcalco', categoria: 'centro', lat: 18.2766, lng: -93.2145, radioKm: 2.5 },
+  // Verificada vía Nominatim — iglesia real y muy conocida por sus colores,
+  // en la localidad de Cupilco (no en la cabecera municipal).
+  { key: 'santuario-cupilco', label: 'Santuario La Asunción de María (Cupilco)', categoria: 'cultura', lat: 18.2382, lng: -93.1270, radioKm: 1.5, aliases: ['iglesia de cupilco', 'santuario de cupilco', 'cupilco'] },
 
   // Paraíso
   { key: 'puerto-dos-bocas', label: 'Puerto Dos Bocas', categoria: 'transporte', lat: 18.3333, lng: -93.1833, radioKm: 5 },
   { key: 'paraiso-centro', label: 'centro de Paraíso', categoria: 'centro', lat: 18.3999, lng: -93.2073, radioKm: 2.5 },
+  // "El Bellote" (colonia ya catalogada en colonias.ts, no se repite aquí
+  // como landmark — mismo lugar, evitar el mismo tipo de colisión de
+  // "olmeca"/"carrizal") cubre también lo que NotebookLM llamó "Corredor
+  // Gastronómico El Bellote": es la misma ubicación, no un lugar aparte.
+
+  // Tacotalpa
+  // Verificada solo a nivel pueblo (Tapijulapa) — no se encontró en
+  // Nominatim la coordenada específica del Templo de Santiago Apóstol, así
+  // que se usa el centro del pueblo en vez de adivinar el edificio exacto.
+  // NotebookLM señaló que "Tapijulapa" ya se usa como sinónimo de toda la
+  // zona turística de la sierra, no solo el templo — el alias queda así a
+  // propósito.
+  { key: 'tapijulapa', label: 'Tapijulapa', categoria: 'cultura', lat: 17.4603, lng: -92.7788, radioKm: 2, aliases: ['templo de santiago apóstol', 'templo de tapijulapa'] },
 
   // Otros municipios — punto de referencia del centro urbano
   { key: 'cardenas-centro', label: 'centro de Cárdenas', categoria: 'centro', lat: 18.0037, lng: -93.3737, radioKm: 2.5 },
@@ -196,6 +223,19 @@ export const LANDMARKS: Landmark[] = [
   { key: 'centla-centro', label: 'centro de Frontera (Centla)', categoria: 'centro', lat: 18.3892, lng: -92.5917, radioKm: 2.5 },
   { key: 'macuspana-centro', label: 'centro de Macuspana', categoria: 'centro', lat: 17.7633, lng: -92.5936, radioKm: 2.5 },
   { key: 'tenosique-centro', label: 'centro de Tenosique', categoria: 'centro', lat: 17.4743, lng: -91.4241, radioKm: 2.5 },
+  // Los siguientes 7 faltaban por completo — de los 17 municipios que
+  // reconoce la plataforma, estos eran los únicos siete sin ni un solo
+  // landmark de referencia. Coordenadas de municipalities.json (mismo
+  // criterio "a mano por geografía conocida" que ya aplica a los 7 de
+  // arriba, no Nominatim — son solo el punto de referencia del centro
+  // urbano, no un lugar específico).
+  { key: 'cunduacan-centro', label: 'centro de Cunduacán', categoria: 'centro', lat: 18.0781, lng: -93.1647, radioKm: 2.5 },
+  { key: 'emiliano-zapata-centro', label: 'centro de Emiliano Zapata', categoria: 'centro', lat: 17.7492, lng: -91.7695, radioKm: 2.5 },
+  { key: 'balancan-centro', label: 'centro de Balancán', categoria: 'centro', lat: 17.8000, lng: -91.5000, radioKm: 2.5 },
+  { key: 'jonuta-centro', label: 'centro de Jonuta', categoria: 'centro', lat: 18.0839, lng: -92.1292, radioKm: 2.5 },
+  { key: 'tacotalpa-centro', label: 'centro de Tacotalpa', categoria: 'centro', lat: 17.5972, lng: -92.8189, radioKm: 2.5 },
+  { key: 'teapa-centro', label: 'centro de Teapa', categoria: 'centro', lat: 17.5428, lng: -92.9558, radioKm: 2.5 },
+  { key: 'jalapa-centro', label: 'centro de Jalapa', categoria: 'centro', lat: 17.7000, lng: -92.8000, radioKm: 2.5 },
 ];
 
 export function getLandmark(key: string): Landmark | undefined {
