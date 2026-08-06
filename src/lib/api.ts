@@ -153,14 +153,21 @@ function propertiesInZone(all: Property[], z: Zone): Property[] {
  * funciones lo hacen también disponible para el listado (`/zonas`), y caen
  * de vuelta al valor editorial solo cuando de verdad no hay propiedades
  * reales que promediar (para no mostrar $0).
+ *
+ * Los municipios (`getMunicipalitiesWithLiveStats`) NO tienen precio
+ * promedio — se quitó a propósito: con 1-2 propiedades por municipio en el
+ * catálogo, un "promedio" no es más que el precio de esa única propiedad
+ * disfrazado de estadística de mercado, y el valor editorial de respaldo
+ * tampoco salía de ningún dato real. Mismo criterio que ya exige
+ * `getPriceContext` (`totalComparables >= 2` antes de decir algo) — aquí,
+ * en vez de imponer un mínimo de muestra, se decidió no mostrar ningún
+ * precio a nivel municipio por ahora.
  */
 export function getMunicipalitiesWithLiveStats(): Municipality[] {
   const all = getAllProperties();
   return getAllMunicipalities().map((m) => {
     const props = propertiesInMunicipality(all, m);
-    if (props.length === 0) return { ...m, propiedades: 0 };
-    const precioPromedio = Math.round(props.reduce((sum, p) => sum + p.precio, 0) / props.length);
-    return { ...m, propiedades: props.length, precioPromedio };
+    return { ...m, propiedades: props.length };
   });
 }
 
@@ -168,7 +175,12 @@ export function getZonesWithLiveStats(): Zone[] {
   const all = getAllProperties();
   return getAllZones().map((z) => {
     const props = propertiesInZone(all, z);
-    if (props.length === 0) return { ...z, propiedades: 0 };
+    // Mismo caso que getMunicipalitiesWithLiveStats de arriba: zones.json
+    // trae precios editoriales fijos que hay que apagar si de verdad no
+    // queda ninguna propiedad real detrás — no visible hoy (ninguna zona
+    // del catálogo de muestra tiene 0), pero es el mismo bug latente si una
+    // colonia se queda sin propiedades activas.
+    if (props.length === 0) return { ...z, propiedades: 0, precioPromedioRenta: 0, precioPromedioVenta: 0 };
     const rentas = props.filter((p) => p.operacion === 'renta').map((p) => p.precio);
     const ventas = props.filter((p) => p.operacion === 'venta').map((p) => p.precio);
     return {

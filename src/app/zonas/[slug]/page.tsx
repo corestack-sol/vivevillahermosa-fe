@@ -121,28 +121,20 @@ export default async function ZonaDetailPage({ params }: Props) {
               <p className="text-2xl font-display font-black text-brand">{zoneProperties.length}</p>
               <p className="text-xs text-gray-600 mt-1">Propiedades</p>
             </div>
-            {zone && (
-              <>
-                <div className="bg-white border border-gray-200 rounded-2xl p-4 text-center">
-                  <p className="text-lg font-heading font-bold text-gray-800">
-                    {formatPrice(zone.precioPromedioRenta, 'renta')}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">Renta promedio</p>
-                </div>
-                <div className="bg-white border border-gray-200 rounded-2xl p-4 text-center">
-                  <p className="text-lg font-heading font-bold text-gray-800">
-                    {formatPrice(zone.precioPromedioVenta, 'venta')}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">Venta promedio</p>
-                </div>
-              </>
-            )}
-            {municipality && municipality.precioPromedio > 0 && (
+            {zone && zone.precioPromedioRenta > 0 && (
               <div className="bg-white border border-gray-200 rounded-2xl p-4 text-center">
                 <p className="text-lg font-heading font-bold text-gray-800">
-                  {formatPrice(municipality.precioPromedio, 'venta')}
+                  {formatPrice(zone.precioPromedioRenta, 'renta')}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">Precio promedio</p>
+                <p className="text-xs text-gray-500 mt-1">Renta promedio</p>
+              </div>
+            )}
+            {zone && zone.precioPromedioVenta > 0 && (
+              <div className="bg-white border border-gray-200 rounded-2xl p-4 text-center">
+                <p className="text-lg font-heading font-bold text-gray-800">
+                  {formatPrice(zone.precioPromedioVenta, 'venta')}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Venta promedio</p>
               </div>
             )}
           </div>

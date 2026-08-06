@@ -157,13 +157,10 @@ export default function ZonasPage() {
                 {mun.nombre}
               </h3>
               <p className="text-xs text-gray-400 line-clamp-2 mb-4 leading-relaxed min-h-[2rem]">{mun.descripcion}</p>
-              <div className="flex items-center justify-between pt-3 border-t border-gray-50">
+              <div className="pt-3 border-t border-gray-50">
                 <span className={`text-xs font-semibold ${mun.propiedades > 0 ? 'text-brand' : 'text-gray-300'}`}>
                   {mun.propiedades > 0 ? `${mun.propiedades} propiedad${mun.propiedades !== 1 ? 'es' : ''}` : 'Sin propiedades'}
                 </span>
-                {mun.precioPromedio > 0 && (
-                  <span className="text-xs text-gray-400">~{formatPrice(mun.precioPromedio, 'venta')}</span>
-                )}
               </div>
             </Link>
           ))}

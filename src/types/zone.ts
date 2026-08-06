@@ -5,7 +5,6 @@ export interface Municipality {
   lat: number;
   lng: number;
   propiedades: number;
-  precioPromedio: number;
   descripcion: string;
   foto: string;
   cercaDosoBocas?: boolean;
