@@ -39,7 +39,7 @@
 6. [Citas y configuración de agenda](#6-citas-y-configuración-de-agenda)
 7. [Perfil de inmobiliaria](#7-perfil-de-inmobiliaria)
 8. [IA (proxy a OpenRouter/Gemini)](#8-ia-proxy-a-openroutergemini)
-9. [Colonias descubiertas](#9-colonias-descubiertas)
+9. [Colonias descubiertas](#9-colonias-descubiertas) · [9.1 Colonias más solicitadas — NUEVO](#91-colonias-más-solicitadas--nuevo-no-existe-hoy)
 10. [Contacto y reportes sobre una propiedad](#10-contacto-y-reportes-sobre-una-propiedad)
 11. [Directorio de servicios — ⏸️ EN PAUSA](#11-directorio-de-servicios--en-pausa)
 12. [Stats del dashboard](#12-stats-del-dashboard)
@@ -250,6 +250,24 @@ El backend nuevo necesita sus propias credenciales de OpenRouter/Gemini y replic
 | `/colonias/descubiertas` | GET | No | Array de `ColoniaDescubierta` — `Cache-Control: public, max-age=300, stale-while-revalidate=3600` |
 
 No hay un endpoint `POST` propio — nuevas filas se crean como efecto secundario de `/ia/busqueda-inteligente` cuando alguien menciona una colonia que no está en el catálogo estático del frontend: se geocodifica contra Nominatim (OpenStreetMap) con un filtro de dos niveles (solo `place/neighbourhood` o `leisure/park`, validando `state === 'Tabasco'` y el municipio contra la lista de §1) — si pasa el filtro, se guarda; si no, se descarta en silencio. Rate-limitado a ~1 request/segundo contra Nominatim (política de uso de OSM).
+
+### 9.1 Colonias más solicitadas — NUEVO, no existe hoy
+
+`/zonas` muestra tarjetas de colonias con un ícono de llama en la que tiene más actividad — hoy ese ranking (`getColoniasRankedByPropiedades`, `src/lib/api.ts`) es por **oferta** (cuántas propiedades activas tiene la colonia), que es real y dinámico, pero **no** es lo mismo que "más solicitada/con más movimiento del momento" (demanda). Verificado que ese segundo dato no existe en ningún lado de la plataforma: cero modelos de eventos en `prisma/schema.prisma`, cero integración de analytics en `layout.tsx`. A propósito no se fabricó del lado del frontend — mostrarle a un visitante real un ícono de "tendencia" con un número inventado repetiría el mismo problema que ya hizo que el ranking público de inmobiliarias se dejara en pausa (ver `docs/plan-inmobiliarias.md`): nunca presentarle a un usuario real un dato fabricado como si fuera real.
+
+**Lo que hace falta construir:**
+1. Un registro de eventos (nuevo modelo, ej. `SolicitudColonia`: `id, coloniaKey, municipio, tipo ('busqueda' | 'vista_propiedad' | 'contacto'), createdAt`) — se escribe en 3 momentos que ya existen en el código y solo hay que instrumentar:
+   - Cuando `/ia/busqueda-inteligente` (o su heurística de respaldo) resuelve una colonia desde la consulta del usuario (mismo punto donde hoy se crea `ColoniaDescubierta` si la colonia es nueva — ver 9 arriba).
+   - Cuando se sirve `GET /propiedades/:id` con éxito (colonia = `property.colonia`).
+   - Cuando se sirve `GET /propiedades/:id/contacto` con éxito (§10) — la señal de intención más fuerte de las tres.
+2. Un endpoint de agregación, ej. `GET /colonias/tendencia`, que cuenta esos eventos agrupados por colonia dentro de una ventana de tiempo reciente y devuelve el ranking completo (no solo el top 9 — el frontend decide cuántas tarjetas mostrar, ver abajo) — `Cache-Control` corto (unos minutos) porque el dato cambia seguido.
+3. **Decisión abierta, no la asumas:** cuánto dura "del momento" (¿últimas 24h? ¿7 días?) — es una decisión de producto, coordinar con el equipo antes de implementar la ventana.
+
+**Los dos requisitos exactos, para que no quede ambiguo:**
+- **Badge dinámico** — el ícono de llama es solo para la(s) colonia(s) que llegan o superan el TOP de la lista de más solicitadas (empate incluido) — no es "las 9 de la tarjeta", es específicamente la primera posición del ranking de demanda.
+- **Tarjetas dinámicas de "más solicitadas"** — las tarjetas grandes de `/zonas` (máximo 9, `MAX_CARDS` en `zonas/page.tsx`) se ordenan por este mismo ranking de demanda, no por cantidad de propiedades. El resto de colonias con actividad pero fuera del top 9 se siguen viendo como chip debajo (mismo patrón que hoy).
+
+**Cambio en el frontend cuando este endpoint exista:** en `src/app/zonas/page.tsx`, reemplazar `coloniasRanked` (hoy `getColoniasRankedByPropiedades()`, por oferta) por el resultado de `GET /colonias/tendencia` (por demanda) para decidir tanto el orden de las tarjetas como a cuál le toca la llama — el resto del componente (slice a 9, chips, tooltip) ya está listo, es un cambio de una sola fuente de datos. El tooltip vuelve a decir "más solicitada ahora mismo" en cuanto el dato sea real (hoy dice honestamente "más propiedades publicadas").
 
 ---
 

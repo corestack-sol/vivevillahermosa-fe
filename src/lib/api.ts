@@ -198,6 +198,11 @@ export interface ColoniaCard {
  * así que según crece el catálogo el orden se recalcula solo, sin que nadie
  * tenga que tocar zones.json. Las colonias sin propiedades no aparecen —
  * una tarjeta o chip que lleva a "nada" no le sirve a nadie.
+ *
+ * Ranking por OFERTA (cuántas propiedades activas tiene la colonia), no por
+ * DEMANDA (búsquedas/vistas/contactos) — ese segundo dato no existe todavía
+ * en la plataforma, ver docs/BACKEND.md §9 para el requisito real ("colonias
+ * más solicitadas del momento").
  */
 export function getColoniasRankedByPropiedades(): ColoniaCard[] {
   const all = getAllProperties();

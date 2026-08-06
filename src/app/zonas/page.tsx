@@ -20,9 +20,21 @@ export default function ZonasPage() {
   const coloniasRanked = getColoniasRankedByPropiedades();
   const coloniasCards = coloniasRanked.slice(0, MAX_CARDS);
   const coloniasChips = coloniasRanked.slice(MAX_CARDS);
-  // Solo se marca "con más actividad" cuando de verdad se despega del resto
-  // (no cuando todas empatan en 1 propiedad) — evita que la llama pierda
-  // significado si el catálogo apenas empieza.
+  // Solo se marca "con más propiedades" cuando de verdad se despega del
+  // resto (no cuando todas empatan en 1 propiedad) — evita que la llama
+  // pierda significado si el catálogo apenas empieza.
+  //
+  // ⚠️ BACKEND (docs/BACKEND.md §9): esto mide OFERTA (cuántas propiedades
+  // activas tiene la colonia), no DEMANDA — no hay ningún rastreo real de
+  // búsquedas/vistas/contactos por colonia en la plataforma hoy (verificado:
+  // cero modelos de eventos en prisma/schema.prisma, cero analytics en
+  // layout.tsx). Es dinámico y honesto para lo que mide, pero NO es lo mismo
+  // que "colonia más solicitada ahora mismo" — a propósito no se fabricó esa
+  // señal aquí: mostrarle a un visitante real un ícono de "tendencia" con un
+  // número inventado sería el mismo problema que ya evitó el ranking público
+  // de inmobiliarias (ver docs/plan-inmobiliarias.md). Cuando exista el
+  // endpoint real de tendencia (§9), reemplazar `coloniasRanked` por ese
+  // dato y el título del tooltip de abajo vuelve a decir "más solicitada".
   const maxPropiedades = coloniasCards[0]?.propiedades ?? 0;
 
   return (
@@ -48,7 +60,7 @@ export default function ZonasPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {coloniasCards.map((colonia) => {
             const href = colonia.slug ? `/zonas/${colonia.slug}` : `/propiedades?q=${encodeURIComponent(colonia.nombre)}`;
-            const conMasActividad = maxPropiedades > 1 && colonia.propiedades === maxPropiedades;
+            const conMasPropiedades = maxPropiedades > 1 && colonia.propiedades === maxPropiedades;
             return (
               <Link
                 key={colonia.nombre}
@@ -66,8 +78,8 @@ export default function ZonasPage() {
                     <span className="flex items-center gap-1 bg-white/15 backdrop-blur-sm text-white/90 text-[11px] font-semibold px-2.5 py-1 rounded-full">
                       <MapPin size={10} /> {colonia.municipio === 'Centro' ? 'Villahermosa' : colonia.municipio}
                     </span>
-                    {conMasActividad && (
-                      <span title="La colonia con más actividad ahora mismo" className="flex-shrink-0">
+                    {conMasPropiedades && (
+                      <span title="La colonia con más propiedades publicadas ahora mismo" className="flex-shrink-0">
                         <Flame size={18} className="text-amber-400" strokeWidth={2} />
                       </span>
                     )}
