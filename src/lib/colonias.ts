@@ -64,12 +64,18 @@ export const RADIO_COLONIA_KM = 1.3;
  * "por lo menos las del centro"; extender esto a los otros 9 municipios
  * de Tabasco es un trabajo aparte, del mismo tamaño que este.
  *
- * Nota de calidad de datos: "El Bellote" está aquí con municipio real
- * "Paraíso" (confirmado en OSM) — pero la propiedad de muestra que lo usa
- * (src/data/properties.json) tiene `municipio: "Nacajuca"`, que parece un
- * error de captura en el dato de muestra. No se corrigió aquí porque es un
- * problema distinto (dato de catálogo, no de coordenadas) — queda anotado
- * para revisión aparte.
+ * Nota de calidad de datos (corregida 2026-08-06): "El Bellote" está aquí
+ * con municipio real "Paraíso" (confirmado en OSM) — la propiedad de
+ * muestra `prop-010` (src/data/properties.json) tenía `colonia: "El
+ * Bellote"` con `municipio: "Nacajuca"`, una combinación imposible (título
+ * y descripción decían "Nacajuca, 20 min del centro", pero El Bellote está
+ * a 42km de Villahermosa). La coordenada `lat`/`lng` original de esa
+ * propiedad, antes de que la migración de privacidad de ubicación la
+ * reemplazara por `latPublico`/`lngPublico`, coincidía exacto con el
+ * centroide de Nacajuca en municipalities.json — confirma que la intención
+ * real era Nacajuca, no El Bellote. Se corrigió `prop-010` a
+ * `colonia: "Centro"` (mismo patrón que otros municipios sin catálogo
+ * propio, ver Cárdenas/Comalcalco más abajo en properties.json).
  *
  * Nota de precisión: "Framboyanes" (arriba, ya verificada) y un geocode
  * independiente hecho en esta ronda para lo mismo difieren por ~640m —
