@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand palette — Verde esmeralda Tabasco */
+  --color-brand:        #0D7065;
+  --color-brand-dark:   #0A4F48;
+  --color-brand-mid:    #0F8577;
+  --color-brand-light:  #14A097;
+  --color-brand-pale:   #E6F5F4;
+
+  /* Accent — Ámbar sol tabasqueño */
+  --color-accent:       #F59E0B;
+  --color-accent-dark:  #D97706;
+  --color-accent-pale:  #FEF3C7;
+
+  /* Semánticos */
+  --color-success:      #10B981;
+  --color-danger:       #EF4444;
+  --color-warning:      #F59E0B;
+  --color-sky:          #38BDF8;
+  --color-sand:         #F5F0E8;
+  --color-coral:        #F97316;
+
+  /* Fondo de página — un solo neutro cálido para todo el sitio (antes había
+     dos grises fríos distintos, gray-50 y #F0F4F8, sin relación con el
+     verde/ámbar de la marca ni con el hero claro). Este es un punto medio
+     entre blanco y sand, con una pizca del mismo calor. */
+  --color-page:         #F7F6F2;
+
+  /* Tipografía — una sola familia (Inter, vía next/font), variada por peso */
+  --font-display:  var(--font-inter), system-ui, sans-serif;
+  --font-heading:  var(--font-inter), system-ui, sans-serif;
+  --font-body:     var(--font-inter), system-ui, sans-serif;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    /* El color de fondo real lo pone la clase bg-page en layout.tsx —
+       aquí solo iba una segunda declaración de gris frío que competía
+       con ella (con menos especificidad, pero era confuso tener dos). */
+    color: #1E293B;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Fade-up animation for sections */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fadeUp 0.5s ease-out both;
+}
+
+/* Slide-in from left */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in {
+  animation: slideIn 0.4s ease-out both;
+}
+
+/* Number ticker pseudo-animation via CSS */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-count {
+  animation: countUp 0.6s ease-out both;
+}
+
+/* Leaflet fixes inside Next.js */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* Price display font */
+.font-price {
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
+
+/* Shimmer animation for skeletons */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Toast enter animation */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-toast-in {
+  animation: toastIn 0.25s ease-out both;
+}
+
+/* Carrusel horizontal infinito (feature bar del home) — el track duplica su
+   contenido y se desplaza exactamente 50%, así el punto donde "reinicia" es
+   invisible (el segundo set ya es idéntico al primero). El fade de entrada/
+   salida no es una animación de opacidad por ítem, sino una máscara CSS en
+   el contenedor — más barato y funciona sin importar cuántos ítems haya. */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 32s linear infinite;
+}
+
+/* Respeta la preferencia del sistema de reducir movimiento — aplica a todas
+   las animaciones decorativas de la app (hallazgo de accesibilidad). */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up, .animate-slide-in, .animate-count, .animate-shimmer, .animate-toast-in, .animate-marquee {
+    animation: none !important;
+  }
+}

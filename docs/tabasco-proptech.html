@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Plataforma Inmobiliaria Tabasco — Reporte de Viabilidad</title>
+  <link rel="stylesheet" href="shared.css"/>
+  <script src="editor.js" defer></script>
+  <style>
+    .phase-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 0.45rem; margin-top: 0.75rem; }
+    .phase-box { padding: 0.6rem 0.5rem; border-radius: 7px; border: 1px solid var(--blue-dim); background: rgba(0,174,239,0.04); text-align: center; }
+    .phase-num { font-size: 6.5pt; font-weight: 800; color: var(--blue); text-transform: uppercase; letter-spacing: 0.1em; }
+    .phase-name { font-size: 8pt; font-weight: 700; color: var(--navy); margin: 0.2rem 0 0.15rem; line-height: 1.3; }
+    .phase-period { font-size: 6.5pt; color: var(--orange); font-weight: 600; }
+    .phase-kpi { font-size: 6.5pt; color: var(--gray-600); margin-top: 0.3rem; border-top: 1px solid var(--gray-200); padding-top: 0.3rem; line-height: 1.5; }
+    .kw-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.35rem; }
+    .kw-item { padding: 0.35rem 0.55rem; border-radius: 5px; border-left: 3px solid; }
+    .kw-item.hi { background: rgba(16,185,129,0.07); border-color: var(--success); }
+    .kw-item.md { background: var(--blue-dim); border-color: var(--blue); }
+    .kw-item.lo { background: var(--gray-100); border-color: var(--gray-400); }
+    .kw-term { font-size: 7.5pt; font-weight: 600; color: var(--navy); }
+    .kw-vol { font-size: 6.5pt; color: var(--gray-400); }
+    .mono-row { display: flex; gap: 0; border: 1px solid var(--gray-200); border-radius: 7px; overflow: hidden; margin-bottom: 0.3rem; }
+    .mono-cat { font-size: 7.5pt; font-weight: 700; color: var(--white); background: var(--navy); padding: 0.3rem 0.6rem; min-width: 110px; display: flex; align-items: center; }
+    .mono-items { padding: 0.3rem 0.6rem; font-size: 7.5pt; color: var(--gray-600); display: flex; flex-direction: column; gap: 0.15rem; flex: 1; }
+    .mono-rev { font-size: 7.5pt; font-weight: 700; color: var(--success); padding: 0.3rem 0.6rem; display: flex; align-items: center; white-space: nowrap; }
+    .adv-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 0.4rem; }
+    .adv-item { display: flex; gap: 0.5rem; padding: 0.5rem; border-radius: 6px; background: var(--gray-100); border-left: 3px solid var(--blue); align-items: flex-start; }
+    .adv-num { font-size: 7pt; font-weight: 800; color: var(--blue); min-width: 18px; }
+    .adv-text { font-size: 7.5pt; color: var(--gray-600); line-height: 1.45; }
+    .fin-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.6rem; }
+    .fin-box { border-radius: 8px; overflow: hidden; border: 1px solid var(--gray-200); }
+    .fin-head { padding: 0.5rem 0.75rem; font-size: 8pt; font-weight: 700; color: var(--white); text-align: center; }
+    .fin-head.con { background: var(--gray-600); }
+    .fin-head.rea { background: var(--blue); }
+    .fin-head.agr { background: var(--orange); }
+    .fin-row { display: flex; justify-content: space-between; padding: 0.3rem 0.65rem; font-size: 7.5pt; border-bottom: 1px solid var(--gray-200); }
+    .fin-row:last-child { border-bottom: none; }
+    .fin-row .yr { color: var(--gray-600); }
+    .fin-row .val { font-weight: 700; color: var(--navy); }
+    .action-list { list-style: none; padding: 0; margin: 0; }
+    .action-list li { display: flex; gap: 0.6rem; padding: 0.45rem 0; border-bottom: 1px solid var(--gray-200); align-items: flex-start; font-size: 8.5pt; color: var(--gray-600); }
+    .action-list li:last-child { border-bottom: none; }
+    .action-list .step { font-size: 8pt; font-weight: 800; color: var(--blue); min-width: 22px; }
+    .action-list .when { font-size: 7pt; font-weight: 700; color: var(--orange); white-space: nowrap; margin-top: 2px; }
+    .risk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .risk-card { padding: 0.65rem; border-radius: 7px; border: 1px solid; }
+    .risk-card.alta { border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.05); }
+    .risk-card.media { border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.05); }
+    .risk-card .rt { font-size: 7pt; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.3rem; }
+    .risk-card.alta .rt { color: var(--danger); }
+    .risk-card.media .rt { color: var(--warning); }
+    .risk-card ul { font-size: 7.5pt; color: var(--gray-600); padding-left: 1rem; margin: 0; line-height: 1.7; }
+  </style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="toolbar-brand">
+    <img src="../images/corestack.png" alt="Corestack"/>
+    <span>Corestack</span> Solutions
+    <span class="toolbar-label">· Reporte de Viabilidad — Plataforma Inmobiliaria Tabasco</span>
+  </div>
+  <div class="toolbar-actions">
+    <a href="/" class="btn btn-ghost">← Sitio web</a>
+    <a href="index.html" class="btn btn-ghost">Documentos</a>
+    <button class="btn btn-primary" onclick="window.print()">⬇ Exportar PDF</button>
+  </div>
+</div>
+
+<div class="pages">
+
+<!-- ═══════════════════════ P1 · PORTADA ═══════════════════════ -->
+<div class="page cover">
+  <div class="cover-body">
+    <div class="cover-brand">
+      <img src="../images/corestack.png" alt="Corestack Solutions" class="cover-logo"/>
+      <div class="cover-brand-text">
+        <div class="cover-brand-name">CORESTACK SOLUTIONS</div>
+        <div class="cover-brand-tagline">Investigación estratégica · Uso confidencial</div>
+      </div>
+    </div>
+
+    <div class="cover-eyebrow">Reporte de Inteligencia de Mercado · PropTech · Tabasco</div>
+    <h1 class="cover-title">PLATAFORMA<br/><span class="accent">INMOBILIARIA</span><br/>TABASCO</h1>
+    <p class="cover-subtitle">Análisis de viabilidad, estrategia de mercado y modelo de negocio para la construcción del marketplace inmobiliario líder del estado de Tabasco, México</p>
+    <div class="cover-rule"></div>
+
+    <div class="cover-meta">
+      <div class="cover-meta-item">
+        <span class="cover-meta-icon">📋</span>
+        <span class="cover-meta-value">Reporte Ejecutivo de Viabilidad</span>
+      </div>
+      <div class="cover-meta-item">
+        <span class="cover-meta-icon">📍</span>
+        <span class="cover-meta-value">Mercado: Tabasco, México · 17 municipios</span>
+      </div>
+      <div class="cover-meta-item">
+        <span class="cover-meta-icon">🔒</span>
+        <span class="cover-meta-value">Documento Confidencial · <span class="year"></span></span>
+      </div>
+    </div>
+  </div>
+  <div class="cover-pattern"></div>
+  <div class="cover-footer">
+    <span class="cover-footer-brand">Elaborado por el equipo multidisciplinario Corestack Solutions</span>
+    <span class="cover-footer-contact">McKinsey · PropTech · Growth · SEO · Monetización · Inteligencia de Mercado</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ P2 · ÍNDICE ═══════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../images/corestack.png" class="page-header-logo" alt="Corestack"/>
+    <div class="page-header-info">
+      <div class="page-header-doc">Índice del Reporte</div>
+      <div class="page-header-sub">Plataforma Inmobiliaria Tabasco · Viabilidad y Estrategia</div>
+    </div>
+  </div>
+  <div class="content">
+    <h1>Índice</h1>
+    <div class="two-col" style="gap:1rem">
+      <div>
+        <div class="toc-item"><span class="toc-num">01</span><span class="toc-label">Resumen Ejecutivo</span><span class="toc-dots"></span><span class="toc-pg">3</span></div>
+        <div class="toc-item"><span class="toc-num">02</span><span class="toc-label">Radiografía de Tabasco</span><span class="toc-dots"></span><span class="toc-pg">4</span></div>
+        <div class="toc-item"><span class="toc-num">03</span><span class="toc-label">Mercado Inmobiliario</span><span class="toc-dots"></span><span class="toc-pg">5</span></div>
+        <div class="toc-item"><span class="toc-num">04</span><span class="toc-label">Análisis Competitivo</span><span class="toc-dots"></span><span class="toc-pg">6</span></div>
+        <div class="toc-item"><span class="toc-num">05</span><span class="toc-label">Comportamiento del Usuario</span><span class="toc-dots"></span><span class="toc-pg">7</span></div>
+        <div class="toc-item"><span class="toc-num">06</span><span class="toc-label">Estrategia a 5 Años</span><span class="toc-dots"></span><span class="toc-pg">8</span></div>
+        <div class="toc-item"><span class="toc-num">07</span><span class="toc-label">Adquisición de Usuarios + SEO</span><span class="toc-dots"></span><span class="toc-pg">9</span></div>
+        <div class="toc-item"><span class="toc-num">08</span><span class="toc-label">Estrategia Viral</span><span class="toc-dots"></span><span class="toc-pg">10</span></div>
+      </div>
+      <div>
+        <div class="toc-item"><span class="toc-num">09</span><span class="toc-label">Modelo de Monetización</span><span class="toc-dots"></span><span class="toc-pg">11</span></div>
+        <div class="toc-item"><span class="toc-num">10</span><span class="toc-label">Marketplace de Servicios</span><span class="toc-dots"></span><span class="toc-pg">12</span></div>
+        <div class="toc-item"><span class="toc-num">11</span><span class="toc-label">Ventajas Competitivas</span><span class="toc-dots"></span><span class="toc-pg">12</span></div>
+        <div class="toc-item"><span class="toc-num">12</span><span class="toc-label">Features Exclusivos Tabasco</span><span class="toc-dots"></span><span class="toc-pg">13</span></div>
+        <div class="toc-item"><span class="toc-num">13</span><span class="toc-label">Estrategia de IA</span><span class="toc-dots"></span><span class="toc-pg">13</span></div>
+        <div class="toc-item"><span class="toc-num">14</span><span class="toc-label">Roadmap Tecnológico</span><span class="toc-dots"></span><span class="toc-pg">14</span></div>
+        <div class="toc-item"><span class="toc-num">15</span><span class="toc-label">Proyección Financiera</span><span class="toc-dots"></span><span class="toc-pg">14</span></div>
+        <div class="toc-item"><span class="toc-num">16</span><span class="toc-label">Riesgos + Recomendación Final</span><span class="toc-dots"></span><span class="toc-pg">15</span></div>
+      </div>
+    </div>
+
+    <div class="divider mt-2"><span>Métricas clave del análisis</span></div>
+
+    <div class="kpi-grid cols-4">
+      <div class="kpi">
+        <div class="kpi-val">2.4<span class="u">M</span></div>
+        <div class="kpi-label">Habitantes en Tabasco</div>
+        <div class="kpi-sub">Base de usuarios potenciales</div>
+      </div>
+      <div class="kpi orange">
+        <div class="kpi-val">$0<span class="u"></span></div>
+        <div class="kpi-label">Competidor dominante local</div>
+        <div class="kpi-sub">Mercado sin plataforma líder</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val">85<span class="u">%</span></div>
+        <div class="kpi-label">Viabilidad estimada</div>
+        <div class="kpi-sub">Alta probabilidad de liderazgo</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-val">$30<span class="u">M</span></div>
+        <div class="kpi-label">Potencial año 5 (MXN)</div>
+        <div class="kpi-sub">Escenario realista de ingresos</div>
+      </div>
+    </div>
+
+    <div class="callout success mt-1">
+      <span class="callout-icon">🎯</span>
+      <div class="callout-body">
+        <div class="callout-title">Conclusión anticipada del equipo multidisciplinario</div>
+        <p>El mercado inmobiliario de Tabasco está <strong>sin plataforma digital dominante</strong>. La demanda existe, los usuarios ya buscan propiedades en línea a través de canales informales (Facebook, WhatsApp), y ningún actor ha resuelto el problema de forma profesional a nivel local. La ventana de oportunidad es real, accionable y urgente.</p>
+      </div>
+    </div>
+  </div>
+  <div class="page-pattern-bottom"></div>
+  <div class="page-footer">
+    <span>Corestack Solutions © <span class="year"></span></span>
+    <span class="page-footer-brand">Plataforma Inmobiliaria Tabasco · Reporte de Viabilidad</span>
+    <span>Pág. 2 / 15</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ P3 · RESUMEN EJECUTIVO ═══════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../images/corestack.png" class="page-header-logo" alt="Corestack"/>
+    <div class="page-header-info">
+      <div class="page-header-doc">01 · Resumen Ejecutivo</div>
+      <div class="page-header-sub">Oportunidad, mercado, probabilidad de éxito y recomendación</div>
+    </div>
+  </div>
+  <div class="content">
+    <h1>01 · Resumen Ejecutivo</h1>
+
+    <div class="two-col">
+      <div>
+        <h2>La Oportunidad</h2>
+        <p>Tabasco concentra 2.4 millones de habitantes en un estado con alta actividad económica gracias al sector energético (PEMEX, Dos Bocas), el Corredor Interoceánico del Istmo de Tehuantepec y un sector agropecuario activo. La movilidad laboral genera una demanda habitacional constante, especialmente en renta.</p>
+        <p style="margin-top:0.4rem">Sin embargo, el mercado inmobiliario digital local está <strong>fragmentado y sin liderazgo claro</strong>. Los portales nacionales (Inmuebles24, Lamudi) tienen presencia mínima y deficiente cobertura local. Los canales informales (Facebook, WhatsApp) dominan, pero no ofrecen búsqueda estructurada, historial de precios ni confianza.</p>
+      </div>
+      <div>
+        <h2>Tamaño del Mercado</h2>
+        <table class="corp-table">
+          <thead><tr><th>Segmento</th><th class="right">Estimado anual</th></tr></thead>
+          <tbody>
+            <tr><td>Transacciones de compraventa</td><td class="right">~8,000–12,000</td></tr>
+            <tr><td>Contratos de renta nuevos</td><td class="right">~25,000–40,000</td></tr>
+            <tr><td>Terrenos transaccionados</td><td class="right">~3,000–5,000</td></tr>
+            <tr><td>Búsquedas mensuales (Google)</td><td class="right">~45,000–70,000</td></tr>
+            <tr><td>Gasto en publicidad inmobiliaria</td><td class="right">~$18–30M MXN/año</td></tr>
+            <tr class="subtotal"><td><strong>Mercado direccionable total (TAM)</strong></td><td class="right"><strong>~$500M MXN</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="divider mt-1"><span>Evaluación estratégica</span></div>
+
+    <div class="card-grid cols-3 mt-1">
+      <div class="card">
+        <span class="card-icon">📊</span>
+        <div class="card-title">Probabilidad de Éxito</div>
+        <div class="card-body"><strong style="font-size:18pt;color:var(--success)">85%</strong><br/>Con ejecución correcta en los primeros 18 meses, existe alta probabilidad de convertirse en la plataforma líder del estado antes de que un competidor nacional decida atacar el mercado local con recursos.</div>
+        <span class="card-tag">Alta</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">⚠️</span>
+        <div class="card-title">Riesgos Principales</div>
+        <div class="card-body">1. Entrada de Inmuebles24 con subsidio de listings<br/>2. Facebook reforzando su marketplace inmobiliario<br/>3. Masa crítica de propiedades (cold start)<br/>4. Monetizar sin ahuyentar a los primeros usuarios</div>
+        <span class="card-tag orange">Moderado-Alto</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">✅</span>
+        <div class="card-title">Recomendación Final</div>
+        <div class="card-body"><strong>SÍ, construir.</strong> La ausencia de un competidor local fuerte, la demanda demostrable y el bajo costo de adquisición de mercado en Tabasco hacen de este proyecto una apuesta con alta asimetría de riesgo-retorno.</div>
+        <span class="card-tag">Proceder</span>
+      </div>
+    </div>
+
+    <div class="highlight mt-1">
+      <div class="hl-eyebrow">Tesis central del equipo</div>
+      <p>El primer actor en ofrecer una experiencia de búsqueda inmobiliaria profesional, local y gratuita en Tabasco <strong>capturará efectos de red que serán difíciles de desplazar en menos de 3–5 años.</strong> La ventana de oportunidad existe hoy. En 24 meses puede estar cerrada.</p>
+    </div>
+  </div>
+  <div class="page-pattern-bottom"></div>
+  <div class="page-footer">
+    <span>Corestack Solutions © <span class="year"></span></span>
+    <span class="page-footer-brand">Plataforma Inmobiliaria Tabasco · Reporte de Viabilidad</span>
+    <span>Pág. 3 / 15</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ P4 · RADIOGRAFÍA DE TABASCO ═══════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../images/corestack.png" class="page-header-logo" alt="Corestack"/>
+    <div class="page-header-info">
+      <div class="page-header-doc">02 · Radiografía de Tabasco</div>
+      <div class="page-header-sub">Demografía, economía y potencial de mercado por municipio</div>
+    </div>
+  </div>
+  <div class="content">
+    <h1>02 · Radiografía de Tabasco</h1>
+
+    <div class="kpi-grid cols-4">
+      <div class="kpi"><div class="kpi-val">2.4<span class="u">M</span></div><div class="kpi-label">Población total</div><div class="kpi-sub">Censo INEGI 2020</div></div>
+      <div class="kpi"><div class="kpi-val">17</div><div class="kpi-label">Municipios</div><div class="kpi-sub">Concentración: 60% en 3</div></div>
+      <div class="kpi orange"><div class="kpi-val">1.4<span class="u">%</span></div><div class="kpi-label">Crecimiento anual</div><div class="kpi-sub">Por encima de media nacional</div></div>
+      <div class="kpi"><div class="kpi-val">$9.2<span class="u">K</span></div><div class="kpi-label">Ingreso promedio/mes</div><div class="kpi-sub">MXN, trabajador formal</div></div>
+    </div>
+
+    <h2>Municipios con Mayor Potencial Inmobiliario</h2>
+
+    <table class="corp-table mt-1">
+      <thead>
+        <tr>
+          <th>Municipio</th>
+          <th class="right">Población</th>
+          <th>Perfil económico</th>
+          <th>Potencial inmobiliario</th>
+          <th class="center">Prioridad</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Villahermosa</strong> (Centro)</td><td class="right">~520,000</td><td>Capital, servicios, gobierno, comercio</td><td>Compra, renta, oficinas, departamentos</td><td class="center"><span class="badge badge-green">P1</span></td></tr>
+        <tr><td><strong>Cárdenas</strong></td><td class="right">~268,000</td><td>Agroindustria, ganadería, petroquímica</td><td>Casas en renta y venta, terrenos</td><td class="center"><span class="badge badge-green">P1</span></td></tr>
+        <tr><td><strong>Comalcalco</strong></td><td class="right">~185,000</td><td>Cacao, ecoturismo, agroindustria</td><td>Terrenos, casas economía</td><td class="center"><span class="badge badge-blue">P2</span></td></tr>
+        <tr><td><strong>Paraíso</strong></td><td class="right">~103,000</td><td>PEMEX Dos Bocas, petroquímica, pesca</td><td>Alta demanda renta por trabajadores PEMEX</td><td class="center"><span class="badge badge-green">P1</span></td></tr>
+        <tr><td><strong>Jalpa de Méndez</strong></td><td class="right">~95,000</td><td>Commuters Villahermosa, manufactura</td><td>Habitacional económico creciente</td><td class="center"><span class="badge badge-blue">P2</span></td></tr>
+        <tr><td><strong>Nacajuca</strong></td><td class="right">~89,000</td><td>Zona conurbada Villahermosa</td><td>Expansión urbana, terrenos, casas nuevas</td><td class="center"><span class="badge badge-blue">P2</span></td></tr>
+        <tr><td><strong>Huimanguillo</strong></td><td class="right">~173,000</td><td>Ganadería, petróleo, agroindustria</td><td>Terrenos rurales, casas economía</td><td class="center"><span class="badge badge-orange">P3</span></td></tr>
+        <tr><td><strong>Centla</strong></td><td class="right">~95,000</td><td>Pesca, petróleo, zona costera</td><td>Propiedades costeras, terrenos</td><td class="center"><span class="badge badge-orange">P3</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="two-col mt-1">
+      <div>
+        <h2>Motores de Demanda Habitacional</h2>
+        <ul>
+          <li><strong>Refinery Dos Bocas (Paraíso):</strong> Miles de trabajadores PEMEX y contratistas generan demanda de renta intensa — muchos buscan alojamiento mensual en Paraíso y Villahermosa.</li>
+          <li><strong>Corredor Interoceánico:</strong> Tránsito de trabajadores entre Coatzacoalcos y Salina Cruz con paso por Tabasco activa demanda de propiedades en municipios de conexión.</li>
+          <li><strong>Migración pendular:</strong> Jalpa de Méndez y Nacajuca funcionan como ciudades dormitorio de Villahermosa, impulsando demanda de vivienda económica.</li>
+          <li><strong>Crecimiento universitario:</strong> UJAT, TECNM y sedes privadas atraen estudiantes que demandan cuartos y departamentos en renta.</li>
+        </ul>
+      </div>
+      <div>
+        <h2>Sectores Productivos y su Impacto</h2>
+        <ul>
+          <li><strong>Petróleo y gas:</strong> 35% del PIB estatal. Alta rotación de trabajadores. Crea demanda de renta de corto y mediano plazo.</li>
+          <li><strong>Gobierno:</strong> Segundo empleador más grande. Trabajadores buscan vivienda cerca de dependencias en Villahermosa.</li>
+          <li><strong>Agropecuario:</strong> Concentrado en Cárdenas, Comalcalco y Huimanguillo. Demanda terrenos productivos y casas en cabeceras municipales.</li>
+          <li><strong>Comercio y servicios:</strong> Crecimiento de plazas comerciales en Villahermosa genera demanda de locales y bodegas.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="page-pattern-bottom"></div>
+  <div class="page-footer">
+    <span>Corestack Solutions © <span class="year"></span></span>
+    <span class="page-footer-brand">Plataforma Inmobiliaria Tabasco · Reporte de Viabilidad</span>
+    <span>Pág. 4 / 15</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ P5 · MERCADO INMOBILIARIO ═══════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../images/corestack.png" class="page-header-logo" alt="Corestack"/>
+    <div class="page-header-info">
+      <div class="page-header-doc">03 · Mercado Inmobiliario de Tabasco</div>
+      <div class="page-header-sub">Tamaño, segmentos, precios y zonas de crecimiento</div>
+    </div>
+  </div>
+  <div class="content">
+    <h1>03 · Mercado Inmobiliario de Tabasco</h1>
+
+    <div class="two-col">
+      <div>
+        <h2>Tipos de Propiedad — Demanda Relativa</h2>
+        <table class="corp-table">
+          <thead><tr><th>Tipo</th><th class="right">Demanda estimada</th><th class="center">Tendencia</th></tr></thead>
+          <tbody>
+            <tr><td>Casa en renta</td><td class="right">38% del volumen</td><td class="center"><span class="badge badge-green">↑ Alta</span></td></tr>
+            <tr><td>Casa en venta</td><td class="right">22%</td><td class="center"><span class="badge badge-blue">→ Estable</span></td></tr>
+            <tr><td>Terreno en venta</td><td class="right">14%</td><td class="center"><span class="badge badge-green">↑ Creciente</span></td></tr>
+            <tr><td>Departamento renta</td><td class="right">10%</td><td class="center"><span class="badge badge-green">↑ Creciente</span></td></tr>
+            <tr><td>Habitación / Roomie</td><td class="right">8%</td><td class="center"><span class="badge badge-green">↑ Alta</span></td></tr>
+            <tr><td>Local comercial</td><td class="right">4%</td><td class="center"><span class="badge badge-blue">→ Estable</span></td></tr>
+            <tr><td>Bodega / Oficina</td><td class="right">2%</td><td class="center"><span class="badge badge-blue">→ Estable</span></td></tr>
+            <tr><td>Terreno en renta</td><td class="right">2%</td><td class="center"><span class="badge badge-orange">↓ Bajo</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h2>Rangos de Precio — Villahermosa</h2>
+        <table class="corp-table">
+          <thead><tr><th>Propiedad</th><th class="right">Precio / Renta</th></tr></thead>
+          <tbody>
+            <tr><td>Casa en renta (2 rec)</td><td class="right">$5,500–$10,000/mes</td></tr>
+            <tr><td>Casa en renta (3 rec)</td><td class="right">$8,000–$18,000/mes</td></tr>
+            <tr><td>Casa en venta (media)</td><td class="right">$900K–$2.5M MXN</td></tr>
+            <tr><td>Casa en venta (residencial)</td><td class="right">$2.5M–$8M MXN</td></tr>
+            <tr><td>Departamento renta</td><td class="right">$5,000–$12,000/mes</td></tr>
+            <tr><td>Habitación individual</td><td class="right">$1,500–$3,500/mes</td></tr>
+            <tr><td>Terreno (m²) urbano</td><td class="right">$800–$3,500/m²</td></tr>
+            <tr><td>Local comercial renta</td><td class="right">$8,000–$35,000/mes</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h2>Zonas de Mayor Crecimiento</h2>
+    <div class="card-grid cols-3 mt-1">
+      <div class="card">
+        <span class="card-icon">🏙️</span>
+        <div class="card-title">Norte Villahermosa</div>
+        <div class="card-body">Tabasco 2000, Framboyanes, Gaviotas. Zona premium con plusvalía estable. Residencias, condominios y locales de alta gama.</div>
+        <span class="card-tag">Plusvalía alta</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">🌿</span>
+        <div class="card-title">Expansión Sur-Oriente</div>
+        <div class="card-body">Col. del Parque, Ocuiltzapotlán. Desarrollos nuevos con vivienda de interés social y medio. Mayor volumen de transacciones.</div>
+        <span class="card-tag orange">Volumen alto</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">⚡</span>
+        <div class="card-title">Paraíso — Dos Bocas</div>
+        <div class="card-body">Demanda explosiva de renta corto plazo por trabajadores de la refinería. Oportunidad única sin plataforma que la capture.</div>
+        <span class="card-tag">Emergente</span>
+      </div>
+    </div>
+
+    <div class="callout warning mt-1">
+      <span class="callout-icon">🌊</span>
+      <div class="callout-body">
+        <div class="callout-title">Factor crítico local: riesgo de inundación</div>
+        <p>Tabasco es el estado más propenso a inundaciones de México (2007: 80% del territorio inundado). Los compradores y rentadores priorizan conocer el riesgo hídrico de una propiedad antes de tomar decisiones. <strong>Ninguna plataforma actual ofrece esta información.</strong> Es la ventaja competitiva más poderosa disponible.</p>
+      </div>
+    </div>
+  </div>
+  <div class="page-pattern-bottom"></div>
+  <div class="page-footer">
+    <span>Corestack Solutions © <span class="year"></span></span>
+    <span class="page-footer-brand">Plataforma Inmobiliaria Tabasco · Reporte de Viabilidad</span>
+    <span>Pág. 5 / 15</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ P6 · ANÁLISIS COMPETITIVO ═══════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../images/corestack.png" class="page-header-logo" alt="Corestack"/>
+    <div class="page-header-info">
+      <div class="page-header-doc">04 · Análisis Competitivo</div>
+      <div class="page-header-sub">Portales nacionales y competidores locales · Fortalezas, debilidades y gaps</div>
+    </div>
+  </div>
+  <div class="content">
+    <h1>04 · Análisis Competitivo</h1>
+    <h2>Portales Nacionales — Presencia en Tabasco</h2>
+
+    <table class="corp-table mt-1">
+      <thead>
+        <tr><th>Portal</th><th>Fortalezas</th><th>Debilidades en Tabasco</th><th class="right">Listings est. Tabasco</th><th class="center">Amenaza</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Inmuebles24</strong></td>
+          <td>Marca nacional, SEO fuerte, base de agentes</td>
+          <td>Sin cobertura de colonias local, sin mapa de inundaciones, caro para agentes locales</td>
+          <td class="right">~800–1,200</td>
+          <td class="center"><span class="badge badge-orange">Media</span></td>
+        </tr>
+        <tr>
+          <td><strong>Mercado Libre Inmuebles</strong></td>
+          <td>Enorme tráfico, confianza de marca, gratis básico</td>
+          <td>Experiencia genérica, sin especialización, muchos anuncios duplicados o falsos</td>
+          <td class="right">~1,500–2,500</td>
+          <td class="center"><span class="badge badge-red">Alta</span></td>
+        </tr>
+        <tr>
+          <td><strong>Lamudi</strong></td>
+          <td>Plataforma moderna, segmento premium</td>
+          <td>Casi sin presencia en Tabasco, enfocado en CDMX/MTY/GDL</td>
+          <td class="right">~100–200</td>
+          <td class="center"><span class="badge badge-green">Baja</span></td>
+        </tr>
+        <tr>
+          <td><strong>Propiedades.com</strong></td>
+          <td>SEO razonable, buena UX</td>
+          <td>Cobertura mínima en Tabasco, sin diferenciación local</td>
+          <td class="right">~200–400</td>
+          <td class="center"><span class="badge badge-green">Baja</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Actores Locales</h2>
+    <table class="corp-table mt-1">
+      <thead>
+        <tr><th>Actor</th><th>Tipo</th><th>Fortaleza</th><th>Debilidad crítica</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Facebook / Marketplace</strong></td><td>Red social</td><td>Masivo, gratis, viral, familiar</td><td>Sin búsqueda estructurada, sin filtros reales, fraudes, no indexa en Google</td></tr>
+        <tr><td><strong>Grupos WhatsApp</strong></td><td>Mensajería</td><td>Inmediatez, confianza entre conocidos</td><td>Sin historial, sin búsqueda, caótico, efímero</td></tr>
+        <tr><td><strong>Mercotab</strong></td><td>Clasificados locales</td><td>Reconocimiento local, presencia en Tabasco</td><td>Diseño obsoleto, sin especialización inmobiliaria, bajo tráfico</td></tr>
+        <tr><td><strong>Inmobiliarias web locales</strong><br/>(Lafayette, Corredor 66, Orbemaz, Prospecta, etc.)</td><td>Agencias</td><td>Conocimiento del mercado local</td><td>Solo muestran su propio inventario, sin adopción masiva, sitios con bajo tráfico SEO</td></tr>
+        <tr><td><strong>Pluvalia / XiSo / Globo</strong></td><td>Portales menores</td><td>Intentaron construir plataforma local</td><td>Sin masa crítica, sin actualización frecuente, presencia anecdótica</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout info mt-1">
+      <span class="callout-icon">💡</span>
+      <div class="callout-body">
+        <div class="callout-title">Huecos que NINGÚN competidor está cubriendo hoy</div>
+        <p>Mapa de zonas inundables integrado · Búsqueda real por colonia en Tabasco · Verificación de propietarios · Historial de precios por zona · Alertas automáticas configurables · Roomies y habitaciones en categoría propia · Propiedades para trabajadores PEMEX/Dos Bocas · Índice de plusvalía por municipio · Información del Corredor Interoceánico sobre valores.</p>
+      </div>
+    </div>
+  </div>
+  <div class="page-pattern-bottom"></div>
+  <div class="page-footer">
+    <span>Corestack Solutions © <span class="year"></span></span>
+    <span class="page-footer-brand">Plataforma Inmobiliaria Tabasco · Reporte de Viabilidad</span>
+    <span>Pág. 6 / 15</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ P7 · COMPORTAMIENTO DEL USUARIO ═══════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../images/corestack.png" class="page-header-logo" alt="Corestack"/>
+    <div class="page-header-info">
+      <div class="page-header-doc">05 · Comportamiento del Usuario</div>
+      <div class="page-header-sub">Cómo buscan vivienda los tabasqueños hoy y qué les falta</div>
+    </div>
+  </div>
+  <div class="content">
+    <h1>05 · Comportamiento del Usuario</h1>
+
+    <div class="two-col">
+      <div>
+        <h2>Canales Actuales de Búsqueda</h2>
+        <table class="corp-table">
+          <thead><tr><th>Canal</th><th class="right">Adopción est.</th><th>Por qué lo usan</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Facebook Marketplace</strong></td><td class="right">~55%</td><td>Gratis, familiar, visual, local</td></tr>
+            <tr><td><strong>Grupos de Facebook</strong></td><td class="right">~25%</td><td>Confianza de comunidad, inmediatez</td></tr>
+            <tr><td><strong>WhatsApp (contactos)</strong></td><td class="right">~40%</td><td>Red personal, confianza, sin costo</td></tr>
+            <tr><td><strong>Portales nacionales</strong></td><td class="right">~18%</td><td>Búsqueda con filtros, fotos profesionales</td></tr>
+            <tr><td><strong>TikTok</strong></td><td class="right">~8%</td><td>Tours de propiedades en video, emergente</td></tr>
+            <tr><td><strong>Referidos directos</strong></td><td class="right">~35%</td><td>Confianza, sin fraude, inmediatez</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout danger mt-1">
+          <span class="callout-icon">😤</span>
+          <div class="callout-body">
+            <div class="callout-title">Lo que más les molesta de los canales actuales</div>
+            <p>· Anuncios desactualizados (propiedad ya rentada)<br/>
+            · Sin precio real o "llame para precio"<br/>
+            · Fotos de mala calidad o engañosas<br/>
+            · Propietarios que no responden<br/>
+            · Fraudes: piden anticipo sin mostrar propiedad<br/>
+            · No saben si la zona se inunda<br/>
+            · Sin historial de precios para negociar<br/>
+            · Deben revisar 10 grupos de Facebook para ver todo</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h2>Perfiles de Usuario</h2>
+
+        <div class="card-grid cols-1 mt-0" style="gap:0.5rem">
+          <div class="card" style="padding:0.6rem 0.75rem">
+            <div class="card-title" style="font-size:8.5pt">👨‍👩‍👧 Familia buscando renta</div>
+            <div class="card-body" style="font-size:7.5pt">Prioriza: precio, colonia segura, cercanía a escuelas. Usa: Facebook y WhatsApp. Dolor: no saber si la zona se inunda, fotos mentirosas.</div>
+          </div>
+          <div class="card" style="padding:0.6rem 0.75rem">
+            <div class="card-title" style="font-size:8.5pt">⛽ Trabajador PEMEX / Dos Bocas</div>
+            <div class="card-body" style="font-size:7.5pt">Busca renta mensual o semanal en Paraíso o Villahermosa. Rota cada 3–12 meses. Paga bien pero necesita confirmación rápida y sin complicaciones.</div>
+          </div>
+          <div class="card" style="padding:0.6rem 0.75rem">
+            <div class="card-title" style="font-size:8.5pt">🎓 Estudiante universitario</div>
+            <div class="card-body" style="font-size:7.5pt">Busca cuarto o roomie. Presupuesto $1,500–$3,000/mes. Canal principal: grupos de Facebook de la universidad. Frustración: fraudes y zonas desconocidas.</div>
+          </div>
+          <div class="card" style="padding:0.6rem 0.75rem">
+            <div class="card-title" style="font-size:8.5pt">🏗️ Propietario con inmueble disponible</div>
+            <div class="card-body" style="font-size:7.5pt">Publica en Facebook, WhatsApp y de boca en boca. Le frustra los intermediarios que cobran comisiones altas. Quiere publicar gratis y recibir contactos directos.</div>
+          </div>
+          <div class="card" style="padding:0.6rem 0.75rem">
+            <div class="card-title" style="font-size:8.5pt">🏢 Agente inmobiliario local</div>
+            <div class="card-body" style="font-size:7.5pt">Maneja 20–80 propiedades. Invierte en Facebook Ads. Necesita más visibilidad y leads de calidad. Desconfía de portales nacionales por su costo vs. resultados en Tabasco.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-pattern-bottom"></div>
+  <div class="page-footer">
+    <span>Corestack Solutions © <span class="year"></span></span>
+    <span class="page-footer-brand">Plataforma Inmobiliaria Tabasco · Reporte de Viabilidad</span>
+    <span>Pág. 7 / 15</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ P8 · ESTRATEGIA A 5 AÑOS ═══════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../images/corestack.png" class="page-header-logo" alt="Corestack"/>
+    <div class="page-header-info">
+      <div class="page-header-doc">06 · Estrategia a 5 Años</div>
+      <div class="page-header-sub">Del lanzamiento al dominio regional · Fases, KPIs y hitos</div>
+    </div>
+  </div>
+  <div class="content">
+    <h1>06 · Estrategia a 5 Años</h1>
+
+    <div class="phase-grid">
+      <div class="phase-box">
+        <div class="phase-num">Fase 1</div>
+        <div class="phase-name">Lanzamiento</div>
+        <div class="phase-period">Meses 1–6</div>
+        <div class="phase-kpi">500 propiedades<br/>200 registros<br/>SEO base activo<br/>0 ingresos</div>
+      </div>
+      <div class="phase-box" style="border-color:rgba(0,174,239,0.3);background:rgba(0,174,239,0.06)">
+        <div class="phase-num">Fase 2</div>
+        <div class="phase-name">Adopción</div>
+        <div class="phase-period">Meses 7–18</div>
+        <div class="phase-kpi">5,000 propiedades<br/>50 inmobiliarias<br/>10,000 MAU<br/>MXN 200K/mes</div>
+      </div>
+      <div class="phase-box" style="border-color:rgba(249,115,22,0.3);background:rgba(249,115,22,0.05)">
+        <div class="phase-num">Fase 3</div>
+        <div class="phase-name">Dominio Local</div>
+        <div class="phase-period">Meses 19–30</div>
+        <div class="phase-kpi">15,000 propiedades<br/>200 inmobiliarias<br/>40,000 MAU<br/>MXN 600K/mes</div>
+      </div>
+      <div class="phase-box" style="border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.05)">
+        <div class="phase-num">Fase 4</div>
+        <div class="phase-name">Efectos de Red</div>
+        <div class="phase-period">Meses 31–48</div>
+        <div class="phase-kpi">30,000 propiedades<br/>400 inmobiliarias<br/>100,000 MAU<br/>MXN 1.5M/mes</div>
+      </div>
+      <div class="phase-box" style="border-color:rgba(16,185,129,0.5);background:rgba(16,185,129,0.08)">
+        <div class="phase-num">Fase 5</div>
+        <div class="phase-name">Monopolio Regional</div>
+        <div class="phase-period">Meses 49–60</div>
+        <div class="phase-kpi">50,000+ propiedades<br/>600+ inmobiliarias<br/>180,000 MAU<br/>MXN 2.5M+/mes</div>
+      </div>
+    </div>
+
+    <div class="divider mt-1"><span>Plan de ejecución por fase</span></div>
+
+    <div class="two-col">
+      <div>
+        <h2>Fase 1 · Lanzamiento (M1–6)</h2>
+        <ul>
+          <li><strong>Semana 1–4:</strong> Captura manual de 300 propiedades de Facebook, grupos y agencias locales. Crear inventario inicial que "llene" la plataforma.</li>
+          <li><strong>Semana 5–8:</strong> Lanzar MVP con búsqueda básica + mapa. Notificar a 30 inmobiliarias locales que pueden publicar gratis.</li>
+          <li><strong>Mes 3:</strong> Activar SEO con páginas de colonia y zona. Comenzar blog inmobiliario de Tabasco.</li>
+          <li><strong>Mes 4–6:</strong> Primeras publicidades en Facebook e Instagram. Registrar 50 inmobiliarias. Validar embudo de leads.</li>
+        </ul>
+
+        <h2>Fase 2 · Adopción (M7–18)</h2>
+        <ul>
+          <li>Lanzar alertas de nuevas propiedades por email/WhatsApp.</li>
+          <li>Activar primeros productos de monetización: destacados y suscripciones básicas de inmobiliarias.</li>
+          <li>Alianzas con bancos locales para simuladores hipotecarios.</li>
+          <li>Lanzar mapa de inundaciones como feature exclusivo.</li>
+        </ul>
+      </div>
+      <div>
+        <h2>Fase 3 · Dominio (M19–30)</h2>
+        <ul>
+          <li>Lanzar ranking público de inmobiliarias con reviews verificadas.</li>
+          <li>Activar API de datos de mercado para desarrolladoras.</li>
+          <li>Lanzar marketplace de servicios (mudanzas, remodelación).</li>
+          <li>Primer reporte de mercado inmobiliario de Tabasco publicado y distribuido.</li>
+        </ul>
+
+        <h2>Fases 4 y 5 · Efectos de Red y Monopolio</h2>
+        <ul>
+          <li>Lanzar app móvil nativa (iOS + Android).</li>
+          <li>Integrar valuación automática por IA por colonia.</li>
+          <li>Abrir marketplace de seguros e hipotecas como canal de ingresos principal.</li>
+          <li>Considerar expansión a Campeche y Veracruz (mercados similares sin liderazgo).</li>
+          <li>Explorar ronda de inversión o acercamiento a portales nacionales para adquisición.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="page-pattern-bottom"></div>
+  <div class="page-footer">
+    <span>Corestack Solutions © <span class="year"></span></span>
+    <span class="page-footer-brand">Plataforma Inmobiliaria Tabasco · Reporte de Viabilidad</span>
+    <span>Pág. 8 / 15</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ P9 · ADQUISICIÓN + SEO ═══════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../images/corestack.png" class="page-header-logo" alt="Corestack"/>
+    <div class="page-header-info">
+      <div class="page-header-doc">07 · Adquisición de Usuarios + SEO</div>
+      <div class="page-header-sub">Estrategias de crecimiento y dominio en buscadores</div>
+    </div>
+  </div>
+  <div class="content">
+    <h1>07 · Adquisición de Usuarios y SEO</h1>
+
+    <div class="two-col">
+      <div>
+        <h2>Milestones de Crecimiento</h2>
+        <table class="corp-table">
+          <thead><tr><th>Meta</th><th>Estrategia principal</th><th class="right">Plazo</th></tr></thead>
+          <tbody>
+            <tr><td><strong>1,000 usuarios</strong></td><td>Captura manual de propiedades + outreach a 50 agentes</td><td class="right">Mes 2–3</td></tr>
+            <tr><td><strong>10,000 usuarios</strong></td><td>SEO activo + Facebook Ads ($5K–$10K MXN/mes) + boca a boca</td><td class="right">Mes 8–12</td></tr>
+            <tr><td><strong>50,000 usuarios</strong></td><td>Rankings Google para palabras clave locales + viral loop</td><td class="right">Mes 18–24</td></tr>
+            <tr><td><strong>100,000 usuarios</strong></td><td>App móvil + alertas + publicidad regional</td><td class="right">Mes 30–36</td></tr>
+          </tbody>
+        </table>
+
+        <h2>Por Segmento de Usuario</h2>
+        <table class="corp-table" style="margin-top:0.5rem">
+          <thead><tr><th>Segmento</th><th>Canal principal</th><th>Incentivo</th></tr></thead>
+          <tbody>
+            <tr><td>Buscadores</td><td>SEO + Facebook Ads</td><td>Alertas automáticas gratis</td></tr>
+            <tr><td>Propietarios</td><td>Outreach directo + referidos</td><td>Publicación gratuita ilimitada</td></tr>
+            <tr><td>Inmobiliarias</td><td>Visita comercial directa</td><td>3 meses gratis al registrarse</td></tr>
+            <tr><td>Roomies</td><td>Facebook universitario</td><td>Categoría exclusiva sin costo</td></tr>
+            <tr><td>Trabajadores PEMEX</td><td>Alianza con contratistas</td><td>Sección Paraíso/Dos Bocas</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h2>Palabras Clave Prioritarias</h2>
+        <div class="kw-grid">
+          <div class="kw-item hi"><div class="kw-term">casas en renta villahermosa</div><div class="kw-vol">~3,600/mes · Dif. baja</div></div>
+          <div class="kw-item hi"><div class="kw-term">casas en venta villahermosa</div><div class="kw-vol">~2,400/mes · Dif. baja</div></div>
+          <div class="kw-item hi"><div class="kw-term">renta departamento tabasco</div><div class="kw-vol">~1,900/mes · Dif. muy baja</div></div>
+          <div class="kw-item hi"><div class="kw-term">cuartos en renta villahermosa</div><div class="kw-vol">~1,300/mes · Dif. muy baja</div></div>
+          <div class="kw-item md"><div class="kw-term">terrenos en venta tabasco</div><div class="kw-vol">~880/mes · Dif. baja</div></div>
+          <div class="kw-item md"><div class="kw-term">casas en renta cardenas tabasco</div><div class="kw-vol">~720/mes · Dif. muy baja</div></div>
+          <div class="kw-item md"><div class="kw-term">propiedades en tabasco</div><div class="kw-vol">~590/mes · Dif. baja</div></div>
+          <div class="kw-item md"><div class="kw-term">inmuebles villahermosa tabasco</div><div class="kw-vol">~480/mes · Dif. baja</div></div>
+          <div class="kw-item lo"><div class="kw-term">renta paraiso tabasco dos bocas</div><div class="kw-vol">~320/mes · Sin competencia</div></div>
+          <div class="kw-item lo"><div class="kw-term">colonias gaviotas tabasco 2000</div><div class="kw-vol">~260/mes · Sin competencia</div></div>
+          <div class="kw-item lo"><div class="kw-term">roomies villahermosa tabasco</div><div class="kw-vol">~210/mes · Sin competencia</div></div>
+          <div class="kw-item lo"><div class="kw-term">locales comerciales renta tabasco</div><div class="kw-vol">~190/mes · Dif. muy baja</div></div>
+        </div>
+
+        <div class="callout info mt-1">
+          <span class="callout-icon">🔍</span>
+          <div class="callout-body">
+            <div class="callout-title">Estrategia SEO local — cómo dominar Google</div>
+            <p>Crear <strong>una página dedicada por colonia</strong> de Villahermosa (Gaviotas Norte, Tabasco 2000, Framboyanes, Del Parque, etc.). Cada página indexa las propiedades disponibles + datos de la zona. Esto es el activo SEO más poderoso y difícil de copiar. A 6 meses genera tráfico orgánico compuesto.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-pattern-bottom"></div>
+  <div class="page-footer">
+    <span>Corestack Solutions © <span class="year"></span></span>
+    <span class="page-footer-brand">Plataforma Inmobiliaria Tabasco · Reporte de Viabilidad</span>
+    <span>Pág. 9 / 15</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ P10 · VIRAL + MONETIZACIÓN P1 ═══════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../images/corestack.png" class="page-header-logo" alt="Corestack"/>
+    <div class="page-header-info">
+      <div class="page-header-doc">08–09 · Estrategia Viral y Modelo de Monetización</div>
+      <div class="page-header-sub">Mecanismos de crecimiento y fuentes de ingresos sin cobrar al usuario final</div>
+    </div>
+  </div>
+  <div class="content">
+    <h1>08 · Estrategia Viral</h1>
+
+    <div class="card-grid cols-3 mt-1">
+      <div class="card">
+        <span class="card-icon">📱</span>
+        <div class="card-title">Compartir en WhatsApp</div>
+        <div class="card-body">Cada propiedad tiene un botón "Compartir en WhatsApp" que genera una tarjeta con foto, precio, colonia y link. Los grupos de WhatsApp de colonias son el principal canal de difusión informal en Tabasco.</div>
+        <span class="card-tag">Prioridad 1</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">🔔</span>
+        <div class="card-title">Alertas Automáticas</div>
+        <div class="card-body">El usuario configura: zona + tipo + presupuesto. Recibe notificación al instante cuando aparece una propiedad que coincide. Esto crea un hábito de apertura diaria de la app/web.</div>
+        <span class="card-tag">Retención alta</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">🏆</span>
+        <div class="card-title">Ranking de Inmobiliarias</div>
+        <div class="card-body">Ranking público de las mejores inmobiliarias de Tabasco con reviews verificadas. Incentiva a las agencias a promover la plataforma entre sus clientes para mejorar su posición.</div>
+        <span class="card-tag orange">Viral B2B</span>
+      </div>
+    </div>
+
+    <div class="two-col mt-1">
+      <div>
+        <h2>Mecanismo de Referidos</h2>
+        <ul>
+          <li><strong>Propietario refiere propietario:</strong> Por cada propietario que se registra a través de un link de referido, el referente obtiene publicación destacada por 15 días gratis.</li>
+          <li><strong>Agente refiere agente:</strong> 1 mes de suscripción premium gratis por cada agente referido que pague suscripción.</li>
+          <li><strong>Buscador comparte búsqueda:</strong> Link de búsqueda compartible con filtros aplicados — "mira lo que encontré en tabascoinmuebles.com".</li>
+        </ul>
+      </div>
+      <div>
+        <h2>Contenido Viral</h2>
+        <ul>
+          <li><strong>Reporte mensual de precios:</strong> "Precio promedio de renta en Villahermosa: $8,200/mes en octubre." Ampliamente compartido en grupos y medios locales.</li>
+          <li><strong>Estadísticas de colonias:</strong> "Gaviotas Norte: la colonia más buscada del mes." Genera orgullo y conversación.</li>
+          <li><strong>Alertas de precio:</strong> "Esta propiedad bajó de precio esta semana" genera urgencia y reaberturas.</li>
+          <li><strong>TikTok / Reels:</strong> Tours de propiedades destacadas con link directo a la plataforma.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="divider mt-1"><span>09 · Modelo de Monetización (sin cobrar al usuario final)</span></div>
+
+    <h1>09 · Monetización — Líneas de Ingreso Principales</h1>
+    <p>La plataforma es <strong>100% gratuita para compradores, rentadores y buscadores.</strong> Los ingresos provienen de actores B2B que se benefician del tráfico y los datos.</p>
+
+    <div class="mono-row">
+      <div class="mono-cat">Inmobiliarias</div>
+      <div class="mono-items">
+        Suscripción básica ($999/mes · hasta 30 propiedades) · Premium ($2,499/mes · ilimitadas + CRM) · Enterprise ($5,999/mes · múltiples agentes)<br/>
+        Publicación destacada ($299–$599 por propiedad/mes) · Top de búsqueda ($499/7 días) · Leads calificados ($199–$499 c/u)
+      </div>
+      <div class="mono-rev">$8,000–$180,000/mes</div>
+    </div>
+    <div class="mono-row">
+      <div class="mono-cat">Desarrolladoras</div>
+      <div class="mono-items">
+        Página de desarrollo destacado ($2,999/mes) · Banner de nuevo desarrollo ($5,000–$15,000/mes) · Tour virtual 3D hosted ($299/propiedad) · Reporte de demanda por zona ($15,000–$50,000)
+      </div>
+      <div class="mono-rev">$5,000–$65,000/mes</div>
+    </div>
+    <div class="mono-row">
+      <div class="mono-cat">Bancos e Hipotecas</div>
+      <div class="mono-items">
+        Simulador hipotecario patrocinado ($8,000–$20,000/mes por banco) · Leads de crédito hipotecario ($199–$499 c/u) · Banner calculadora Infonavit/Fovissste
+      </div>
+      <div class="mono-rev">$8,000–$40,000/mes</div>
+    </div>
+    <div class="mono-row">
+      <div class="mono-cat">Notarios / Valuadores</div>
+      <div class="mono-items">
+        Directorio notarios premium ($1,500–$3,000/mes) · Valuadores certificados destacados ($999/mes) · Abogados inmobiliarios ($799/mes) · Arquitectos ($599/mes)
+      </div>
+      <div class="mono-rev">$3,000–$15,000/mes</div>
+    </div>
+  </div>
+  <div class="page-pattern-bottom"></div>
+  <div class="page-footer">
+    <span>Corestack Solutions © <span class="year"></span></span>
+    <span class="page-footer-brand">Plataforma Inmobiliaria Tabasco · Reporte de Viabilidad</span>
+    <span>Pág. 10 / 15</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ P11 · MONETIZACIÓN P2 + SERVICIOS ═══════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../images/corestack.png" class="page-header-logo" alt="Corestack"/>
+    <div class="page-header-info">
+      <div class="page-header-doc">09–10 · Monetización Completa y Marketplace de Servicios</div>
+      <div class="page-header-sub">30+ líneas de ingresos · Servicios adyacentes al proceso inmobiliario</div>
+    </div>
+  </div>
+  <div class="content">
+    <h1>Monetización — Servicios Adyacentes (30+ líneas)</h1>
+
+    <div class="mono-row">
+      <div class="mono-cat">Seguros</div>
+      <div class="mono-items">Seguro de hogar (comisión 8–12%) · Seguro de renta/arrendatario (comisión 8–12%) · Seguro de crédito hipotecario · Garantía de renta patrocinada</div>
+      <div class="mono-rev">$3,000–$25,000/mes</div>
+    </div>
+    <div class="mono-row">
+      <div class="mono-cat">Mudanzas</div>
+      <div class="mono-items">Directorio de mudanzas con comisión 10–15% por transacción · Suscripción mensual empresa de mudanzas ($599/mes) · Solicitud de cotización conectada a proveedor</div>
+      <div class="mono-rev">$2,000–$15,000/mes</div>
+    </div>
+    <div class="mono-row">
+      <div class="mono-cat">Remodelación</div>
+      <div class="mono-items">Pintores, electricistas, plomeros, albañiles: leads por solicitud ($99–$199 c/u) · Suscripción empresa remodeladora ($799/mes) · Cotizaciones integradas en cada propiedad</div>
+      <div class="mono-rev">$2,500–$20,000/mes</div>
+    </div>
+    <div class="mono-row">
+      <div class="mono-cat">Energía Solar</div>
+      <div class="mono-items">Leads para instaladores de paneles solares ($299–$599 c/u) · Banner patrocinado en páginas de propiedades · Calculadora de ahorro solar integrada</div>
+      <div class="mono-rev">$1,500–$12,000/mes</div>
+    </div>
+    <div class="mono-row">
+      <div class="mono-cat">Aire Acondicionado</div>
+      <div class="mono-items">Servicios esenciales en Tabasco (clima extremo). Instalación y mantenimiento: comisión 10% · Suscripción proveedores locales ($499/mes)</div>
+      <div class="mono-rev">$1,000–$8,000/mes</div>
+    </div>
+    <div class="mono-row">
+      <div class="mono-cat">Domótica y Seguridad</div>
+      <div class="mono-items">Alarmas, cámaras, acceso inteligente: leads ($299 c/u) · Vitrina de productos patrocinados · Afiliado de Alexa/Google Home proveedores locales</div>
+      <div class="mono-rev">$1,000–$6,000/mes</div>
+    </div>
+    <div class="mono-row">
+      <div class="mono-cat">Muebles y Decoración</div>
+      <div class="mono-items">Afiliados de tiendas de muebles locales (5–8% comisión) · "Amueblado virtual" — visualizar muebles en propiedad · Patrocinio de tiendas en propiedades vacías</div>
+      <div class="mono-rev">$500–$5,000/mes</div>
+    </div>
+    <div class="mono-row">
+      <div class="mono-cat">Datos e Inteligencia</div>
+      <div class="mono-items">Reportes de mercado mensuales ($15,000–$50,000 c/u) · API de datos por zona para desarrolladoras · Índice de precios por colonia (suscripción $5,000–$20,000/mes)</div>
+      <div class="mono-rev">$5,000–$40,000/mes</div>
+    </div>
+    <div class="mono-row">
+      <div class="mono-cat">Display / Publicidad</div>
+      <div class="mono-items">Banners en resultados de búsqueda (CPM/CPC) · Email a base de usuarios segmentados ($5,000/envío) · Push notifications patrocinadas</div>
+      <div class="mono-rev">$2,000–$15,000/mes</div>
+    </div>
+    <div class="mono-row">
+      <div class="mono-cat">Propietarios Premium</div>
+      <div class="mono-items">Verificación de propietario $199/año · Perfil verificado con badge · Publicaciones destacadas de propietario directo ($199–$399/mes)</div>
+      <div class="mono-rev">$500–$8,000/mes</div>
+    </div>
+
+    <div class="callout success mt-1">
+      <span class="callout-icon">💰</span>
+      <div class="callout-body">
+        <div class="callout-title">Potencial de ingresos consolidado — Escenario realista año 3</div>
+        <p>Con 300 inmobiliarias de pago ($2,499/mes promedio) + 5 bancos ($10,000/mes) + seguros ($15,000/mes) + servicios adyacentes ($20,000/mes) + datos ($10,000/mes) + publicidad ($10,000/mes) = <strong>~$830,000 MXN/mes · $9.9M MXN/año.</strong> Escenario conservador: $4.5M/año. Agresivo: $18M/año.</p>
+      </div>
+    </div>
+  </div>
+  <div class="page-pattern-bottom"></div>
+  <div class="page-footer">
+    <span>Corestack Solutions © <span class="year"></span></span>
+    <span class="page-footer-brand">Plataforma Inmobiliaria Tabasco · Reporte de Viabilidad</span>
+    <span>Pág. 11 / 15</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ P12 · VENTAJAS COMPETITIVAS + FEATURES TABASCO ═══════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../images/corestack.png" class="page-header-logo" alt="Corestack"/>
+    <div class="page-header-info">
+      <div class="page-header-doc">11–12 · Ventajas Competitivas y Features Exclusivos de Tabasco</div>
+      <div class="page-header-sub">Lo que ningún competidor puede copiar fácilmente en el corto plazo</div>
+    </div>
+  </div>
+  <div class="content">
+    <h1>11 · Ventajas Competitivas Difíciles de Copiar</h1>
+
+    <div class="adv-grid mt-1">
+      <div class="adv-item"><span class="adv-num">01</span><span class="adv-text"><strong>Mapa de inundaciones integrado:</strong> Zonas de riesgo hídrico por colonia, el dato más demandado en Tabasco.</span></div>
+      <div class="adv-item"><span class="adv-num">02</span><span class="adv-text"><strong>Historial de precios por colonia:</strong> Base de datos propia que crece con el tiempo. Imposible de replicar sin años de datos.</span></div>
+      <div class="adv-item"><span class="adv-num">03</span><span class="adv-text"><strong>Índice de plusvalía por municipio:</strong> Cuánto han subido los precios en cada zona en los últimos 12–36 meses.</span></div>
+      <div class="adv-item"><span class="adv-num">04</span><span class="adv-text"><strong>Verificación de propietarios:</strong> Propietario verificado con documento oficial. Reduce fraudes. Diferenciador de confianza único.</span></div>
+      <div class="adv-item"><span class="adv-num">05</span><span class="adv-text"><strong>Inventario local exhaustivo:</strong> Primero en capturar la masa crítica de propiedades en Tabasco. El efecto red hace que más propiedades atraigan más usuarios.</span></div>
+      <div class="adv-item"><span class="adv-num">06</span><span class="adv-text"><strong>Índice de seguridad por colonia:</strong> Basado en datos públicos de incidencias. Decisión crítica para familias y empresas.</span></div>
+      <div class="adv-item"><span class="adv-num">07</span><span class="adv-text"><strong>Sección Paraíso / Dos Bocas:</strong> Único portal con sección dedicada a trabajadores de la refinería. Demanda alta, sin oferta estructurada.</span></div>
+      <div class="adv-item"><span class="adv-num">08</span><span class="adv-text"><strong>SEO de largo plazo por colonia:</strong> Una página por colonia = activo imposible de desplazar en meses por un competidor nuevo.</span></div>
+      <div class="adv-item"><span class="adv-num">09</span><span class="adv-text"><strong>Ranking público de inmobiliarias:</strong> Reviews verificadas de clientes. Las inmobiliarias promueven la plataforma para mejorar su posición.</span></div>
+      <div class="adv-item"><span class="adv-num">10</span><span class="adv-text"><strong>Red de datos del Corredor Interoceánico:</strong> Seguimiento de desarrollos, corredores industriales y su impacto en plusvalía de zonas cercanas.</span></div>
+      <div class="adv-item"><span class="adv-num">11</span><span class="adv-text"><strong>Valuación automática por IA:</strong> Estimación de precio de mercado en tiempo real basada en datos reales de la plataforma.</span></div>
+      <div class="adv-item"><span class="adv-num">12</span><span class="adv-text"><strong>Base de leads propietarios:</strong> Cada propietario que publica es un contacto de valor. Base que crece con cada publicación.</span></div>
+      <div class="adv-item"><span class="adv-num">13</span><span class="adv-text"><strong>Alertas configurables en tiempo real:</strong> El usuario que configura una alerta tiene alta intención de compra/renta. Base de datos de demanda activa.</span></div>
+      <div class="adv-item"><span class="adv-num">14</span><span class="adv-text"><strong>Relaciones comerciales con inmobiliarias locales:</strong> Una vez que 200+ agencias dependen de la plataforma para sus leads, el costo de cambio es muy alto.</span></div>
+      <div class="adv-item"><span class="adv-num">15</span><span class="adv-text"><strong>Reconocimiento de marca local "el Idealista de Tabasco":</strong> Una vez posicionado, imposible de desvanecer sin inversión masiva del competidor.</span></div>
+      <div class="adv-item"><span class="adv-num">16</span><span class="adv-text"><strong>CRM inmobiliario integrado:</strong> Herramienta de gestión gratuita para agentes. Switching cost alto una vez adoptado.</span></div>
+      <div class="adv-item"><span class="adv-num">17</span><span class="adv-text"><strong>API de datos de mercado:</strong> Constructoras y desarrolladoras pagan por acceso. Los datos solo existen si la plataforma tiene historial.</span></div>
+      <div class="adv-item"><span class="adv-num">18</span><span class="adv-text"><strong>Reporte anual del mercado inmobiliario de Tabasco:</strong> Publicación de autoridad que posiciona la marca como fuente oficial de datos del sector.</span></div>
+      <div class="adv-item"><span class="adv-num">19</span><span class="adv-text"><strong>Red de servicios complementarios:</strong> Mudanzas, seguros, renovación — ecosistema que ningún portal tiene en Tabasco.</span></div>
+      <div class="adv-item"><span class="adv-num">20</span><span class="adv-text"><strong>Conocimiento geográfico profundo:</strong> Qué colonias se inundan en qué nivel, qué zonas tienen agua potable irregular, distancia real a servicios.</span></div>
+    </div>
+
+    <div class="divider mt-1"><span>12 · Features Exclusivos para Tabasco</span></div>
+    <div class="card-grid cols-3 mt-1">
+      <div class="card"><span class="card-icon">🌊</span><div class="card-title">Mapa de Inundaciones</div><div class="card-body">Overlay sobre el mapa de propiedades mostrando zonas de riesgo bajo, medio y alto según histórico de inundaciones CONAGUA.</div><span class="card-tag orange">Exclusivo</span></div>
+      <div class="card"><span class="card-icon">⛽</span><div class="card-title">Sección Dos Bocas / PEMEX</div><div class="card-body">Filtro especial para propiedades en Paraíso, Comalcalco y rutas de acceso a la refinería. Renta mensual y semanal para trabajadores.</div><span class="card-tag">Exclusivo</span></div>
+      <div class="card"><span class="card-icon">🛣️</span><div class="card-title">Corredor Interoceánico</div><div class="card-body">Mapa de impacto del CIIT sobre plusvalía de municipios. Identifica zonas con potencial de valorización por inversión pública.</div><span class="card-tag">Exclusivo</span></div>
+    </div>
+  </div>
+  <div class="page-pattern-bottom"></div>
+  <div class="page-footer">
+    <span>Corestack Solutions © <span class="year"></span></span>
+    <span class="page-footer-brand">Plataforma Inmobiliaria Tabasco · Reporte de Viabilidad</span>
+    <span>Pág. 12 / 15</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ P13 · IA + ROADMAP ═══════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../images/corestack.png" class="page-header-logo" alt="Corestack"/>
+    <div class="page-header-info">
+      <div class="page-header-doc">13–14 · Estrategia de IA y Roadmap Tecnológico</div>
+      <div class="page-header-sub">Inteligencia artificial aplicada al mercado inmobiliario · Velocidad de lanzamiento</div>
+    </div>
+  </div>
+  <div class="content">
+    <h1>13 · Estrategia de Inteligencia Artificial</h1>
+
+    <div class="card-grid cols-2 mt-1">
+      <div class="card">
+        <span class="card-icon">🔍</span>
+        <div class="card-title">Búsqueda Inteligente</div>
+        <div class="card-body">El usuario escribe: <em>"quiero rentar algo cerca de la UJAT, máximo $7,000, que no se inunde"</em>. La IA interpreta la intención, aplica filtros de zona, precio y riesgo hídrico automáticamente. Sin necesitar conocer las colonias.</div>
+        <span class="card-tag">Lanzamiento M6</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">💰</span>
+        <div class="card-title">Valuación Automática (AVM)</div>
+        <div class="card-body">Estimación del precio justo de una propiedad basada en características (m², recámaras, colonia, estado) comparadas con propiedades similares vendidas/rentadas en los últimos 12 meses. Ayuda a propietarios a publicar al precio correcto.</div>
+        <span class="card-tag">Lanzamiento M12</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">🤖</span>
+        <div class="card-title">Generación de Anuncios</div>
+        <div class="card-body">Propietario sube fotos y datos básicos. La IA genera automáticamente el texto del anuncio (descripción, puntos de venta clave, colonia, accesos). Reduce fricción al publicar. Alta adopción entre propietarios no expertos.</div>
+        <span class="card-tag">Lanzamiento M8</span>
+      </div>
+      <div class="card">
+        <span class="card-icon">🛡️</span>
+        <div class="card-title">Detección de Fraudes</div>
+        <div class="card-body">Análisis automático de nuevas publicaciones: fotos robadas de internet, precios atípicamente bajos, patrones de comportamiento de estafadores. Alerta al equipo antes de publicar. Confianza como ventaja competitiva.</div>
+        <span class="card-tag orange">Lanzamiento M4</span>
+      </div>
+    </div>
+
+    <div class="two-col mt-1">
+      <div>
+        <h2>Chat Inmobiliario con IA</h2>
+        <p>Asistente conversacional disponible 24/7 que responde preguntas como: <em>"¿Cuánto cuesta rentrar en Tabasco 2000?" / "¿Qué colonia es mejor para ir a la UJAT?" / "¿Este precio está bien para Gaviotas Norte?"</em></p>
+        <p style="margin-top:0.4rem">Construido sobre Claude API + datos propios de la plataforma. El modelo mejora con cada transacción registrada. Disponible en web y WhatsApp.</p>
+      </div>
+      <div>
+        <h2>Recomendaciones Personalizadas</h2>
+        <p>Basado en el historial de búsqueda del usuario, las propiedades que vio más de 30 segundos y las alertas configuradas, el sistema sugiere propiedades con alta probabilidad de match.</p>
+        <p style="margin-top:0.4rem">Modelo colaborativo: "usuarios como tú también vieron estas propiedades". Aumenta el tiempo en plataforma y la tasa de contacto.</p>
+      </div>
+    </div>
+
+    <div class="divider mt-1"><span>14 · Roadmap Tecnológico</span></div>
+
+    <div class="timeline mt-1">
+      <div class="tl-item"><div class="tl-dot orange"></div><div class="tl-date">MVP · M1–3</div><div class="tl-title">Lanzamiento mínimo viable</div><div class="tl-body">Web responsive · Publicación de propiedades · Búsqueda con filtros básicos · Mapa con pin por propiedad · Formulario de contacto · SEO técnico base · Panel básico para agentes</div></div>
+      <div class="tl-item"><div class="tl-dot"></div><div class="tl-date">V1 · M4–9</div><div class="tl-title">Plataforma con propuesta de valor</div><div class="tl-body">Alertas por email · Mapa de inundaciones overlay · Páginas de colonia indexadas · Dashboard de agente con métricas · Suscripciones de pago · Simulador hipotecario · Detección básica de fraudes con IA</div></div>
+      <div class="tl-item"><div class="tl-dot done"></div><div class="tl-date">V2 · M10–18</div><div class="tl-title">Crecimiento y retención</div><div class="tl-body">App PWA (instalable, notificaciones push) · Chat integrado propietario-buscador · Generación de anuncios con IA · Ranking de inmobiliarias · Búsqueda semántica · Marketplace de servicios básico</div></div>
+      <div class="tl-item"><div class="tl-dot done"></div><div class="tl-date">V3 · M19–36</div><div class="tl-title">Plataforma de datos y ecosistema</div><div class="tl-body">App nativa iOS + Android · AVM (valuación automática) · API pública de datos · CRM inmobiliario completo · Reportes de mercado automatizados · Integración bancaria directa · Chat de IA inmobiliario</div></div>
+    </div>
+  </div>
+  <div class="page-pattern-bottom"></div>
+  <div class="page-footer">
+    <span>Corestack Solutions © <span class="year"></span></span>
+    <span class="page-footer-brand">Plataforma Inmobiliaria Tabasco · Reporte de Viabilidad</span>
+    <span>Pág. 13 / 15</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ P14 · PROYECCIÓN FINANCIERA ═══════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../images/corestack.png" class="page-header-logo" alt="Corestack"/>
+    <div class="page-header-info">
+      <div class="page-header-doc">15 · Proyección Financiera</div>
+      <div class="page-header-sub">Escenarios conservador, realista y agresivo a 1, 3 y 5 años</div>
+    </div>
+  </div>
+  <div class="content">
+    <h1>15 · Proyección Financiera</h1>
+
+    <div class="fin-grid mt-1">
+      <div class="fin-box">
+        <div class="fin-head con">Escenario Conservador</div>
+        <div class="fin-row"><span class="yr">Año 1</span><span class="val">$480,000 MXN</span></div>
+        <div class="fin-row"><span class="yr">Año 3</span><span class="val">$4,500,000 MXN</span></div>
+        <div class="fin-row"><span class="yr">Año 5</span><span class="val">$12,000,000 MXN</span></div>
+        <div class="fin-row"><span class="yr">Inmobiliarias año 3</span><span class="val">80 pagando</span></div>
+        <div class="fin-row"><span class="yr">MAU año 3</span><span class="val">25,000</span></div>
+        <div class="fin-row"><span class="yr">Valuación año 5</span><span class="val">~$60M MXN</span></div>
+      </div>
+      <div class="fin-box">
+        <div class="fin-head rea">Escenario Realista</div>
+        <div class="fin-row"><span class="yr">Año 1</span><span class="val">$1,200,000 MXN</span></div>
+        <div class="fin-row"><span class="yr">Año 3</span><span class="val">$9,900,000 MXN</span></div>
+        <div class="fin-row"><span class="yr">Año 5</span><span class="val">$30,000,000 MXN</span></div>
+        <div class="fin-row"><span class="yr">Inmobiliarias año 3</span><span class="val">300 pagando</span></div>
+        <div class="fin-row"><span class="yr">MAU año 3</span><span class="val">60,000</span></div>
+        <div class="fin-row"><span class="yr">Valuación año 5</span><span class="val">~$150M MXN</span></div>
+      </div>
+      <div class="fin-box">
+        <div class="fin-head agr">Escenario Agresivo</div>
+        <div class="fin-row"><span class="yr">Año 1</span><span class="val">$2,800,000 MXN</span></div>
+        <div class="fin-row"><span class="yr">Año 3</span><span class="val">$22,000,000 MXN</span></div>
+        <div class="fin-row"><span class="yr">Año 5</span><span class="val">$65,000,000 MXN</span></div>
+        <div class="fin-row"><span class="yr">Inmobiliarias año 3</span><span class="val">500+ pagando</span></div>
+        <div class="fin-row"><span class="yr">MAU año 3</span><span class="val">120,000</span></div>
+        <div class="fin-row"><span class="yr">Valuación año 5</span><span class="val">~$325M MXN</span></div>
+      </div>
+    </div>
+
+    <div class="two-col mt-1">
+      <div>
+        <h2>Estructura de Costos — Año 1</h2>
+        <table class="corp-table">
+          <thead><tr><th>Rubro</th><th class="right">Costo estimado/año</th></tr></thead>
+          <tbody>
+            <tr><td>Desarrollo web + MVP</td><td class="right">$120,000–$300,000</td></tr>
+            <tr><td>Hosting + infraestructura</td><td class="right">$24,000–$60,000</td></tr>
+            <tr><td>Marketing (Facebook + SEO)</td><td class="right">$60,000–$180,000</td></tr>
+            <tr><td>Operación + ventas</td><td class="right">$180,000–$360,000</td></tr>
+            <tr><td>Datos + contenido (colonias)</td><td class="right">$36,000–$96,000</td></tr>
+            <tr class="subtotal"><td><strong>Total inversión año 1</strong></td><td class="right"><strong>$420K–$1M MXN</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h2>Camino a $100M MXN en Valuación</h2>
+        <p>Los marketplaces de contenido local y datos se valúan típicamente en <strong>5–10× ingresos anuales.</strong></p>
+        <ul>
+          <li><strong>A $10M/año en ingresos</strong> (escenario realista año 3–4) → valuación $50–100M MXN.</li>
+          <li><strong>A $20–30M/año</strong> (año 5) → valuación $100–300M MXN.</li>
+          <li><strong>Catalizadores:</strong> Expansión a Campeche y Veracruz, integración bancaria directa, o adquisición por Inmuebles24 / proptech regional.</li>
+        </ul>
+        <div class="callout success" style="margin-top:0.5rem">
+          <span class="callout-icon">🚀</span>
+          <div class="callout-body">
+            <div class="callout-title">El camino más rápido</div>
+            <p>Dominar Tabasco en 24 meses → abrir Campeche con playbook probado → captar atención de portales nacionales para adquisición o ronda de inversión con múltiplo 8–12×.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="page-pattern-bottom"></div>
+  <div class="page-footer">
+    <span>Corestack Solutions © <span class="year"></span></span>
+    <span class="page-footer-brand">Plataforma Inmobiliaria Tabasco · Reporte de Viabilidad</span>
+    <span>Pág. 14 / 15</span>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ P15 · RIESGOS + RECOMENDACIÓN FINAL ═══════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <img src="../images/corestack.png" class="page-header-logo" alt="Corestack"/>
+    <div class="page-header-info">
+      <div class="page-header-doc">16–18 · Riesgos, Plan de Acción y Recomendación Final</div>
+      <div class="page-header-sub">Qué puede salir mal · Los primeros 12 meses · Veredicto del equipo</div>
+    </div>
+  </div>
+  <div class="content">
+    <h1>16 · Riesgos Críticos</h1>
+
+    <div class="risk-grid mt-1">
+      <div class="risk-card alta"><div class="rt">🔴 Riesgo Alto</div>
+        <ul>
+          <li><strong>Problema del lado frío (cold start):</strong> Sin propiedades, nadie busca. Sin búsquedas, nadie publica. Solución: captura manual de listings en los primeros 60 días.</li>
+          <li><strong>Entrada agresiva de Inmuebles24:</strong> Subsidiar cero comisiones para atraer agentes locales. Contramedida: relaciones directas y lealtad de marca local.</li>
+          <li><strong>Facebook reforzando Marketplace:</strong> Meta puede invertir en especialización inmobiliaria local. Contramedida: datos de mercado y confianza que Facebook no puede ofrecer.</li>
+        </ul>
+      </div>
+      <div class="risk-card media"><div class="rt">🟡 Riesgo Medio</div>
+        <ul>
+          <li><strong>Fraudes en publicaciones:</strong> Un escándalo viral destruye la confianza. Solución: verificación de propietarios desde el inicio y sistema de reportes.</li>
+          <li><strong>Monetización prematura:</strong> Cobrar demasiado pronto reduce adopción. Solución: 12 meses gratis mínimo para inmobiliarias en la etapa de lanzamiento.</li>
+          <li><strong>Dependencia de un solo canal:</strong> Si SEO falla o Facebook cambia algoritmo, el tráfico colapsa. Solución: diversificar fuentes desde el mes 1.</li>
+          <li><strong>Problemas legales de datos:</strong> Publicar propiedades sin permiso del propietario. Solución: términos claros y solo publicar con consentimiento.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="divider mt-1"><span>18 · Recomendación Final y Plan de Acción — Primeros 12 Meses</span></div>
+
+    <div class="highlight mt-1">
+      <div class="hl-eyebrow">Veredicto del equipo multidisciplinario</div>
+      <p><strong>SÍ. Construir esta plataforma es una decisión con asimetría de riesgo-retorno favorable.</strong> El mercado tiene demanda real, ningún competidor dominante local, costo de entrada bajo y una ventana de oportunidad abierta hoy. Con ejecución disciplinada en los primeros 12 meses, la probabilidad de convertirse en la plataforma líder de Tabasco antes del mes 24 es del <strong>85%.</strong></p>
+    </div>
+
+    <h2>Plan de Acción — Primeros 12 Meses como Fundador</h2>
+    <ul class="action-list mt-1">
+      <li><span class="step">M1</span><span class="action-text">Registrar dominio (tabascoinmuebles.com o similar), lanzar landing de "próximamente", comenzar captura manual de 300 propiedades de Facebook y grupos de WhatsApp.</span><span class="when">Día 1–30</span></li>
+      <li><span class="step">M2</span><span class="action-text">MVP en producción: búsqueda básica + mapa + publicación de propiedades + SEO técnico. Notificar a 50 inmobiliarias locales: "publica gratis durante 1 año".</span><span class="when">Día 31–60</span></li>
+      <li><span class="step">M3</span><span class="action-text">Crear 50 páginas de colonias de Villahermosa indexadas en Google. Activar blog inmobiliario de Tabasco. Primera nota de prensa en medios locales.</span><span class="when">Día 61–90</span></li>
+      <li><span class="step">M4</span><span class="action-text">Lanzar mapa de inundaciones (obtener datos CONAGUA). Activar Facebook Ads a $3,000 MXN/mes. Meta: 500 propiedades activas y 2,000 MAU.</span><span class="when">Mes 4</span></li>
+      <li><span class="step">M6</span><span class="action-text">Activar alertas automáticas por email. Primer reporte mensual de precios publicado. Meta: 100 inmobiliarias registradas, 5,000 MAU.</span><span class="when">Mes 6</span></li>
+      <li><span class="step">M9</span><span class="action-text">Lanzar primeras suscripciones de pago para inmobiliarias ($999/mes). Alianza con 1–2 bancos para simulador hipotecario. Meta: $50,000 MXN/mes en ingresos.</span><span class="when">Mes 9</span></li>
+      <li><span class="step">M12</span><span class="action-text">Revisar métricas, escalar lo que funciona, cortar lo que no. Meta: 150+ inmobiliarias de pago, 15,000 MAU, $200,000 MXN/mes. Preparar expansión V2.</span><span class="when">Mes 12</span></li>
+    </ul>
+
+    <div class="callout success mt-1">
+      <span class="callout-icon">🏆</span>
+      <div class="callout-body">
+        <div class="callout-title">La plataforma de $100M MXN — Qué la hace posible</div>
+        <p>El proptech regional en mercados sin liderazgo sigue un patrón documentado: <strong>el primero que llega con UX decente y cobertura local domina.</strong> Portales como Locanto, OLX regional, e Idealista en sus respectivos mercados lo demostraron. Tabasco no tiene a ese actor hoy. La pregunta no es si esta plataforma puede valer $100M MXN — la pregunta es quién la va a construir primero.</p>
+      </div>
+    </div>
+  </div>
+  <div class="page-pattern-bottom"></div>
+  <div class="page-footer">
+    <span>Corestack Solutions © <span class="year"></span></span>
+    <span class="page-footer-brand">Plataforma Inmobiliaria Tabasco · Reporte de Viabilidad · v1.0 · <span class="year"></span></span>
+    <span>Pág. 15 / 15</span>
+  </div>
+</div>
+
+</div><!-- /pages -->
+<script>document.querySelectorAll('.year').forEach(el => el.textContent = new Date().getFullYear());</script>
+</body>
+</html>

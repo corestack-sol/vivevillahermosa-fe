@@ -1,0 +1,171 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { Home, MapPin, Phone, Mail, Droplets } from 'lucide-react';
+
+const propertyLinks = [
+  { href: '/propiedades?tipo=casa&operacion=venta', label: 'Casas en venta' },
+  { href: '/propiedades?tipo=casa&operacion=renta', label: 'Casas en renta' },
+  { href: '/propiedades?tipo=departamento', label: 'Departamentos' },
+  { href: '/propiedades?tipo=terreno', label: 'Terrenos' },
+  { href: '/propiedades?tipo=local', label: 'Locales comerciales' },
+  { href: '/propiedades?tipo=habitacion', label: 'Habitaciones / Roomies' },
+];
+
+const zoneLinks = [
+  { href: '/zonas/villahermosa', label: 'Villahermosa' },
+  { href: '/zonas/paraiso', label: 'Paraíso / Dos Bocas' },
+  { href: '/zonas/cardenas', label: 'Cárdenas' },
+  { href: '/zonas/comalcalco', label: 'Comalcalco' },
+  { href: '/zonas/nacajuca', label: 'Nacajuca' },
+  { href: '/zonas/jalpa-de-mendez', label: 'Jalpa de Méndez' },
+];
+
+function FooterMinimal() {
+  return (
+    <footer className="bg-white border-t border-brand/10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-1.5">
+        <p className="text-sm text-brand-dark/70">
+          © {new Date().getFullYear()} Vive Villahermosa. Todos los derechos reservados.
+        </p>
+        <p className="text-sm text-brand/50">
+          Plataforma inmobiliaria local · Tabasco, México
+        </p>
+      </div>
+    </footer>
+  );
+}
+
+function FooterFull() {
+  return (
+    <footer className="bg-brand-dark text-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {/* Brand */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                <Home size={16} className="text-white" />
+              </span>
+              <span className="font-display font-bold text-lg">
+                Vive <span className="text-accent">Villahermosa</span>
+              </span>
+            </div>
+            <p className="text-sm text-white/70 leading-relaxed mb-4">
+              Encontrar dónde vivir en Tabasco no debería ser difícil. Casas, departamentos,
+              terrenos y cuartos en los 17 municipios del estado. Gratis para todos.
+            </p>
+            <div className="space-y-2">
+              <a
+                href="tel:+529931234567"
+                className="flex items-center gap-2 text-sm text-white/70 hover:text-accent transition-colors"
+              >
+                <Phone size={14} /> +52 993 123 4567
+              </a>
+              <a
+                href="mailto:hola@vivevillahermosa.mx"
+                className="flex items-center gap-2 text-sm text-white/70 hover:text-accent transition-colors"
+              >
+                <Mail size={14} /> hola@vivevillahermosa.mx
+              </a>
+              <span className="flex items-center gap-2 text-sm text-white/70">
+                <MapPin size={14} /> Villahermosa, Tabasco, México
+              </span>
+            </div>
+          </div>
+
+          {/* Propiedades */}
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-white/50 mb-4">
+              Propiedades
+            </h3>
+            <ul className="space-y-2">
+              {propertyLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-white/70 hover:text-accent transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Zonas */}
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-white/50 mb-4">
+              Zonas
+            </h3>
+            <ul className="space-y-2">
+              {zoneLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-white/70 hover:text-accent transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Legal */}
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-white/50 mb-4">
+              Empresa
+            </h3>
+            <ul className="space-y-2">
+              <li>
+                <Link href="/nosotros" className="text-sm text-white/70 hover:text-accent transition-colors">
+                  Nosotros
+                </Link>
+              </li>
+              <li>
+                <Link href="/publicar" className="text-sm text-white/70 hover:text-accent transition-colors">
+                  Publicar propiedad
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacidad" className="text-sm text-white/70 hover:text-accent transition-colors">
+                  Aviso de privacidad
+                </Link>
+              </li>
+              <li>
+                <Link href="/mapa" className="text-sm text-white/70 hover:text-accent transition-colors">
+                  Mapa de propiedades
+                </Link>
+              </li>
+            </ul>
+
+            <div className="mt-6 p-3 bg-white/10 rounded-xl flex gap-2">
+              <Droplets size={14} className="flex-shrink-0 mt-0.5 text-white/60" />
+              <p className="text-xs text-white/60 leading-relaxed">
+                <strong className="text-white/80">¿Sabías?</strong> En Tabasco las lluvias importan.
+                Por eso cada propiedad muestra si su zona se inunda. Solo en Vive Villahermosa.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs text-white/50">
+            © {new Date().getFullYear()} Vive Villahermosa. Todos los derechos reservados.
+          </p>
+          <p className="text-xs text-white/40">
+            Plataforma inmobiliaria local · Tabasco, México
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+export function Footer() {
+  const pathname = usePathname();
+  if (pathname.startsWith('/mapa')) return null;
+  return pathname.startsWith('/propiedades') ? <FooterMinimal /> : <FooterFull />;
+}

@@ -1,0 +1,276 @@
+import { distanciaKm } from './landmarks';
+
+export interface ColoniaCoord {
+  key: string;
+  label: string;
+  municipio: string;
+  lat: number;
+  lng: number;
+  /** Qué tan lejos todavía cuenta como "cerca de" esta colonia. */
+  radioKm: number;
+  aliases?: string[];
+}
+
+/**
+ * Cuánto vale "cerca de" una colonia por defecto. Una colonia es un área,
+ * no un punto — más grande que el radio típico de un landmark puntual
+ * (parque, hospital), pero acotado para no volverse una búsqueda a nivel de
+ * toda la ciudad. Un solo valor para todas en vez de uno por colonia:
+ * no hay una fuente confiable de polígonos reales para calibrar caso por
+ * caso, y un número fijo es más honesto que inventar un radio "a ojo" por
+ * cada una.
+ */
+export const RADIO_COLONIA_KM = 1.3;
+
+/**
+ * Coordenadas de colonias/fraccionamientos reales de Tabasco, para poder
+ * calcular distancia real (Haversine, igual que src/lib/landmarks.ts) en
+ * vez de solo comparar texto contra el campo `colonia` de cada propiedad —
+ * antes de esto, buscar "cerca de la col Magisterial" daba cero resultados
+ * aunque hubiera una propiedad a 220m, porque su campo `colonia` dice
+ * "Framboyanes", no "Magisterial" (caso real reportado y verificado).
+ *
+ * Cobertura: el catálogo OFICIAL completo de colonias de Centro
+ * (Villahermosa) — 229 nombres, misma fuente que usa el sistema de
+ * códigos postales (heraldo.com.mx/SEPOMEX) — se intentó geocodificar
+ * contra OpenStreetMap/Nominatim uno por uno. De ahí solo entraron aquí
+ * las que resolvieron con confianza alta:
+ *   1. Coincidencia `place/neighbourhood` en OSM (el lugar existe como tal,
+ *      con ese nombre) — la mayoría de las entradas de abajo.
+ *   2. Coincidencia `leisure/park` con nombre igual a la colonia (ej.
+ *      "Parque Guayabal" para la colonia "Guayabal") — un parque de barrio
+ *      suele estar dentro de su colonia, mismo razonamiento ya usado para
+ *      verificar "Atasta" cruzándolo contra los landmarks UJAT/IMSS.
+ * Se descartaron a propósito los resultados que solo coincidieron con una
+ * CALLE (`highway/*`), un polígono de uso de suelo genérico
+ * (`landuse/residential|commercial`), o un negocio/edificio que por
+ * casualidad comparte nombre (`amenity/bank`, `office/government`, etc.) —
+ * ninguno de esos es un proxy confiable del centro real de la colonia; una
+ * calle puede estar en su borde, no en medio, y un banco puede estar en
+ * cualquier parte de la ciudad. Es la misma razón por la que "Zona Rural",
+ * "Zona Rural Norte", "Zona Industrial" y "Colonia Ejidal" (de otros
+ * municipios) quedaron fuera desde antes: no hay match confiable.
+ *
+ * De las 163 colonias intentadas (excluyendo ~66 ya cubiertas o
+ * demasiado genéricas para intentar), 56 pasaron la verificación de dos
+ * niveles de arriba. Las ~107 restantes simplemente no tienen match en
+ * OSM con ese nombre — se prefirió dejarlas fuera a inventar una
+ * coordenada. Colonias que no están aquí (de Centro o de cualquier otro
+ * municipio) no rompen la búsqueda: caen al match de texto de siempre
+ * (ver filters.ts), solo pierden precisión de distancia.
+ *
+ * Fuera de Centro/Villahermosa la cobertura sigue siendo mínima (solo
+ * El Bellote y Frontera, verificadas antes) — el pedido explícito fue
+ * "por lo menos las del centro"; extender esto a los otros 9 municipios
+ * de Tabasco es un trabajo aparte, del mismo tamaño que este.
+ *
+ * Nota de calidad de datos: "El Bellote" está aquí con municipio real
+ * "Paraíso" (confirmado en OSM) — pero la propiedad de muestra que lo usa
+ * (src/data/properties.json) tiene `municipio: "Nacajuca"`, que parece un
+ * error de captura en el dato de muestra. No se corrigió aquí porque es un
+ * problema distinto (dato de catálogo, no de coordenadas) — queda anotado
+ * para revisión aparte.
+ *
+ * Nota de precisión: "Framboyanes" (arriba, ya verificada) y un geocode
+ * independiente hecho en esta ronda para lo mismo difieren por ~640m —
+ * ambos puntos caen dentro del bounding box real que OSM le asigna a esa
+ * colonia (una colonia es un área, no un punto; esta es la imprecisión
+ * normal de reducirla a uno). Se descartó el geocode nuevo y se dejó el
+ * valor ya existente, para no invalidar mediciones ya mostradas.
+ */
+export const COLONIAS_COORDS: ColoniaCoord[] = [
+  // Ya verificadas en src/data/zones.json — mismas coordenadas, no se
+  // vuelven a geocodificar.
+  { key: 'tabasco-2000', label: 'Tabasco 2000', municipio: 'Centro', lat: 17.9994, lng: -92.9316, radioKm: RADIO_COLONIA_KM },
+  { key: 'gaviotas-norte', label: 'Gaviotas Norte', municipio: 'Centro', lat: 18.0141, lng: -92.9312, radioKm: RADIO_COLONIA_KM },
+  { key: 'gaviotas-sur', label: 'Gaviotas Sur', municipio: 'Centro', lat: 18.0089, lng: -92.9278, radioKm: RADIO_COLONIA_KM },
+  { key: 'framboyanes', label: 'Framboyanes', municipio: 'Centro', lat: 18.0056, lng: -92.9288, radioKm: RADIO_COLONIA_KM },
+  // "Sector Carrizal" — DISTINTO de "Fraccionamiento Carrizal" más abajo
+  // (~3.4km de diferencia, verificado). Ninguno de los dos lleva un alias
+  // corto "carrizal": mismo criterio que universidad-olmeca en
+  // landmarks.ts, un alias ambiguo entre dos lugares reales es peor que no
+  // tener alias — sin coincidencia exacta, cae al texto de siempre, que sí
+  // encuentra ambos por separado.
+  { key: 'sector-carrizal', label: 'Sector Carrizal', municipio: 'Centro', lat: 17.9875, lng: -92.9421, radioKm: RADIO_COLONIA_KM },
+  { key: 'atasta', label: 'Atasta', municipio: 'Centro', lat: 17.9923, lng: -92.9178, radioKm: RADIO_COLONIA_KM },
+  { key: 'centro-historico', label: 'Centro Histórico', municipio: 'Centro', lat: 17.9895, lng: -92.9478, radioKm: RADIO_COLONIA_KM },
+  { key: 'olmeca', label: 'Olmeca', municipio: 'Centro', lat: 17.9812, lng: -92.9502, radioKm: RADIO_COLONIA_KM },
+  { key: 'gil-y-saenz', label: 'Gil y Sáenz', municipio: 'Centro', lat: 17.9867, lng: -92.9356, radioKm: RADIO_COLONIA_KM },
+  { key: 'col-del-parque', label: 'Col. del Parque', municipio: 'Centro', lat: 17.9734, lng: -92.9267, radioKm: RADIO_COLONIA_KM },
+
+  // Geocodificadas y verificadas en esta sesión (OpenStreetMap/Nominatim).
+  { key: 'magisterial', label: 'Magisterial', municipio: 'Centro', lat: 18.0036, lng: -92.9287, radioKm: RADIO_COLONIA_KM },
+  { key: 'fraccionamiento-carrizal', label: 'Fraccionamiento Carrizal', municipio: 'Centro', lat: 18.0141, lng: -92.9530, radioKm: RADIO_COLONIA_KM },
+  { key: 'el-bellote', label: 'El Bellote', municipio: 'Paraíso', lat: 18.4250, lng: -93.1534, radioKm: RADIO_COLONIA_KM },
+  { key: 'frontera', label: 'Frontera', municipio: 'Centla', lat: 18.5322, lng: -92.6461, radioKm: RADIO_COLONIA_KM },
+
+  // Catálogo completo de Centro/Villahermosa, geocodificadas y verificadas
+  // en esta ronda (ver metodología de dos niveles arriba).
+  { key: 'adolfo-lopez-mateos', label: 'Adolfo López Mateos', municipio: 'Centro', lat: 18.0002, lng: -92.9299, radioKm: RADIO_COLONIA_KM },
+  { key: 'alvaro-obregon', label: 'Álvaro Obregón', municipio: 'Centro', lat: 17.9959, lng: -92.9403, radioKm: RADIO_COLONIA_KM },
+  { key: 'bonanza', label: 'Bonanza', municipio: 'Centro', lat: 18.0040, lng: -92.9385, radioKm: RADIO_COLONIA_KM },
+  { key: 'bosques-de-villahermosa', label: 'Bosques de Villahermosa', municipio: 'Centro', lat: 18.0106, lng: -92.9452, radioKm: RADIO_COLONIA_KM },
+  { key: 'brisas-del-grijalva', label: 'Brisas del Grijalva', municipio: 'Centro', lat: 18.0118, lng: -92.9060, radioKm: RADIO_COLONIA_KM },
+  // "Ciudad Industrial" e "Infonavit" (sueltos) resolvieron al MISMO nodo
+  // real de OSM — es un solo lugar con nombre compuesto. NO se le da alias
+  // "Infonavit" a secas: el catálogo original tiene varios "Infonavit ___"
+  // distintos (2da/3a Sección, etc.) que no se pudieron verificar — un
+  // alias genérico aquí sería tan ambiguo como el caso Carrizal/Olmeca.
+  { key: 'infonavit-ciudad-industrial', label: 'Infonavit Ciudad Industrial', municipio: 'Centro', lat: 18.0256, lng: -92.9011, radioKm: RADIO_COLONIA_KM, aliases: ['Ciudad Industrial'] },
+  { key: 'cosmos', label: 'Cosmos', municipio: 'Centro', lat: 18.0278, lng: -92.9040, radioKm: RADIO_COLONIA_KM },
+  { key: 'cotip', label: 'Cotip', municipio: 'Centro', lat: 17.9730, lng: -92.9711, radioKm: RADIO_COLONIA_KM },
+  { key: 'del-bosque', label: 'Del Bosque', municipio: 'Centro', lat: 17.9732, lng: -92.9492, radioKm: RADIO_COLONIA_KM },
+  { key: 'florida', label: 'Florida', municipio: 'Centro', lat: 17.9971, lng: -92.9317, radioKm: RADIO_COLONIA_KM },
+  // Resolvió específicamente a esta etapa del fraccionamiento, no a
+  // "Fovissste" en general (que tiene 1a-4a Etapa + 4a Sección Carrizal,
+  // sin verificar) — el label dice la verdad de lo que se comprobó.
+  { key: 'fovissste-casa-blanca', label: 'Fovissste Casa Blanca', municipio: 'Centro', lat: 18.0021, lng: -92.9137, radioKm: RADIO_COLONIA_KM },
+  { key: 'francisco-villa', label: 'Francisco Villa', municipio: 'Centro', lat: 18.0281, lng: -92.8897, radioKm: RADIO_COLONIA_KM },
+  { key: 'galaxia', label: 'Galaxia', municipio: 'Centro', lat: 18.0001, lng: -92.9505, radioKm: RADIO_COLONIA_KM },
+  { key: 'guadalupe', label: 'Guadalupe', municipio: 'Centro', lat: 17.9769, lng: -92.9634, radioKm: RADIO_COLONIA_KM },
+  { key: 'guadalupe-borja', label: 'Guadalupe Borja', municipio: 'Centro', lat: 17.9769, lng: -92.9634, radioKm: RADIO_COLONIA_KM },
+  { key: 'heriberto-kehoe-vicent', label: 'Heriberto Kehoe Vicent', municipio: 'Centro', lat: 18.0091, lng: -92.9412, radioKm: RADIO_COLONIA_KM },
+  { key: 'insurgentes', label: 'Insurgentes', municipio: 'Centro', lat: 18.0334, lng: -92.9005, radioKm: RADIO_COLONIA_KM },
+  { key: 'jardines-del-sol', label: 'Jardines del Sol', municipio: 'Centro', lat: 18.0262, lng: -92.9048, radioKm: RADIO_COLONIA_KM },
+  { key: 'jardines-del-sur', label: 'Jardines del Sur', municipio: 'Centro', lat: 17.9649, lng: -92.9547, radioKm: RADIO_COLONIA_KM },
+  { key: 'jesus-garcia', label: 'Jesús García', municipio: 'Centro', lat: 17.9955, lng: -92.9343, radioKm: RADIO_COLONIA_KM },
+  { key: 'jose-maria-pino-suarez', label: 'José María Pino Suárez', municipio: 'Centro', lat: 17.9730, lng: -92.9518, radioKm: RADIO_COLONIA_KM, aliases: ['Pino Suárez'] },
+  { key: 'jose-pages-llergo', label: 'José Pagés Llergo', municipio: 'Centro', lat: 17.9820, lng: -92.9697, radioKm: RADIO_COLONIA_KM },
+  // Resolvió específicamente a la Sección II (de I/II/III sin verificar).
+  { key: 'la-manga-ii', label: 'La Manga II', municipio: 'Centro', lat: 17.9999, lng: -92.9087, radioKm: RADIO_COLONIA_KM },
+  { key: 'las-delicias', label: 'Las Delicias', municipio: 'Centro', lat: 17.9714, lng: -92.9692, radioKm: RADIO_COLONIA_KM },
+  { key: 'lindavista', label: 'Lindavista', municipio: 'Centro', lat: 17.9916, lng: -92.9421, radioKm: RADIO_COLONIA_KM },
+  { key: 'loma-linda', label: 'Loma Linda', municipio: 'Centro', lat: 17.9936, lng: -92.9414, radioKm: RADIO_COLONIA_KM },
+  { key: 'marcos-buendia', label: 'Marcos Buendia', municipio: 'Centro', lat: 17.9690, lng: -92.9246, radioKm: RADIO_COLONIA_KM },
+  // Resolvió específicamente a la Sección I (de 1a/2a/5a Sección sin verificar).
+  { key: 'miguel-hidalgo-i', label: 'Miguel Hidalgo I', municipio: 'Centro', lat: 17.9777, lng: -92.9781, radioKm: RADIO_COLONIA_KM },
+  { key: 'multiochenta', label: 'Multiochenta', municipio: 'Centro', lat: 18.0028, lng: -92.9536, radioKm: RADIO_COLONIA_KM },
+  { key: 'nueva-imagen', label: 'Nueva Imagen', municipio: 'Centro', lat: 18.0051, lng: -92.9405, radioKm: RADIO_COLONIA_KM },
+  { key: 'nueva-villahermosa', label: 'Nueva Villahermosa', municipio: 'Centro', lat: 17.9927, lng: -92.9283, radioKm: RADIO_COLONIA_KM },
+  { key: 'oropeza', label: 'Oropeza', municipio: 'Centro', lat: 18.0003, lng: -92.9402, radioKm: RADIO_COLONIA_KM },
+  { key: 'palmitas', label: 'Palmitas', municipio: 'Centro', lat: 17.9791, lng: -92.9538, radioKm: RADIO_COLONIA_KM },
+  { key: 'pensiones', label: 'Pensiones', municipio: 'Centro', lat: 17.9768, lng: -92.9482, radioKm: RADIO_COLONIA_KM },
+  { key: 'prados-de-villahermosa', label: 'Prados de Villahermosa', municipio: 'Centro', lat: 18.0058, lng: -92.9333, radioKm: RADIO_COLONIA_KM },
+  { key: 'primero-de-mayo', label: 'Primero de Mayo', municipio: 'Centro', lat: 17.9734, lng: -92.9356, radioKm: RADIO_COLONIA_KM },
+  { key: 'punta-brava', label: 'Punta Brava', municipio: 'Centro', lat: 17.9696, lng: -92.9660, radioKm: RADIO_COLONIA_KM },
+  { key: 'real-de-minas', label: 'Real de Minas', municipio: 'Centro', lat: 18.0071, lng: -92.9457, radioKm: RADIO_COLONIA_KM },
+  { key: 'sanchez-magallanes', label: 'Sánchez Magallanes', municipio: 'Centro', lat: 17.9750, lng: -92.9514, radioKm: RADIO_COLONIA_KM },
+  // Resolvió específicamente a la Sección I (de I/II/III sin verificar).
+  { key: 'triunfo-la-manga-i', label: 'Triunfo La Manga I', municipio: 'Centro', lat: 17.9794, lng: -92.9164, radioKm: RADIO_COLONIA_KM },
+  { key: 'valle-marino', label: 'Valle Marino', municipio: 'Centro', lat: 18.0158, lng: -92.9171, radioKm: RADIO_COLONIA_KM },
+  { key: 'villa-las-fuentes', label: 'Villa las Fuentes', municipio: 'Centro', lat: 17.9706, lng: -92.9512, radioKm: RADIO_COLONIA_KM },
+  { key: 'villas-del-bosque', label: 'Villas del Bosque', municipio: 'Centro', lat: 17.9980, lng: -92.9544, radioKm: RADIO_COLONIA_KM },
+  { key: 'vista-alegre', label: 'Vista Alegre', municipio: 'Centro', lat: 17.9757, lng: -92.9558, radioKm: RADIO_COLONIA_KM },
+  // Verificadas vía parque de barrio con el mismo nombre (nivel 2, ver
+  // metodología arriba) en vez de un nodo de colonia directo.
+  { key: '18-de-marzo', label: '18 de Marzo', municipio: 'Centro', lat: 18.0095, lng: -92.9424, radioKm: RADIO_COLONIA_KM },
+  { key: 'carlos-a-madrazo', label: 'Carlos A. Madrazo', municipio: 'Centro', lat: 17.9857, lng: -92.9193, radioKm: RADIO_COLONIA_KM },
+  { key: 'el-parque', label: 'El Parque', municipio: 'Centro', lat: 18.0212, lng: -92.9051, radioKm: RADIO_COLONIA_KM },
+  { key: 'guayabal', label: 'Guayabal', municipio: 'Centro', lat: 17.9728, lng: -92.9270, radioKm: RADIO_COLONIA_KM },
+  { key: 'jose-colomo', label: 'José Colomo', municipio: 'Centro', lat: 17.9863, lng: -92.9451, radioKm: RADIO_COLONIA_KM },
+  { key: 'la-choca', label: 'La Choca', municipio: 'Centro', lat: 18.0041, lng: -92.9529, radioKm: RADIO_COLONIA_KM },
+  { key: 'las-brisas', label: 'Las Brisas', municipio: 'Centro', lat: 17.9772, lng: -92.9272, radioKm: RADIO_COLONIA_KM },
+  { key: 'lomas-del-dorado', label: 'Lomas del Dorado', municipio: 'Centro', lat: 17.9590, lng: -92.9517, radioKm: RADIO_COLONIA_KM },
+  { key: 'tierra-colorada', label: 'Tierra Colorada', municipio: 'Centro', lat: 18.0246, lng: -92.9207, radioKm: RADIO_COLONIA_KM },
+  { key: 'villa-de-las-flores', label: 'Villa de las Flores', municipio: 'Centro', lat: 18.0276, lng: -92.8994, radioKm: RADIO_COLONIA_KM },
+  { key: 'villa-de-los-arcos', label: 'Villa de los Arcos', municipio: 'Centro', lat: 17.9764, lng: -92.9592, radioKm: RADIO_COLONIA_KM },
+  { key: 'villa-de-los-trabajadores', label: 'Villa de los Trabajadores', municipio: 'Centro', lat: 17.9900, lng: -92.9604, radioKm: RADIO_COLONIA_KM },
+];
+
+function normalizarBase(s: string): string {
+  return s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+}
+
+/** Exportado para que coloniaDiscovery.ts (server-only) compare nombres con la misma regla exacta, sin duplicar la lógica. */
+export function normalizarNombreColonia(s: string): string {
+  return normalizarBase(s)
+    // Solo se quita el relleno genérico "colonia/col." — la gente lo usa
+    // indistintamente para CUALQUIER colonia ("col Magisterial" = "colonia
+    // Magisterial"). "fraccionamiento"/"sector" NO se quitan: son parte del
+    // nombre propio que distingue lugares reales distintos (ver comentario
+    // de Carrizal arriba) — quitarlos causaría el mismo tipo de colisión
+    // que ya se evitó con el alias "olmeca" en landmarks.ts.
+    .replace(/^(la |el )?(colonia|col\.?)\s+/, '')
+    .trim();
+}
+
+// Colonias descubiertas automáticamente (src/lib/coloniaDiscovery.ts,
+// geocodificadas contra Nominatim con el mismo filtro de dos niveles que
+// las 70 de arriba, guardadas en Prisma) — este módulo corre también en el
+// navegador (filters.ts, PropertiesClient.tsx), donde no se puede
+// consultar la base de datos directamente, así que se cachean aquí tras
+// pedirlas una vez a `GET /api/colonias/descubiertas`. Arranca vacío: las
+// funciones de abajo simplemente se comportan como si solo existiera el
+// catálogo estático hasta que la carga (best-effort, nunca bloqueante)
+// termine — ninguna búsqueda se rompe ni espera por esto.
+let coloniasDescubiertasCache: ColoniaCoord[] = [];
+let cargaIniciada = false;
+
+/**
+ * Dispara la carga del caché una sola vez por sesión de navegador —
+ * llamar varias veces no duplica la petición ni el trabajo. Pensada para
+ * invocarse "fire and forget" (sin `await`) desde el punto de entrada del
+ * buscador (ver PropertiesClient.tsx) — si falla o tarda, las funciones de
+ * abajo siguen funcionando igual, solo sin las colonias descubiertas más
+ * recientes hasta que sí cargue.
+ */
+export function precargarColoniasDescubiertas(): void {
+  if (cargaIniciada || typeof window === 'undefined') return;
+  cargaIniciada = true;
+  fetch('/api/colonias/descubiertas')
+    .then((res) => (res.ok ? res.json() : []))
+    .then((data: ColoniaCoord[]) => { coloniasDescubiertasCache = data; })
+    .catch(() => { /* silencioso — se sigue usando solo el catálogo estático */ });
+}
+
+function todasLasColonias(): ColoniaCoord[] {
+  return coloniasDescubiertasCache.length
+    ? [...COLONIAS_COORDS, ...coloniasDescubiertasCache]
+    : COLONIAS_COORDS;
+}
+
+/** Busca una colonia por nombre libre (como lo extrae la IA) — null si no está catalogada aquí. */
+export function matchColonia(nombre: string): ColoniaCoord | undefined {
+  const n = normalizarNombreColonia(nombre);
+  if (!n) return undefined;
+  return todasLasColonias().find(
+    (c) => normalizarNombreColonia(c.label) === n || (c.aliases ?? []).some((a) => normalizarNombreColonia(a) === n)
+  );
+}
+
+/** Busca por key exacta (ej. desde `?cercaColonia=magisterial` en la URL) — mismo patrón que getLandmark(). */
+export function getColoniaByKey(key: string): ColoniaCoord | undefined {
+  return todasLasColonias().find((c) => c.key === key);
+}
+
+function escaparRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Busca cualquier colonia catalogada mencionada literalmente DENTRO de un
+ * texto libre (frontera de palabra, sin acentos) — a diferencia de
+ * `matchColonia`, que compara un candidato ya extraído contra el catálogo,
+ * esta escanea la oración completa. Es la red de seguridad determinística
+ * para cuando la IA extrae mal o simplemente omite el campo "colonia" en
+ * una búsqueda con varios datos a la vez (falla real, confirmada: 3 de 5
+ * intentos idénticos con "cerca de la col magisterial" no devolvieron
+ * colonia) — mismo patrón que ya usa el loop de LANDMARKS en
+ * `busquedaInteligenteHeuristica` (src/lib/ai.ts), que las colonias no
+ * tenían para las 56 agregadas en la ronda de geocodificación completa.
+ * Nunca puede inventar una coordenada nueva: solo encuentra lo que ya está
+ * verificado en COLONIAS_COORDS.
+ */
+export function buscarColoniaEnTexto(texto: string): ColoniaCoord | undefined {
+  const t = normalizarBase(texto);
+  for (const c of todasLasColonias()) {
+    const nombres = [c.label, ...(c.aliases ?? [])];
+    for (const nombre of nombres) {
+      const re = new RegExp(`\\b${escaparRegex(normalizarBase(nombre))}\\b`);
+      if (re.test(t)) return c;
+    }
+  }
+  return undefined;
+}
+
+export { distanciaKm };

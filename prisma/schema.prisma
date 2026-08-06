@@ -1,0 +1,339 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./vivevillahermosa.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id         String     @id @default(cuid())
+  email      String     @unique
+  password   String?
+  nombre     String
+  rol        String     @default("buscador")
+  googleId   String?    @unique
+  facebookId String?    @unique
+  avatar     String?
+  // Moderación del buscador con IA (ver src/lib/moderacionBusqueda.ts) — el
+  // conteo de intentos se DERIVA de IntentosSospechosos (abajo), no se
+  // cachea aquí, para que nunca se desincronice del registro real usado en
+  // una auditoría. Al 3er intento, `bloqueado` pasa a true: no puede volver
+  // a iniciar sesión (login/route.ts) y getSession() invalida incluso una
+  // sesión ya activa. El badge "En revisión" en AgentCard se muestra cuando
+  // `bloqueado` es true — nunca antes del 3er intento.
+  bloqueado           Boolean   @default(false)
+  bloqueadoMotivo     String?
+  bloqueadoEn         DateTime?
+  intentosSospechosos IntentoSospechoso[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  favoritos  Favorito[]
+  alertas    Alerta[]
+  notificaciones Notificacion[]
+  perfilInmobiliaria PerfilInmobiliaria?
+  configuracionAgenda ConfiguracionAgenda?
+  citas               Cita[]
+  serviciosProveedor  ServicioProveedor[]
+}
+
+// Directorio de servicios (plomería, pintura, mudanza, remodelación,
+// albañilería, etc.) — vertical nueva, aparte de propiedades. A diferencia
+// de `Property` (que sigue siendo un catálogo estático + localStorage,
+// Property.userId no existe todavía), esto SÍ tiene `userId` real desde el
+// día uno — no hay catálogo previo que migrar, así que no hace falta el
+// parche de `emailCuenta` usado en propiedades.
+//
+// Publicar es gratis por ahora — sin campos de pago/destacado todavía a
+// propósito: el usuario decidió esperar a tener base de usuarios y tráfico
+// real antes de monetizar esto (ver docs/BACKEND.md §11 y §15).
+model ServicioProveedor {
+  id          String   @id @default(cuid())
+  userId      String
+  // Uno de CATEGORIA_SERVICIO_OPTIONS (src/lib/publishServicioSchema.ts) —
+  // string simple, mismo patrón que Property.tipo/User.rol en este schema.
+  categoria   String
+  nombre      String
+  descripcion String
+  municipio   String
+  colonia     String?
+  telefono    String
+  whatsapp    String?
+  email       String?
+  // Data URI base64, mismo patrón que PerfilInmobiliaria.logoDataUrl — sin
+  // costo de almacenamiento externo para un MVP.
+  fotoDataUrl String?
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trabajos    TrabajoServicio[]
+
+  @@index([categoria, municipio])
+}
+
+// Portafolio del proveedor: cada fila es una foto de un trabajo realizado
+// con una descripción/historia opcional — pensado como una especie de blog
+// o carta de presentación que el proveedor puede ir llenando poco a poco
+// (publica una entrada, vuelve otro día y agrega otra), no un formulario de
+// una sola vez. El texto es opcional a propósito: hay proveedores
+// independientes que solo quieren mostrar la foto sin escribir nada.
+model TrabajoServicio {
+  id            String   @id @default(cuid())
+  servicioId    String
+  // Data URI base64, mismo patrón que ServicioProveedor.fotoDataUrl.
+  imagenDataUrl String
+  descripcion   String?
+  createdAt     DateTime @default(now())
+  servicio      ServicioProveedor @relation(fields: [servicioId], references: [id], onDelete: Cascade)
+
+  @@index([servicioId, createdAt])
+}
+
+// Registro de auditoría de cada intento confirmado de manipular el
+// buscador — a diferencia de un simple contador, esto guarda el texto
+// EXACTO de la búsqueda y qué frase lo disparó, para que un bloqueo se
+// pueda revisar/explicar de verdad si alguien lo reclama ("¿por qué se
+// bloqueó mi cuenta?"), no solo confiar en un número. Se conserva incluso
+// después de que la cuenta se desbloquee manualmente (si eso llega a
+// pasar) — es historial, no un contador que deba resetearse.
+model IntentoSospechoso {
+  id        String   @id @default(cuid())
+  userId    String
+  // Texto exacto de la búsqueda que disparó el aviso (ya viene acotado a
+  // 300 caracteres por el schema de zod en la ruta, ver
+  // busqueda-inteligente/route.ts).
+  consulta  String
+  // Qué frase de MARCADORES_INYECCION (ai.ts) coincidió — trazabilidad de
+  // por qué se marcó, no solo que se marcó.
+  marcador  String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Favorito {
+  id          String   @id @default(cuid())
+  userId      String
+  propiedadId String
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propiedadId])
+}
+
+model Alerta {
+  id        String   @id @default(cuid())
+  userId    String
+  municipio String?
+  tipo      String?
+  operacion String?
+  precioMax Float?
+  dosBocas  Boolean  @default(false)
+  sinRiesgo Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notificacion {
+  id          String   @id @default(cuid())
+  userId      String
+  tipo        String   @default("alerta_match")
+  titulo      String
+  mensaje     String
+  // Sin valor hoy: el disparador real (publicar una propiedad) todavía no
+  // persiste la propiedad en un catálogo navegable (ver docs/BACKEND.md
+  // §3 y §5) — cuando exista, esto debe apuntar
+  // al id/slug real para que la notificación enlace a la ficha.
+  propiedadId String?
+  leida       Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PerfilInmobiliaria {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  nombreEmpresa String?
+  // Data URI base64 (PNG), redimensionado y comprimido en el navegador antes
+  // de subir (ver src/app/dashboard/perfil/page.tsx) — MVP sin costo de
+  // infraestructura de almacenamiento externo (Cloudinary/S3). Válido para
+  // un logo pequeño; si el catálogo real de fotos (Módulo 1) llega a
+  // justificar object storage, este campo debería migrar a una URL externa
+  // en vez de guardar el binario en la base de datos.
+  logoDataUrl   String?
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// La fuente de verdad para cómo se ve el calendario en el frontend
+// (FullCalendar): días laborables, horario, duración de cita por defecto y
+// cuándo se manda el recordatorio. El frontend no tiene nada hardcodeado —
+// arma sus props (businessHours, slotMinTime, etc.) a partir de esta fila
+// vía GET /api/configuracion-agenda, así que cambiar esto en la base de
+// datos reconfigura el calendario sin tocar código.
+model ConfiguracionAgenda {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  // CSV de días de la semana activos, 0=domingo … 6=sábado. Ej. "1,2,3,4,5" = lunes a viernes.
+  diasLaborables       String   @default("1,2,3,4,5")
+  horaInicio           String   @default("09:00")
+  horaFin              String   @default("18:00")
+  duracionCitaMin      Int      @default(30)
+  // Minutos antes de la cita en que se envía el correo de recordatorio.
+  recordatorioMinAntes Int      @default(60)
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Colonias descubiertas en tiempo real: cuando una búsqueda menciona una
+// colonia que no está en el catálogo verificado a mano (src/lib/colonias.ts,
+// 70 entradas auditadas una por una esta sesión), el servidor intenta
+// geocodificarla contra OpenStreetMap/Nominatim con el mismo filtro de dos
+// niveles usado para verificar esas 70 (solo place/neighbourhood o
+// leisure/park con nombre igual — nunca calles/negocios/polígonos
+// genéricos). Si pasa el filtro, se guarda aquí — el catálogo de
+// colonias.ts se queda estático (fue auditado a mano, con varios errores
+// reales atrapados y corregidos, ver docs/colonia_proximity_search en la
+// memoria del proyecto); esta tabla es la extensión que crece sola, con su
+// propio rastro de auditoría (`fuenteTipo`, `verificadoEn`) para poder
+// distinguir "verificado a mano" de "descubierto automático" si algún día
+// hace falta revisar uno con más cuidado.
+model ColoniaDescubierta {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  label       String
+  municipio   String
+  lat         Float
+  lng         Float
+  radioKm     Float
+  // JSON array de strings (SQLite no tiene tipo arreglo nativo) — mismo
+  // patrón que otros campos de "lista simple" en este schema (ver
+  // ConfiguracionAgenda.diasLaborables, aunque ahí es CSV en vez de JSON).
+  aliasesJson String?
+  // Clase/tipo de OSM que hizo pasar el filtro (ej. "place/neighbourhood")
+  // — trazabilidad de por qué se confió en este resultado.
+  fuenteTipo  String
+  verificadoEn DateTime @default(now())
+
+  @@index([municipio])
+}
+
+model Cita {
+  id                  String   @id @default(cuid())
+  userId              String
+  // Referencia libre al catálogo (id o slug) — no hay Property.userId real
+  // todavía (Módulo 1 pendiente), así que esto es solo para mostrar el
+  // título/liga de la propiedad si se proporciona, no una relación validada.
+  propiedadId         String?
+  titulo              String
+  nombreCliente       String
+  telefonoCliente     String?
+  emailCliente        String?
+  notas               String?
+  fecha               DateTime
+  duracionMin         Int      @default(30)
+  estado              String   @default("confirmada") // confirmada | cancelada | completada
+  recordatorioEnviado Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, fecha])
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ⚠️ BACKEND PENDIENTE — MODELO Property (bloqueante para el MVP)
+// ═══════════════════════════════════════════════════════════════════════
+//
+// Este es el hueco más grande del MVP: "Property" hoy NO es una tabla de
+// Prisma. Las propiedades viven en un catálogo estático (src/data/
+// properties.json) más una capa de simulación en localStorage del
+// navegador (src/lib/propiedadesLocales.ts — publicar/editar/pausar/
+// eliminar ahí "se sienten reales" pero no persisten en ningún servidor,
+// ni las ve nadie más). Sin este modelo, publicar/buscar/gestionar
+// propiedades nunca sale de "una sola persona, un solo navegador".
+//
+// ⚠️ 2026-08-06 — el backend real ahora es un PROYECTO SEPARADO (ver el
+// aviso de arquitectura al inicio de docs/BACKEND.md), no una tabla que se
+// agregue a este mismo schema.prisma. Este bloque se deja aquí solo como
+// referencia rápida del modelo — el documento completo (docs/BACKEND.md §1
+// y §3) es la fuente de verdad, incluye además los 10 modelos que YA
+// existen abajo en este archivo, que también hay que replicar en el
+// backend nuevo.
+//
+// Sugerencia de forma (no es la única válida, pero cubre todo lo que
+// src/types/property.ts ya define):
+//
+//   model Property {
+//     id                  String   @id @default(cuid())
+//     userId              String                          // dueño real — hoy no existe, ver emailCuenta más abajo
+//     slug                String   @unique
+//     titulo              String
+//     descripcion         String
+//     tipo                String                          // casa | departamento | terreno | local | oficina | bodega | habitacion
+//     operacion           String                          // venta | renta
+//     precio              Float
+//     m2Construidos       Float
+//     m2Terreno           Float
+//     recamaras           Int
+//     banos               Int
+//     mediosBanos         Int
+//     estacionamientos    Int
+//     antiguedad          Int
+//     amenidades          String?                         // JSON array (mismo patrón que otros campos "lista simple" en este schema)
+//     servicios           String?                         // JSON array, ver SERVICIOS_RENTA en src/lib/servicios.ts
+//     fotos               String?                         // JSON array de URLs reales (Cloudinary/S3) — HOY son data URIs base64 enteras dentro del objeto Property, no van a caber/escalar en una columna
+//     municipio           String                          // uno de MUNICIPIO_OPTIONS, src/lib/publishSchema.ts (17 valores) — validar server-side contra esa lista
+//     colonia             String
+//     direccion           String
+//     lat                 Float                           // coordenada real del pin (MapPicker) — SÍ se guarda exacta, la aproximación ya la maneja el frontend al mostrarla (ver docs/BACKEND.md §3)
+//     lng                 Float
+//     riesgoInundacion    String                          // bajo | medio | alto
+//     zonaEcologica       Boolean  @default(false)
+//     cercaDosoBocas      Boolean  @default(false)
+//     featured            Boolean  @default(false)
+//     alertaFraude        Json?                            // calculado por el SERVIDOR llamando analizarFraude() (src/lib/ai.ts) — nunca aceptar este campo tal cual del cliente
+//     requiereModeracion  Boolean  @default(false)         // riesgo alto o lenguaje discriminatorio (detectarLenguajeSensible, src/lib/contentModeration.ts) — no publicar directo
+//     aceptaTerminosAt    DateTime?
+//     // Datos de contacto del anuncio (hoy PropertyAgent anidado en el tipo) —
+//     // aplanados aquí, más simple que una relación aparte para el MVP:
+//     agenteNombre        String
+//     agenteTel           String?
+//     agenteEmail         String?
+//     agenteWhatsapp      String?
+//     requiereMensajePrimero Boolean @default(false)
+//     // Estado de publicación — HOY vive solo en localStorage
+//     // (src/lib/estadoOverrides.ts, tipo EstadoPublicacion) y por eso pausar
+//     // una propiedad no tiene ningún efecto real fuera de tu propio
+//     // navegador. Debe ser una columna real para que "Pausar"/"Eliminar"
+//     // en OwnerActionsBar.tsx y /dashboard/propiedades signifiquen algo.
+//     estado              String   @default("activa")     // activa | pausada | vencida | vendida | rentada
+//     activa              Boolean  @default(true)         // soft-delete — false cuando el dueño elimina desde OwnerActionsBar/dashboard
+//     createdAt           DateTime @default(now())
+//     updatedAt           DateTime @updatedAt
+//     user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+//
+//     @@index([municipio, tipo, operacion])
+//     @@index([userId])
+//   }
+//
+// Endpoints que src/lib/api.ts (hoy puro JSON estático) y
+// src/lib/propiedadesLocales.ts (hoy puro localStorage) necesitan para
+// poder reemplazarse sin tocar las páginas que los consumen (mismo patrón
+// "quirúrgico" ya usado en este proyecto):
+//   GET    /api/propiedades            — lista + filtros (municipio, tipo, operación, precio, colonia, riesgo…), reemplaza getAllProperties()
+//   GET    /api/propiedades/:id        — una propiedad por id o slug, reemplaza getPropertyById()
+//   GET    /api/propiedades/mias       — solo las del usuario en sesión, reemplaza getMisPropiedadesDemo() + el merge de propiedadesLocales.ts
+//   POST   /api/propiedades            — publicar (ver el comentario grande en PublishForm.tsx para las validaciones server-side que debe correr)
+//   PATCH  /api/propiedades/:id        — editar / pausar-reactivar (estado) / destacar — todo dueño-validado contra session.userId
+//   DELETE /api/propiedades/:id        — eliminar (soft-delete, activa=false), dueño-validado
+//
+// Con este modelo + estos endpoints, el frontend de búsqueda/publicación/
+// gestión de propiedades (el alcance del MVP — NO incluye el directorio de
+// "servicios", que está en pausa a propósito, ver ServicioProveedor arriba
+// y docs/BACKEND.md §11) sigue funcionando prácticamente
+// sin cambios — está deliberadamente escrito para que la fuente de datos
+// sea lo único que cambie.

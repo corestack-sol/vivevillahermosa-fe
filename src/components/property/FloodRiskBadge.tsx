@@ -1,0 +1,75 @@
+import type { FloodRisk } from '@/types/property';
+import { Droplets, Info } from 'lucide-react';
+
+interface FloodRiskBadgeProps {
+  nivel: FloodRisk;
+  compact?: boolean;
+}
+
+const config = {
+  alto: {
+    label: 'Riesgo Alto',
+    description: 'Esta zona tiene historial de inundaciones severas según el Atlas de Riesgos Municipal.',
+    classes: 'bg-red-50 text-red-700 border-red-200',
+    iconClass: 'text-red-500',
+    dot: 'bg-red-500',
+    compactText: 'text-red-300',
+  },
+  medio: {
+    label: 'Riesgo Medio',
+    description: 'Zona con anegamiento ocasional en temporada de lluvias según el Atlas de Riesgos Municipal.',
+    classes: 'bg-amber-50 text-amber-700 border-amber-200',
+    iconClass: 'text-amber-500',
+    dot: 'bg-amber-400',
+    compactText: 'text-amber-300',
+  },
+  bajo: {
+    label: 'Riesgo Bajo',
+    description: 'Zona con bajo historial de inundaciones según el Atlas de Riesgos Municipal.',
+    classes: 'bg-green-50 text-green-700 border-green-200',
+    iconClass: 'text-green-500',
+    dot: 'bg-emerald-400',
+    compactText: 'text-emerald-300',
+  },
+};
+
+export function FloodRiskBadge({ nivel, compact = false }: FloodRiskBadgeProps) {
+  const c = config[nivel];
+
+  if (compact) {
+    return (
+      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm ${c.compactText}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
+        {c.label}
+      </span>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className={`flex gap-3 p-4 rounded-xl border ${c.classes}`}>
+        <Droplets className={`flex-shrink-0 mt-1 ${c.iconClass}`} size={22} />
+        <div className="min-w-0">
+          <p className="font-bold text-xl leading-tight">{c.label} de inundación</p>
+          <p className="text-base mt-1 opacity-80">{c.description}</p>
+          <p className="text-xs opacity-40 mt-2 leading-relaxed">
+            Atlas de Riesgos del Municipio de Centro, 2023. Ayuntamiento de Centro. P 377
+          </p>
+        </div>
+      </div>
+
+      <div className="flex gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-3">
+        <Info size={15} className="text-gray-400 flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-gray-500 leading-relaxed space-y-1.5">
+          <p>
+            <span className="font-semibold">Dato informativo.</span>{' '}
+            Esta clasificación se basa en registros históricos y modelos de simulación. Te recomendamos verificar directamente con el H. Ayuntamiento de Centro o IMPLAN antes de tomar una decisión.
+          </p>
+          <p>
+            El precio de la propiedad no está condicionado por la zona de riesgo — puede estar justificado por acabados, servicios, ubicación u otras características propias del inmueble.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

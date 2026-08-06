@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Vive Villahermosa
 
-## Getting Started
+Portal inmobiliario para Tabasco, México (Villahermosa y los 17 municipios del estado): búsqueda con filtros y mapa interactivo, riesgo de inundación por zona (Atlas de Riesgos / CONAGUA), publicación de propiedades con IA (detección de fraude, moderación de contenido), y directorio de servicios para el hogar.
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** (App Router) + **TypeScript** + **Tailwind CSS v4**
+- **Prisma** + SQLite (dev) — Postgres planeado para producción
+- Auth: JWT (`jose`) + `bcryptjs`, OAuth Google/Facebook
+- Mapas: Leaflet + `leaflet.markercluster`
+- Forms: `react-hook-form` + `zod`
+- IA: OpenRouter (texto — búsqueda, fraude, moderación) + Gemini (visión — fotos de propiedades)
+- Email: Resend
+
+**Importante para cualquier agente/IA trabajando en este repo:** lee `AGENTS.md` antes de escribir código — esta versión de Next.js tiene cambios respecto a lo que un modelo entrenado antes de su lanzamiento puede asumir.
+
+## Levantar el proyecto
 
 ```bash
+npm install
+cp .env.example .env.local   # completar las variables (ver abajo)
+npx prisma db push           # crea/actualiza la base de datos SQLite local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abrir [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Variables de entorno mínimas para desarrollo — ver `.env.example` para la lista completa y comentarios: `DATABASE_URL`, `JWT_SECRET`, `OPENROUTER_API_KEY` (búsqueda/fraude/moderación con IA), `GEMINI_API_KEY` (análisis de fotos). El resto (Resend, OAuth, Nominatim) es opcional en desarrollo — las funciones que dependen de ellas se degradan sin romper el resto de la app (ver comentarios en `src/lib/`).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Estado del proyecto — dónde está cada cosa
 
-## Learn More
+Este proyecto tiene **mucho más frontend construido que backend real** — varias herramientas (formulario de publicar, gestión de "mis propiedades", panel de inmobiliaria) corren hoy sobre una simulación en `localStorage` del navegador, documentada explícitamente en el código con comentarios `⚠️ BACKEND` (`grep -rn "⚠️ BACKEND" src/` para encontrarlos todos).
 
-To learn more about Next.js, take a look at the following resources:
+**Si vas a trabajar en el backend, hay un solo documento — [`docs/BACKEND.md`](docs/BACKEND.md).** Todo lo pendiente del lado del servidor vive ahí, organizado por prioridad:
+1. **V1 (MVP, bloqueante)** — búsqueda + publicación + gestión de propiedades, para cualquier cuenta.
+2. **V2** — panel profesional para inmobiliarias, cobro real, agenda de citas, directorio de servicios (**en pausa**, no asignar).
+3. **Seguridad e infraestructura** — transversal a V1/V2.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Otros documentos, distintos en propósito (no se fusionaron con el de arriba):
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Documento | Para qué |
+|---|---|
+| [`docs/investigacion-mercado-tabasco.md`](docs/investigacion-mercado-tabasco.md) | Investigación de mercado (negocio, no técnico) |
+| [`fase1-spec.md`](fase1-spec.md) / [`fase2-spec.md`](fase2-spec.md) | Specs originales del roadmap por fases (parcialmente desactualizadas — ver banner al inicio de cada una) |
+| [`SECURITY.md`](SECURITY.md) | Cómo reportar una vulnerabilidad |
 
-## Deploy on Vercel
+## Comandos útiles
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run dev          # servidor de desarrollo (Turbopack)
+npx tsc --noEmit      # type-check
+npx eslint src/       # lint
+npx prisma studio     # explorar la base de datos local
+```
