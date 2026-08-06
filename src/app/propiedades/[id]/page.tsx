@@ -1,4 +1,3 @@
-import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getAllProperties, getPropertyById } from '@/lib/api';
 import { buildPropertyMetadata } from '@/lib/seo';
@@ -6,7 +5,6 @@ import { getLandmark, distanciaKm, distanciaMinimaACategoria, CATEGORIAS_GENERIC
 import { getColoniaByKey } from '@/lib/colonias';
 import { obtenerColoniaDescubiertaPorKey } from '@/lib/coloniaDiscovery';
 import { estaEnRevision } from '@/lib/moderacionBusqueda';
-import { esPropiedadLocal } from '@/lib/idsLocales';
 import { PropertyDetailView } from '@/components/property/PropertyDetailView';
 import { LocalPropertyDetail } from '@/components/property/LocalPropertyDetail';
 
@@ -35,40 +33,48 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  // Un id `local-...` nunca está en el catálogo estático server-side (vive
-  // en localStorage de quien lo publicó) — no es que "no exista", solo no
-  // se puede resolver aquí. Evita el título engañoso "no encontrada" mientras
-  // el cliente todavía no cargó los datos reales.
-  if (esPropiedadLocal(id)) return { title: 'Propiedad | Vive Villahermosa' };
   const property = getPropertyById(id);
-  if (!property) return { title: 'Propiedad no encontrada | Vive Villahermosa' };
-  return buildPropertyMetadata(property);
+  if (property) return buildPropertyMetadata(property);
+  // No está en el catálogo estático — puede ser una propiedad publicada en
+  // este navegador (vive en localStorage de quien la publicó, ver
+  // propiedadesLocales.ts), que este Server Component no puede leer. No es
+  // que "no exista", solo no se puede resolver aquí — título neutro en vez
+  // de "no encontrada" mientras el cliente todavía no cargó los datos
+  // reales.
+  return { title: 'Propiedad | Vive Villahermosa' };
 }
 
 export default async function PropertyDetailPage({ params, searchParams }: Props) {
   const { id } = await params;
 
-  // Propiedades publicadas desde el formulario (PublishForm.tsx) se guardan
-  // en localStorage — src/lib/propiedadesLocales.ts — y nunca existen en el
-  // catálogo estático que este Server Component puede leer. Antes de este
-  // fix, entrar aquí con un id `local-...` daba 404 siempre, incluso para
-  // quien la acababa de publicar: se delega a un componente cliente que
-  // resuelve el mismo id desde localStorage.
-  //
-  // ⚠️ BACKEND: esta rama (y LocalPropertyDetail.tsx entero) existe
-  // solo por la ausencia de Property real en la base de datos — ver el
-  // modelo sugerido al final de prisma/schema.prisma. Con
-  // `GET /api/propiedades/:id` real, `esPropiedadLocal`/ids con prefijo
-  // `local-` dejan de tener sentido (todo id sería un id real de la base de
-  // datos) y esta página vuelve a ser un solo camino: `getPropertyById(id)`
-  // seguido de `notFound()` si no existe, sin el if de aquí abajo.
-  if (esPropiedadLocal(id)) {
+  const property = getPropertyById(id);
+
+  if (!property) {
+    // No está en el catálogo estático — puede ser una propiedad publicada
+    // en este navegador (PublishForm.tsx la guarda en localStorage, ver
+    // propiedadesLocales.ts), que este Server Component no puede leer. Se
+    // delega sin condición a un componente cliente que resuelve el mismo
+    // id O slug desde localStorage.
+    //
+    // Antes esto se decidía con `esPropiedadLocal(id)` (¿el id empieza con
+    // "local-"?) — pero los enlaces reales usan `property.slug`
+    // (generarSlugLocal), que nunca lleva ese prefijo, solo `property.id`
+    // sí. Entrar por el slug (como hace cualquier tarjeta/resultado de
+    // búsqueda) daba 404 siempre para una propiedad local, aunque
+    // existiera — bug real, reportado por un usuario. Intentar primero el
+    // catálogo estático y caer aquí si no aparece cubre ambos casos (id o
+    // slug, local o simplemente no encontrada) sin adivinar por el formato
+    // del texto.
+    //
+    // ⚠️ BACKEND: esta rama (y LocalPropertyDetail.tsx entero) existe
+    // solo por la ausencia de Property real en la base de datos — ver el
+    // modelo sugerido al final de prisma/schema.prisma. Con
+    // `GET /api/propiedades/:id` real, esta página vuelve a ser un solo
+    // camino: `getPropertyById(id)` seguido de `notFound()` si no existe,
+    // sin este if.
     const sp = await searchParams;
     return <LocalPropertyDetail id={id} cerca={sp.cerca} cercaTipo={sp.cercaTipo} cercaColonia={sp.cercaColonia} />;
   }
-
-  const property = getPropertyById(id);
-  if (!property) notFound();
 
   // Cuando se llega desde una búsqueda "cerca de X" (el enlace de la
   // tarjeta en /propiedades propaga ?cerca=/?cercaTipo=, ver
