@@ -66,7 +66,8 @@ export const LANDMARKS_VERIFICADO_EN = '2026-08-04';
  * Gobierno, Congreso del Estado, Museo Carlos Pellicer, Parque Juárez,
  * Estadio Centenario 27 de Febrero, Mercado Pino Suárez, Instituto Juárez,
  * Centro de Convenciones, Casa de los Azulejos, Museo Papagayo, Plaza Las
- * Américas — estas últimas 11 vía Nominatim/OpenStreetMap, auditoría
+ * Américas, Central de Abastos, Mercado Gregorio Méndez, Mercado Florentino
+ * Hernández — estas últimas 14 vía Nominatim/OpenStreetMap, auditoría
  * 2026-08-06) — el resto son una ubicación aproximada dentro de
  * la colonia/calle real, situada a mano por geografía conocida de la
  * ciudad, no un geocoder. Suficiente para un radio de "cerca de" de 1-5 km,
@@ -165,6 +166,15 @@ export const LANDMARKS: Landmark[] = [
   // apliquen a la vez y no quede ningún resultado posible.
   { key: 'mercado-pino-suarez', label: 'Mercado José María Pino Suárez', categoria: 'comercial', lat: 17.9964, lng: -92.9144, radioKm: 1, aliases: ['mercado pino suárez', 'mercado pino suarez'] },
   { key: 'plaza-las-americas', label: 'Plaza Las Américas', categoria: 'comercial', lat: 18.0144, lng: -92.9190, radioKm: 1.2, aliases: ['plaza las américas', 'plaza las americas', 'las américas', 'las americas'] },
+  // Búsqueda dedicada en Nominatim por "mercado, Villahermosa" — son los
+  // 3 mercados públicos que existen ahí como amenity/marketplace, más la
+  // Central de Abastos (mayoreo, tipo de lugar distinto). Antes de esto
+  // solo estaba Pino Suárez, agregado por casualidad al investigar el bug
+  // original — el usuario tenía razón en que un mercado no es menos
+  // importante que un centro comercial para la vida diaria.
+  { key: 'central-abastos', label: 'Central de Abastos de Villahermosa', categoria: 'comercial', lat: 17.9919, lng: -92.9657, radioKm: 1.5, aliases: ['central de abastos', 'abastos'] },
+  { key: 'mercado-gregorio-mendez', label: 'Mercado Público Coronel Gregorio Méndez Magaña', categoria: 'comercial', lat: 17.9792, lng: -92.9291, radioKm: 1, aliases: ['mercado gregorio méndez', 'mercado gregorio mendez'] },
+  { key: 'mercado-florentino-hernandez', label: 'Mercado Público Florentino Hernández Bautista', categoria: 'comercial', lat: 17.9839, lng: -92.9187, radioKm: 1, aliases: ['mercado florentino hernández', 'mercado florentino hernandez'] },
 
   // Villahermosa (Centro) — transporte
   { key: 'aeropuerto-vsa', label: 'Aeropuerto de Villahermosa (VSA)', categoria: 'transporte', lat: 17.9970, lng: -92.8174, radioKm: 4, aliases: ['aeropuerto', 'vsa'] },
