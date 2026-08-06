@@ -200,6 +200,7 @@ export function MapView({
   useEffect(() => {
     if (!ready) return;
     if (!approximate) return;
+    if (!Number.isFinite(center[0]) || !Number.isFinite(center[1])) return;
     (async () => {
       const L = (await import('leaflet')).default;
       circleRef.current?.remove();
@@ -251,6 +252,12 @@ export function MapView({
       }
 
       markers.forEach((m) => {
+        // Un solo pin con coordenada inválida (ej. propiedad local vieja sin
+        // latPublico/lngPublico, ver conPuntoPublico en propiedadesLocales.ts)
+        // no debe tirar el resto del mapa — Leaflet lanza y corta el forEach
+        // a la mitad si se le pasa NaN, dejando de dibujar todos los pines
+        // siguientes. Se salta silenciosamente solo ese marcador.
+        if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) return;
         const color  = FLOOD_COLORS[m.riesgoInundacion];
         const dark   = FLOOD_DARK[m.riesgoInundacion];
         const active = selectedId === m.id;

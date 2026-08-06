@@ -2,6 +2,7 @@ import type { Property } from '@/types/property';
 import type { MiPropiedad, EstadoPublicacion } from './misPropiedadesDemo';
 import { readJson, writeJson } from './localStore';
 import { getEstadoOverride } from './estadoOverrides';
+import { getPuntoPublico } from './colonias';
 
 const KEY_CREADAS = 'vivevillahermosa_propiedades_creadas';
 const KEY_EDICIONES = 'vivevillahermosa_propiedades_ediciones';
@@ -31,8 +32,24 @@ function emitirCambio() {
  * archivar).
  */
 
+/**
+ * Repara al vuelo una propiedad guardada en localStorage ANTES de que
+ * `latPublico`/`lngPublico` existieran en el tipo `Property` (ver el fix de
+ * privacidad de ubicación) — sin esto, esas propiedades viejas traen
+ * `latPublico`/`lngPublico` en `undefined`, y `jitterCoord` los convierte en
+ * `NaN`, lo que hace que Leaflet truene (`Invalid LatLng object: (NaN,
+ * NaN)`) a medio dibujar los pines — no solo se ve mal esa propiedad, deja
+ * de agregar el resto de los pines del mapa también, porque el error corta
+ * el `forEach` a la mitad.
+ */
+function conPuntoPublico(p: Property): Property {
+  if (typeof p.latPublico === 'number' && typeof p.lngPublico === 'number') return p;
+  const punto = getPuntoPublico(p.id, p.lat, p.lng, p.colonia);
+  return { ...p, latPublico: punto.lat, lngPublico: punto.lng };
+}
+
 export function getPropiedadesCreadas(): Property[] {
-  return readJson<Property[]>(KEY_CREADAS, []);
+  return readJson<Property[]>(KEY_CREADAS, []).map(conPuntoPublico);
 }
 
 export function crearPropiedad(property: Property): void {
