@@ -23,7 +23,7 @@ import { TermsModal } from './TermsModal';
 import { useToast } from '@/context/ToastContext';
 import { useAuth } from '@/context/AuthContext';
 import { crearPropiedad } from '@/lib/propiedadesLocales';
-import { getPuntoPublico } from '@/lib/colonias';
+import { getPuntoPublico, matchColonia, distanciaKm } from '@/lib/colonias';
 import { generarIdLocal, generarSlugLocal } from '@/lib/idsLocales';
 import { resizeImageToDataUrl } from '@/lib/imageResize';
 import {
@@ -155,6 +155,22 @@ export function PublishForm() {
   const descripcion = watch('descripcion');
   const mapCenter = (MUNICIPIO_CENTERS[municipio ?? ''] ?? [17.9869, -92.9303]) as [number, number];
   const frasesSensibles = descripcion ? detectarLenguajeSensible(descripcion) : [];
+
+  // Aviso (no bloqueante) si el pin que se marcó en el mapa queda lejos de
+  // la colonia escrita arriba — mismo tipo de inconsistencia real que se
+  // encontró y corrigió en el catálogo de muestra dos veces esta sesión
+  // ("Centro Histórico" y "Atasta" apuntaban a un lugar distinto del que
+  // describían). Solo se puede comparar cuando la colonia escrita coincide
+  // con el catálogo verificado (colonias.ts) — si no coincide, no hay
+  // centroide real contra qué comparar, y no se avisa nada (no es lo mismo
+  // "no pudimos verificar" que "está mal"). 3km es generoso a propósito:
+  // una colonia es un área, no un punto, así que solo se avisa cuando la
+  // distancia ya no se explica por eso.
+  const coloniaVerificada = colonia ? matchColonia(colonia) : undefined;
+  const distanciaPinColonia = coords && coloniaVerificada
+    ? distanciaKm(coords.lat, coords.lng, coloniaVerificada.lat, coloniaVerificada.lng)
+    : null;
+  const pinLejosDeColonia = distanciaPinColonia !== null && distanciaPinColonia > 3;
 
   // ── Detección automática de riesgo de inundación ───────────────────────────
   const [deteccion, setDeteccion] = useState<DeteccionUI | null>(null);
@@ -619,6 +635,12 @@ export function PublishForm() {
               ) : (
                 <p className="text-xs text-gray-400 mt-1.5">
                   Toca el mapa o arrastra el pin para marcar la propiedad exacta
+                </p>
+              )}
+              {pinLejosDeColonia && (
+                <p className="flex items-start gap-1.5 text-[10px] text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-2.5 py-2 mt-2">
+                  <Info size={11} className="flex-shrink-0 mt-0.5" />
+                  El pin que marcaste está a {distanciaPinColonia!.toFixed(1)} km de &quot;{coloniaVerificada!.label}&quot; — revisa que el punto y la colonia coincidan antes de publicar.
                 </p>
               )}
               {coords && (
