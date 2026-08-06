@@ -89,7 +89,8 @@ latPublico, lngPublico (el único punto que se le puede devolver a alguien que n
 riesgoInundacion (bajo|medio|alto), zonaEcologica (bool), cercaDosoBocas (bool), featured (bool, default false),
 alertaFraude? ({ señales: string[] } — SOLO lo calcula el servidor, nunca aceptar del cliente),
 requiereModeracion (bool, default false), aceptaTerminosAt (datetime),
-agenteNombre, agenteTel?, agenteEmail?, agenteWhatsapp?, requiereMensajePrimero (bool, default false),
+agenteNombre, agenteTel?, agenteEmail?, agenteWhatsapp? (PRIVADOS — ver aviso más abajo, mismo trato que lat/lng),
+requiereMensajePrimero (bool, default false),
 estado (activa|pausada|vencida|vendida|rentada, default activa), activa (bool, default true — soft-delete),
 userId, createdAt, updatedAt
 ```
@@ -106,6 +107,11 @@ userId, createdAt, updatedAt
 > - `GET /propiedades` y `GET /propiedades/:id` (sin sesión, o con sesión de alguien que NO es el dueño) devuelven **solo** `latPublico`/`lngPublico` — el campo `lat`/`lng` real ni siquiera debe estar presente en el JSON de esa respuesta, no basta con "no usarlo en el frontend".
 > - `GET /propiedades/:id` cuando el `userId` de la sesión SÍ es el dueño, y `GET /propiedades/mias`, pueden incluir la coordenada real además de la pública — el dueño es quien la puso, verla no es una fuga.
 > - La plataforma **no necesita** un endpoint tipo "revelar ubicación exacta" (a diferencia del teléfono, que sí tiene uno, §10) — compartir la dirección real sigue siendo una decisión 100% manual del propietario, por WhatsApp, fuera de la plataforma. No hay que construir nada para ese flujo, solo no filtrar el dato por accidente.
+
+> ⚠️ **Corrección 2026-08-06 — el mismo bug existía para `agenteTel`/`agenteEmail`/`agenteWhatsapp`.**
+> El endpoint `GET /propiedades/:id/contacto` (§10) siempre estuvo bien diseñado — exige sesión, tiene rate limit. El bug estaba en otro lado: `GET /propiedades` (la lista) devolvía el objeto de cada propiedad con el contacto real incluido en `agente`, sin que nadie tuviera que pasar por el endpoint gateado. Confirmado en vivo: pedir la lista sin sesión traía el teléfono y correo real de cada agente, repetido una vez por cada propiedad suya — el endpoint gateado no protegía nada porque el mismo dato ya viajaba por otro camino sin ninguna de sus protecciones.
+> - `GET /propiedades` y `GET /propiedades/:id` (para quien no es el dueño) deben devolver `agente` con **solo** `nombre`, `foto`, `verificado` — nunca `tel`/`email`/`whatsapp`, ni siquiera cuando hay sesión iniciada. El único camino para esos tres campos es `GET /propiedades/:id/contacto`.
+> - `GET /propiedades/:id` cuando el `userId` de la sesión SÍ es el dueño, y `GET /propiedades/mias`, sí pueden incluir su propio contacto completo — es su propio dato de contacto, no una fuga.
 
 ---
 
