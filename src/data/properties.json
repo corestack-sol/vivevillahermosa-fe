@@ -1,6 +1,6 @@
 {
   "meta": {
-    "total": 24,
+    "total": 25,
     "page": 1,
     "perPage": 12
   },
@@ -1090,6 +1090,49 @@
         "whatsapp": "529931234567"
       },
       "fechaPublicacion": "2026-06-17",
+      "activa": true
+    },
+    {
+      "id": "prop-025",
+      "slug": "casa-venta-centro-historico-villahermosa-025",
+      "titulo": "Casa en el Centro Histórico de Villahermosa",
+      "descripcion": "Casa céntrica en el corazón del Centro Histórico de Villahermosa, a pasos de comercios, oficinas de gobierno y la Catedral. Techos altos y balcón a la calle, típicos de la zona. Ideal para quien busca cercanía con el centro de la ciudad. Contacta al propietario para conocer la ubicación exacta.",
+      "tipo": "casa",
+      "operacion": "venta",
+      "precio": 1350000,
+      "moneda": "MXN",
+      "m2Construidos": 140,
+      "m2Terreno": 160,
+      "recamaras": 3,
+      "banos": 2,
+      "mediosBanos": 0,
+      "estacionamientos": 1,
+      "antiguedad": 20,
+      "amenidades": [
+        "Balcón",
+        "Techos altos",
+        "Ubicación céntrica"
+      ],
+      "fotos": [
+        "/images/props/prop-025-1.jpg"
+      ],
+      "municipio": "Centro",
+      "colonia": "Centro Histórico",
+      "direccion": "Calle Santos Degollado, Centro Histórico, Villahermosa, Tabasco",
+      "latPublico": 17.9895,
+      "lngPublico": -92.9478,
+      "riesgoInundacion": "bajo",
+      "zonaEcologica": false,
+      "cercaDosoBocas": false,
+      "featured": false,
+      "agente": {
+        "nombre": "María Hernández",
+        "tel": "+52 993 123 4567",
+        "email": "maria@Vive Villahermosa.mx",
+        "foto": "/images/agents/agente-001.jpg",
+        "whatsapp": "529931234567"
+      },
+      "fechaPublicacion": "2026-08-06",
       "activa": true
     }
   ]
