@@ -9,7 +9,11 @@ const BCRYPT_COST = 12; // subido de 10 — guía actual recomienda 12+ (hallazg
 
 const schema = z.object({
   nombre: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
-  email: z.string().email('Email inválido'),
+  // Normalizado antes de guardar — sin esto, "Juan@Gmail.com" y
+  // "juan@gmail.com" quedan como cuentas "distintas" a ojos de cualquier
+  // lookup por email exacto (login, solicitar-revision), ya que SQLite
+  // compara texto con `=` de forma sensible a mayúsculas por defecto.
+  email: z.string().email('Email inválido').trim().toLowerCase(),
   // Mínimo subido de 6 a 10 caracteres (hallazgo H4) — 6 es trivialmente
   // fuerza-bruteable y hoy es la única barrera real de la cuenta, ya que
   // aún no existe verificación de correo ni MFA.

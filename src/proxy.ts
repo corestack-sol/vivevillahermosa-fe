@@ -20,7 +20,13 @@ import { jwtVerify } from 'jose';
 //
 // Nota: en Next.js 16 este archivo se llama `proxy.ts` (antes
 // `middleware.ts`) — ver node_modules/next/dist/docs/01-app/01-getting-started/16-proxy.md.
-const PROTECTED_PATHS = ['/dashboard', '/favoritos', '/alertas', '/publicar', '/servicios/publicar'];
+// /admin: esto solo exige que exista una sesión válida (defensa en
+// profundidad) — la verificación real de que además sea un admin
+// (esAdmin, leído fresco de la base de datos) pasa server-side en
+// src/app/admin/layout.tsx y en cada ruta /api/admin/** vía
+// requireAdmin() (src/lib/adminAuth.ts), nunca aquí: el edge runtime de
+// este archivo solo puede validar la firma del JWT, no consultar Prisma.
+const PROTECTED_PATHS = ['/dashboard', '/favoritos', '/alertas', '/publicar', '/servicios/publicar', '/admin'];
 const COOKIE = 'vivevillahermosa_session';
 
 function isProtected(pathname: string): boolean {
@@ -48,5 +54,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/favoritos/:path*', '/alertas/:path*', '/publicar/:path*', '/servicios/publicar/:path*'],
+  matcher: ['/dashboard/:path*', '/favoritos/:path*', '/alertas/:path*', '/publicar/:path*', '/servicios/publicar/:path*', '/admin/:path*'],
 };

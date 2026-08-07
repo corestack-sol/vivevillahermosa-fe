@@ -7,6 +7,7 @@ export interface AuthUser {
   email: string;
   nombre: string;
   rol: string;
+  esAdmin?: boolean;
 }
 
 interface AuthContextValue {

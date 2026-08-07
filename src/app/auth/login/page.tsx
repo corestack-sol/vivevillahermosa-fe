@@ -52,6 +52,11 @@ function LoginContent() {
 
   const [showPass, setShowPass]       = useState(false);
   const [serverError, setServerError] = useState('');
+  // Distingue "cuenta bloqueada" (403) del resto de errores de login (401,
+  // 429, etc.) para poder ofrecer el link real a la apelación SOLO ahí —
+  // antes el mensaje decía "contáctanos" sin ningún link a ningún lado.
+  const [cuentaBloqueada, setCuentaBloqueada] = useState(false);
+  const [emailIntentado, setEmailIntentado]   = useState('');
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -59,13 +64,19 @@ function LoginContent() {
 
   async function onSubmit(data: FormData) {
     setServerError('');
+    setCuentaBloqueada(false);
     const res  = await fetch('/api/auth/login', {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify(data),
     });
     const json = await res.json();
-    if (!res.ok) { setServerError(json.error); return; }
+    if (!res.ok) {
+      setServerError(json.error);
+      setCuentaBloqueada(res.status === 403);
+      setEmailIntentado(data.email);
+      return;
+    }
     await refresh();
     router.push(next);
   }
@@ -131,6 +142,11 @@ function LoginContent() {
             {oauthError && (
               <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 mb-5">
                 {oauthErrorMsg[oauthError] ?? 'Error al autenticar. Intenta de nuevo.'}
+                {oauthError === 'bloqueado' && (
+                  <Link href="/cuenta/solicitar-revision" className="block font-bold underline mt-1.5 hover:text-red-700">
+                    Solicitar revisión de mi cuenta
+                  </Link>
+                )}
               </div>
             )}
 
@@ -200,6 +216,14 @@ function LoginContent() {
               {serverError && (
                 <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
                   {serverError}
+                  {cuentaBloqueada && (
+                    <Link
+                      href={`/cuenta/solicitar-revision?email=${encodeURIComponent(emailIntentado)}`}
+                      className="block font-bold underline mt-1.5 hover:text-red-700"
+                    >
+                      Solicitar revisión de mi cuenta
+                    </Link>
+                  )}
                 </div>
               )}
 

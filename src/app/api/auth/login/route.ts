@@ -6,7 +6,11 @@ import { createSession, setSessionCookie } from '@/lib/auth';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
 
 const schema = z.object({
-  email: z.string().email('Email inválido'),
+  // Mismo trato que en registro/route.ts — normalizar antes de buscar,
+  // para que el casing con el que alguien escribe su email en el
+  // teclado (autocapitalización en móvil, etc.) no rompa el match contra
+  // lo que se guardó al registrarse.
+  email: z.string().email('Email inválido').trim().toLowerCase(),
   password: z.string().min(1, 'Ingresa tu contraseña'),
 });
 

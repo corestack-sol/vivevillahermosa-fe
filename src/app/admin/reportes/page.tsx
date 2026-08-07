@@ -1,0 +1,136 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { Loader2, CheckCircle2, XCircle, Info } from 'lucide-react';
+import { Select } from '@/components/ui/Select';
+import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import { formatRelativeDate } from '@/lib/format';
+
+interface Reporte {
+  id: string;
+  propiedadId: string;
+  userId: string | null;
+  motivo: string;
+  comentario: string | null;
+  estado: 'pendiente' | 'revisado' | 'descartado';
+  createdAt: string;
+}
+
+const ESTADOS = [
+  { value: 'pendiente', label: 'Pendientes' },
+  { value: 'revisado', label: 'Revisados' },
+  { value: 'descartado', label: 'Descartados' },
+];
+
+const MOTIVO_LABEL: Record<string, string> = {
+  info_falsa: 'Información falsa',
+  precio_sospechoso: 'Precio sospechoso',
+  contenido_inapropiado: 'Contenido inapropiado',
+  posible_fraude: 'Posible fraude',
+  otro: 'Otro',
+};
+
+export default function AdminReportesPage() {
+  const [reportes, setReportes] = useState<Reporte[]>([]);
+  const [estado, setEstado] = useState('pendiente');
+  const [loading, setLoading] = useState(true);
+  const [enviando, setEnviando] = useState(false);
+  const [confirmar, setConfirmar] = useState<{ reporte: Reporte; nuevoEstado: 'revisado' | 'descartado' } | null>(null);
+
+  const cargar = useCallback(async () => {
+    setLoading(true);
+    const res = await fetch(`/api/admin/reportes?estado=${estado}`, { cache: 'no-store' });
+    const data = await res.json();
+    setReportes(data.reportes ?? []);
+    setLoading(false);
+  }, [estado]);
+
+  useEffect(() => { function cargarInicial() { cargar(); } cargarInicial(); }, [cargar]);
+
+  async function resolver() {
+    if (!confirmar) return;
+    setEnviando(true);
+    await fetch(`/api/admin/reportes/${confirmar.reporte.id}/resolver`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado: confirmar.nuevoEstado }),
+    });
+    setEnviando(false);
+    setConfirmar(null);
+    cargar();
+  }
+
+  return (
+    <div>
+      <h1 className="text-2xl font-heading font-bold text-gray-900 mb-1">Reportes de publicaciones</h1>
+      <p className="text-gray-500 text-sm mb-6 max-w-2xl flex items-start gap-1.5">
+        <Info size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+        Property no es todavía una tabla real del backend — muchos de estos IDs corresponden a publicaciones locales del navegador de quien reportó y no se pueden abrir ni verificar desde aquí.
+      </p>
+
+      <div className="w-52 mb-5">
+        <Select options={ESTADOS} value={estado} onChange={(e) => setEstado(e.target.value)} placeholder="" />
+      </div>
+
+      {loading ? (
+        <div className="text-center py-10 text-gray-400"><Loader2 className="animate-spin inline" size={20} /></div>
+      ) : reportes.length === 0 ? (
+        <div className="text-center py-10 text-gray-400 text-sm">Sin reportes {estado === 'pendiente' ? 'pendientes' : `en estado "${estado}"`}</div>
+      ) : (
+        <div className="space-y-3">
+          {reportes.map((r) => (
+            <div key={r.id} className="bg-white rounded-2xl border border-gray-200 p-5">
+              <div className="flex items-start justify-between gap-4 mb-2">
+                <div>
+                  <span className="inline-block text-xs font-semibold text-brand bg-brand-pale px-2 py-0.5 rounded-full mb-1.5">{MOTIVO_LABEL[r.motivo] ?? r.motivo}</span>
+                  <p className="text-xs text-gray-400">Publicación: <code className="bg-gray-50 px-1 py-0.5 rounded">{r.propiedadId}</code></p>
+                  <p className="text-xs text-gray-400">{r.userId ? 'Reportado por un usuario con sesión' : 'Reportado de forma anónima'} · {formatRelativeDate(r.createdAt)}</p>
+                </div>
+              </div>
+              {r.comentario && <p className="text-sm text-gray-700 bg-gray-50 rounded-xl p-3 mb-3">{r.comentario}</p>}
+              {r.estado === 'pendiente' && (
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => setConfirmar({ reporte: r, nuevoEstado: 'revisado' })}>
+                    <CheckCircle2 size={14} /> Marcar revisado
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setConfirmar({ reporte: r, nuevoEstado: 'descartado' })}>
+                    <XCircle size={14} /> Descartar
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Modal
+        isOpen={!!confirmar}
+        onClose={() => setConfirmar(null)}
+        title={confirmar?.nuevoEstado === 'revisado' ? 'Marcar como revisado' : 'Descartar reporte'}
+      >
+        {confirmar && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              {confirmar.nuevoEstado === 'revisado'
+                ? 'Vas a marcar como revisado el reporte sobre'
+                : 'Vas a descartar el reporte sobre'}{' '}
+              <code className="bg-gray-50 px-1 py-0.5 rounded text-gray-800">{confirmar.reporte.propiedadId}</code>
+              {' '}({MOTIVO_LABEL[confirmar.reporte.motivo] ?? confirmar.reporte.motivo}). Esta acción no se puede deshacer desde aquí.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setConfirmar(null)}>Cancelar</Button>
+              <Button
+                variant={confirmar.nuevoEstado === 'revisado' ? 'primary' : 'danger'}
+                onClick={resolver}
+                isLoading={enviando}
+              >
+                {confirmar.nuevoEstado === 'revisado' ? 'Confirmar' : 'Confirmar descarte'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}

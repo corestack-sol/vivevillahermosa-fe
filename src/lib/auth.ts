@@ -22,6 +22,14 @@ export interface SessionPayload {
   email: string;
   nombre: string;
   rol: string;
+  /**
+   * Nunca viene del JWT — se agrega en getSession() con un valor leído
+   * fresco de la base de datos en cada request, igual que `bloqueado` unas
+   * líneas más abajo. Si viviera en el token firmado, promover/revocar un
+   * admin no tendría efecto hasta que esa persona cerrara sesión y volviera
+   * a entrar (hasta 7 días de privilegio obsoleto).
+   */
+  esAdmin?: boolean;
 }
 
 export async function createSession(payload: SessionPayload): Promise<string> {
@@ -59,10 +67,10 @@ export async function getSession(): Promise<SessionPayload | null> {
   // extra a la base de datos en cada request autenticado — aceptable a la
   // escala actual (SQLite, pre-lanzamiento); revisar si el tráfico crece
   // mucho y esto empieza a pesar.
-  const user = await prisma.user.findUnique({ where: { id: payload.userId }, select: { bloqueado: true } });
+  const user = await prisma.user.findUnique({ where: { id: payload.userId }, select: { bloqueado: true, esAdmin: true } });
   if (user?.bloqueado) return null;
 
-  return payload;
+  return { ...payload, esAdmin: user?.esAdmin ?? false };
 }
 
 export function setSessionCookie(token: string): { name: string; value: string; options: object } {

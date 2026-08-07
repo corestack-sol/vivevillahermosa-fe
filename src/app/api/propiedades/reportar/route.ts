@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getSession } from '@/lib/auth';
 import { checkRateLimit, getClientIp, rateLimitResponse } from '@/lib/rateLimit';
+import { prisma } from '@/lib/db';
 
 const schema = z.object({
   propiedadId: z.string().min(1),
@@ -10,34 +11,21 @@ const schema = z.object({
 });
 
 /**
- * ⚠️ BACKEND PENDIENTE (Fase 2) — este endpoint hoy es un stub que solo
- * valida la forma del reporte y responde éxito; NO persiste nada todavía.
- * Para llevarlo a producción falta:
+ * Persiste en `ReporteAnuncio` (antes era un stub que solo hacía
+ * console.log, ver historial de este archivo) — un admin lo revisa desde
+ * /admin/reportes (GET/POST /api/admin/reportes, requireAdmin()).
  *
- * 1. Modelo `ReporteAnuncio` en prisma/schema.prisma:
- *      id, propiedadId, userId? (nullable — permitir reporte anónimo),
- *      motivo, comentario?, estado (pendiente|revisado|descartado),
- *      createdAt.
- * 2. Persistir el reporte con Prisma en vez de solo hacer console.log.
- * 3. Rate limiting por IP (ej. máx. 5 reportes/hora) para evitar abuso —
- *    alguien podría usar este endpoint para spamear reportes falsos contra
- *    un competidor y sacar su anuncio de circulación.
- * 4. Si una propiedad acumula N reportes (ej. 3+) de motivo
- *    "posible_fraude" o "info_falsa", marcarla automáticamente para
- *    revisión manual (`requiereModeracion = true`) en vez de esperar a
- *    que un admin la encuentre por casualidad.
- * 5. Notificar al equipo de moderación (email/Slack) cuando entre un
- *    reporte — ver Módulo 11 "Panel Admin Básico" en fase2-spec.md, que
- *    ya prevé una cola de moderación; este reporte debería alimentarla.
- *
- * El campo `userId` de abajo ya captura la sesión si existe, para que
- * cuando se implemente la persistencia no haya que tocar el frontend.
+ * `propiedadId` es una referencia libre sin FK, no valida contra ningún
+ * catálogo — el reportado puede ser una propiedad del catálogo estático o
+ * una publicada solo en el navegador de quien reporta (localStorage,
+ * src/lib/propiedadesLocales.ts); en ese segundo caso un admin no podrá
+ * verla desde el panel (no existe del lado del servidor), /admin/reportes
+ * lo indica explícitamente en vez de mostrar un enlace roto en silencio.
  */
 export async function POST(request: Request) {
   const ip = getClientIp(request);
   // Sin este límite, cualquiera podía spamear reportes falsos contra un
-  // anuncio de la competencia para sacarlo de circulación (riesgo señalado
-  // en el punto 3 del comentario de arriba).
+  // anuncio de la competencia para sacarlo de circulación.
   const limited = checkRateLimit(`reportar:ip:${ip}`, 5, 60 * 60 * 1000);
   if (!limited.ok) return rateLimitResponse(limited.resetAt);
 
@@ -49,11 +37,13 @@ export async function POST(request: Request) {
 
   const session = await getSession();
 
-  // TODO: Fase 2 — reemplazar este log por prisma.reporteAnuncio.create({...})
-  console.log('[reportar-anuncio] Nuevo reporte (no persistido):', {
-    ...parsed.data,
-    userId: session?.userId ?? null,
-    fecha: new Date().toISOString(),
+  await prisma.reporteAnuncio.create({
+    data: {
+      propiedadId: parsed.data.propiedadId,
+      motivo: parsed.data.motivo,
+      comentario: parsed.data.comentario,
+      userId: session?.userId ?? null,
+    },
   });
 
   return NextResponse.json({ ok: true });

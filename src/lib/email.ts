@@ -171,3 +171,55 @@ export async function sendCitaRecordatorioEmail(params: CitaRecordatorioEmailPar
     return false;
   }
 }
+
+interface SolicitudRevisionResueltaEmailParams {
+  to: string;
+  nombre: string;
+  estado: 'aprobada' | 'rechazada';
+  respuestaAdmin: string | null;
+}
+
+/**
+ * El único canal que de verdad le llega a alguien cuando SE RECHAZA su
+ * solicitud de revisión — su cuenta sigue bloqueada, así que nunca podría
+ * iniciar sesión para ver la Notificacion in-app que también se crea (ver
+ * POST /api/admin/solicitudes-revision/:id/resolver). Si se aprueba,
+ * `bloqueado` ya se puso en false antes de llamar esto, así que además
+ * puede volver a entrar y ver la notificación normal.
+ */
+export async function sendSolicitudRevisionResueltaEmail(params: SolicitudRevisionResueltaEmailParams): Promise<boolean> {
+  if (!resend) {
+    console.warn(`[email] RESEND_API_KEY no configurado — no se envió resolución de revisión a ${params.to}`);
+    return false;
+  }
+
+  const aprobada = params.estado === 'aprobada';
+
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM,
+      to: params.to,
+      subject: aprobada ? 'Tu cuenta fue reactivada' : 'Resultado de tu solicitud de revisión',
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+          <p>Hola ${escapeHtml(params.nombre)},</p>
+          ${aprobada
+            ? '<p>Revisamos tu solicitud y <strong>reactivamos tu cuenta</strong> — ya puedes iniciar sesión normalmente.</p>'
+            : '<p>Revisamos tu solicitud y, por ahora, tu cuenta <strong>sigue bloqueada</strong>.</p>'}
+          ${params.respuestaAdmin
+            ? `<p style="color:#444; margin: 12px 0 0; font-size: 14px;">${escapeHtml(params.respuestaAdmin)}</p>`
+            : ''}
+          <p style="color:#888; font-size:12px; margin-top:24px;">Vive Villahermosa.</p>
+        </div>
+      `,
+    });
+    if (error) {
+      console.error('[email] Resend devolvió un error', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[email] Error enviando correo', err);
+    return false;
+  }
+}

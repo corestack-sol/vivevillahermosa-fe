@@ -26,7 +26,25 @@ model User {
   bloqueado           Boolean   @default(false)
   bloqueadoMotivo     String?
   bloqueadoEn         DateTime?
+  // Cuándo se resolvió el bloqueo más reciente (manual o por apelación
+  // aprobada) — NO se borra el historial de IntentoSospechoso al
+  // desbloquear (sigue sirviendo de auditoría), pero el conteo de "3
+  // strikes" en registrarIntentoSospechoso() debe contar solo intentos
+  // DESPUÉS de este momento. Sin este campo, una cuenta reactivada con
+  // exactamente 3 IntentoSospechoso históricos se re-bloqueaba con un solo
+  // intento nuevo (4to acumulado ≥ 3), no con 3 nuevos — la promesa de
+  // "ya puedes iniciar sesión normalmente" quedaba rota en la práctica.
+  bloqueoResueltoEn   DateTime?
+  // Permiso de plataforma, aparte de `rol` (que solo distingue
+  // buscador/agente — un tipo de uso del sitio, no un permiso). Se lee
+  // fresco de la base de datos en cada request (ver getSession() en
+  // src/lib/auth.ts) — nunca va dentro del JWT firmado, para que
+  // promover/revocar a alguien tenga efecto de inmediato, mismo criterio
+  // que ya usa `bloqueado` para revocación en tiempo real.
+  esAdmin             Boolean   @default(false)
   intentosSospechosos IntentoSospechoso[]
+  solicitudesRevision SolicitudRevision[]
+  accionesAdmin       AccionAdmin[]
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
   favoritos  Favorito[]
@@ -112,6 +130,72 @@ model IntentoSospechoso {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// Apelación de una cuenta bloqueada — el único bloqueo que existe hoy es
+// 100% automático (3 intentos confirmados, ver IntentoSospechoso arriba),
+// y una detección automática puede equivocarse con un usuario honesto. Sin
+// esto, no había ninguna forma de reclamar un bloqueo salvo escribir
+// directo a soporte fuera de la plataforma. Como `bloqueado=true` impide
+// iniciar sesión (login/OAuth la rechazan, y getSession() invalida hasta
+// una sesión ya activa), esta cuenta NO puede llegar a ningún endpoint que
+// exija sesión — por eso el endpoint que la crea
+// (POST /api/cuenta/solicitar-revision) es público, identificado por
+// correo, no por sesión.
+model SolicitudRevision {
+  id             String    @id @default(cuid())
+  userId         String
+  motivo         String
+  estado         String    @default("pendiente") // pendiente | aprobada | rechazada
+  respuestaAdmin String?
+  resueltoPorId  String?
+  createdAt      DateTime  @default(now())
+  resueltoEn     DateTime?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([estado])
+}
+
+// Hace real el reporte de un anuncio — antes (POST /api/propiedades/reportar)
+// solo se validaba y se hacía console.log, nada se guardaba. `propiedadId`
+// es una referencia libre sin FK, mismo patrón que Favorito.propiedadId/
+// Cita.propiedadId: el catálogo de propiedades sigue sin ser una tabla real
+// (ver el bloque Property comentado más abajo), así que no hay nada contra
+// qué hacer una relación de verdad todavía.
+model ReporteAnuncio {
+  id          String   @id @default(cuid())
+  propiedadId String
+  // Nullable a propósito — reportar sigue sin exigir sesión (igual que
+  // hoy), para no ponerle fricción a alguien que solo quiere avisar de un
+  // anuncio sospechoso.
+  userId      String?
+  motivo      String   // info_falsa | precio_sospechoso | contenido_inapropiado | posible_fraude | otro
+  comentario  String?
+  estado      String   @default("pendiente") // pendiente | revisado | descartado
+  createdAt   DateTime @default(now())
+
+  @@index([estado])
+  @@index([propiedadId])
+}
+
+// Auditoría de cada acción de un administrador — sin esto, este log tendría
+// el mismo problema que ya tenía IntentoSospechoso antes de este cambio:
+// se escribe pero nadie lo puede revisar. `objetivoId` es libre (puede ser
+// un userId, un id de SolicitudRevision, de ReporteAnuncio, etc. según
+// `accion`) — no se modela como relación porque apunta a distintas tablas
+// según el caso.
+model AccionAdmin {
+  id         String   @id @default(cuid())
+  adminId    String
+  accion     String
+  objetivoId String
+  detalle    String?
+  createdAt  DateTime @default(now())
+  admin      User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([accion])
 }
 
 model Favorito {

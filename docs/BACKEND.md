@@ -46,6 +46,7 @@
 13. [Cambios necesarios en el frontend Next.js](#13-cambios-necesarios-en-el-frontend-nextjs)
 14. [Seguridad e infraestructura](#14-seguridad-e-infraestructura)
 15. [V2 — fuera de alcance del MVP](#15-v2--fuera-de-alcance-del-mvp)
+16. [Panel de administración — NUEVO, ya existe hoy en Next.js](#16-panel-de-administración--nuevo-ya-existe-hoy-en-nextjs)
 
 ---
 
@@ -54,7 +55,7 @@
 > **`prisma/schema.prisma` (en la raíz de este mismo repo) es la fuente de verdad exacta — este resumen en prosa es solo para lectura rápida.** Ahí están los tipos precisos, `@default`, `@unique`, relaciones (`@relation`, `onDelete: Cascade`) e índices compuestos (`@@index`) tal cual, sin resumir. Los modelos 1-10 de abajo (`User` hasta `ColoniaDescubierta`) son una transcripción de los primeros ~225 líneas del archivo — ya existen y funcionan hoy dentro de Next.js. El modelo 11 (`Property`) es el sketch sugerido que está comentado (`//`) al final del mismo archivo — búscalo con `grep -n "MODELO Property" prisma/schema.prisma` — es nuevo, no existe como tabla real todavía en ningún lado. El backend nuevo no tiene por qué usar Prisma ni SQLite — pero esta es la forma de datos exacta que el frontend ya espera en cada respuesta, así que hay que replicarla, no reinventarla.
 
 **1. `User`**
-`id, email (único), password (nullable — vacío si es cuenta OAuth), nombre, rol ('buscador' | 'agente'), googleId? (único), facebookId? (único), avatar?, bloqueado (bool, default false), bloqueadoMotivo?, bloqueadoEn?, createdAt, updatedAt`
+`id, email (único), password (nullable — vacío si es cuenta OAuth), nombre, rol ('buscador' | 'agente'), googleId? (único), facebookId? (único), avatar?, bloqueado (bool, default false), bloqueadoMotivo?, bloqueadoEn?, esAdmin (bool, default false — ver §16, nunca va en el JWT), createdAt, updatedAt`
 
 **2. `Favorito`** — `id, userId, propiedadId (string libre, no FK — el catálogo de propiedades hoy es estático), createdAt`. Único por `(userId, propiedadId)`.
 
@@ -73,6 +74,12 @@
 **9. `TrabajoServicio`** (⏸️ en pausa, ver §11) — `id, servicioId, imagenDataUrl, descripcion?, createdAt`.
 
 **10. `ColoniaDescubierta`** — `id, key (único), label, municipio, lat, lng, radioKm, aliasesJson? (JSON de array de strings), fuenteTipo, verificadoEn`.
+
+**12. `SolicitudRevision`** (ver §16) — `id, userId, motivo, estado ('pendiente'|'aprobada'|'rechazada'), respuestaAdmin?, resueltoPorId?, createdAt, resueltoEn?`.
+
+**13. `ReporteAnuncio`** (ver §10 y §16) — `id, propiedadId, userId?, motivo, comentario?, estado ('pendiente'|'revisado'|'descartado'), createdAt`.
+
+**14. `AccionAdmin`** (ver §16) — `id, adminId, accion, objetivoId, detalle?, createdAt`.
 
 **11. `Property`** — **NUEVO.** Campos que el frontend ya espera (`src/types/property.ts`):
 ```
@@ -119,10 +126,12 @@ userId, createdAt, updatedAt
 
 **Todo este dominio se reconstruye desde cero en el backend nuevo** — hoy vive en `src/lib/auth.ts` + `src/app/api/auth/**` dentro de Next.js. El JWT actual: `jose`, algoritmo `HS256`, payload `{ userId, email, nombre, rol }`, expira en 7 días (`TTL = 60*60*24*7` segundos). El backend nuevo puede mantener esta misma forma de payload (recomendado, para no tocar `AuthContext.tsx` del lado del frontend) o cambiarla — si cambia, el frontend necesita actualizarse también.
 
+**Normalización de email (2026-08-06):** `registro` y `login` aplican `.trim().toLowerCase()` al email ANTES de cualquier `findUnique`/`create` — antes no lo hacían, así que "Juan@Gmail.com" y "juan@gmail.com" se trataban como cuentas distintas en cualquier comparación exacta (SQLite compara `=` sensible a mayúsculas por defecto). El backend nuevo debe normalizar igual, en todo lookup por email (incluyendo `/cuenta/solicitar-revision`, §16) — sin esto, una persona que registra su cuenta con mayúsculas y después escribe su email distinto en otro formulario (muy plausible en móvil, por auto-capitalización) no encuentra su propia cuenta. **Nota:** cuentas creadas ANTES de este cambio pueden tener el email guardado con mayúsculas mixtas — no se corrió ninguna migración de datos sobre esto (base de desarrollo, sin usuarios reales todavía); si se migra la base existente al backend nuevo, normalizar también los valores ya guardados.
+
 | Endpoint actual (Next.js) | Método | Body | Respuesta | Notas de comportamiento a replicar |
 |---|---|---|---|---|
-| `/api/auth/registro` | POST | `{ nombre, email, password, rol? }` | `{ user: {id,email,nombre,rol} }` + cookie de sesión | `password` mínimo 10 caracteres. `bcrypt` costo **12**. Rate limit 8/hora por IP. 409 si el email ya existe. |
-| `/api/auth/login` | POST | `{ email, password }` | `{ user: {...} }` + cookie | Rate limit 20/15min por IP **y** 5/15min por IP+email (frena fuerza bruta dirigida). 403 si `bloqueado`. 401 si la cuenta es OAuth-only (`password` null) — mensaje explícito "usa Google/Facebook". |
+| `/api/auth/registro` | POST | `{ nombre, email, password, rol? }` | `{ user: {id,email,nombre,rol} }` + cookie de sesión | `email` normalizado (ver arriba). `password` mínimo 10 caracteres. `bcrypt` costo **12**. Rate limit 8/hora por IP. 409 si el email ya existe. |
+| `/api/auth/login` | POST | `{ email, password }` | `{ user: {...} }` + cookie | `email` normalizado (ver arriba). Rate limit 20/15min por IP **y** 5/15min por IP+email (frena fuerza bruta dirigida). 403 si `bloqueado`. 401 si la cuenta es OAuth-only (`password` null) — mensaje explícito "usa Google/Facebook". |
 | `/api/auth/logout` | POST | — | `{ ok: true }` | Borra la cookie de sesión (`maxAge: 0`). |
 | `/api/auth/me` | GET | — | `{ user: SessionPayload \| null }` | Nunca da error si no hay sesión — devuelve `user: null` con 200. |
 | `/api/auth/cuenta` | DELETE | — | `{ ok: true }` + borra cookie | Elimina la cuenta **de inmediato**, sin período de gracia. Cascada a Favoritos/Alertas/Notificaciones/etc. (todo lo que tenga `onDelete: Cascade` sobre `userId`). |
@@ -138,6 +147,8 @@ userId, createdAt, updatedAt
    - Si existe una cuenta con ese email **sin `password`** (creada antes por el otro proveedor social) → sí se puede vincular (`googleId`/`facebookId` + `avatar`), es seguro porque nadie pudo "reservar" ese email con un secreto que controla.
    - Si no existe ninguna cuenta → crear una nueva con `rol: 'buscador'`.
 3. Verificar `bloqueado` antes de emitir sesión (igual que login por contraseña).
+
+**Gap conocido, no corregido todavía:** el paso 2 busca por `profile.email` tal cual lo devuelve Google/Facebook, sin pasar por la misma normalización (`.trim().toLowerCase()`) que ya tienen `registro`/`login` (ver arriba). Google normalmente ya devuelve el email en minúsculas, pero no está garantizado para todos los proveedores — si alguien se registró con contraseña usando mayúsculas mixtas (cuentas de antes del fix de normalización) y luego entra con OAuth usando el email en otro casing, el `findUnique` no encuentra la cuenta existente y crea una duplicada en vez de vincular. No se corrigió en esta ronda porque el flujo OAuth no se tocó — pendiente para cuando se retome ese módulo.
 
 **Revocación en tiempo real (parcial, no general):** en cada request autenticado, además de verificar la firma/expiración del JWT, se consulta `User.bloqueado` en la base de datos — si es `true`, la sesión se trata como inválida aunque el JWT siga siendo válido y no haya expirado. Esto es lo único "en tiempo real" que existe hoy; no hay tabla de revocación general (ver §14).
 
@@ -284,7 +295,7 @@ No hay un endpoint `POST` propio — nuevas filas se crean como efecto secundari
 |---|---|---|---|---|
 | `/propiedades/:id/contacto` | GET | Sí | — | `{ tel, email, whatsapp }` del agente — revelado instantáneo con sesión, cero acceso anónimo. Rate limit 30/10min **por IP Y por `userId` a la vez, los dos límites deben pasar** — confirmado con una prueba real que el límite solo por IP (`X-Forwarded-For`, falsificable por el cliente sin proxy de confianza en frente) no evitaba que una sola cuenta autenticada scrapeara el contacto de todas las propiedades sin fricción (60/60 solicitudes exitosas falsificando la IP en cada una). El límite por `userId` (sale de la sesión firmada, no falsificable desde el cliente) es el que de verdad detiene esto — no omitirlo pensando que el de IP ya alcanza. |
 | `/propiedades/:id/contactar` | POST | No (público) | `{ nombre, telefono, email, mensaje }` | Manda un correo real al `emailCuenta`/`agenteEmail` del dueño con el mensaje. **No hay tabla `Contacto`** — el correo ES el único registro; si falla el envío, responde error real (502), no un éxito falso. Rate limit 10/10min por IP. |
-| `/propiedades/reportar` | POST | Opcional | `{ propiedadId, motivo (info_falsa\|precio_sospechoso\|contenido_inapropiado\|posible_fraude\|otro), comentario? }` | **Hoy es un stub** — solo valida y responde éxito, no persiste nada. El backend nuevo debe construir esto de verdad: guardar en una tabla `ReporteAnuncio` (`id, propiedadId, userId?, motivo, comentario?, estado, createdAt`), y si una propiedad acumula 3+ reportes de "posible_fraude"/"info_falsa", marcarla `requiereModeracion=true` automáticamente. Rate limit 5/hora por IP (evita que alguien reporte en masa el anuncio de un competidor). |
+| `/propiedades/reportar` | POST | Opcional | `{ propiedadId, motivo (info_falsa\|precio_sospechoso\|contenido_inapropiado\|posible_fraude\|otro), comentario? }` | **Ya persiste de verdad** en `ReporteAnuncio` (ver §16, panel admin en `/admin/reportes`) — dejó de ser un stub 2026-08-06. Pendiente para el backend nuevo: si una propiedad acumula 3+ reportes de "posible_fraude"/"info_falsa", marcarla `requiereModeracion=true` automáticamente (esto todavía no está implementado ni en Next.js). Rate limit 5/hora por IP (evita que alguien reporte en masa el anuncio de un competidor). |
 
 ---
 
@@ -372,7 +383,52 @@ No construir como parte de este trabajo — el foco es replicar §1-§10, 12-14 
 
 - **Cobro real / suscripciones** — hoy `POST /auth/activar-inmobiliaria` (§2) solo demuestra el resultado final (cambiar `rol`), sin pasarela de pago real. Para cobrar de verdad: Stripe/Conekta/Mercado Pago, modelo `Suscripcion`, webhook de confirmación, cron de vencimiento, página de facturación.
 - **Panel profesional avanzado para inmobiliarias** — CRM de leads, verificación de agencia, anuncios destacados con ordenamiento real, cuentas multi-agente, carga masiva CSV, analítica con tabla de eventos real. Todo esto ya tiene UI construida en el frontend (sobre datos simulados) — el trabajo pendiente es solo de backend, y depende de que `Property` (§3) exista primero.
-- **Panel admin** — no existe ningún rol `admin` ni panel de moderación manual hoy.
+---
+
+## 16. Panel de administración — NUEVO, ya existe hoy en Next.js
+
+**A diferencia del resto de este documento (contrato a replicar), este módulo se construyó 2026-08-06 directo dentro de Next.js, con datos 100% reales — no hay nada que migrar desde una simulación.** Motivo del cambio: hasta ahora el único bloqueo de cuenta era el automático de moderación del buscador (§8, `IntentoSospechoso`, 3 strikes), sin ninguna forma de que un humano revisara un caso ni ningún panel para gestionar nada de la plataforma. El pedido explícito fue que una detección automática pueda equivocarse con un usuario honesto, y que exista una salida real para ese caso — no un trámite burocrático, la prioridad es que nadie honesto se quede mal etiquetado sin recurso.
+
+**Fuera de alcance a propósito:** moderar/editar publicaciones de propiedad — `Property` no es una tabla real todavía (§3), no hay ningún registro del lado del servidor al que un admin pueda entrar. Se documenta como bloqueado-hasta-que-`Property`-sea-real, igual criterio que el resto de este documento con datos que no se fabrican.
+
+**Modelo de datos nuevo** (`prisma/schema.prisma`):
+- **`User.esAdmin`** (bool, default false) — campo aparte de `rol` (que significa "buscador/agente", una cosa distinta de "tiene permisos de administración"), mismo patrón que `bloqueado` ya es independiente de `rol`. **Se lee fresco de la base en cada request** (nunca va en el payload del JWT) — así revocar el permiso de un admin corta el acceso de inmediato, sin esperar a que expire su sesión ni a que vuelva a iniciar sesión. Primera cuenta admin se crea con un script fuera de banda (`scripts/hacer-admin.ts <email>`), no hay ningún toggle público.
+- **`User.bloqueoResueltoEn`** (DateTime?) — cuándo se resolvió el bloqueo más reciente (manual o por apelación aprobada). El conteo de "3 strikes" en `registrarIntentoSospechoso()` (§8) cuenta solo `IntentoSospechoso` con `createdAt` posterior a este campo, nunca el historial completo — sin esto, una cuenta reactivada con 3+ intentos históricos se re-bloqueaba con un solo intento nuevo (el 4to acumulado ≥ 3), no con 3 nuevos de verdad. El historial completo se conserva igual (nunca se borra, sigue sirviendo de auditoría).
+- **`SolicitudRevision`** — `id, userId, motivo, estado ('pendiente'|'aprobada'|'rechazada', default pendiente), respuestaAdmin?, resueltoPorId?, createdAt, resueltoEn?`.
+- **`ReporteAnuncio`** — antes era un stub (§10), ahora persiste de verdad: `id, propiedadId, userId?, motivo, comentario?, estado ('pendiente'|'revisado'|'descartado'), createdAt`.
+- **`AccionAdmin`** (auditoría) — `id, adminId, accion, objetivoId, detalle?, createdAt`. Sin esto, este log tendría el mismo problema de "solo escritura, nadie lo lee" que ya tenía `IntentoSospechoso` antes de este panel.
+
+**El flujo de apelación — por qué el endpoint de solicitud es público:** `getSession()` invalida en tiempo real una sesión con `bloqueado=true`, y login/OAuth la rechazan de entrada — una cuenta bloqueada no puede autenticarse, así que no puede llegar a ningún endpoint que exija sesión.
+
+**Frontend público:** `src/app/cuenta/solicitar-revision/page.tsx` — formulario real (email + motivo), enlazado desde el mensaje de error de login (`src/app/auth/login/page.tsx`) cuando el login falla con 403 o el callback de OAuth vuelve con `?error=bloqueado`. **Este endpoint existió una sesión entera sin ninguna página que lo llamara** — el mensaje de error solo decía "contáctanos" sin ningún link; se corrigió el mismo día que se detectó en auditoría.
+
+| Endpoint | Método | Auth | Body | Notas |
+|---|---|---|---|---|
+| `/cuenta/solicitar-revision` | POST | **No (público)** | `{ email, motivo }` | Identificado por email (normalizado a minúsculas antes de buscar, igual que `registro`/`login`), no por sesión — es el único canal posible para una cuenta bloqueada. Rate limit 5/hora por IP. **Responde siempre el mismo mensaje genérico de éxito, en tiempo aproximadamente constante** (piso de 200ms — sin esto, el branch que sí escribe a la base tarda medible más que el que no, filtrando por latencia lo que el mensaje genérico busca ocultar), exista o no la cuenta, y solo persiste una fila si la cuenta está REALMENTE bloqueada (antes creaba una fila para cualquier cuenta existente). Como mucho una `SolicitudRevision` pendiente por cuenta — un reintento actualiza el motivo de la ya existente en vez de duplicar. |
+
+**Rutas admin nuevas** (`/admin/**`, todas exigen `esAdmin: true` — 401 sin sesión, 403 si `esAdmin` es false):
+
+| Ruta | Método | Qué hace |
+|---|---|---|
+| `/admin/metricas` | GET | Conteos reales sobre User, SolicitudRevision, ReporteAnuncio, IntentoSospechoso, Favorito, Alerta, Cita, ServicioProveedor, más flags de qué integraciones (Resend/OpenRouter/Gemini) tienen variable de entorno configurada. Sin ninguna métrica de propiedades — no hay tabla real que contar. |
+| `/admin/usuarios` | GET | Lista/busca (`q` sobre email/nombre)/filtra (`bloqueados=1`)/pagina (20 por página). |
+| `/admin/usuarios/:id/bloquear` | POST | `{ motivo }` (mín. 5 caracteres) — bloqueo manual, primero que existe fuera del automático de 3 strikes. Rechaza si el objetivo es uno mismo. |
+| `/admin/usuarios/:id/desbloquear` | POST | Limpia `bloqueado`/`bloqueadoMotivo`/`bloqueadoEn`, marca `bloqueoResueltoEn=now()` (ver arriba). También resuelve automáticamente (a `aprobada`, con nota) cualquier `SolicitudRevision` pendiente de esa persona — sin esto quedaba huérfana, visible para siempre como "pendiente" aunque el problema ya se hubiera resuelto por esta vía. |
+| `/admin/usuarios/:id/promover` | POST | `esAdmin = true`. |
+| `/admin/usuarios/:id/revocar-admin` | POST | `esAdmin = false` — bloquea la operación si el objetivo es uno mismo y es el último admin restante. **El conteo y la escritura corren dentro de la misma transacción de Prisma** (no como dos pasos separados) — dos auto-revocaciones concurrentes cuando quedan exactamente 2 admins ya no pueden ambas leer "quedan 2" antes de que cualquiera escriba; verificado en vivo con 10 pares de solicitudes simultáneas, nunca bajó de 1 admin. |
+| `/admin/intentos-sospechosos` | GET | Primer consumidor real de `IntentoSospechoso` (§8) — filtrable por `userId`. |
+| `/admin/solicitudes-revision` | GET | Cola de apelaciones, filtrable por `estado`. `take: 200` (backstop, sin paginación completa todavía). |
+| `/admin/solicitudes-revision/:id/resolver` | POST | `{ estado: 'aprobada'\|'rechazada', respuestaAdmin? }`. La resolución es un `updateMany` atómico con `estado: 'pendiente'` en el WHERE (no un `findUnique`+`update` separados) — dos resoluciones concurrentes de la misma solicitud (doble clic, reintento de red) ya no pueden ambas pasar el chequeo antes de escribir; verificado en vivo con 8 requests simultáneas, solo 1 tuvo éxito. Si `aprobada`: además actualiza `User.bloqueado=false` + `bloqueoResueltoEn=now()` y crea una `Notificacion`. Registra en `AccionAdmin`. **En ambos casos manda un correo real** (no solo la `Notificacion` in-app) — si queda rechazada, la cuenta sigue bloqueada y jamás podría iniciar sesión para ver una notificación in-app; el correo es el único canal que de verdad le llega. |
+| `/admin/reportes` | GET | Cola de `ReporteAnuncio`, filtrable por `estado`. `take: 200`. |
+| `/admin/reportes/:id/resolver` | POST | `{ estado: 'revisado'\|'descartado' }`. Mismo `updateMany` atómico con `estado: 'pendiente'` en el WHERE que el resolver de solicitudes — antes no tenía ningún guard contra resolver el mismo reporte dos veces. |
+| `/admin/servicios` | GET | Lista completa de `ServicioProveedor` (activos e inactivos) con datos del dueño — a diferencia de `GET /servicios` público (§11), que solo trae activos y nunca el dueño. `take: 200`. |
+| `/admin/servicios/:id` | PATCH | `{ activo }` — toggle con permiso de admin, bypassa el chequeo de dueño que tiene el `PATCH /servicios/:id` normal (§11). |
+| `/admin/auditoria` | GET | Lista `AccionAdmin`, filtrable por `adminId`/`accion`, últimas 200. |
+| `/admin/usuarios` búsqueda | — | `q` compara email/nombre sin distinguir acentos (normaliza NFD en el servidor sobre un candidate set acotado a 1000 filas) — SQLite pliega mayúsculas/minúsculas de `contains` solo en ASCII, así que "andres" no encontraba "Andrés" sin este paso extra. |
+
+**Frontend** (`src/app/admin/**`, gate server-side en `admin/layout.tsx` vía `getSession()` + `redirect()` si no es admin — más estricto que el patrón client-side que usan las páginas de `/dashboard/*`, que es anterior a `proxy.ts`): página de métricas, usuarios (buscar/bloquear/desbloquear/promover/revocar), solicitudes de revisión (aprobar/rechazar con respuesta opcional), reportes (marcar revisado/descartar), intentos sospechosos (solo lectura), servicios (pausar/reactivar), auditoría (solo lectura). `src/proxy.ts` agrega `/admin` a `PROTECTED_PATHS` como defensa en profundidad (exige sesión válida en el edge; la verificación real de `esAdmin` sigue siendo server-side en cada página/ruta, porque el edge runtime no puede consultar `esAdmin` fresco de la base).
+
+**Para el backend nuevo:** replicar el mismo contrato — `esAdmin` nunca debe viajar en el JWT por el mismo motivo que aquí (revocación inmediata), y el endpoint de apelación debe seguir siendo público e identificado por email, no por sesión.
 
 ---
 

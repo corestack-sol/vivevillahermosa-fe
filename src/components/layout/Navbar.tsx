@@ -4,12 +4,11 @@ import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
-  Menu, X, Plus, User, Heart, Bell, LayoutDashboard, LogOut, ChevronDown, Building2, Sparkles, Settings,
-  CalendarDays, Users, TrendingUp, UserPlus, type LucideIcon,
+  Menu, X, Plus, User, Heart, Bell, LayoutDashboard, LogOut, ChevronDown, Building2, Settings,
+  CalendarDays, Users, TrendingUp, UserPlus, ShieldCheck, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { buttonClasses } from '@/components/ui/Button';
-import { ActivarInmobiliariaModal } from '@/components/account/ActivarInmobiliariaModal';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { useClickOutside } from '@/hooks/useClickOutside';
 
@@ -50,7 +49,7 @@ const PERFIL_ITEMS_BASE: MenuItem[] = [
   { href: '/alertas', icon: Bell, label: 'Mis alertas' },
 ];
 
-function buildMenuGroups(esProfesional: boolean): MenuGroup[] {
+function buildMenuGroups(esProfesional: boolean, esAdmin: boolean): MenuGroup[] {
   return [
     { items: [{ href: '/dashboard', icon: LayoutDashboard, label: 'Mi panel' }] },
     ...(esProfesional ? [{ label: 'Herramientas', items: HERRAMIENTAS_ITEMS }] : []),
@@ -62,13 +61,13 @@ function buildMenuGroups(esProfesional: boolean): MenuGroup[] {
         ...PERFIL_ITEMS_BASE,
       ],
     },
+    ...(esAdmin ? [{ label: 'Administración', items: [{ href: '/admin', icon: ShieldCheck, label: 'Panel de administración' }] }] : []),
   ];
 }
 
 export function Navbar() {
   const [isOpen, setIsOpen]         = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [showActivarModal, setShowActivarModal] = useState(false);
   const pathname     = usePathname();
   const searchParams = useSearchParams();
   const router       = useRouter();
@@ -181,7 +180,7 @@ export function Navbar() {
                           <p className="text-xs font-semibold text-gray-800">{user.nombre}</p>
                           <p className="text-xs text-gray-400 truncate">{user.email}</p>
                         </div>
-                        {buildMenuGroups(esProfesional).map((group, gi) => (
+                        {buildMenuGroups(esProfesional, !!user.esAdmin).map((group, gi) => (
                           <div key={gi} className={gi > 0 ? 'border-t border-gray-50 mt-1 pt-1' : ''}>
                             {group.label && (
                               <p className="px-4 pt-1 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wide">{group.label}</p>
@@ -194,14 +193,6 @@ export function Navbar() {
                             ))}
                           </div>
                         ))}
-                        {!esProfesional && (
-                          <div className="border-t border-gray-50 mt-1 pt-1">
-                            <button onClick={() => { setUserMenuOpen(false); setShowActivarModal(true); }}
-                              className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-brand hover:bg-brand-pale transition-colors">
-                              <Sparkles size={14} /> Activar modo Inmobiliaria
-                            </button>
-                          </div>
-                        )}
                         <div className="border-t border-gray-50 mt-1 pt-1">
                           <button onClick={handleLogout}
                             className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors">
@@ -257,7 +248,7 @@ export function Navbar() {
             )}
             {user ? (
               <div className="border-t mt-2 pt-2 border-white/10">
-                {buildMenuGroups(esProfesional).map((group, gi) => (
+                {buildMenuGroups(esProfesional, !!user.esAdmin).map((group, gi) => (
                   <div key={gi} className={`space-y-0.5 ${gi > 0 ? 'border-t border-white/10 mt-2 pt-2' : ''}`}>
                     {group.label && (
                       <p className="px-4 pt-1 pb-1 text-[10px] font-bold text-white/40 uppercase tracking-wide">{group.label}</p>
@@ -271,12 +262,6 @@ export function Navbar() {
                   </div>
                 ))}
                 <div className="border-t border-white/10 mt-2 pt-2">
-                  {!esProfesional && (
-                    <button onClick={() => { setIsOpen(false); setShowActivarModal(true); }}
-                      className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm rounded-xl text-amber-300 hover:bg-white/8">
-                      <Sparkles size={14} /> Activar modo Inmobiliaria
-                    </button>
-                  )}
                   <button onClick={handleLogout}
                     className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-300 hover:bg-red-500/15 rounded-xl">
                     <LogOut size={14} /> Cerrar sesión
@@ -292,8 +277,6 @@ export function Navbar() {
           </div>
         )}
       </nav>
-
-      <ActivarInmobiliariaModal isOpen={showActivarModal} onClose={() => setShowActivarModal(false)} />
     </header>
   );
 }

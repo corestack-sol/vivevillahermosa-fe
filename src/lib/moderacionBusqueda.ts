@@ -46,10 +46,20 @@ export async function registrarIntentoSospechoso(
   marcador: string
 ): Promise<ResultadoModeracion> {
   await prisma.intentoSospechoso.create({ data: { userId, consulta, marcador } });
-  const strikes = await prisma.intentoSospechoso.count({ where: { userId } });
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { bloqueado: true, bloqueoResueltoEn: true } });
+  // Cuenta solo intentos DESPUÉS del último desbloqueo (manual o por
+  // apelación aprobada) — no el historial completo. Sin este filtro, una
+  // cuenta reactivada con 3 IntentoSospechoso viejos se re-bloqueaba con
+  // un solo intento nuevo (4to acumulado ≥ 3), no con 3 nuevos de verdad.
+  // El historial completo se conserva igual (nunca se borra, sirve de
+  // auditoría vía obtenerHistorialSospechoso) — solo el CONTEO que decide
+  // el bloqueo se acota a la ventana desde el último desbloqueo.
+  const strikes = await prisma.intentoSospechoso.count({
+    where: { userId, ...(user?.bloqueoResueltoEn ? { createdAt: { gt: user.bloqueoResueltoEn } } : {}) },
+  });
 
   if (strikes >= LIMITE_INTENTOS) {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { bloqueado: true } });
     if (!user?.bloqueado) {
       await prisma.user.update({
         where: { id: userId },

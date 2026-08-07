@@ -202,15 +202,18 @@ export async function generarDescripcionAnuncio(datos: DatosAnuncio, userId?: st
 
 ## Módulo 11 — Panel Admin Básico
 
-**Sin cambios — nada de este módulo existe todavía.**
+**Construido 2026-08-06 — ver `docs/BACKEND.md` §16 para el contrato completo.** Datos 100% reales (Prisma), no simulados. Único punto fuera de alcance a propósito: moderar/editar publicaciones de propiedad, porque `Property` no es una tabla real todavía.
 
 | Feature | Prioridad | Estado real 2026-08-06 |
 |---|---|---|
-| `/admin` protegido por rol `admin` | 🟡 ALTA | ❌ No existe (no hay rol `admin` en el schema) |
-| Lista de propiedades pendientes de moderación | 🟡 ALTA | ❌ No existe |
-| Lista de usuarios registrados | 🟠 MEDIA | ❌ No existe |
-| Stats globales | 🟠 MEDIA | ❌ No existe |
-| Bloquear usuario / marcar propiedad como fraude | 🟠 MEDIA | ⚠️ El bloqueo de usuario SÍ existe pero es automático (3 strikes de abuso de búsqueda), no hay panel manual para que un admin lo haga a mano |
+| `/admin` protegido por permiso de admin | 🟡 ALTA | ✅ Completo — `User.esAdmin`, gate server-side en `src/app/admin/layout.tsx`, nunca viaja en el JWT (se lee fresco de la base en cada request, igual que `bloqueado`) |
+| Lista de propiedades pendientes de moderación | 🟡 ALTA | ❌ Sigue sin existir — bloqueado hasta que `Property` sea una tabla real |
+| Lista de usuarios registrados | 🟠 MEDIA | ✅ Completo — `/admin/usuarios`, búsqueda + filtro + paginación |
+| Stats globales | 🟠 MEDIA | ✅ Completo — `/admin/metricas` |
+| Bloquear usuario / marcar propiedad como fraude | 🟠 MEDIA | ⚠️ Bloquear usuario ahora SÍ tiene panel manual (`/admin/usuarios`, además del automático de 3 strikes). Marcar propiedad como fraude sigue sin existir (mismo bloqueo que arriba, depende de `Property`) |
+| Solicitud de revisión para cuentas bloqueadas por error | 🟡 ALTA | ✅ Completo — endpoint público `POST /api/cuenta/solicitar-revision` + cola en `/admin/solicitudes`, con correo real en ambos sentidos (aprobada/rechazada) |
+| Reportes de publicaciones | 🟠 MEDIA | ✅ Completo — `POST /api/propiedades/reportar` dejó de ser un stub, cola en `/admin/reportes` |
+| Auditoría de acciones de admin | 🟠 MEDIA | ✅ Completo — `AccionAdmin`, visor en `/admin/auditoria` |
 
 ---
 
