@@ -6,7 +6,6 @@ import propertiesData from '@/data/properties.json';
 import municipalitiesData from '@/data/municipalities.json';
 import zonesData from '@/data/zones.json';
 import agentsData from '@/data/agents.json';
-import statsData from '@/data/stats.json';
 
 // El JSON de muestra ya NO trae `lat`/`lng` reales — solo `latPublico`/
 // `lngPublico` (centroide de colonia o jitter amplio, precalculados una
@@ -52,6 +51,14 @@ const PER_PAGE = 12;
  * Fuente de verdad de verificación: el registro de agentes (agents.json), no la
  * copia embebida en cada propiedad. Evita que "Agente verificado" se muestre
  * para todos aunque el agente real no esté verificado.
+ *
+ * `verificado` en agents.json está en `false` para los 5 agentes de muestra
+ * a propósito (2026-08-08, hallazgo de auditoría) — no existe ningún proceso
+ * real de verificación de agentes en la plataforma todavía (mismo motivo por
+ * el que `PlanesInmobiliaria` está oculto en Home, ver ese comentario), así
+ * que el badge "Agente verificado" (BadgeCheck, AgentCard.tsx) nunca debe
+ * aparecer hasta que exista uno real. No reactivar manualmente en datos de
+ * muestra solo para que la demo se vea "más creíble".
  */
 function getAgentVerification(whatsapp?: string): boolean {
   if (!whatsapp) return false;
@@ -285,8 +292,19 @@ export function getAllAgents(): Agent[] {
   return agentsData as Agent[];
 }
 
+// Antes leía un src/data/stats.json estático que se quedaba desactualizado
+// (propiedadesActivas fijo en 24 mientras el catálogo real ya tenía más) y
+// traía campos que nunca se usaron en ninguna pantalla y nadie calculaba de
+// verdad (busquedasMes, agentesRegistrados, precioPromedio*) — un archivo
+// con datos inventados sin que nada lo mantuviera actualizado. Ahora
+// `propiedadesActivas` sale del catálogo real cada vez; `municipiosCubiertos`
+// es un hecho estable (los 17 municipios de Tabasco que la plataforma
+// soporta, ver MUNICIPIO_OPTIONS), no un conteo que dependa de datos.
 export function getStats() {
-  return statsData;
+  return {
+    propiedadesActivas: getAllProperties().length,
+    municipiosCubiertos: 17,
+  };
 }
 
 export interface PriceContext {

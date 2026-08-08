@@ -70,12 +70,16 @@ const MapPicker = dynamic(
 
 const STEPS = ['Tipo', 'Detalles', 'Ubicación', 'Descripción', 'Fotos', 'Contacto'];
 const STEP_ICONS = [Home, DollarSign, MapPin, FileText, Camera, Phone] as const;
+// El paso de fotos decía "3× más contactos" — un multiplicador preciso que
+// nadie mide aquí (no hay tabla de eventos real, ver GET /api/me/stats).
+// Se quita el número inventado, se conserva el consejo (universalmente
+// cierto en bienes raíces) sin presentarlo como un dato propio medido.
 const STEP_SUBTITLES = [
   '¿Qué tipo de propiedad quieres publicar?',
   'Precio, metros y características',
   '¿Dónde está ubicada?',
   'Escribe un anuncio que destaque',
-  'Las fotos generan 3× más contactos',
+  'Las fotos generan más contactos',
   '¿Cómo te pueden contactar?',
 ];
 const MAX_FOTOS = 4;
@@ -944,7 +948,7 @@ export function PublishForm() {
 
             {fotos.length === 0 && (
               <p className="flex items-center justify-center gap-1.5 text-xs text-accent-dark text-center bg-accent-pale rounded-xl py-3">
-                <Lightbulb size={13} className="flex-shrink-0" /> Las propiedades con fotos reciben hasta 3× más contactos
+                <Lightbulb size={13} className="flex-shrink-0" /> Las propiedades con fotos reciben más contactos
               </p>
             )}
 

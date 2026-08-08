@@ -120,14 +120,14 @@ export function OwnerActionsBar({ propertyId }: { propertyId: string }) {
             )}
           </div>
           <div className="flex items-center gap-3 text-xs text-brand-dark/60 mt-0.5">
-            <Tooltip label="Vistas">
-              <span className="flex items-center gap-1" title="Vistas"><Eye size={12} /> {mine.vistas}</span>
+            <Tooltip label="Vistas (dato de muestra — todavía no cuenta actividad real)">
+              <span className="flex items-center gap-1" title="Vistas (dato de muestra)"><Eye size={12} /> {mine.vistas}</span>
             </Tooltip>
-            <Tooltip label="Contactos recibidos">
-              <span className="flex items-center gap-1" title="Contactos recibidos"><MessageCircle size={12} /> {mine.contactos}</span>
+            <Tooltip label="Contactos recibidos (dato de muestra — todavía no cuenta actividad real)">
+              <span className="flex items-center gap-1" title="Contactos recibidos (dato de muestra)"><MessageCircle size={12} /> {mine.contactos}</span>
             </Tooltip>
-            <Tooltip label="Favoritos">
-              <span className="flex items-center gap-1" title="Favoritos"><Heart size={12} /> {mine.favoritos}</span>
+            <Tooltip label="Favoritos (dato de muestra — todavía no cuenta actividad real)">
+              <span className="flex items-center gap-1" title="Favoritos (dato de muestra)"><Heart size={12} /> {mine.favoritos}</span>
             </Tooltip>
           </div>
         </div>

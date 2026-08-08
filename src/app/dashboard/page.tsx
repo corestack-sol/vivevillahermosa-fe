@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Heart, Bell, Plus, Eye, TrendingUp, Home, LayoutDashboard, Lightbulb, MessageCircle, Building2, Download, CalendarDays, Users, Loader2 } from 'lucide-react';
+import { Heart, Bell, Plus, Eye, TrendingUp, Home, LayoutDashboard, Lightbulb, MessageCircle, Building2, Download, CalendarDays, Users, Loader2, Info } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { getMisPropiedadesDemo } from '@/lib/misPropiedadesDemo';
@@ -165,6 +165,20 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Aviso de datos de muestra — mismo criterio que /dashboard/analitica,
+          /dashboard/leads y /dashboard/propiedades (ver misPropiedadesDemo.ts
+          y GET /api/me/stats): "Vistas"/"Contactos" de aquí abajo todavía no
+          cuentan nada real, sin esto era la única pantalla del panel que
+          mostraba estos números sin ninguna advertencia. */}
+      <div className="flex items-start gap-2.5 bg-brand-pale border border-brand/20 rounded-xl px-4 py-3 mb-6">
+        <Info size={15} className="text-brand flex-shrink-0 mt-0.5" />
+        <p className="text-xs text-brand-dark leading-relaxed">
+          <strong>Vista previa con datos de muestra.</strong> Vistas y contactos todavía no cuentan actividad
+          real — cuando exista una tabla de eventos con fecha (Fase 2), estos números reflejarán tu
+          desempeño de verdad.
+        </p>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         {stats.map((s) => (
@@ -253,7 +267,7 @@ export default function DashboardPage() {
         <div className="bg-brand-pale rounded-2xl p-6">
           <p className="flex items-center gap-2 text-sm font-semibold text-brand-dark mb-1">
             <Lightbulb size={16} className="flex-shrink-0" />
-            Las propiedades con fotos reciben hasta 3× más contactos
+            Las propiedades con fotos reciben más contactos
           </p>
           <p className="text-sm text-gray-600 mb-4">
             Revisa tus publicaciones activas y asegúrate de que cada una tenga fotos, precio actualizado y buena descripción — así conviertes más vistas en contactos reales.

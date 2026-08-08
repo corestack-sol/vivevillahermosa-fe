@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Shield, Map, Zap, Users, ChevronRight, MapPin } from 'lucide-react';
+import { getStats } from '@/lib/api';
 
 export const metadata: Metadata = {
   title: '¿Quiénes somos? | Vive Villahermosa — Plataforma inmobiliaria de Tabasco',
@@ -32,6 +33,7 @@ const VALUES = [
 ];
 
 export default function NosotrosPage() {
+  const stats = getStats();
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       {/* Hero */}
@@ -52,7 +54,7 @@ export default function NosotrosPage() {
       {/* Mission Statement */}
       <div className="bg-gradient-to-br from-brand-dark to-brand rounded-3xl p-8 md:p-12 text-white text-center mb-16">
         <p className="text-2xl md:text-3xl font-heading font-bold max-w-2xl mx-auto leading-snug">
-          "Cada familia merece saber si su futura casa se inunda, antes de mudarse."
+          &ldquo;Cada familia merece saber si su futura casa se inunda, antes de mudarse.&rdquo;
         </p>
         <p className="text-white/60 mt-4 text-sm">— Por qué existe Vive Villahermosa</p>
       </div>
@@ -91,8 +93,8 @@ export default function NosotrosPage() {
             se ha disparado — y nadie tenía una plataforma local para canalizarla.
           </p>
           <p>
-            Vive Villahermosa integra mapa de riesgo hídrico CONAGUA, filtro especial Dos Bocas/PEMEX,
-            cobertura de los 17 municipios y publicación 100% gratuita para propietarios.
+            Vive Villahermosa integra el Atlas de Riesgos del Municipio de Centro, filtro especial Dos
+            Bocas/PEMEX, cobertura de los 17 municipios y publicación 100% gratuita para propietarios.
           </p>
         </div>
       </div>
@@ -100,8 +102,8 @@ export default function NosotrosPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
         {[
-          { num: '17', label: 'Municipios cubiertos' },
-          { num: '24+', label: 'Propiedades activas' },
+          { num: `${stats.municipiosCubiertos}`, label: 'Municipios cubiertos' },
+          { num: `${stats.propiedadesActivas}+`, label: 'Propiedades activas' },
           { num: '100%', label: 'Publicación gratuita' },
           { num: '1', label: 'Sola misión: Tabasco' },
         ].map((s) => (
