@@ -10,6 +10,16 @@
  * límite. Ver docs/BACKEND.md para el reemplazo
  * recomendado (Upstash Redis o tabla en la base de datos) antes de escalar
  * a producción multi-instancia.
+ *
+ * ⚠️ SEGUNDA LIMITACIÓN, DISTINTA (2026-08-08) — confirmada en vivo en
+ * `next dev`: sin `globalThis` (mismo patrón que ya usa src/lib/db.ts para
+ * Prisma), este módulo se puede re-evaluar por separado según qué ruta API
+ * lo importó, dando un `Map` de buckets distinto cada vez en vez de un
+ * singleton real — un límite alcanzado en una ruta no se reflejaba al
+ * consultarlo desde otra. Esto es un problema de re-evaluación de módulos
+ * en dev/Turbopack, no el mismo problema de multi-instancia serverless de
+ * arriba (ese sigue existiendo en producción multi-instancia aunque este
+ * se corrija).
  */
 
 interface Bucket {
@@ -17,7 +27,9 @@ interface Bucket {
   resetAt: number;
 }
 
-const buckets = new Map<string, Bucket>();
+const g = globalThis as unknown as { __rateLimitBuckets?: Map<string, Bucket> };
+const buckets = g.__rateLimitBuckets ?? new Map<string, Bucket>();
+g.__rateLimitBuckets = buckets;
 
 // Evita que el Map crezca sin límite en un proceso de larga duración.
 function sweep(now: number) {

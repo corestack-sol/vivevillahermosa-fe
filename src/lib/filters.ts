@@ -2,6 +2,7 @@ import type { Property } from '@/types/property';
 import type { SearchFilters } from '@/types/search';
 import { getLandmark, distanciaKm, distanciaMinimaACategoria, RADIO_CATEGORIA_KM } from './landmarks';
 import { matchColonia } from './colonias';
+import { estaEnZonaDestacada } from './zonasDestacadas';
 
 export function applyFilters(properties: Property[], filters: SearchFilters): Property[] {
   let result = [...properties];
@@ -66,6 +67,30 @@ export function applyFilters(properties: Property[], filters: SearchFilters): Pr
     result = result.filter((p) => p.recamaras >= filters.recamaras!);
   }
 
+  if (filters.recamarasMax && filters.recamarasMax > 0) {
+    result = result.filter((p) => p.recamaras <= filters.recamarasMax!);
+  }
+
+  if (filters.banos && filters.banos > 0) {
+    result = result.filter((p) => p.banos >= filters.banos!);
+  }
+
+  if (filters.m2Min !== undefined && filters.m2Min > 0) {
+    // Un terreno se mide por m2Terreno (m2Construidos es 0 casi siempre) —
+    // todo lo demás se mide por lo construido, que es lo que la gente
+    // pregunta al decir "de 200 metros" para una casa/depa.
+    result = result.filter((p) => (p.tipo === 'terreno' ? p.m2Terreno : p.m2Construidos) >= filters.m2Min!);
+  }
+
+  if (filters.m2Max !== undefined && filters.m2Max > 0) {
+    result = result.filter((p) => (p.tipo === 'terreno' ? p.m2Terreno : p.m2Construidos) <= filters.m2Max!);
+  }
+
+  if (filters.amenidad) {
+    const a = filters.amenidad.toLowerCase();
+    result = result.filter((p) => p.amenidades.some((am) => am.toLowerCase().includes(a)));
+  }
+
   if (filters.riesgoInundacion) {
     result = result.filter((p) => p.riesgoInundacion === filters.riesgoInundacion);
   }
@@ -93,6 +118,15 @@ export function applyFilters(properties: Property[], filters: SearchFilters): Pr
       const d = distanciaMinimaACategoria(p.lat, p.lng, cat);
       return d !== null && d <= RADIO_CATEGORIA_KM;
     });
+  }
+
+  if (filters.zonaDestacada) {
+    // "zona de alta plusvalía"/"zona exclusiva" — igual que landmark, es
+    // distancia real a uno o más puntos ya verificados (ver
+    // zonasDestacadas.ts), nunca coincidencia de texto contra el nombre de
+    // la zona.
+    const zona = filters.zonaDestacada;
+    result = result.filter((p) => estaEnZonaDestacada(zona, p.lat, p.lng));
   }
 
   return sortProperties(result, filters.sort ?? 'relevancia');

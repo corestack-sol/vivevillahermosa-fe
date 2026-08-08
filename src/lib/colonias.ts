@@ -1,4 +1,5 @@
 import { distanciaKm } from './landmarks';
+import coloniasMunicipiosData from '@/data/colonias-municipios.json';
 
 export interface ColoniaCoord {
   key: string;
@@ -185,6 +186,28 @@ export const COLONIAS_COORDS: ColoniaCoord[] = [
   { key: 'villa-las-fuentes', label: 'Villa las Fuentes', municipio: 'Centro', lat: 17.9706, lng: -92.9512, radioKm: RADIO_COLONIA_KM },
   { key: 'villas-del-bosque', label: 'Villas del Bosque', municipio: 'Centro', lat: 17.9980, lng: -92.9544, radioKm: RADIO_COLONIA_KM },
   { key: 'vista-alegre', label: 'Vista Alegre', municipio: 'Centro', lat: 17.9757, lng: -92.9558, radioKm: RADIO_COLONIA_KM },
+  // Agregada 2026-08-08 — confirmada vía Nominatim (place/neighbourhood,
+  // nombre exacto). Distinta del "Club Campestre Villahermosa" (el campo de
+  // golf en sí, landmarks.ts) que queda a ~600m — el fraccionamiento es más
+  // grande que el club. Surgió al verificar la tabla de "zonas de mayor
+  // plusvalía" que trajo el usuario (ver ZONAS_DESTACADAS más abajo):
+  // "El Country"/"Jardines del Country" que mencionaba la misma tabla NO se
+  // pudieron confirmar en Nominatim con ningún término, se dejaron fuera.
+  { key: 'club-campestre', label: 'Fraccionamiento Club Campestre', municipio: 'Centro', lat: 18.0098351, lng: -92.9497433, radioKm: 1, aliases: ['club campestre', 'campestre'] },
+  // Agregada 2026-08-08 (segunda tabla del usuario, "vocación de zonas") —
+  // confirmada vía Nominatim (place/neighbourhood, nombre exacto). "El
+  // Country" se reintentó una vez más con "86039"/calle Macuilis como
+  // contexto — sigue sin ningún resultado, van 6+ variantes probadas en dos
+  // rondas distintas, se da por no verificable con las fuentes disponibles.
+  { key: 'indeco', label: 'Colonia Indeco', municipio: 'Centro', lat: 18.0215479, lng: -92.8978157, radioKm: 1, aliases: ['indeco', 'indeco unidad'] },
+  // Agregada 2026-08-08 — sin match directo de "Fraccionamiento Pomoca" en
+  // Nominatim, pero sí de negocios reales (centro comercial, parada de
+  // TRANSMETROPOLITANO, sitio de taxis) todos etiquetados dentro de la
+  // localidad "Pomoca", a ~1km de 'saloya-segunda-seccion' (arriba) — mismo
+  // caso que ya documentado en la cuarta pasada de landmarks.ts: dos formas
+  // de nombrar zonas vecinas/superpuestas, no un error. Se usa el punto del
+  // centro comercial (POMOCA 2) por ser el más específico de los tres.
+  { key: 'pomoca', label: 'Pomoca', municipio: 'Nacajuca', lat: 18.0513378, lng: -92.9294658, radioKm: 1.5, aliases: ['pomoca valle real', 'fraccionamiento pomoca'] },
   // Verificadas vía parque de barrio con el mismo nombre (nivel 2, ver
   // metodología arriba) en vez de un nodo de colonia directo.
   { key: '18-de-marzo', label: '18 de Marzo', municipio: 'Centro', lat: 18.0095, lng: -92.9424, radioKm: RADIO_COLONIA_KM },
@@ -204,7 +227,45 @@ export const COLONIAS_COORDS: ColoniaCoord[] = [
   // Centro — a propósito, aunque en la práctica ya se percibe como una
   // colonia más de la zona conurbada de Villahermosa (fraccionamiento
   // grande y consolidado, no un pueblo aparte).
-  { key: 'bosques-de-saloya', label: 'Bosques de Saloya', municipio: 'Nacajuca', lat: 18.0137, lng: -92.9598, radioKm: RADIO_COLONIA_KM },
+  // Coordenada actualizada 2026-08-07 al valor oficial de INEGI (ver bloque
+  // grande más abajo) — el centroide calculado del polígono real quedó a
+  // 187m de la aproximación anterior, dentro del margen esperado.
+  { key: 'bosques-de-saloya', label: 'Bosques de Saloya', municipio: 'Nacajuca', lat: 18.0153669, lng: -92.9595985, radioKm: 0.67 },
+  // Agregadas 2026-08-07 — de las 107 colonias del catálogo original sin
+  // match en Nominatim, se probó una fuente distinta (Google Maps, leyendo
+  // las coordenadas de la URL tras buscar "Colonia X, Villahermosa,
+  // Tabasco") para 122 nombres. Esa primera pasada dio 101 resultados con
+  // distancia plausible a la ciudad — pero NINGUNO se aceptó solo por eso:
+  // Google Maps resultó tener fallbacks silenciosos (8 nombres distintos,
+  // como "Club Campestre" y "Mayito", cayeron en el MISMO punto exacto que
+  // resultó ser "Gaviotas Sur Sector San José" al hacer reverse-geocode).
+  // Se le hizo reverse-geocode a los 101 contra Nominatim y solo se
+  // aceptaron los que un segundo dato independiente (el barrio/colonia que
+  // Nominatim reporta para ese punto) confirmara — 19 lo lograron, y de
+  // esos se descartaron 5 más a mano: 'Framboyanes de Villahermosa'
+  // (~640m del 'framboyanes' que ya existía arriba, no es un lugar nuevo),
+  // 'Gaviotas Sur Sección San José' (a 4km de la 'gaviotas-sur' ya
+  // existente, relación ambigua, se prefirió no crear una posible
+  // confusión), 'Fovissste' (resolvió a "Etapa I" específica, mismo caso ya
+  // documentado con 'fovissste-casa-blanca'), 'Gaviotas Norte Sector
+  // Explanada' (el reverse-geocode dio "Gaviotas SUR", no Norte — no
+  // coincide) y 'Real Hidalgo' (la única coincidencia con Nominatim fue la
+  // palabra "Hidalgo" sola, demasiado débil). De 122 candidatos, 14
+  // resultaron confiables con dos fuentes independientes de acuerdo.
+  { key: 'blancas-mariposas', label: 'Blancas Mariposas', municipio: 'Centro', lat: 17.9584195, lng: -92.9469486, radioKm: RADIO_COLONIA_KM },
+  { key: 'bonampak', label: 'Bonampak', municipio: 'Centro', lat: 17.9600838, lng: -93.007445, radioKm: RADIO_COLONIA_KM },
+  { key: 'casa-blanca-1a-seccion', label: 'Casa Blanca 1a Sección', municipio: 'Centro', lat: 18.0045817, lng: -92.9180621, radioKm: RADIO_COLONIA_KM },
+  { key: 'deportiva-residencial', label: 'Deportiva Residencial', municipio: 'Centro', lat: 17.9724158, lng: -92.9453798, radioKm: RADIO_COLONIA_KM },
+  { key: 'el-recreo', label: 'El Recreo', municipio: 'Centro', lat: 18.015182, lng: -92.9216193, radioKm: RADIO_COLONIA_KM },
+  { key: 'flores-del-tropico', label: 'Flores del Trópico', municipio: 'Centro', lat: 18.0045595, lng: -92.9759166, radioKm: RADIO_COLONIA_KM },
+  { key: 'islas-del-mundo', label: 'Islas del Mundo', municipio: 'Centro', lat: 17.9751438, lng: -92.9807737, radioKm: RADIO_COLONIA_KM },
+  { key: 'jose-narciso-rovirosa', label: 'José Narciso Rovirosa', municipio: 'Centro', lat: 17.9920813, lng: -92.9357863, radioKm: RADIO_COLONIA_KM, aliases: ['Jose N Rovirosa'] },
+  { key: 'lagunas', label: 'Lagunas', municipio: 'Centro', lat: 18.0376473, lng: -92.8977572, radioKm: RADIO_COLONIA_KM },
+  { key: 'las-garzas', label: 'Las Garzas', municipio: 'Centro', lat: 18.0213187, lng: -92.9002515, radioKm: RADIO_COLONIA_KM },
+  { key: 'los-tulipanes', label: 'Los Tulipanes', municipio: 'Centro', lat: 17.9816059, lng: -92.9238736, radioKm: RADIO_COLONIA_KM },
+  { key: 'sabina', label: 'Sabina', municipio: 'Centro', lat: 17.9517864, lng: -92.9524085, radioKm: RADIO_COLONIA_KM },
+  { key: 'santa-elena', label: 'Santa Elena', municipio: 'Centro', lat: 17.9719048, lng: -92.9905229, radioKm: RADIO_COLONIA_KM },
+  { key: 'vicente-guerrero', label: 'Vicente Guerrero', municipio: 'Centro', lat: 18.0315138, lng: -92.8975353, radioKm: RADIO_COLONIA_KM },
 ];
 
 function normalizarBase(s: string): string {
@@ -253,10 +314,45 @@ export function precargarColoniasDescubiertas(): void {
     .catch(() => { /* silencioso — se sigue usando solo el catálogo estático */ });
 }
 
+/**
+ * Colonias/asentamientos de los otros 16 municipios de Tabasco (todo menos
+ * Centro), fuente: INEGI, "Delimitación de colonias y otros asentamientos
+ * humanos" 2024 (https://www.inegi.org.mx/app/biblioteca/ficha.html?upc=794551132180),
+ * descarga oficial por estado, sin necesidad de token/registro. A
+ * diferencia de todo lo demás en este archivo (geocodificado punto por
+ * punto contra Nominatim/Google), esto viene de polígonos reales:
+ * lat/lng es el centroide del polígono de cada asentamiento (proyección
+ * original Lambert Conformal Conic "MEXICO_ITRF_2008_LCC", reproyectada a
+ * WGS84 con proj4) y radioKm es la distancia real del centroide al vértice
+ * más lejano del polígono (con un piso de 0.4km para que el radio de
+ * "cerca de" siga siendo útil en polígonos muy pequeños) — más preciso que
+ * el RADIO_COLONIA_KM fijo que se usa arriba para Centro, porque aquí sí
+ * hay geometría real de la que sacarlo.
+ *
+ * Centro (Villahermosa) NO está en esta fuente: de los 754 asentamientos
+ * que INEGI cataloga para Tabasco, cero son del municipio de Centro — este
+ * producto se arma con datos que cada ayuntamiento envía de forma
+ * voluntaria, y el de Centro simplemente no participó (al menos no en la
+ * versión 2024). Por eso Centro se queda con el catálogo de arriba
+ * (verificado uno por uno, mezcla de Nominatim/Google) y todo lo demás usa
+ * esto.
+ *
+ * A propósito NO se agrega a `COLONIAS_COORDS` (arriba) ni al catálogo que
+ * `src/lib/ai.ts` le manda al modelo para resolver typos/apodos —
+ * `COLONIAS_COORDS` son ~85 nombres, esto son 753 más, casi todos
+ * rancherías/ejidos rurales de baja relevancia para una búsqueda
+ * inmobiliaria; meterlos ahí infla cada llamada a la IA sin necesidad. Solo
+ * participan en `matchColonia()` (más abajo), que es comparación de texto
+ * exacto/alias — cuando alguien escribe el nombre correcto, resuelve a
+ * coordenada real igual que cualquier otra colonia catalogada, simplemente
+ * no hay respaldo de "typo" con IA para estos 753 en particular.
+ */
+const COLONIAS_MUNICIPIOS: ColoniaCoord[] = coloniasMunicipiosData;
+
 function todasLasColonias(): ColoniaCoord[] {
   return coloniasDescubiertasCache.length
-    ? [...COLONIAS_COORDS, ...coloniasDescubiertasCache]
-    : COLONIAS_COORDS;
+    ? [...COLONIAS_COORDS, ...COLONIAS_MUNICIPIOS, ...coloniasDescubiertasCache]
+    : [...COLONIAS_COORDS, ...COLONIAS_MUNICIPIOS];
 }
 
 /** Busca una colonia por nombre libre (como lo extrae la IA) — null si no está catalogada aquí. */

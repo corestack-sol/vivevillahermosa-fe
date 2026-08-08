@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Users, ShieldAlert, FileWarning, FlagTriangleRight, Heart, Bell, CalendarDays, Wrench, Ban, Mail, Cpu, Eye } from 'lucide-react';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminAuth';
+import { getBusquedaStats } from '@/lib/busquedaStats';
 
 // Server Component — llama directo a Prisma en vez de fetch a su propia API
 // (evita un roundtrip HTTP innecesario a sí mismo en el primer render).
@@ -56,6 +57,8 @@ export default async function AdminPage() {
     { icon: Cpu, label: 'Gemini (IA foto)', ok: m.geminiConfigurado },
   ];
 
+  const busqueda = getBusquedaStats();
+
   return (
     <div>
       <h1 className="text-2xl font-heading font-bold text-gray-900 mb-1">Métricas de la plataforma</h1>
@@ -85,7 +88,7 @@ export default async function AdminPage() {
         })}
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-5">
+      <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-8">
         <p className="text-sm font-semibold text-gray-800 mb-3">Configuración de integraciones</p>
         <div className="flex flex-wrap gap-4">
           {config.map((c) => (
@@ -96,6 +99,70 @@ export default async function AdminPage() {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-200 p-5">
+        <p className="text-sm font-semibold text-gray-800 mb-1">Buscador con IA — desde que arrancó el servidor</p>
+        <p className="text-xs text-gray-400 mb-3">
+          Contador en memoria, se reinicia con cada despliegue — sirve para calibrar el límite de tasa global de{' '}
+          <code className="bg-gray-100 px-1 py-0.5 rounded">/ia/busqueda-inteligente</code> con tráfico real en vez de una suposición (ver docs/BACKEND.md §8).
+        </p>
+        {busqueda.total === 0 ? (
+          <p className="text-sm text-gray-400">Sin búsquedas todavía.</p>
+        ) : (
+          <div className="flex flex-wrap gap-6">
+            <div>
+              <p className="text-2xl font-display font-black text-gray-900">{busqueda.total}</p>
+              <p className="text-xs text-gray-500 mt-0.5">Búsquedas totales</p>
+            </div>
+            <div>
+              <p className="text-2xl font-display font-black text-emerald-600">{busqueda.tasaCacheHit}%</p>
+              <p className="text-xs text-gray-500 mt-0.5">Resueltas por caché ({busqueda.cacheHits})</p>
+            </div>
+            <div>
+              <p className="text-2xl font-display font-black text-brand">{busqueda.iaExitosa}</p>
+              <p className="text-xs text-gray-500 mt-0.5">Llamadas reales a OpenRouter</p>
+            </div>
+            <div>
+              <p className={`text-2xl font-display font-black ${busqueda.tasaDegradacion > 10 ? 'text-red-500' : 'text-amber-500'}`}>{busqueda.tasaDegradacion}%</p>
+              <p className="text-xs text-gray-500 mt-0.5">Degradadas a heurística ({busqueda.heuristicaRespaldo})</p>
+            </div>
+          </div>
+        )}
+
+        {busqueda.total > 0 && (
+          <div className="mt-6 pt-5 border-t border-gray-100">
+            <p className="text-sm font-semibold text-gray-800 mb-1">
+              Búsquedas por hora del día{busqueda.horaPico !== null && (
+                <span className="font-normal text-gray-500"> — hora pico: <strong className="text-brand">{String(busqueda.horaPico).padStart(2, '0')}:00</strong> (hora de Tabasco)</span>
+              )}
+            </p>
+            <p className="text-xs text-gray-400 mb-4">
+              Único dato de uso real que hay hoy — las &quot;vistas&quot; de propiedades en otros lados de la plataforma son de muestra, no tráfico real (<code className="bg-gray-100 px-1 py-0.5 rounded">Property</code> no es una tabla real todavía).
+            </p>
+            <div className="flex items-end gap-1 h-32">
+              {busqueda.porHora.map((valor, hora) => {
+                const maxValor = Math.max(...busqueda.porHora, 1);
+                const esPico = valor > 0 && valor === maxValor;
+                return (
+                  <div key={hora} className="flex-1 flex flex-col items-center justify-end h-full" title={`${String(hora).padStart(2, '0')}:00 — ${valor} búsqueda${valor === 1 ? '' : 's'}`}>
+                    <div
+                      className={`w-full rounded-t ${esPico ? 'bg-brand' : valor > 0 ? 'bg-brand-pale' : 'bg-gray-100'}`}
+                      style={{ height: valor > 0 ? `${Math.max((valor / maxValor) * 100, 6)}%` : '2px' }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex gap-1 mt-1.5">
+              {busqueda.porHora.map((_, hora) => (
+                <div key={hora} className="flex-1 text-center text-[9px] text-gray-400">
+                  {hora % 3 === 0 ? hora : ''}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -5,7 +5,14 @@ import { useRouter } from 'next/navigation';
 import { Search, MapPin, Clock, X, Loader2 } from 'lucide-react';
 import { getAllProperties } from '@/lib/api';
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches';
-import { interpretarBusqueda, type FiltrosIA } from '@/lib/interpretarBusqueda';
+import { interpretarBusqueda, esOracionLarga, type FiltrosIA } from '@/lib/interpretarBusqueda';
+
+// Bandera de un solo uso para avisar en /propiedades que la búsqueda que
+// trajo hasta ahí no tenía nada concreto que interpretar (ver irA más abajo)
+// — sessionStorage en vez de un parámetro en la URL porque es un aviso de
+// "cómo llegaste aquí", no un estado de la página en sí; no debería
+// sobrevivir un refresh ni ensuciar la URL compartible.
+export const BUSQUEDA_SIN_INTERPRETAR_KEY = 'vv:busqueda-sin-interpretar';
 
 interface SearchBarProps {
   initialValue?: string;
@@ -69,20 +76,37 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
     // la búsqueda (ej. "Gaviotas"), se usa esa frase corta como `q` — sigue
     // siendo texto literal, pero corto y real, así que sí puede convivir
     // con los demás filtros en vez de excluir todo. Si no encontró nada que
-    // interpretar, `q` cae a la oración completa (mismo comportamiento de
-    // siempre para búsquedas simples de un lugar).
-    if (filtros.colonia) params.set('colonia', filtros.colonia);
-    else if (!hayFiltros) params.set('q', q);
+    // interpretar Y es un término corto, `q` cae a la oración completa
+    // (búsqueda simple de un lugar sin catalogar, sí puede matchear). Si es
+    // una oración larga sin nada que interpretar, no se manda `q` en
+    // absoluto — dejarla condenaba la búsqueda a cero resultados por el
+    // mismo motivo de arriba; se avisa en /propiedades vía sessionStorage.
+    if (filtros.colonia) {
+      params.set('colonia', filtros.colonia);
+    } else if (!hayFiltros) {
+      if (esOracionLarga(q)) {
+        if (typeof window !== 'undefined') sessionStorage.setItem(BUSQUEDA_SIN_INTERPRETAR_KEY, '1');
+      } else {
+        params.set('q', q);
+      }
+    }
     if (filtros.municipio) params.set('municipio', filtros.municipio);
     if (filtros.tipo) params.set('tipo', filtros.tipo);
     if (filtros.operacion) params.set('operacion', filtros.operacion);
     if (filtros.precioMin) params.set('precioMin', String(filtros.precioMin));
     if (filtros.precioMax) params.set('precioMax', String(filtros.precioMax));
     if (filtros.recamaras) params.set('recamaras', String(filtros.recamaras));
+    if (filtros.recamarasMax) params.set('recamarasMax', String(filtros.recamarasMax));
+    if (filtros.banos) params.set('banos', String(filtros.banos));
+    if (filtros.m2Min) params.set('m2Min', String(filtros.m2Min));
+    if (filtros.m2Max) params.set('m2Max', String(filtros.m2Max));
+    if (filtros.amenidad) params.set('amenidad', filtros.amenidad);
     if (filtros.riesgoInundacion) params.set('riesgo', filtros.riesgoInundacion);
     if (filtros.cercaDosoBocas) params.set('dosabocas', '1');
     if (filtros.landmark) params.set('cerca', filtros.landmark);
     else if (filtros.categoriaLandmark) params.set('cercaTipo', filtros.categoriaLandmark);
+    if (filtros.zonaDestacada) params.set('zona', filtros.zonaDestacada);
+    if (filtros.sort) params.set('sort', filtros.sort);
     router.push(`/buscar?${params.toString()}`);
   }
 

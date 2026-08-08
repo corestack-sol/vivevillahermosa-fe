@@ -15,10 +15,16 @@ function buildQuery(filters: SearchFilters): string {
   if (filters.precioMin) params.set('precioMin', String(filters.precioMin));
   if (filters.precioMax) params.set('precioMax', String(filters.precioMax));
   if (filters.recamaras) params.set('recamaras', String(filters.recamaras));
+  if (filters.recamarasMax) params.set('recamarasMax', String(filters.recamarasMax));
+  if (filters.banos) params.set('banos', String(filters.banos));
+  if (filters.m2Min) params.set('m2Min', String(filters.m2Min));
+  if (filters.m2Max) params.set('m2Max', String(filters.m2Max));
+  if (filters.amenidad) params.set('amenidad', filters.amenidad);
   if (filters.riesgoInundacion) params.set('riesgo', filters.riesgoInundacion);
   if (filters.cercaDosoBocas) params.set('dosabocas', '1');
   if (filters.landmark) params.set('cerca', filters.landmark);
   if (filters.categoriaLandmark) params.set('cercaTipo', filters.categoriaLandmark);
+  if (filters.zonaDestacada) params.set('zona', filters.zonaDestacada);
   if (filters.sort && filters.sort !== 'relevancia') params.set('sort', filters.sort);
   if (filters.page && filters.page > 1) params.set('page', String(filters.page));
   return params.toString();
@@ -34,10 +40,16 @@ export function parseFiltersFromSearchParams(params: URLSearchParams): SearchFil
     precioMin: Number(params.get('precioMin')) || 0,
     precioMax: Number(params.get('precioMax')) || 0,
     recamaras: Number(params.get('recamaras')) || 0,
+    recamarasMax: Number(params.get('recamarasMax')) || 0,
+    banos: Number(params.get('banos')) || 0,
+    m2Min: Number(params.get('m2Min')) || 0,
+    m2Max: Number(params.get('m2Max')) || 0,
+    amenidad: params.get('amenidad') ?? '',
     riesgoInundacion: (params.get('riesgo') as FloodRisk) ?? '',
     cercaDosoBocas: params.get('dosabocas') === '1',
     landmark: params.get('cerca') ?? '',
     categoriaLandmark: params.get('cercaTipo') ?? '',
+    zonaDestacada: params.get('zona') ?? '',
     sort: (params.get('sort') as SortOption) ?? 'relevancia',
     page: Number(params.get('page')) || 1,
   };

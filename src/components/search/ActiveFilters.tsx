@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import type { SearchFilters } from '@/types/search';
 import { getLandmark, CATEGORIAS_GENERICAS } from '@/lib/landmarks';
 import { matchColonia } from '@/lib/colonias';
+import { getZonaDestacada, ZONA_DESTACADA_CUALQUIERA } from '@/lib/zonasDestacadas';
 
 interface ActiveFiltersProps {
   filters: SearchFilters;
@@ -31,6 +32,11 @@ export function ActiveFilters({ filters, onUpdate, onClear }: ActiveFiltersProps
   if (filters.precioMax && filters.precioMax > 0)
                                 chips.push({ label: `Hasta ${formatPeso(filters.precioMax)}`, onRemove: () => onUpdate({ precioMax: 0 }) });
   if (filters.recamaras)        chips.push({ label: `${filters.recamaras}+ rec.`,         onRemove: () => onUpdate({ recamaras: 0 }) });
+  if (filters.recamarasMax)     chips.push({ label: `Máx. ${filters.recamarasMax} rec.`,  onRemove: () => onUpdate({ recamarasMax: 0 }) });
+  if (filters.banos)            chips.push({ label: `${filters.banos}+ baños`,            onRemove: () => onUpdate({ banos: 0 }) });
+  if (filters.m2Min)            chips.push({ label: `Desde ${filters.m2Min}m²`,           onRemove: () => onUpdate({ m2Min: 0 }) });
+  if (filters.m2Max)            chips.push({ label: `Hasta ${filters.m2Max}m²`,           onRemove: () => onUpdate({ m2Max: 0 }) });
+  if (filters.amenidad)         chips.push({ label: filters.amenidad,                     onRemove: () => onUpdate({ amenidad: '' }) });
   if (filters.riesgoInundacion) chips.push({ label: `Riesgo ${filters.riesgoInundacion}`, onRemove: () => onUpdate({ riesgoInundacion: '' }) });
   if (filters.cercaDosoBocas)   chips.push({ label: 'Dos Bocas',                         onRemove: () => onUpdate({ cercaDosoBocas: false }) });
   if (filters.landmark) {
@@ -42,6 +48,12 @@ export function ActiveFilters({ filters, onUpdate, onClear }: ActiveFiltersProps
   } else if (filters.colonia) {
     const coord = matchColonia(filters.colonia);
     chips.push({ label: coord ? `Cerca de ${coord.label}` : filters.colonia, onRemove: () => onUpdate({ colonia: '' }) });
+  }
+  if (filters.zonaDestacada) {
+    const label = filters.zonaDestacada === ZONA_DESTACADA_CUALQUIERA
+      ? 'Zona de alta plusvalía'
+      : getZonaDestacada(filters.zonaDestacada)?.label;
+    if (label) chips.push({ label, onRemove: () => onUpdate({ zonaDestacada: '' }) });
   }
 
   if (chips.length === 0) return null;

@@ -1,6 +1,6 @@
 {
   "meta": {
-    "total": 25,
+    "total": 31,
     "page": 1,
     "perPage": 12
   },
@@ -1133,6 +1133,253 @@
         "whatsapp": "529931234567"
       },
       "fechaPublicacion": "2026-08-06",
+      "activa": true
+    },
+    {
+      "id": "prop-026",
+      "slug": "casa-venta-bosques-de-saloya-nacajuca-026",
+      "titulo": "Casa en Bosques de Saloya, Nacajuca",
+      "descripcion": "Casa de una planta en el fraccionamiento Bosques de Saloya, zona tranquila y consolidada de Nacajuca. Ideal para quien busca cercanía con Villahermosa sin el ruido del centro.",
+      "tipo": "casa",
+      "operacion": "venta",
+      "precio": 1250000,
+      "moneda": "MXN",
+      "m2Construidos": 120,
+      "m2Terreno": 150,
+      "recamaras": 3,
+      "banos": 2,
+      "mediosBanos": 0,
+      "estacionamientos": 2,
+      "antiguedad": 3,
+      "amenidades": [
+        "Cochera techada",
+        "Jardín"
+      ],
+      "fotos": [
+        "/images/props/prop-001-1.jpg"
+      ],
+      "municipio": "Nacajuca",
+      "colonia": "Bosques de Saloya",
+      "direccion": "Bosques de Saloya, Nacajuca, Tabasco",
+      "latPublico": 18.0153669,
+      "lngPublico": -92.9595985,
+      "riesgoInundacion": "medio",
+      "zonaEcologica": false,
+      "cercaDosoBocas": false,
+      "featured": false,
+      "agente": {
+        "nombre": "Prueba QA",
+        "tel": "+52 993 000 0000",
+        "email": "pruebas@vivevillahermosa.mx",
+        "foto": "/images/agents/agente-001.jpg",
+        "whatsapp": "529930000000"
+      },
+      "fechaPublicacion": "2026-08-08",
+      "activa": true
+    },
+    {
+      "id": "prop-027",
+      "slug": "departamento-renta-parrilla-centro-027",
+      "titulo": "Departamento en renta cerca de UTTAB",
+      "descripcion": "Departamento de una recámara a unos minutos de la Universidad Tecnológica de Tabasco (UTTAB), zona de Parrilla 2. Perfecto para estudiantes o personal académico.",
+      "tipo": "departamento",
+      "operacion": "renta",
+      "precio": 4500,
+      "moneda": "MXN",
+      "m2Construidos": 45,
+      "m2Terreno": 45,
+      "recamaras": 1,
+      "banos": 1,
+      "mediosBanos": 0,
+      "estacionamientos": 1,
+      "antiguedad": 5,
+      "amenidades": [
+        "Amueblado"
+      ],
+      "fotos": [
+        "/images/props/prop-002-1.jpg"
+      ],
+      "municipio": "Centro",
+      "colonia": "Parrilla 2",
+      "direccion": "Parrilla 2, Centro, Tabasco",
+      "latPublico": 17.8837589,
+      "lngPublico": -92.9257541,
+      "riesgoInundacion": "bajo",
+      "zonaEcologica": false,
+      "cercaDosoBocas": false,
+      "featured": false,
+      "agente": {
+        "nombre": "Prueba QA",
+        "tel": "+52 993 000 0000",
+        "email": "pruebas@vivevillahermosa.mx",
+        "foto": "/images/agents/agente-001.jpg",
+        "whatsapp": "529930000000"
+      },
+      "fechaPublicacion": "2026-08-08",
+      "activa": true
+    },
+    {
+      "id": "prop-028",
+      "slug": "terreno-venta-nuevo-mexico-balancan-028",
+      "titulo": "Terreno en venta en Nuevo México, Balancán",
+      "descripcion": "Terreno plano en la colonia Nuevo México, Balancán, ideal para construir. Buen acceso a la carretera principal.",
+      "tipo": "terreno",
+      "operacion": "venta",
+      "precio": 350000,
+      "moneda": "MXN",
+      "m2Construidos": 0,
+      "m2Terreno": 400,
+      "recamaras": 0,
+      "banos": 0,
+      "mediosBanos": 0,
+      "estacionamientos": 0,
+      "antiguedad": 0,
+      "amenidades": [],
+      "fotos": [
+        "/images/props/prop-003-1.jpg"
+      ],
+      "municipio": "Balancán",
+      "colonia": "Nuevo México",
+      "direccion": "Nuevo México, Balancán, Tabasco",
+      "latPublico": 17.8176403,
+      "lngPublico": -91.5398503,
+      "riesgoInundacion": "medio",
+      "zonaEcologica": false,
+      "cercaDosoBocas": false,
+      "featured": false,
+      "agente": {
+        "nombre": "Prueba QA",
+        "tel": "+52 993 000 0000",
+        "email": "pruebas@vivevillahermosa.mx",
+        "foto": "/images/agents/agente-001.jpg",
+        "whatsapp": "529930000000"
+      },
+      "fechaPublicacion": "2026-08-08",
+      "activa": true
+    },
+    {
+      "id": "prop-029",
+      "slug": "casa-renta-tamulte-centro-029",
+      "titulo": "Casa en renta en Tamulté, cerca del Hospital de la Mujer",
+      "descripcion": "Casa de dos plantas en Tamulté de las Barrancas, a unos minutos del Hospital Regional de Alta Especialidad de la Mujer y del mercado de Tamulté.",
+      "tipo": "casa",
+      "operacion": "renta",
+      "precio": 9500,
+      "moneda": "MXN",
+      "m2Construidos": 140,
+      "m2Terreno": 160,
+      "recamaras": 3,
+      "banos": 2,
+      "mediosBanos": 0,
+      "estacionamientos": 2,
+      "antiguedad": 6,
+      "amenidades": [
+        "Cochera",
+        "Patio"
+      ],
+      "fotos": [
+        "/images/props/prop-004-1.jpg"
+      ],
+      "municipio": "Centro",
+      "colonia": "Tamulté de las Barrancas",
+      "direccion": "Tamulté de las Barrancas, Centro, Tabasco",
+      "latPublico": 17.9649928,
+      "lngPublico": -92.9622973,
+      "riesgoInundacion": "medio",
+      "zonaEcologica": false,
+      "cercaDosoBocas": false,
+      "featured": false,
+      "agente": {
+        "nombre": "Prueba QA",
+        "tel": "+52 993 000 0000",
+        "email": "pruebas@vivevillahermosa.mx",
+        "foto": "/images/agents/agente-001.jpg",
+        "whatsapp": "529930000000"
+      },
+      "fechaPublicacion": "2026-08-08",
+      "activa": true
+    },
+    {
+      "id": "prop-030",
+      "slug": "departamento-venta-alvaro-obregon-centro-030",
+      "titulo": "Departamento en venta cerca de MUSEVI y Paseo Tabasco",
+      "descripcion": "Departamento moderno sobre Paseo Tabasco, muy cerca del MUSEVI y del Parque de los Abuelos, a un paso de la Laguna de las Ilusiones.",
+      "tipo": "departamento",
+      "operacion": "venta",
+      "precio": 2100000,
+      "moneda": "MXN",
+      "m2Construidos": 95,
+      "m2Terreno": 95,
+      "recamaras": 2,
+      "banos": 2,
+      "mediosBanos": 0,
+      "estacionamientos": 1,
+      "antiguedad": 2,
+      "amenidades": [
+        "Roof garden",
+        "Seguridad 24h"
+      ],
+      "fotos": [
+        "/images/props/prop-005-1.jpg"
+      ],
+      "municipio": "Centro",
+      "colonia": "Fraccionamiento Álvaro Obregón",
+      "direccion": "Paseo Tabasco, Centro, Tabasco",
+      "latPublico": 17.9951786,
+      "lngPublico": -92.9377808,
+      "riesgoInundacion": "bajo",
+      "zonaEcologica": false,
+      "cercaDosoBocas": false,
+      "featured": false,
+      "agente": {
+        "nombre": "Prueba QA",
+        "tel": "+52 993 000 0000",
+        "email": "pruebas@vivevillahermosa.mx",
+        "foto": "/images/agents/agente-001.jpg",
+        "whatsapp": "529930000000"
+      },
+      "fechaPublicacion": "2026-08-08",
+      "activa": true
+    },
+    {
+      "id": "prop-031",
+      "slug": "casa-venta-huimanguillo-lejos-centro-031",
+      "titulo": "Casa en venta en Huimanguillo, a las afueras de la cabecera",
+      "descripcion": "Casa amplia en el municipio de Huimanguillo, a unos minutos de la cabecera municipal. Terreno grande, zona tranquila.",
+      "tipo": "casa",
+      "operacion": "venta",
+      "precio": 980000,
+      "moneda": "MXN",
+      "m2Construidos": 130,
+      "m2Terreno": 300,
+      "recamaras": 3,
+      "banos": 2,
+      "mediosBanos": 0,
+      "estacionamientos": 2,
+      "antiguedad": 10,
+      "amenidades": [
+        "Terreno amplio"
+      ],
+      "fotos": [
+        "/images/props/prop-006-1.jpg"
+      ],
+      "municipio": "Huimanguillo",
+      "colonia": "Ranchería cercana",
+      "direccion": "Huimanguillo, Tabasco",
+      "latPublico": 17.868,
+      "lngPublico": -93.3858905,
+      "riesgoInundacion": "medio",
+      "zonaEcologica": false,
+      "cercaDosoBocas": false,
+      "featured": false,
+      "agente": {
+        "nombre": "Prueba QA",
+        "tel": "+52 993 000 0000",
+        "email": "pruebas@vivevillahermosa.mx",
+        "foto": "/images/agents/agente-001.jpg",
+        "whatsapp": "529930000000"
+      },
+      "fechaPublicacion": "2026-08-08",
       "activa": true
     }
   ]

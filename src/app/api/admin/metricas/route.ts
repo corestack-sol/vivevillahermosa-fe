@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/adminAuth';
+import { getBusquedaStats } from '@/lib/busquedaStats';
 
 /**
  * Conteos reales sobre tablas que ya existen — sin ninguna cifra de
@@ -51,5 +52,9 @@ export async function GET() {
     resendConfigurado: !!process.env.RESEND_API_KEY,
     openrouterConfigurado: !!process.env.OPENROUTER_API_KEY,
     geminiConfigurado: !!process.env.GEMINI_API_KEY,
+    // Desde que arrancó este proceso, no desde siempre — ver el comentario
+    // en busquedaStats.ts. Sirve para calibrar el backstop global de
+    // /ia/busqueda-inteligente con tráfico real en vez de una suposición.
+    busquedaIA: getBusquedaStats(),
   });
 }

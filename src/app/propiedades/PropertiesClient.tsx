@@ -14,10 +14,12 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { MapViewDynamic } from '@/components/map/MapViewDynamic';
 import { getLandmark, CATEGORIAS_GENERICAS } from '@/lib/landmarks';
 import { matchColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
-import { interpretarBusqueda } from '@/lib/interpretarBusqueda';
+import { interpretarBusqueda, esOracionLarga } from '@/lib/interpretarBusqueda';
 import { aplicarOverridesPublicos, PROPIEDADES_LOCALES_EVENT } from '@/lib/propiedadesLocales';
 import { ESTADO_OVERRIDE_EVENT } from '@/lib/estadoOverrides';
 import { ExploreZonasCta } from '@/components/search/ExploreZonasCta';
+import { BUSQUEDA_SIN_INTERPRETAR_KEY } from '@/components/search/SearchBar';
+import { useToast } from '@/context/ToastContext';
 
 const PER_PAGE = 12;
 
@@ -29,6 +31,15 @@ const TIPO_PLURAL: Record<string, string> = {
   casa: 'Casas', departamento: 'Departamentos', terreno: 'Terrenos',
   local: 'Locales', oficina: 'Oficinas', bodega: 'Bodegas', habitacion: 'Habitaciones',
 };
+
+// Detecta, mientras el usuario todavía está escribiendo (antes de someter
+// la búsqueda), que lo que hay en `q` es una oración larga en vez de un
+// término corto — mismo umbral que `esOracionLarga` (interpretarBusqueda.ts),
+// aplicado al filtro ya activo en vez de al texto que se está por interpretar.
+function esBusquedaSinInterpretar(filters: SearchFilters): boolean {
+  if (!filters.q) return false;
+  return esOracionLarga(filters.q);
+}
 
 function buildTitle(filters: SearchFilters): string {
   const tipo  = filters.tipo ? (TIPO_PLURAL[filters.tipo] ?? 'Propiedades') : 'Propiedades';
@@ -68,6 +79,7 @@ export function PropertiesClient({ allProperties }: Props) {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [buscandoIA, setBuscandoIA] = useState(false);
+  const toast = useToast();
 
   // Trae las colonias descubiertas automáticamente (ver coloniaDiscovery.ts)
   // una sola vez al entrar a la página — sin esto, matchColonia/
@@ -75,6 +87,18 @@ export function PropertiesClient({ allProperties }: Props) {
   // el próximo refresh completo. No bloquea nada: si tarda o falla, la
   // búsqueda sigue funcionando igual con lo que ya había.
   useEffect(() => { precargarColoniasDescubiertas(); }, []);
+
+  // Aviso de un solo uso cuando se llega desde el buscador de Home
+  // (SearchBar.tsx) con una búsqueda que la IA no pudo interpretar en nada
+  // concreto — ver BUSQUEDA_SIN_INTERPRETAR_KEY. Se limpia de inmediato para
+  // que no reaparezca en un refresh ni en una futura visita a esta página.
+  useEffect(() => {
+    if (sessionStorage.getItem(BUSQUEDA_SIN_INTERPRETAR_KEY)) {
+      sessionStorage.removeItem(BUSQUEDA_SIN_INTERPRETAR_KEY);
+      toast.info('No identificamos un lugar o tipo de propiedad específico en tu búsqueda — te mostramos todas las propiedades disponibles.');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     function aplicarOverrides() {
@@ -111,19 +135,49 @@ export function PropertiesClient({ allProperties }: Props) {
     // completa junto con filtros estructurados casi siempre da cero
     // resultados, así que se limpia cuando la IA sí encontró algo.
     updates.colonia = filtros.colonia || '';
-    if (filtros.colonia) updates.q = '';
-    else if (!hayFiltros) updates.q = texto;
-    else updates.q = '';
+    if (filtros.colonia) {
+      updates.q = '';
+    } else if (!hayFiltros) {
+      // La IA no encontró NADA que extraer — no necesariamente porque algo
+      // falló, sino porque la búsqueda no menciona un lugar/tipo concreto
+      // ("algo bonito y espacioso"): por diseño, REGLA 1 del prompt (ai.ts)
+      // nunca adivina qué colonia/landmark "cuenta" para ese tipo de frase
+      // subjetiva, para no inventar datos. ("la zona de más plusvalía" ya
+      // no cae aquí — REGLA 8/zonasDestacadas.ts la resuelve con un
+      // catálogo curado y verificado, no una adivinanza de la IA.)
+      // Dejar la oración completa como `q` en ese caso condenaba la
+      // búsqueda a cero resultados (texto literal contra título/colonia/
+      // descripción, que una oración natural nunca va a matchear) — se veía
+      // como "la IA nunca encuentra nada" cuando en realidad sí interpretó
+      // correctamente que no había nada concreto que buscar. Un término
+      // corto (< 5 palabras) sigue cayendo a texto literal como antes: eso
+      // sí puede coincidir de verdad con una colonia sin catalogar.
+      if (esOracionLarga(texto)) {
+        updates.q = '';
+        toast.info('No identificamos un lugar o tipo de propiedad específico en tu búsqueda — te mostramos todas las propiedades disponibles.');
+      } else {
+        updates.q = texto;
+      }
+    } else {
+      updates.q = '';
+    }
     if (filtros.municipio) updates.municipio = filtros.municipio;
     if (filtros.tipo) updates.tipo = filtros.tipo as SearchFilters['tipo'];
     if (filtros.operacion) updates.operacion = filtros.operacion as SearchFilters['operacion'];
     if (filtros.precioMin) updates.precioMin = filtros.precioMin;
     if (filtros.precioMax) updates.precioMax = filtros.precioMax;
     if (filtros.recamaras) updates.recamaras = filtros.recamaras;
+    if (filtros.recamarasMax) updates.recamarasMax = filtros.recamarasMax;
+    if (filtros.banos) updates.banos = filtros.banos;
+    if (filtros.m2Min) updates.m2Min = filtros.m2Min;
+    if (filtros.m2Max) updates.m2Max = filtros.m2Max;
+    if (filtros.amenidad) updates.amenidad = filtros.amenidad;
     if (filtros.riesgoInundacion) updates.riesgoInundacion = filtros.riesgoInundacion as SearchFilters['riesgoInundacion'];
     if (filtros.cercaDosoBocas) updates.cercaDosoBocas = true;
     if (filtros.landmark) updates.landmark = filtros.landmark;
     else if (filtros.categoriaLandmark) updates.categoriaLandmark = filtros.categoriaLandmark;
+    if (filtros.zonaDestacada) updates.zonaDestacada = filtros.zonaDestacada;
+    if (filtros.sort) updates.sort = filtros.sort as SearchFilters['sort'];
     updateFilters(updates);
   }
 
@@ -227,7 +281,7 @@ export function PropertiesClient({ allProperties }: Props) {
               value={filters.q ?? ''}
               onChange={(e) => updateFilters({ q: e.target.value })}
               placeholder="Buscar por colonia, municipio... o descríbelo y presiona Enter"
-              className="w-full pl-9 pr-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand focus:bg-white transition-colors placeholder-gray-400 text-gray-800"
+              className="w-full pl-9 pr-4 py-2.5 text-base sm:text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand focus:bg-white transition-colors placeholder-gray-400 text-gray-800"
             />
             {buscandoIA ? (
               <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand animate-spin" />
@@ -298,10 +352,19 @@ export function PropertiesClient({ allProperties }: Props) {
                     zoom={11}
                   />
                 ) : (
-                  <div className="w-full h-full bg-white flex flex-col items-center justify-center text-gray-400">
+                  <div className="w-full h-full bg-white flex flex-col items-center justify-center text-gray-400 text-center px-6">
                     <Map size={40} className="mb-3 opacity-30" />
-                    <p className="text-sm font-medium">Sin propiedades en el mapa</p>
-                    <p className="text-xs mt-1">Ajusta los filtros para ver resultados</p>
+                    {esBusquedaSinInterpretar(filters) ? (
+                      <>
+                        <p className="text-sm font-medium">No pudimos interpretar del todo tu búsqueda</p>
+                        <p className="text-xs mt-1 max-w-xs">Prueba con menos palabras (ej. solo el lugar) o usa los filtros para acotar a mano</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium">Sin propiedades en el mapa</p>
+                        <p className="text-xs mt-1">Ajusta los filtros para ver resultados</p>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -321,9 +384,13 @@ export function PropertiesClient({ allProperties }: Props) {
                     <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mb-4">
                       <Search size={28} className="text-gray-300" strokeWidth={1.5} />
                     </div>
-                    <h3 className="font-heading font-bold text-gray-800 text-lg mb-2 text-center">Sin resultados</h3>
+                    <h3 className="font-heading font-bold text-gray-800 text-lg mb-2 text-center">
+                      {esBusquedaSinInterpretar(filters) ? 'No pudimos interpretar tu búsqueda' : 'Sin resultados'}
+                    </h3>
                     <p className="text-gray-400 text-sm mb-2 max-w-sm leading-relaxed text-center">
-                      No encontramos propiedades con esos filtros.
+                      {esBusquedaSinInterpretar(filters)
+                        ? 'Prueba con menos palabras (ej. solo el lugar que buscas) o usa los filtros para acotar a mano.'
+                        : 'No encontramos propiedades con esos filtros.'}
                     </p>
                     <button onClick={clearFilters}
                       className="text-brand font-semibold text-sm hover:underline mb-8">
