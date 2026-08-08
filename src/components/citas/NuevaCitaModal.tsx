@@ -134,7 +134,7 @@ export function NuevaCitaModal({ isOpen, onClose, fechaInicial, duracionDefault,
             {...register('notas')}
             rows={3}
             placeholder="Detalles adicionales de la cita..."
-            className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand resize-none"
+            className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-base sm:text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand resize-none"
           />
         </div>
 

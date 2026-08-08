@@ -69,7 +69,7 @@ export function PublishServicioForm({ servicioId, valoresIniciales }: PublishSer
           {...register('descripcion')}
           rows={4}
           placeholder="Cuéntale a la gente qué haces, tu experiencia, si trabajas fines de semana, etc."
-          className={`w-full rounded-xl border px-4 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 resize-none ${
+          className={`w-full rounded-xl border px-4 py-2.5 text-base sm:text-sm placeholder-gray-400 focus:outline-none focus:ring-2 resize-none ${
             errors.descripcion ? 'border-danger' : 'border-gray-200 focus:border-brand focus:ring-brand/40'
           }`}
         />

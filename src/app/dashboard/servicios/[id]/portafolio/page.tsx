@@ -153,7 +153,7 @@ export default function PortafolioPage() {
               rows={3}
               maxLength={700}
               placeholder="Cuenta la historia de este trabajo (opcional) — qué se hizo, dónde, algún detalle que te enorgullezca…"
-              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-brand focus:ring-brand/40 resize-none"
+              className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-base sm:text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-brand focus:ring-brand/40 resize-none"
             />
             <div className="flex gap-2">
               <Button variant="outline" size="md" onClick={() => { setPreviewDataUrl(null); setDescripcion(''); }} disabled={subiendo}>

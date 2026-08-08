@@ -46,12 +46,15 @@ export function SimilarCarousel({ properties }: SimilarCarouselProps) {
       {canLeft  && <div className="pointer-events-none absolute left-0 top-0 bottom-4 w-16 bg-gradient-to-r from-page to-transparent z-10" />}
       {canRight && <div className="pointer-events-none absolute right-0 top-0 bottom-4 w-16 bg-gradient-to-l from-page to-transparent z-10" />}
 
-      {/* Nav buttons */}
+      {/* Nav buttons — ocultos en móvil: el track ya es deslizable por touch
+          (overflow-x-auto + snap), así que en pantallas chicas son
+          redundantes y su tamaño (36px) queda bajo el mínimo recomendado
+          de touch target. Solo tienen sentido para mouse/desktop. */}
       <button
         onClick={() => scroll('left')}
         disabled={!canLeft}
         aria-label="Anterior"
-        className={`absolute left-2 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center transition-all ${
+        className={`hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-white shadow-md border border-gray-200 items-center justify-center transition-all ${
           canLeft ? 'opacity-100 hover:shadow-lg hover:border-brand/30 text-gray-700' : 'opacity-0 pointer-events-none'
         }`}
       >
@@ -61,7 +64,7 @@ export function SimilarCarousel({ properties }: SimilarCarouselProps) {
         onClick={() => scroll('right')}
         disabled={!canRight}
         aria-label="Siguiente"
-        className={`absolute right-2 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-white shadow-md border border-gray-200 flex items-center justify-center transition-all ${
+        className={`hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-white shadow-md border border-gray-200 items-center justify-center transition-all ${
           canRight ? 'opacity-100 hover:shadow-lg hover:border-brand/30 text-gray-700' : 'opacity-0 pointer-events-none'
         }`}
       >

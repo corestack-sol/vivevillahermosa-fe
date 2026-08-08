@@ -91,7 +91,7 @@ function SolicitarRevisionContent() {
             id="motivo"
             rows={4}
             placeholder="Ej. Estaba probando cómo funciona el buscador y no quise manipular nada..."
-            className={`w-full rounded-xl border text-sm px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand/40 transition-shadow ${errors.motivo ? 'border-danger' : 'border-gray-200 focus:border-brand'}`}
+            className={`w-full rounded-xl border text-base sm:text-sm px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand/40 transition-shadow ${errors.motivo ? 'border-danger' : 'border-gray-200 focus:border-brand'}`}
             {...register('motivo')}
           />
           {errors.motivo && <p className="mt-1 text-xs text-danger">{errors.motivo.message}</p>}

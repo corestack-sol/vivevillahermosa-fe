@@ -170,11 +170,11 @@ export default function EditarPropiedadPage() {
 
         <Input label="Precio (MXN)" type="number" error={errors.precio?.message} {...register('precio', { valueAsNumber: true })} />
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <Input label="m² construidos" type="number" {...register('m2Construidos', { valueAsNumber: true })} />
           <Input label="Recámaras" type="number" {...register('recamaras', { valueAsNumber: true })} />
-          <Input label="Baños" type="number" {...register('banos', { valueAsNumber: true })} />
         </div>
+        <Input label="Baños" type="number" {...register('banos', { valueAsNumber: true })} />
 
         <div className="grid grid-cols-2 gap-3">
           <Select label="Municipio" options={MUNICIPIO_OPTIONS} error={errors.municipio?.message} {...register('municipio')} />
@@ -188,7 +188,7 @@ export default function EditarPropiedadPage() {
           <textarea
             rows={5}
             {...register('descripcion')}
-            className={`w-full rounded-xl border bg-white text-gray-800 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 resize-none ${errors.descripcion ? 'border-danger' : 'border-gray-200 focus:border-brand'}`}
+            className={`w-full rounded-xl border bg-white text-gray-800 px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 resize-none ${errors.descripcion ? 'border-danger' : 'border-gray-200 focus:border-brand'}`}
           />
           {errors.descripcion && <p className="text-xs text-danger mt-1">{errors.descripcion.message}</p>}
         </div>

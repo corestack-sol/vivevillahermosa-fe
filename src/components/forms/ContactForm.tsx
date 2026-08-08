@@ -183,7 +183,7 @@ export function ContactForm({ propertyTitle, propertyId, dark = false }: Contact
           placeholder="Hola, me interesa saber más sobre esta propiedad..."
           rows={4}
           defaultValue="Hola, vi esta propiedad en Vive Villahermosa y me gustaría recibir más información."
-          className={`w-full rounded-xl border px-4 py-2.5 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 resize-none ${textareaCls}`}
+          className={`w-full rounded-xl border px-4 py-2.5 text-base sm:text-sm placeholder-gray-400 focus:outline-none focus:ring-2 resize-none ${textareaCls}`}
         />
         {errors.mensaje && (
           <p className="mt-1 text-xs text-danger">{errors.mensaje.message}</p>

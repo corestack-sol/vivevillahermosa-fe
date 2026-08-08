@@ -95,10 +95,10 @@ function SelectedCard({ marker, onClose }: { marker: MapMarker; onClose: () => v
       {/* Close */}
       <button
         onClick={onClose}
-        className="absolute top-3 right-3 z-10 w-8 h-8 bg-black/30 hover:bg-black/50
+        className="absolute top-3 right-3 z-10 w-10 h-10 bg-black/30 hover:bg-black/50
                    text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-sm"
       >
-        <X size={14} />
+        <X size={16} />
       </button>
 
       {/* Image / gradient header */}

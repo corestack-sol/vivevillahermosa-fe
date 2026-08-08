@@ -174,7 +174,7 @@ export function FilterPanel({ filters, onUpdate, onClear, activeCount, total }: 
           <select
             value={filters.municipio ?? ''}
             onChange={(e) => onUpdate({ municipio: e.target.value || undefined })}
-            className={`w-full appearance-none rounded-xl text-sm font-medium transition-colors
+            className={`w-full appearance-none rounded-xl text-base sm:text-sm font-medium transition-colors
                         focus:outline-none px-4 py-2.5 pr-9 cursor-pointer border-2
                         bg-white/10 text-white hover:border-white/35 focus:border-white/50
                         ${filters.municipio ? 'border-white text-white' : 'border-white/20 text-white/65'}`}

@@ -179,7 +179,7 @@ export default function AlertasPage() {
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Municipio</label>
               <select {...register('municipio')}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:border-brand bg-white">
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-base sm:text-sm focus:outline-none focus:border-brand bg-white">
                 <option value="">Cualquiera</option>
                 {MUNICIPIO_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
@@ -187,7 +187,7 @@ export default function AlertasPage() {
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
               <select {...register('tipo')}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:border-brand bg-white">
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-base sm:text-sm focus:outline-none focus:border-brand bg-white">
                 <option value="">Cualquier tipo</option>
                 {TIPO_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
@@ -195,7 +195,7 @@ export default function AlertasPage() {
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Operación</label>
               <select {...register('operacion')}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:border-brand bg-white">
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-base sm:text-sm focus:outline-none focus:border-brand bg-white">
                 <option value="">Venta y renta</option>
                 <option value="renta">Solo renta</option>
                 <option value="venta">Solo venta</option>
@@ -204,7 +204,7 @@ export default function AlertasPage() {
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Precio máximo (MXN)</label>
               <input type="number" {...register('precioMax')} placeholder="Sin límite"
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-base sm:text-sm focus:outline-none focus:border-brand" />
             </div>
           </div>
 

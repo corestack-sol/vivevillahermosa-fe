@@ -19,7 +19,7 @@ export function SortSelect({ value, onChange }: SortSelectProps) {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value as SortOption)}
-      className="text-sm border border-gray-200 rounded-xl px-3 py-2 text-gray-700 bg-white focus:outline-none focus:border-brand"
+      className="text-base sm:text-sm border border-gray-200 rounded-xl px-3 py-2 text-gray-700 bg-white focus:outline-none focus:border-brand"
     >
       {OPTIONS.map((o) => (
         <option key={o.value} value={o.value}>

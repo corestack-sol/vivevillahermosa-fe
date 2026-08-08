@@ -89,7 +89,7 @@ export function ReportButton({ propiedadId }: ReportButtonProps) {
               placeholder="Detalles adicionales (opcional)"
               rows={3}
               maxLength={500}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand resize-none"
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand resize-none"
             />
             <Button
               type="button"

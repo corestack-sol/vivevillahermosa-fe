@@ -190,7 +190,7 @@ function LoginContent() {
                   {...register('email')}
                   placeholder="tu@email.com"
                   autoComplete="email"
-                  className={`w-full rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 transition-shadow ${errors.email ? 'border-red-300' : 'border-gray-200 focus:border-brand'}`}
+                  className={`w-full rounded-xl border px-4 py-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 transition-shadow ${errors.email ? 'border-red-300' : 'border-gray-200 focus:border-brand'}`}
                 />
                 {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>}
               </div>
@@ -203,7 +203,7 @@ function LoginContent() {
                     {...register('password')}
                     placeholder="••••••••"
                     autoComplete="current-password"
-                    className={`w-full rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 pr-11 transition-shadow ${errors.password ? 'border-red-300' : 'border-gray-200 focus:border-brand'}`}
+                    className={`w-full rounded-xl border px-4 py-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 pr-11 transition-shadow ${errors.password ? 'border-red-300' : 'border-gray-200 focus:border-brand'}`}
                   />
                   <button type="button" onClick={() => setShowPass(!showPass)}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">

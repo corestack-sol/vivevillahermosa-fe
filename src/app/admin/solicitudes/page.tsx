@@ -102,7 +102,7 @@ export default function AdminSolicitudesPage() {
                       onChange={(e) => setRespuesta(e.target.value)}
                       rows={2}
                       placeholder="Respuesta opcional para el correo (por qué se aprobó o rechazó)"
-                      className="w-full rounded-xl border border-gray-200 text-sm px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
+                      className="w-full rounded-xl border border-gray-200 text-base sm:text-sm px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
                     />
                     <div className="flex gap-2">
                       <Button size="sm" onClick={() => setConfirmar({ solicitud: s, nuevoEstado: 'aprobada' })}>

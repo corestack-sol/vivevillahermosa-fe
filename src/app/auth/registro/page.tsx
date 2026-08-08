@@ -70,7 +70,7 @@ function RegistroContent() {
   }
 
   const inputCls = (hasError: boolean) =>
-    `w-full rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 transition-shadow ${hasError ? 'border-red-300' : 'border-gray-200 focus:border-brand'}`;
+    `w-full rounded-xl border px-4 py-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 transition-shadow ${hasError ? 'border-red-300' : 'border-gray-200 focus:border-brand'}`;
 
   const oauthErrorMsg: Record<string, string> = {
     config:   'OAuth no configurado. Usa el formulario.',

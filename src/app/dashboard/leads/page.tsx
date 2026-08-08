@@ -234,7 +234,7 @@ export default function LeadsPage() {
               <SelectorEtapa
                 lead={detalleLead}
                 onMover={handleMover}
-                className="w-full text-sm font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
+                className="w-full text-base sm:text-sm font-semibold text-gray-700 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
               />
             </div>
           </div>

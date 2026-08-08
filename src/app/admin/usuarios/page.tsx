@@ -179,7 +179,7 @@ export default function AdminUsuariosPage() {
                   value={motivo}
                   onChange={(e) => setMotivo(e.target.value)}
                   rows={3}
-                  className="w-full rounded-xl border border-gray-200 text-sm px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
+                  className="w-full rounded-xl border border-gray-200 text-base sm:text-sm px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
                   placeholder="Ej. Publicó el mismo anuncio con 3 precios distintos en menos de una hora"
                 />
               </div>
