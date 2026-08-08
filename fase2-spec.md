@@ -25,7 +25,7 @@
 | API `POST /api/propiedades` — crear propiedad | 🔴 CRÍTICO | ❌ No existe. `PublishForm.tsx` persiste en `localStorage`, no en BD |
 | Modelo `Property` en Prisma | 🔴 CRÍTICO | ❌ No existe — sketch completo al final de `prisma/schema.prisma` |
 | Upload fotos a Cloudinary/Supabase Storage | 🔴 CRÍTICO | ❌ No existe — fotos son data URI base64 |
-| Límite 6 fotos por propiedad | 🔴 CRÍTICO | ✅ Ya en UI (`MAX_FOTOS=6`) |
+| Límite 4 fotos por propiedad | 🔴 CRÍTICO | ✅ Ya en UI (`MAX_FOTOS=4`) |
 | Estado de publicación: `activa / pausada / vencida / vendida / rentada` | 🔴 CRÍTICO | ⚠️ Existe en `localStorage` (`estadoOverrides.ts`), no como columna real |
 | Propiedad visible en catálogo al publicar | 🔴 CRÍTICO | ⚠️ Visible solo en el mismo navegador desde 2026-08-06 (antes ni eso) |
 | Validación anti-spam básica (rate limit, campos mínimos) | 🟡 ALTA | ⚠️ Rate limit existe para otros endpoints (`src/lib/rateLimit.ts`), falta aplicarlo a publicar real |

@@ -154,7 +154,7 @@
 | Picker de tipo de propiedad | ✅ COMPLETO | 7 tipos con iconos |
 | Selector de operación (venta/renta) | ✅ COMPLETO | |
 | Picker de servicios para renta (18 iconos) | ✅ COMPLETO | |
-| Upload de hasta 6 fotos con preview | ✅ COMPLETO | FileReader, drag area |
+| Upload de hasta 4 fotos con preview | ✅ COMPLETO | FileReader, drag area |
 | Detección de fraude e IA al publicar | ✅ COMPLETO | `analizarFraude`/`analizarImagenPropiedad` reales (OpenRouter/Gemini) — pero la decisión de bloquear la toma el navegador, no el servidor (ver `docs/BACKEND.md`, V1 Paso 2) |
 | **Persistencia en base de datos** | ❌ PENDIENTE | Sigue siendo `localStorage` (simulación de un solo navegador) — **el bloqueante real de Fase 1**, ver `docs/BACKEND.md` |
 | **Storage de fotos** | ❌ PENDIENTE | Sin Cloudinary/S3 — fotos son data URIs base64 |
