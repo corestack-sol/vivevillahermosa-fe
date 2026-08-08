@@ -24,6 +24,7 @@ import { useToast } from '@/context/ToastContext';
 import { useAuth } from '@/context/AuthContext';
 import { crearPropiedad } from '@/lib/propiedadesLocales';
 import { getPuntoPublico, matchColonia, distanciaKm } from '@/lib/colonias';
+import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { generarIdLocal, generarSlugLocal } from '@/lib/idsLocales';
 import { resizeImageToDataUrl } from '@/lib/imageResize';
 import {
@@ -77,7 +78,27 @@ const STEP_SUBTITLES = [
   'Las fotos generan 3× más contactos',
   '¿Cómo te pueden contactar?',
 ];
-const MAX_FOTOS = 6;
+const MAX_FOTOS = 4;
+
+// Nombres legibles para el resumen de "campos por corregir" — sin esto, la
+// lista mostraría las llaves crudas del schema (ej. "riesgoInundacion" en
+// vez de "Riesgo de inundación"). Solo cubre los campos que participan en
+// `stepFields` (los que de verdad bloquean avanzar); el resto de FormData
+// nunca aparece ahí.
+const ETIQUETAS_CAMPO: Partial<Record<keyof FormData, string>> = {
+  tipo: 'Tipo de propiedad',
+  operacion: 'Operación (venta o renta)',
+  precio: 'Precio',
+  municipio: 'Municipio',
+  colonia: 'Colonia',
+  riesgoInundacion: 'Riesgo de inundación',
+  titulo: 'Título del anuncio',
+  descripcion: 'Descripción',
+  nombreContacto: 'Tu nombre',
+  metodoContacto: 'Método de contacto',
+  telefonoContacto: 'Teléfono',
+  emailContacto: 'Correo electrónico',
+};
 
 type FormData = PublishFormData;
 
@@ -146,7 +167,14 @@ export function PublishForm() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(publishSchema),
-    defaultValues: { recamaras: 0, banos: 0, m2Construidos: 0, m2Terreno: 0, aceptaTerminos: false, metodoContacto: 'ambos' },
+    // `operacion` explícito en vez de dejarlo fuera — confirmado con
+    // pruebas reales (2026-08-08) que un grupo de radios sin entrada aquí
+    // empieza en `null` (no en `''` como un <select>/<input> normal), y
+    // `z.string()` sin un mensaje de tipo propio mostraba el genérico de
+    // Zod ("Invalid input: expected string, received null") en vez del
+    // mensaje real del campo — ver también `str()` en publishSchema.ts,
+    // la segunda capa de esta misma corrección.
+    defaultValues: { recamaras: 0, banos: 0, m2Construidos: 0, m2Terreno: 0, aceptaTerminos: false, metodoContacto: 'ambos', operacion: '' },
   });
 
   const tipo        = watch('tipo');
@@ -294,6 +322,17 @@ export function PublishForm() {
     ['nombreContacto', 'metodoContacto', 'telefonoContacto', 'emailContacto'],
   ];
 
+  // Campos del paso actual que ya fallaron validación — `errors` solo trae
+  // una entrada mientras el campo siga inválido (react-hook-form la quita
+  // sola en cuanto se corrige), así que esta lista se actualiza sola sin
+  // necesidad de otro estado. Antes solo existía el aviso genérico de
+  // arriba ("Completa los campos marcados") sin decir cuáles — ninguno de
+  // los tres campos de "Ubicación" (Municipio/Colonia/Riesgo de inundación)
+  // tenía forma de saber por qué no lo dejaba avanzar sin adivinar.
+  const camposConError = stepFields[step]
+    .filter((campo) => errors[campo])
+    .map((campo) => ETIQUETAS_CAMPO[campo] ?? campo);
+
   // Una foto marcada como no apta (contenido inapropiado detectado por IA)
   // bloquea avanzar/publicar. "No relacionada" y señales normales de fraude
   // solo advierten, no bloquean — la única excepción es un texto tan
@@ -325,6 +364,19 @@ export function PublishForm() {
       toast.error('No podemos publicar este anuncio — corrige el título y la descripción antes de continuar.');
       return;
     }
+    // Última validación antes de persistir — MapPicker ya rechaza clics/
+    // arrastres fuera de Tabasco (src/components/forms/MapPicker.tsx), pero
+    // esto es la comprobación real: sin pin, el punto cae al centro del
+    // municipio elegido (MUNICIPIO_CENTERS), que por construcción siempre
+    // está dentro del estado, así que solo hace falta revisar cuando sí hay
+    // un `coords` puesto a mano. Ver también el bloque "BACKEND PENDIENTE"
+    // de abajo — el servidor real debe repetir este chequeo con
+    // `estaEnTabasco()`, nunca confiar en que el navegador ya lo hizo.
+    if (coords && !estaEnTabasco(coords.lat, coords.lng)) {
+      toast.error('El punto marcado en el mapa queda fuera de Tabasco — solo se pueden publicar propiedades dentro del estado.');
+      setStep(2);
+      return;
+    }
     // ⚠️ BACKEND PENDIENTE — esto persiste en localStorage (ver
     // src/lib/propiedadesLocales.ts), no en una base de datos real. Cuando
     // exista `POST /api/propiedades` (docs/BACKEND.md §3), esta llamada
@@ -347,6 +399,12 @@ export function PublishForm() {
     //   - Validar `municipio` contra los 17 valores de MUNICIPIO_OPTIONS
     //     (src/lib/publishSchema.ts) — el navegador ya solo deja elegir uno
     //     válido, pero el servidor no debe confiar en eso.
+    //   - Repetir el chequeo `estaEnTabasco(lat, lng)` de arriba
+    //     (src/lib/tabascoBoundary.ts) contra las coordenadas ya resueltas
+    //     (`lat`/`lng` más abajo, no `coords` — ese puede venir vacío y caer
+    //     al centro del municipio) — mismo motivo que el resto de esta
+    //     lista, el navegador ya no deja avanzar con un pin fuera del
+    //     estado, pero nada impide que alguien mande el request directo.
     //   - Fotos: hoy van como data URI base64 completas dentro del objeto
     //     Property (fotosDataUrls abajo) — no van a escalar en una columna
     //     de base de datos. El servidor debe recibir los archivos aparte y
@@ -618,7 +676,12 @@ export function PublishForm() {
                 <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Opcional</span>
               </div>
               <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: 220 }}>
-                <MapPicker value={coords} onChange={setCoords} center={mapCenter} />
+                <MapPicker
+                  value={coords}
+                  onChange={setCoords}
+                  center={mapCenter}
+                  onRejected={() => toast.error('Ese punto queda fuera de Tabasco — solo se pueden publicar propiedades dentro del estado.')}
+                />
               </div>
               {coords ? (
                 <p className="text-[10px] text-gray-400 mt-1.5 flex items-center gap-1">
@@ -724,10 +787,27 @@ export function PublishForm() {
                   </label>
                 ))}
               </div>
+              {errors.riesgoInundacion && (
+                <p className="mt-1 text-xs text-danger">{errors.riesgoInundacion.message}</p>
+              )}
               <p className="mt-2 text-[10px] text-gray-400 leading-relaxed lg:hidden">
                 Este dato es público y visible en tu anuncio. La plataforma puede mostrar alertas si el valor difiere de registros oficiales.
               </p>
             </div>
+
+            {camposConError.length > 0 && (
+              <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                <AlertCircle size={15} className="text-red-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-red-700">
+                    {camposConError.length === 1 ? 'Falta corregir este campo:' : 'Faltan corregir estos campos:'}
+                  </p>
+                  <ul className="text-xs text-red-500 mt-1 list-disc list-inside space-y-0.5">
+                    {camposConError.map((campo) => <li key={campo}>{campo}</li>)}
+                  </ul>
+                </div>
+              </div>
+            )}
           </>
         )}
 
@@ -752,7 +832,7 @@ export function PublishForm() {
                 {...register('descripcion')}
                 rows={5}
                 placeholder="Describe la propiedad: características, acabados, vecindario, accesos..."
-                className={`w-full rounded-xl border bg-white text-gray-800 placeholder-gray-400 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 resize-none ${errors.descripcion ? 'border-danger' : 'border-gray-200 focus:border-brand'}`}
+                className={`w-full rounded-xl border bg-white text-gray-800 placeholder-gray-400 px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 resize-none ${errors.descripcion ? 'border-danger' : 'border-gray-200 focus:border-brand'}`}
               />
               {errors.descripcion && <p className="text-xs text-danger mt-1">{errors.descripcion.message}</p>}
               <p className="flex items-center gap-1.5 text-xs text-gray-400 mt-1">
@@ -851,10 +931,10 @@ export function PublishForm() {
                       <button
                         type="button"
                         onClick={() => removePhoto(i)}
-                        className={`absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-all ${noApta ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                        className={`absolute top-1.5 right-1.5 w-7 h-7 bg-black/60 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-all opacity-100 ${noApta ? 'md:opacity-100' : 'md:opacity-0 md:group-hover:opacity-100'}`}
                         aria-label="Eliminar foto"
                       >
-                        <X size={12} />
+                        <X size={14} />
                       </button>
                     </div>
                   );

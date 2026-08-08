@@ -7,6 +7,14 @@ import { z } from 'zod';
  * publicar.
  */
 const num = (msg: string) => z.number({ error: msg });
+// Mismo motivo que `num()`: `.min(N, msg)` solo cubre "es texto pero
+// demasiado corto" — si el valor ni siquiera es texto (ej. `null`, caso
+// real confirmado en "operacion": un grupo de radios sin `defaultValues`
+// explícito empieza en `null`, no en `''`), Zod usa su propio mensaje
+// genérico ("Invalid input: expected string, received null") en vez de
+// cualquier mensaje que se le haya dado solo a `.min()`. `str(msg)` le da
+// un mensaje amigable también a ese primer chequeo de tipo.
+const str = (msg: string) => z.string({ error: msg });
 
 export const METODO_CONTACTO_OPTIONS = [
   { value: 'telefono', label: 'Teléfono' },
@@ -15,25 +23,28 @@ export const METODO_CONTACTO_OPTIONS = [
 ] as const;
 
 const baseSchema = z.object({
-  tipo:          z.string().min(1, 'Elige el tipo de propiedad antes de continuar'),
-  operacion:     z.string().min(1, 'Indica si es venta o renta'),
+  tipo:          str('Elige el tipo de propiedad antes de continuar').min(1, 'Elige el tipo de propiedad antes de continuar'),
+  operacion:     str('Indica si es venta o renta').min(1, 'Indica si es venta o renta'),
   precio:        num('Escribe el precio de la propiedad').positive('El precio debe ser mayor a $0'),
   m2Construidos: num('Metros cuadrados inválidos').min(0).optional(),
   m2Terreno:     num('Metros de terreno inválidos').min(0).optional(),
   recamaras:     num('Número de recámaras inválido').min(0).optional(),
   banos:         num('Número de baños inválido').min(0).optional(),
-  municipio:     z.string().min(1, 'Selecciona el municipio donde está la propiedad'),
-  colonia:       z.string().min(2, 'Escribe el nombre de la colonia o fraccionamiento'),
-  titulo:        z.string().min(10, 'El título está muy corto — sé más descriptivo (mín. 10 caracteres)'),
-  descripcion:   z.string().min(30, 'La descripción está muy corta — añade más detalles (mín. 30 caracteres)'),
-  riesgoInundacion: z.enum(['alto', 'medio', 'bajo']),
-  nombreContacto:   z.string().min(2, 'Escribe tu nombre completo para que puedan contactarte'),
+  municipio:     str('Selecciona el municipio donde está la propiedad').min(1, 'Selecciona el municipio donde está la propiedad'),
+  colonia:       str('Escribe el nombre de la colonia o fraccionamiento').min(2, 'Escribe el nombre de la colonia o fraccionamiento'),
+  titulo:        str('Escribe un título para tu anuncio').min(10, 'El título está muy corto — sé más descriptivo (mín. 10 caracteres)'),
+  descripcion:   str('Escribe una descripción para tu anuncio').min(30, 'La descripción está muy corta — añade más detalles (mín. 30 caracteres)'),
+  riesgoInundacion: z.enum(['alto', 'medio', 'bajo'], { error: 'Selecciona el nivel de riesgo de inundación de la zona' }),
+  nombreContacto:   str('Escribe tu nombre completo para que puedan contactarte').min(2, 'Escribe tu nombre completo para que puedan contactarte'),
   // Quien publica elige cómo quiere que le escriban — por si no quiere
   // revelar su celular a desconocidos. telefonoContacto/emailContacto se
-  // validan condicionalmente abajo según esta elección, no aquí.
+  // validan condicionalmente abajo según esta elección, no aquí. Igual
+  // llevan `str()` en vez de un `z.string()` pelón: siguen aceptando
+  // `undefined` (son opcionales), pero si por lo que sea llegan como
+  // `null` en vez de eso, ya no muestran el mensaje genérico de Zod.
   metodoContacto:   z.enum(['telefono', 'correo', 'ambos'], { error: 'Elige cómo quieres que te contacten' }),
-  telefonoContacto: z.string().optional(),
-  emailContacto:    z.string().optional(),
+  telefonoContacto: str('Escribe tu número de teléfono').optional(),
+  emailContacto:    str('Escribe tu correo electrónico').optional(),
   // Por defecto false: el contacto es instantáneo con sesión iniciada. Ver
   // Property.requiereMensajePrimero en src/types/property.ts.
   requiereMensajePrimero: z.boolean().optional(),

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { jitterCoord } from '@/lib/colonias';
+import { TABASCO_BOUNDS } from '@/lib/tabascoBoundary';
 
 export interface MapMarker {
   id: string;
@@ -132,6 +133,13 @@ export function MapView({
         center, zoom,
         zoomControl: false,
         scrollWheelZoom: true,
+        // No tiene sentido navegar el mapa de propiedades más allá de
+        // Tabasco — todo el catálogo está adentro (ver tabascoBoundary.ts,
+        // que también bloquea publicar fuera del estado). maxBoundsViscosity
+        // en 1.0 hace el límite sólido, no un rebote tras soltar.
+        maxBounds: TABASCO_BOUNDS,
+        maxBoundsViscosity: 1.0,
+        minZoom: 8,
       });
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
