@@ -12,6 +12,9 @@ const OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'precio-asc', label: 'Precio: menor a mayor' },
   { value: 'precio-desc', label: 'Precio: mayor a menor' },
   { value: 'reciente', label: 'Más recientes' },
+  { value: 'colonia-asc', label: 'Colonia: A-Z' },
+  { value: 'm2-desc', label: 'Tamaño: mayor a menor' },
+  { value: 'm2-asc', label: 'Tamaño: menor a mayor' },
 ];
 
 export function SortSelect({ value, onChange }: SortSelectProps) {

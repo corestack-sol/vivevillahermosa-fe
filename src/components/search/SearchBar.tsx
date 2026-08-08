@@ -107,6 +107,7 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
     else if (filtros.categoriaLandmark) params.set('cercaTipo', filtros.categoriaLandmark);
     if (filtros.zonaDestacada) params.set('zona', filtros.zonaDestacada);
     if (filtros.sort) params.set('sort', filtros.sort);
+    if (filtros.limite) params.set('limite', String(filtros.limite));
     router.push(`/buscar?${params.toString()}`);
   }
 

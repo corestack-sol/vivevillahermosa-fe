@@ -19,6 +19,7 @@ export interface FiltrosIA {
   categoriaLandmark?: string;
   zonaDestacada?: string;
   sort?: string;
+  limite?: number;
 }
 
 // El servidor ya tiene su propio timeout sobre la llamada a OpenRouter

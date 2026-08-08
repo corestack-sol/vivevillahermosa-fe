@@ -55,6 +55,7 @@ export function ActiveFilters({ filters, onUpdate, onClear }: ActiveFiltersProps
       : getZonaDestacada(filters.zonaDestacada)?.label;
     if (label) chips.push({ label, onRemove: () => onUpdate({ zonaDestacada: '' }) });
   }
+  if (filters.limite) chips.push({ label: `Solo ${filters.limite} resultado${filters.limite > 1 ? 's' : ''}`, onRemove: () => onUpdate({ limite: 0 }) });
 
   if (chips.length === 0) return null;
 

@@ -4,7 +4,10 @@ export type SortOption =
   | 'relevancia'
   | 'precio-asc'
   | 'precio-desc'
-  | 'reciente';
+  | 'reciente'
+  | 'colonia-asc'
+  | 'm2-desc'
+  | 'm2-asc';
 
 export interface SearchFilters {
   q?: string;
@@ -40,5 +43,7 @@ export interface SearchFilters {
   /** Key de src/lib/zonasDestacadas.ts — "zona de alta plusvalía", "zona exclusiva", etc. */
   zonaDestacada?: string;
   sort?: SortOption;
+  /** Número exacto de resultados pedido — "muéstrame 5 propiedades", "top 10", "las 3 más baratas". Corta la lista ya ordenada, no reemplaza `sort`. */
+  limite?: number;
   page?: number;
 }

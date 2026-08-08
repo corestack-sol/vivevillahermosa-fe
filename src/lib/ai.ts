@@ -427,8 +427,10 @@ export interface ResultadoBusqueda {
   categoriaLandmark?: string;
   /** Key de src/lib/zonasDestacadas.ts. */
   zonaDestacada?: string;
-  /** 'precio-asc' | 'precio-desc' | 'reciente' — orden pedido, no un filtro (ver REGLA 9). */
+  /** 'precio-asc' | 'precio-desc' | 'reciente' | 'colonia-asc' | 'm2-desc' | 'm2-asc' — orden pedido, no un filtro (ver REGLA 9). */
   sort?: string;
+  /** Número exacto de resultados pedido ("muéstrame 5 propiedades", "top 10", "las 3 más baratas") — ver REGLA 9. */
+  limite?: number;
 }
 
 /**
@@ -536,6 +538,38 @@ export function busquedaInteligenteHeuristica(query: string): ResultadoBusqueda 
     result.sort = 'precio-desc';
   } else if (q.includes('más reciente') || q.includes('mas reciente') || q.includes('recién publicad') || q.includes('recien publicad') || q.includes('más nuev') || q.includes('mas nuev')) {
     result.sort = 'reciente';
+  } else if (q.includes('por colonia')) {
+    result.sort = 'colonia-asc';
+  } else if (q.includes('más grande') || q.includes('mas grande') || q.includes('mayor tamaño') || q.includes('mayor tamano')) {
+    result.sort = 'm2-desc';
+  } else if (q.includes('más chica') || q.includes('mas chica') || q.includes('más pequeñ') || q.includes('mas pequen') || q.includes('más compact') || q.includes('mas compact')) {
+    result.sort = 'm2-asc';
+  }
+
+  // "limite": un tope NUMÉRICO explícito ("muéstrame 5 propiedades", "top
+  // 10", "las 3 más baratas", "solo 5 casas") — nunca se adivina (REGLA 1),
+  // solo se extrae cuando el número aparece junto a una palabra que deja
+  // claro que cuenta RESULTADOS, no otra cosa (recámaras, baños, precio,
+  // m2 ya tienen su propio campo — un número suelto como "3" en "casa de 3
+  // recámaras" nunca debe volverse "limite" solo por estar cerca de un
+  // tipo de propiedad). `\b\d{1,2}\b` con frontera de palabra evita
+  // capturar parte de un número más largo (ej. el "20" de "Tabasco 2000").
+  // "las/los N más ..." ("las 3 más caras", "los 5 más baratos") también
+  // cuenta, aunque no lleve una palabra de tipo/resultado después — el
+  // superlativo ya deja claro que el número son propiedades a mostrar, no
+  // otra cosa. Probado en vivo (2026-08-08): el modelo extrae esto bien la
+  // mayoría de las veces por su cuenta, pero no siempre de forma
+  // consistente entre llamadas — este patrón lo respalda.
+  const limiteMatch =
+    q.match(/\btop\s*(\d{1,2})\b/)
+    || q.match(/\bprimer[oa]s?\s+(\d{1,2})\b/)
+    || q.match(/\bsolo\s+(\d{1,2})\b/)
+    || q.match(/\blas?\s+(\d{1,2})\s+m[aá]s\b/)
+    || q.match(/\blos\s+(\d{1,2})\s+m[aá]s\b/)
+    || q.match(/\b(\d{1,2})\s+(propiedades|casas|departamentos|terrenos|locales|oficinas|bodegas|habitaciones|opciones|resultados)\b/);
+  if (limiteMatch) {
+    const n = parseInt(limiteMatch[1], 10);
+    if (n > 0 && n <= 50) result.limite = n;
   }
 
   for (const landmark of LANDMARKS) {
@@ -712,7 +746,7 @@ const TIPOS_VALIDOS = ['casa', 'departamento', 'terreno', 'local', 'oficina', 'b
 // Mismos valores que SortOption (src/types/search.ts) — sin importarlo
 // directamente para no acoplar este módulo (server + cliente) a un tipo que
 // vive en src/types, igual que ya pasa con TIPOS_VALIDOS/MUNICIPIOS_VALIDOS.
-const SORT_VALIDOS = ['precio-asc', 'precio-desc', 'reciente'];
+const SORT_VALIDOS = ['precio-asc', 'precio-desc', 'reciente', 'colonia-asc', 'm2-desc', 'm2-asc'];
 const MUNICIPIOS_VALIDOS = MUNICIPIO_OPTIONS.map((m) => m.value);
 const LANDMARKS_VALIDOS = LANDMARKS.map((l) => l.key);
 const CATEGORIAS_LANDMARK_VALIDAS = CATEGORIAS_GENERICAS.map((c) => c.value);
@@ -1004,7 +1038,8 @@ REGLA 8 — para "zonaDestacada": cada zona de la lista de abajo tiene una vocac
   - cerca de zona industrial con vivienda a precio competitivo para trabajadores ("zona industrial", "cerca de la ciudad industrial", "para trabajadores de fábrica") → la zona con esa vocación específica, si existe. Distinto de "cercaDosoBocas" (arriba): eso es específicamente Dos Bocas/Pemex/Paraíso, esto es la zona industrial de Villahermosa.
   - nodo comercial/logístico de una región ("zona comercial y de conectividad", "puerta del sureste") → la zona con esa vocación específica, si existe.
   Si no coincide con ninguna zona de la lista para la vocación que pide, omite el campo — no hay ninguna zona "genérica" de respaldo fuera de "${ZONA_DESTACADA_CUALQUIERA}" (y esa solo aplica a la primera vocación). NUNCA uses "zonaDestacada" para "zona segura" a secas sin ninguna palabra de exclusividad/lujo de por medio — eso es REGLA 6 (riesgo de inundación bajo), un concepto totalmente distinto.
-REGLA 9 — "sort" es ORDEN, no un filtro de precio: úsalo cuando la búsqueda pide la más barata/cara/reciente SIN dar un número o rango concreto ("la de menor precio", "la más barata", "ordename por precio", "la más cara", "lo más nuevo/reciente"). "precio-asc" = menor a mayor, "precio-desc" = mayor a menor, "reciente" = más nuevas primero. NO lo confundas con "precioMin"/"precioMax" (REGLA 4): esos son para un número o rango explícito ("hasta 12 mil"), "sort" es para pedir el orden sin dar cifra. Si la búsqueda da un número Y también pide orden ("lo más barato hasta 15 mil"), usa ambos a la vez.
+REGLA 9 — "sort" es ORDEN, no un filtro de precio: úsalo cuando la búsqueda pide un criterio de orden SIN dar un número o rango concreto para ese mismo campo. Valores: "precio-asc" (menor a mayor precio — "la de menor precio", "la más barata", "ordename por precio"), "precio-desc" (mayor a menor precio — "la más cara"), "reciente" (más nuevas primero — "lo más nuevo/reciente", "recién publicadas"), "colonia-asc" (agrupar/ordenar alfabéticamente por colonia — "ordename por colonia", "agrupadas por colonia"), "m2-desc" (más grande primero — "la más grande", "de mayor tamaño"), "m2-asc" (más chica primero — "la más pequeña/compacta"). NO confundas "sort" con "precioMin"/"precioMax" (REGLA 4) ni con "m2Min"/"m2Max": esos son para un número o rango explícito ("hasta 12 mil", "de más de 200 metros"), "sort" es para pedir el ORDEN sin dar cifra para ese campo. Si la búsqueda da un número Y también pide orden para OTRO campo ("lo más barato hasta 15 mil"), usa ambos a la vez.
+REGLA 9b — "limite" es un tope NUMÉRICO explícito de cuántos resultados devolver ("muéstrame 5 propiedades", "top 10", "las 3 más baratas", "solo 5 casas en renta", "dame 10 opciones"). Úsalo SOLO cuando la búsqueda da un número que claramente cuenta RESULTADOS/PROPIEDADES a mostrar — nunca lo confundas con un número que en realidad es recámaras, baños, precio, o metros cuadrados (esos ya tienen su propio campo). Si la búsqueda pide un superlativo SIN dar número ("la propiedad más barata", "la casa más grande") NO uses "limite" — eso es una petición singular implícita que ya cubre "sort" por sí solo (REGLA 1: nunca adivines un número que no está ahí). Si además pide orden ("las 3 más baratas"), usa "limite" Y "sort" juntos.
 REGLA 10 — no confundas conceptos que suenan parecido:
   - "baños" (campo "banos") y "recámaras"/"cuartos"/"habitaciones" (campo "recamaras") son cosas DISTINTAS — "casa con 3 baños" es "banos":3, nunca "recamaras":3. Si la búsqueda menciona ambos ("3 recámaras y 2 baños"), llena los dos campos por separado.
   - "comprar"/"compra" (intención de VENTA, alguien busca comprar una propiedad) es distinto de "compras"/"tienda"/"centro comercial"/"zona de compras" (un lugar donde comprar cosas, no bienes raíces) — "casa cerca de zona de compras" NO es "operacion":"venta", es sobre ubicación (posible "categoriaLandmark":"comercial" o "zonaDestacada" si describe alguna zona comercial de la lista).
@@ -1028,7 +1063,8 @@ REGLA 10 — no confundas conceptos que suenan parecido:
   "riesgoInundacion": "alto" | "medio" | "bajo", // SOLO si pide explícitamente un nivel de riesgo (ej. "que no se inunde"/"zona segura" = bajo; alguien buscando terreno barato en zona de riesgo puede pedir "alto" a propósito)${camposLandmark}
   "zonaDestacada": string,  // ver REGLA 8 — uno de estos keys:
 ${ZONAS_DESTACADAS_TEXTO}
-  "sort": "precio-asc" | "precio-desc" | "reciente", // ver REGLA 9 — orden pedido, no un filtro
+  "sort": "precio-asc" | "precio-desc" | "reciente" | "colonia-asc" | "m2-desc" | "m2-asc", // ver REGLA 9 — orden pedido, no un filtro
+  "limite": number,        // ver REGLA 9b — cuántos resultados devolver, SOLO si la búsqueda da un número explícito para eso
 }
 
 Importante: "cercaDosoBocas" ya es la señal completa para "cerca de Dos Bocas/Pemex/refinería" — cuando la uses, NO agregues también "municipio":"Paraíso" a menos que la búsqueda nombre "Paraíso" explícitamente. Combinar ambos excluiría propiedades cercanas que no están estrictamente dentro de Paraíso, lo cual sería más restrictivo de lo que la persona pidió.
@@ -1051,6 +1087,14 @@ Ejemplos:
 - "la casa más cara en venta en Cárdenas" → { "tipo": "casa", "operacion": "venta", "municipio": "Cárdenas", "sort": "precio-desc" }
 - "departamentos recién publicados en renta" → { "tipo": "departamento", "operacion": "renta", "sort": "reciente" }
 - "lo más barato hasta 15 mil en renta" → { "operacion": "renta", "precioMax": 15000, "sort": "precio-asc" } — da cifra Y pide orden, se usan los dos.
+- "muéstrame 5 propiedades en renta en Cárdenas" → { "operacion": "renta", "municipio": "Cárdenas", "limite": 5 } — número explícito de resultados (REGLA 9b), sin orden pedido.
+- "top 10 casas más baratas en venta" → { "tipo": "casa", "operacion": "venta", "sort": "precio-asc", "limite": 10 } — pide orden Y cantidad, se usan los dos.
+- "las 3 más caras en Centro" → { "municipio": "Centro", "sort": "precio-desc", "limite": 3 }
+- "ordename las propiedades por colonia" → { "sort": "colonia-asc" } — pide agrupar/ordenar por colonia, no nombra ninguna colonia específica (eso sería el campo "colonia").
+- "la casa más grande en venta" → { "tipo": "casa", "operacion": "venta", "sort": "m2-desc" } — superlativo sin número, NO lleva "limite" (REGLA 9b).
+- "el departamento más pequeño y barato en renta" → { "tipo": "departamento", "operacion": "renta", "sort": "m2-asc" } — dos superlativos a la vez; se usa el primero que aparece porque "sort" solo admite un valor, no se puede ordenar por dos criterios distintos simultáneamente.
+- "solo 5 casas con alberca" → { "tipo": "casa", "amenidad": "alberca", "limite": 5 }
+- "casa con 3 recámaras" → { "tipo": "casa", "recamaras": 3 } — el 3 es recámaras (REGLA 10), NUNCA "limite".
 - "casa con 3 baños" → { "tipo": "casa", "banos": 3 } — NO "recamaras" (REGLA 10).
 - "departamento de máximo 2 recámaras" → { "tipo": "departamento", "recamarasMax": 2 } — "máximo" es un techo, no un mínimo.
 - "casa de más de 200 metros cuadrados" → { "tipo": "casa", "m2Min": 200 } — metros, no precio (REGLA 4).
@@ -1116,6 +1160,7 @@ Búsqueda: "${query}"`;
     if (!result.landmark && CATEGORIAS_LANDMARK_VALIDAS.includes(parsed.categoriaLandmark)) result.categoriaLandmark = parsed.categoriaLandmark;
     if (ZONAS_DESTACADAS_VALIDAS.includes(parsed.zonaDestacada)) result.zonaDestacada = parsed.zonaDestacada;
     if (SORT_VALIDOS.includes(parsed.sort)) result.sort = parsed.sort;
+    if (typeof parsed.limite === 'number' && parsed.limite > 0) result.limite = Math.round(parsed.limite);
     const lugarMencionado = typeof parsed.lugarMencionado === 'string' ? parsed.lugarMencionado.trim() : '';
 
     // Red de seguridad: en pruebas reales, el modelo a veces "se saltaba"
@@ -1163,6 +1208,7 @@ Búsqueda: "${query}"`;
     }
     if (result.zonaDestacada === undefined && heuristica.zonaDestacada !== undefined) result.zonaDestacada = heuristica.zonaDestacada;
     if (result.sort === undefined && heuristica.sort !== undefined) result.sort = heuristica.sort;
+    if (result.limite === undefined && heuristica.limite !== undefined) result.limite = heuristica.limite;
     // Mismo criterio que landmark: el nombre de una colonia real (de
     // src/data/zones.json) que aparece literal en el texto es una señal
     // inequívoca, no una adivinanza — complementarla no corre el riesgo de

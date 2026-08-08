@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { SlidersHorizontal, X, Map, LayoutGrid, Search, ChevronDown, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { SlidersHorizontal, X, Map, LayoutGrid, Search, ChevronDown, Loader2, Sparkles, MapPin, Clock } from 'lucide-react';
 import type { Property } from '@/types/property';
 import type { SearchFilters } from '@/types/search';
 import { useFilters } from '@/hooks/useFilters';
@@ -15,6 +15,8 @@ import { MapViewDynamic } from '@/components/map/MapViewDynamic';
 import { getLandmark, CATEGORIAS_GENERICAS } from '@/lib/landmarks';
 import { matchColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
 import { interpretarBusqueda, esOracionLarga } from '@/lib/interpretarBusqueda';
+import { getResultadosSimilares } from '@/lib/filters';
+import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches';
 import { aplicarOverridesPublicos, PROPIEDADES_LOCALES_EVENT } from '@/lib/propiedadesLocales';
 import { ESTADO_OVERRIDE_EVENT } from '@/lib/estadoOverrides';
 import { ExploreZonasCta } from '@/components/search/ExploreZonasCta';
@@ -64,6 +66,26 @@ function buildTitle(filters: SearchFilters): string {
   return [tipo, op, lugar].filter(Boolean).join(' ');
 }
 
+// "sort" (manual o extraído por la IA, ver REGLA 9 en ai.ts) ya deja la
+// lista completa ordenada — pero alguien que pide "la propiedad más
+// barata" (singular) espera UNA respuesta, no una lista para hojear. En
+// vez de recortar la lista a 1 resultado (perdería la posibilidad de
+// comparar), se destaca el primer resultado del orden pedido como tarjeta
+// aparte arriba del resto — "relevancia" (el orden por defecto) no tiene
+// un "primero" con significado propio, así que no aplica.
+function heroLabel(sort: SearchFilters['sort']): string | null {
+  switch (sort) {
+    case 'precio-asc':  return 'El precio más bajo';
+    case 'precio-desc': return 'El precio más alto';
+    case 'reciente':    return 'Publicada más recientemente';
+    case 'm2-desc':      return 'La más grande';
+    case 'm2-asc':       return 'La más compacta';
+    // 'colonia-asc' es un orden de agrupación, no un superlativo — no hay
+    // un "primer resultado" con significado propio que destacar.
+    default:             return null;
+  }
+}
+
 export function PropertiesClient({ allProperties }: Props) {
   const { filters, updateFilters, clearFilters, activeCount } = useFilters();
   // Arranca con el catálogo estático que ya vino del servidor (para que el
@@ -80,6 +102,67 @@ export function PropertiesClient({ allProperties }: Props) {
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [buscandoIA, setBuscandoIA] = useState(false);
   const toast = useToast();
+
+  // Dropdown de sugerencias/historial para el buscador inline — mismo
+  // catálogo real (colonias + municipios con al menos una propiedad, para
+  // nunca sugerir un lugar sin resultados) y la misma búsqueda reciente
+  // (localStorage, src/lib/recentSearches.ts) que ya usa SearchBar.tsx en
+  // Home. Antes este input era un <input> suelto sin ninguno de los dos.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [recent, setRecent] = useState<string[]>([]);
+  const searchFormRef = useRef<HTMLFormElement>(null);
+  const places = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of properties) {
+      set.add(p.colonia);
+      set.add(p.municipio === 'Centro' ? 'Villahermosa' : p.municipio);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'));
+  }, [properties]);
+  const q = filters.q ?? '';
+  const filteredPlaces = q.length >= 2 ? places.filter((s) => s.toLowerCase().includes(q.toLowerCase())).slice(0, 6) : [];
+  const showSuggestions = searchOpen && filteredPlaces.length > 0;
+  const showRecent = searchOpen && q.length < 2 && recent.length > 0;
+
+  useEffect(() => {
+    function cargarRecientes() {
+      setRecent(getRecentSearches());
+    }
+    cargarRecientes();
+  }, []);
+
+  // Mismo motivo que en SearchBar.tsx: comparar contra el <form> completo
+  // (input + dropdown), no solo el input — un mousedown sobre un botón del
+  // dropdown cuenta como "clic afuera" y lo cierra antes de que el click
+  // llegue a dispararse si solo se compara contra el input.
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (!searchFormRef.current?.contains(e.target as Node)) setSearchOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  function handleSuggestionClick(s: string) {
+    // Nombre exacto de colonia/municipio del catálogo — no hace falta
+    // interpretarlo con IA, mismo criterio que handleSuggestion en
+    // SearchBar.tsx.
+    setSearchOpen(false);
+    updateFilters({ q: s });
+    addRecentSearch(s);
+    setRecent(getRecentSearches());
+  }
+
+  function handleRecentClick(s: string) {
+    setSearchOpen(false);
+    aplicarBusquedaIA(s);
+  }
+
+  function handleClearRecent(e: React.MouseEvent) {
+    e.stopPropagation();
+    clearRecentSearches();
+    setRecent([]);
+  }
 
   // Trae las colonias descubiertas automáticamente (ver coloniaDiscovery.ts)
   // una sola vez al entrar a la página — sin esto, matchColonia/
@@ -124,6 +207,8 @@ export function PropertiesClient({ allProperties }: Props) {
   async function aplicarBusquedaIA(query: string) {
     const texto = query.trim();
     if (!texto) return;
+    addRecentSearch(texto);
+    setRecent(getRecentSearches());
     setBuscandoIA(true);
     const filtros = await interpretarBusqueda(texto);
     setBuscandoIA(false);
@@ -178,6 +263,7 @@ export function PropertiesClient({ allProperties }: Props) {
     else if (filtros.categoriaLandmark) updates.categoriaLandmark = filtros.categoriaLandmark;
     if (filtros.zonaDestacada) updates.zonaDestacada = filtros.zonaDestacada;
     if (filtros.sort) updates.sort = filtros.sort as SearchFilters['sort'];
+    if (filtros.limite) updates.limite = filtros.limite;
     updateFilters(updates);
   }
 
@@ -204,6 +290,32 @@ export function PropertiesClient({ allProperties }: Props) {
   }));
 
   const skeletonCount = Math.min(total || PER_PAGE, PER_PAGE);
+
+  // `results` ya viene ordenado por `filters.sort` (useSearch → applyFilters
+  // → sortProperties) — el primero de la lista YA ES el resultado que pidió
+  // "la propiedad más barata/cara/reciente/grande/compacta". Solo aplica
+  // cuando la petición fue singular e IMPLÍCITA (sin número): si además dio
+  // un número explícito ("las 3 más baratas", ver `limite` en ai.ts REGLA
+  // 9b), ya pidió una lista de verdad, no "la mejor destacada + el resto"
+  // — se muestra como grid plano de exactamente esas N, ya en el orden
+  // pedido. Tampoco aplica en vista mapa.
+  const etiquetaHero = !filters.limite ? heroLabel(filters.sort) : null;
+  const heroProperty = etiquetaHero && viewMode === 'grid' && results.length > 0 ? results[0] : null;
+  const restoResultados = heroProperty ? results.filter((p) => p.id !== heroProperty.id) : results;
+
+  // Cuando hay una búsqueda real activa (no solo navegando el catálogo
+  // completo), nunca se deja a la persona con cero resultados relacionados
+  // ni con los que sí coinciden mezclados sin explicar por qué salieron —
+  // se etiquetan como dos grupos: lo que sí cumple todo lo pedido
+  // ("Resultados encontrados por la IA"), y lo más parecido que no cumplió
+  // todo pero sí algo ("Todo lo demás"), calculado sobre el catálogo
+  // completo (`properties`), no solo sobre la página ya cargada.
+  const hayBusquedaActiva = activeCount > 0;
+  const idsExactos = useMemo(() => new Set(allResults.map((p) => p.id)), [allResults]);
+  const resultadosSimilares = useMemo(
+    () => (hayBusquedaActiva && viewMode === 'grid' ? getResultadosSimilares(properties, filters, idsExactos, 6) : []),
+    [hayBusquedaActiva, viewMode, properties, filters, idsExactos]
+  );
 
   return (
     <div className="min-h-screen bg-page">
@@ -272,14 +384,16 @@ export function PropertiesClient({ allProperties }: Props) {
 
           {/* Row 2: Inline search */}
           <form
+            ref={searchFormRef}
             className="relative mb-3"
-            onSubmit={(e) => { e.preventDefault(); aplicarBusquedaIA(filters.q ?? ''); }}
+            onSubmit={(e) => { e.preventDefault(); setSearchOpen(false); aplicarBusquedaIA(filters.q ?? ''); }}
           >
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
               type="text"
               value={filters.q ?? ''}
-              onChange={(e) => updateFilters({ q: e.target.value })}
+              onChange={(e) => { updateFilters({ q: e.target.value }); setSearchOpen(true); }}
+              onFocus={() => setSearchOpen(true)}
               placeholder="Buscar por colonia, municipio... o descríbelo y presiona Enter"
               className="w-full pl-9 pr-4 py-2.5 text-base sm:text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand focus:bg-white transition-colors placeholder-gray-400 text-gray-800"
             />
@@ -293,6 +407,41 @@ export function PropertiesClient({ allProperties }: Props) {
               >
                 <X size={14} />
               </button>
+            )}
+
+            {(showSuggestions || showRecent) && (
+              <ul className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden z-30">
+                {showSuggestions && filteredPlaces.map((s) => (
+                  <li key={s}>
+                    <button type="button" onClick={() => handleSuggestionClick(s)}
+                      className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors">
+                      <MapPin size={13} className="text-gray-400 flex-shrink-0" />
+                      {s}
+                    </button>
+                  </li>
+                ))}
+
+                {showRecent && (
+                  <>
+                    <li className="flex items-center justify-between px-5 pt-3 pb-1.5">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Búsquedas recientes</span>
+                      <button type="button" onClick={handleClearRecent}
+                        className="flex items-center gap-1 text-xs text-gray-300 hover:text-red-500 transition-colors">
+                        <X size={11} /> Borrar
+                      </button>
+                    </li>
+                    {recent.map((s) => (
+                      <li key={s}>
+                        <button type="button" onClick={() => handleRecentClick(s)}
+                          className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors">
+                          <Clock size={13} className="text-gray-400 flex-shrink-0" />
+                          {s}
+                        </button>
+                      </li>
+                    ))}
+                  </>
+                )}
+              </ul>
             )}
           </form>
 
@@ -390,20 +539,50 @@ export function PropertiesClient({ allProperties }: Props) {
                     <p className="text-gray-400 text-sm mb-2 max-w-sm leading-relaxed text-center">
                       {esBusquedaSinInterpretar(filters)
                         ? 'Prueba con menos palabras (ej. solo el lugar que buscas) o usa los filtros para acotar a mano.'
-                        : 'No encontramos propiedades con esos filtros.'}
+                        : resultadosSimilares.length > 0
+                          ? 'No encontramos propiedades con esos filtros exactos — esto es lo más parecido que encontró la IA:'
+                          : 'No encontramos propiedades con esos filtros.'}
                     </p>
                     <button onClick={clearFilters}
                       className="text-brand font-semibold text-sm hover:underline mb-8">
                       Quitar filtros
                     </button>
-                    <div className="w-full max-w-lg">
-                      <ExploreZonasCta />
-                    </div>
+                    {resultadosSimilares.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+                        {resultadosSimilares.map((p) => (
+                          <PropertyCard key={p.id} property={p} landmarkQuery={landmarkQuery} />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="w-full max-w-lg">
+                        <ExploreZonasCta />
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <>
+                    {hayBusquedaActiva && (
+                      <p className="flex items-center gap-1.5 text-xs font-bold text-brand uppercase tracking-wide mb-3">
+                        <Sparkles size={13} />
+                        Resultados encontrados por la IA ({results.length})
+                      </p>
+                    )}
+                    {heroProperty && (
+                      <div className="mb-6">
+                        <p className="flex items-center gap-1.5 text-xs font-bold text-brand uppercase tracking-wide mb-2">
+                          <Sparkles size={13} />
+                          {etiquetaHero}
+                        </p>
+                        <div className="max-w-sm">
+                          <PropertyCard property={heroProperty} landmarkQuery={landmarkQuery} />
+                        </div>
+                        {restoResultados.length > 0 && (
+                          <p className="text-xs text-gray-400 font-medium mt-5 mb-2">Resto de los resultados</p>
+                        )}
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {results.map((p) => (
+                      {restoResultados.map((p) => (
                         <PropertyCard key={p.id} property={p} landmarkQuery={landmarkQuery} />
                       ))}
                     </div>
@@ -421,6 +600,22 @@ export function PropertiesClient({ allProperties }: Props) {
                         <p className="text-xs text-gray-400">
                           Mostrando {results.length} de {total}
                         </p>
+                      </div>
+                    )}
+
+                    {/* "Todo lo demás" — lo más parecido que no cumplió TODOS los
+                        filtros, para no dejar la búsqueda sintiéndose demasiado
+                        estrecha cuando sí hubo resultados exactos pero pocos. */}
+                    {!hasMore && resultadosSimilares.length > 0 && (
+                      <div className="mt-10 pt-8 border-t border-gray-100">
+                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">
+                          Todo lo demás ({resultadosSimilares.length})
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {resultadosSimilares.map((p) => (
+                            <PropertyCard key={p.id} property={p} landmarkQuery={landmarkQuery} />
+                          ))}
+                        </div>
                       </div>
                     )}
 

@@ -26,6 +26,7 @@ function buildQuery(filters: SearchFilters): string {
   if (filters.categoriaLandmark) params.set('cercaTipo', filters.categoriaLandmark);
   if (filters.zonaDestacada) params.set('zona', filters.zonaDestacada);
   if (filters.sort && filters.sort !== 'relevancia') params.set('sort', filters.sort);
+  if (filters.limite) params.set('limite', String(filters.limite));
   if (filters.page && filters.page > 1) params.set('page', String(filters.page));
   return params.toString();
 }
@@ -51,6 +52,7 @@ export function parseFiltersFromSearchParams(params: URLSearchParams): SearchFil
     categoriaLandmark: params.get('cercaTipo') ?? '',
     zonaDestacada: params.get('zona') ?? '',
     sort: (params.get('sort') as SortOption) ?? 'relevancia',
+    limite: Number(params.get('limite')) || 0,
     page: Number(params.get('page')) || 1,
   };
 }
