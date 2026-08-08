@@ -54,27 +54,40 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'No tienes permiso para editar este portafolio' }, { status: 403 });
   }
 
-  const totalActual = await prisma.trabajoServicio.count({ where: { servicioId: id } });
-  if (totalActual >= MAX_TRABAJOS_POR_SERVICIO) {
-    return NextResponse.json(
-      { error: `Llegaste al máximo de ${MAX_TRABAJOS_POR_SERVICIO} fotos en tu portafolio. Elimina alguna para agregar una nueva.` },
-      { status: 400 }
-    );
-  }
-
   const body = await request.json();
   const parsed = trabajoServicioSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
   }
-
   const descripcion = parsed.data.descripcion?.trim();
-  const trabajo = await prisma.trabajoServicio.create({
-    data: {
-      servicioId: id,
-      imagenDataUrl: parsed.data.imagenDataUrl,
-      descripcion: descripcion || null,
-    },
+
+  // Contar y crear en la misma transacción — antes eran dos pasos
+  // separados (mismo patrón que ya causó el bug de "último admin" en el
+  // panel admin), así que varias subidas concurrentes podían leer el
+  // mismo conteo antes de que cualquiera escribiera y pasarse del tope.
+  let tope = false;
+  let trabajoId: string | null = null;
+  await prisma.$transaction(async (tx) => {
+    const totalActual = await tx.trabajoServicio.count({ where: { servicioId: id } });
+    if (totalActual >= MAX_TRABAJOS_POR_SERVICIO) {
+      tope = true;
+      return;
+    }
+    const trabajo = await tx.trabajoServicio.create({
+      data: {
+        servicioId: id,
+        imagenDataUrl: parsed.data.imagenDataUrl,
+        descripcion: descripcion || null,
+      },
+    });
+    trabajoId = trabajo.id;
   });
-  return NextResponse.json({ id: trabajo.id });
+
+  if (tope) {
+    return NextResponse.json(
+      { error: `Llegaste al máximo de ${MAX_TRABAJOS_POR_SERVICIO} fotos en tu portafolio. Elimina alguna para agregar una nueva.` },
+      { status: 400 }
+    );
+  }
+  return NextResponse.json({ id: trabajoId });
 }
