@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
+import { backendFetch } from '@/lib/backendApi';
 import type { ConfiguracionAgenda } from '@/hooks/useConfiguracionAgenda';
 
 const DIAS = [
@@ -80,9 +81,8 @@ export function ConfiguracionAgendaModal({ isOpen, onClose, config, onSaved }: C
     }
     setSaving(true);
     try {
-      const res = await fetch('/api/configuracion-agenda', {
+      const data = await backendFetch<{ config: ConfiguracionAgenda }>('/configuracion-agenda', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           diasLaborables: Array.from(diasLaborables).sort().join(','),
           horaInicio,
@@ -91,8 +91,6 @@ export function ConfiguracionAgendaModal({ isOpen, onClose, config, onSaved }: C
           recordatorioMinAntes: Number(recordatorioMinAntes),
         }),
       });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
       toast.success('Configuración de agenda guardada.');
       onSaved(data.config);
       onClose();

@@ -7,6 +7,7 @@ import { AlertTriangle, Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { loginRedirectUrl } from '@/lib/authRedirect';
+import { backendFetch } from '@/lib/backendApi';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 
@@ -20,8 +21,7 @@ export function EliminarCuentaSection() {
   async function handleConfirmar() {
     setDeleting(true);
     try {
-      const res = await fetch('/api/auth/cuenta', { method: 'DELETE' });
-      if (!res.ok) throw new Error();
+      await backendFetch('/auth/cuenta', { method: 'DELETE' });
       await logout();
       setShowModal(false);
       toast.success('Tu cuenta fue eliminada. Lamentamos verte ir.');

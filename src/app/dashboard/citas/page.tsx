@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
+import { backendFetch } from '@/lib/backendApi';
 import { useConfiguracionAgenda } from '@/hooks/useConfiguracionAgenda';
 import { getPropertyById } from '@/lib/api';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -87,9 +88,8 @@ export default function CitasPage() {
     setCitasLoading(true);
     const desde = subDays(startOfMonth(month), 7);
     const hasta = addDays(endOfMonth(month), 7);
-    fetch(`/api/citas?desde=${desde.toISOString()}&hasta=${hasta.toISOString()}`)
-      .then((r) => r.json())
-      .then((d) => setCitas(d.citas ?? []))
+    backendFetch<Cita[]>(`/citas?desde=${desde.toISOString()}&hasta=${hasta.toISOString()}`)
+      .then((d) => setCitas(d ?? []))
       .catch(() => {})
       .finally(() => setCitasLoading(false));
   }, [month, esProfesional]);
@@ -124,12 +124,10 @@ export default function CitasPage() {
     const previous = citas;
     setCitas((prev) => prev.map((c) => (c.id === id ? { ...c, estado } : c)));
     try {
-      const res = await fetch(`/api/citas/${id}`, {
+      await backendFetch(`/citas/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ estado }),
       });
-      if (!res.ok) throw new Error();
       toast.success(estado === 'cancelada' ? 'Cita cancelada.' : 'Cita marcada como completada.');
     } catch {
       setCitas(previous);
@@ -141,8 +139,7 @@ export default function CitasPage() {
     const previous = citas;
     setCitas((prev) => prev.filter((c) => c.id !== id));
     try {
-      const res = await fetch(`/api/citas/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error();
+      await backendFetch(`/citas/${id}`, { method: 'DELETE' });
       toast.success('Cita eliminada.');
     } catch {
       setCitas(previous);

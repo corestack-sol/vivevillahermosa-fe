@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { Eye, EyeOff, Shield, MapPin, Bell, Check } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { safeRedirectPath } from '@/lib/safeRedirect';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
 const schema = z.object({
   nombre:   z.string().min(2, 'Ingresa tu nombre'),
@@ -58,13 +59,15 @@ function RegistroContent() {
 
   async function onSubmit(data: FormData) {
     setServerError('');
-    const res  = await fetch('/api/auth/registro', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(data),
-    });
-    const json = await res.json();
-    if (!res.ok) { setServerError(json.error); return; }
+    try {
+      await backendFetch('/auth/registro', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    } catch (err) {
+      setServerError(err instanceof BackendApiError ? err.message : 'Error al crear la cuenta.');
+      return;
+    }
     await refresh();
     router.push(next);
   }
@@ -145,7 +148,7 @@ function RegistroContent() {
             {/* OAuth buttons */}
             <div className="space-y-2.5 mb-5">
               <a
-                href={`/api/auth/google?next=${encodeURIComponent(next)}`}
+                href={`${process.env.NEXT_PUBLIC_API_URL}/auth/google?next=${encodeURIComponent(next)}`}
                 className="w-full flex items-center justify-center gap-3 border border-gray-200
                            hover:border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold
                            text-sm py-3 rounded-xl transition-all"
@@ -154,7 +157,7 @@ function RegistroContent() {
                 Continuar con Google
               </a>
               <a
-                href={`/api/auth/facebook?next=${encodeURIComponent(next)}`}
+                href={`${process.env.NEXT_PUBLIC_API_URL}/auth/facebook?next=${encodeURIComponent(next)}`}
                 className="w-full flex items-center justify-center gap-3 font-semibold
                            text-sm py-3 rounded-xl transition-colors text-white"
                 style={{ background: '#1877F2' }}

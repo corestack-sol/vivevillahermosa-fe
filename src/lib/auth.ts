@@ -1,21 +1,6 @@
-import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
-import { prisma } from './db';
-
-// Sin valor de respaldo: si falta o es débil, la app no debe arrancar —
-// un secreto conocido/públicamente comprometido permite forjar sesiones de
-// cualquier usuario. Ver auditoría de seguridad, hallazgo C2.
-const rawSecret = process.env.JWT_SECRET;
-if (!rawSecret || rawSecret.length < 32) {
-  throw new Error(
-    'JWT_SECRET ausente o demasiado corto (mínimo 32 caracteres). ' +
-    'Genera uno con: openssl rand -base64 32'
-  );
-}
-const SECRET = new TextEncoder().encode(rawSecret);
-
-const COOKIE = 'vivevillahermosa_session';
-const TTL = 60 * 60 * 24 * 7; // 7 días
+import { SESSION_COOKIE as COOKIE, type BackendUser } from './backendApi';
+import { backendFetchServer } from './backendApiServer';
 
 export interface SessionPayload {
   userId: string;
@@ -23,68 +8,42 @@ export interface SessionPayload {
   nombre: string;
   rol: string;
   /**
-   * Nunca viene del JWT — se agrega en getSession() con un valor leído
-   * fresco de la base de datos en cada request, igual que `bloqueado` unas
-   * líneas más abajo. Si viviera en el token firmado, promover/revocar un
-   * admin no tendría efecto hasta que esa persona cerrara sesión y volviera
-   * a entrar (hasta 7 días de privilegio obsoleto).
+   * ⚠️ 2026-08-10 — con la sesión ahora emitida y verificada por el backend
+   * separado (docs/BACKEND.md §13), este campo ya NO se puebla nunca aquí:
+   * GET /auth/me del backend no expone `esAdmin` (el panel /admin sigue
+   * corriendo contra Prisma local, con su propio corte pendiente). El
+   * resultado es que requireAdmin() (src/lib/adminAuth.ts) niega a todos
+   * hasta que ese corte pase — falla cerrado, no es una regresión de
+   * seguridad, pero si /admin deja de funcionar en desarrollo es por esto,
+   * no un bug.
    */
   esAdmin?: boolean;
 }
 
-export async function createSession(payload: SessionPayload): Promise<string> {
-  return new SignJWT({ ...payload })
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime(`${TTL}s`)
-    .sign(SECRET);
-}
+/**
+ * Ya no verifica un JWT localmente — la sesión vive del lado del backend
+ * separado (docs/BACKEND.md, "Decisiones abiertas" punto 1: secreto
+ * compartido + cookie httpOnly). Este helper solo le pregunta al backend
+ * quién es, reenviando la cookie que ya llegó en el request actual.
+ */
+export async function getSession(): Promise<SessionPayload | null> {
+  const cookieStore = await cookies();
+  if (!cookieStore.get(COOKIE)?.value) return null;
 
-export async function verifySession(token: string): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, SECRET);
-    return payload as unknown as SessionPayload;
+    const { user } = await backendFetchServer<{ user: BackendUser | null }>(
+      '/auth/me',
+    );
+    if (!user) return null;
+    return {
+      userId: user.id,
+      email: user.email,
+      nombre: user.nombre,
+      rol: user.rol,
+    };
   } catch {
     return null;
   }
 }
 
-export async function getSession(): Promise<SessionPayload | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(COOKIE)?.value;
-  if (!token) return null;
-  const payload = await verifySession(token);
-  if (!payload) return null;
-
-  // Revocación en tiempo real para cuentas bloqueadas (ver
-  // src/lib/moderacionBusqueda.ts) — el JWT es stateless y válido hasta
-  // expirar (7 días) sin importar qué pase con la cuenta después de
-  // emitirlo; no existe todavía una tabla de revocación real (ver
-  // docs/BACKEND.md, sección "Revocación de sesiones"), así que este
-  // chequeo aquí es lo que evita que alguien bloqueado a la mitad de esa
-  // ventana siga con
-  // acceso completo hasta que su sesión expire sola. Costo real: un query
-  // extra a la base de datos en cada request autenticado — aceptable a la
-  // escala actual (SQLite, pre-lanzamiento); revisar si el tráfico crece
-  // mucho y esto empieza a pesar.
-  const user = await prisma.user.findUnique({ where: { id: payload.userId }, select: { bloqueado: true, esAdmin: true } });
-  if (user?.bloqueado) return null;
-
-  return { ...payload, esAdmin: user?.esAdmin ?? false };
-}
-
-export function setSessionCookie(token: string): { name: string; value: string; options: object } {
-  return {
-    name: COOKIE,
-    value: token,
-    options: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-      maxAge: TTL,
-      path: '/',
-    },
-  };
-}
-
-export const SESSION_COOKIE = COOKIE;
+export { SESSION_COOKIE } from './backendApi';

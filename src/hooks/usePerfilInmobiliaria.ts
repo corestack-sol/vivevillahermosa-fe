@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { backendFetch } from '@/lib/backendApi';
 
 export interface PerfilInmobiliaria {
   nombreEmpresa: string | null;
@@ -13,8 +14,7 @@ export function usePerfilInmobiliaria(enabled: boolean): PerfilInmobiliaria | nu
 
   useEffect(() => {
     if (!enabled) return;
-    fetch('/api/perfil-inmobiliaria')
-      .then((r) => r.json())
+    backendFetch<{ perfil: PerfilInmobiliaria | null }>('/perfil-inmobiliaria')
       .then((d) => setPerfil(d.perfil ?? null))
       .catch(() => {});
   }, [enabled]);

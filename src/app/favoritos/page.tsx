@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Heart, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { backendFetch } from '@/lib/backendApi';
 import { getAllProperties } from '@/lib/api';
 import { aplicarOverridesPublicos } from '@/lib/propiedadesLocales';
 import { PropertyCard } from '@/components/property/PropertyCard';
@@ -18,8 +19,7 @@ export default function FavoritosPage() {
   useEffect(() => {
     function cargarFavoritos() {
       if (!user) { setFetching(false); return; }
-      fetch('/api/favoritos')
-        .then((r) => r.json())
+      backendFetch<{ favoritos: string[] }>('/favoritos')
         .then((d) => setFavIds(d.favoritos ?? []))
         .finally(() => setFetching(false));
     }

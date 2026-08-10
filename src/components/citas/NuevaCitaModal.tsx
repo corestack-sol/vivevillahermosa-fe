@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
+import { backendFetch } from '@/lib/backendApi';
 import { getAllProperties } from '@/lib/api';
 
 const DURACION_OPTIONS = [15, 30, 45, 60, 90, 120].map((m) => ({ value: String(m), label: `${m} min` }));
@@ -79,9 +80,8 @@ export function NuevaCitaModal({ isOpen, onClose, fechaInicial, duracionDefault,
       return;
     }
     try {
-      const res = await fetch('/api/citas', {
+      await backendFetch('/citas', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           titulo: data.titulo,
           nombreCliente: data.nombreCliente,
@@ -93,7 +93,6 @@ export function NuevaCitaModal({ isOpen, onClose, fechaInicial, duracionDefault,
           duracionMin: Number(data.duracionMin),
         }),
       });
-      if (!res.ok) throw new Error();
       toast.success('Cita agendada.');
       onCreated();
       onClose();
