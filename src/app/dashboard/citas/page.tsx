@@ -73,6 +73,20 @@ export default function CitasPage() {
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [citas, setCitas] = useState<Cita[]>([]);
   const [citasLoading, setCitasLoading] = useState(true);
+  const [propiedadesPorId, setPropiedadesPorId] = useState<Record<string, { slug: string; titulo: string }>>({});
+
+  useEffect(() => {
+    const ids = Array.from(new Set(citas.map((c) => c.propiedadId).filter((id): id is string => Boolean(id))));
+    if (ids.length === 0) return;
+    let cancelado = false;
+    Promise.all(ids.map((id) => getPropertyById(id))).then((props) => {
+      if (cancelado) return;
+      const map: Record<string, { slug: string; titulo: string }> = {};
+      props.forEach((p, i) => { if (p) map[ids[i]] = { slug: p.slug, titulo: p.titulo }; });
+      setPropiedadesPorId(map);
+    });
+    return () => { cancelado = true; };
+  }, [citas]);
   const [showNueva, setShowNueva] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
 
@@ -254,7 +268,7 @@ export default function CitasPage() {
           ) : (
             <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1 -mr-1">
               {citasDelDia.map((cita) => {
-                const propiedad = cita.propiedadId ? getPropertyById(cita.propiedadId) : undefined;
+                const propiedad = cita.propiedadId ? propiedadesPorId[cita.propiedadId] : undefined;
                 const estadoCfg = ESTADO_CFG[cita.estado];
                 return (
                   <div key={cita.id} className="border border-gray-100 rounded-xl p-3.5">

@@ -39,7 +39,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!limited.ok) return rateLimitResponse(limited.resetAt);
 
     const { id } = await params;
-    const property = getPropertyById(id);
+    const property = await getPropertyById(id);
     if (!property) {
       return NextResponse.json({ error: 'Propiedad no encontrada' }, { status: 404 });
     }

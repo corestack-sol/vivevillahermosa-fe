@@ -13,12 +13,12 @@ export const metadata: Metadata = {
     'Busca casa por colonia en Villahermosa — Tabasco 2000, Gaviotas, Framboyanes, Carrizal, Atasta — o explora los 17 municipios del estado. Casas en renta y venta en Tabasco.',
 };
 
-export default function ZonasPage() {
-  const municipalities = getMunicipalitiesWithLiveStats();
+export default async function ZonasPage() {
+  const municipalities = await getMunicipalitiesWithLiveStats();
   // Ordenadas por cantidad real de propiedades, tengan o no ficha editorial
   // — las primeras MAX_CARDS se ven como tarjeta grande, el resto como chip.
   // El orden se recalcula solo según crece el catálogo (ver lib/api.ts).
-  const coloniasRanked = getColoniasRankedByPropiedades();
+  const coloniasRanked = await getColoniasRankedByPropiedades();
   const coloniasCards = coloniasRanked.slice(0, MAX_CARDS);
   const coloniasChips = coloniasRanked.slice(MAX_CARDS);
   // Solo se marca "con más propiedades" cuando de verdad se despega del

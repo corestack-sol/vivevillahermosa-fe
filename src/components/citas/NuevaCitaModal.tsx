@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -38,10 +38,14 @@ interface NuevaCitaModalProps {
 
 export function NuevaCitaModal({ isOpen, onClose, fechaInicial, duracionDefault, onCreated }: NuevaCitaModalProps) {
   const toast = useToast();
-  const propiedadOptions = useMemo(
-    () => getAllProperties().slice(0, 100).map((p) => ({ value: p.id, label: p.titulo })),
-    []
-  );
+  const [propiedadOptions, setPropiedadOptions] = useState<{ value: string; label: string }[]>([]);
+  useEffect(() => {
+    let cancelado = false;
+    getAllProperties().then((props) => {
+      if (!cancelado) setPropiedadOptions(props.slice(0, 100).map((p) => ({ value: p.id, label: p.titulo })));
+    });
+    return () => { cancelado = true; };
+  }, []);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
