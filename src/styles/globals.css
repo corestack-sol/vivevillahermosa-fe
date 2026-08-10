@@ -273,11 +273,25 @@
    iPhone/iPad), y en Android solo funciona dentro de pantalla completa y
    casi siempre requiere un toque previo, así que "automático" de verdad
    con esa API no es real para una buena parte de quienes visitan el
-   sitio. Este aviso sí funciona igual en cualquier dispositivo. */
+   sitio. Este aviso sí funciona igual en cualquier dispositivo.
+
+   Bug real encontrado (2026-08-09): `orientation: portrait` en CSS se
+   basa PURAMENTE en las dimensiones del viewport actual, no en un
+   sensor físico de orientación — una laptop con la ventana del
+   navegador angostada a mano (o en media pantalla, o con devtools
+   acoplado al costado, o con zoom alto) puede terminar más alta que
+   ancha y por debajo de 1024px, dando un falso positivo: el aviso
+   tapaba el mapa completo en una laptop real con mouse, donde "gira tu
+   dispositivo" ni siquiera tiene sentido. Se agrega `pointer: coarse`
+   (mismo criterio que ya usa el panel de escritorio del mapa, ver
+   `lg:pointer-fine:flex` en MapaClient.tsx, en su forma inversa) para
+   que el aviso solo aparezca cuando el método de entrada principal es
+   el dedo — nunca con mouse/trackpad, sin importar qué tan angosta o
+   "portrait" termine la ventana. */
 .rotate-hint {
   display: none;
 }
-@media (max-width: 1023px) and (orientation: portrait) {
+@media (max-width: 1023px) and (orientation: portrait) and (pointer: coarse) {
   .rotate-hint {
     display: flex;
   }

@@ -1,5 +1,6 @@
 import type { Property } from '@/types/property';
 import type { MiPropiedad, EstadoPublicacion } from './misPropiedadesDemo';
+import { getMisPropiedadesDemo } from './misPropiedadesDemo';
 import { readJson, writeJson } from './localStore';
 import { getEstadoOverride } from './estadoOverrides';
 import { getPuntoPublico } from './colonias';
@@ -209,6 +210,36 @@ export function getMisPropiedadesConOverrides(base: MiPropiedad[]): MiPropiedad[
     }));
 
   return [...creadas, ...catalogo];
+}
+
+/**
+ * Límite gratuito de propiedades ACTIVAS por cuenta (2026-08-09, pedido
+ * explícito del usuario) — a propósito por ACTIVIDAD (cuántas propiedades
+ * activas tiene la cuenta), no por `rol`: hoy `rol` solo distingue
+ * 'buscador'|'propietario'|'agente' a nivel de registro, sin ninguna forma
+ * real de separar a un agente independiente de una inmobiliaria — un
+ * volumen alto de propiedades activas es la señal real de que se trata de
+ * uso comercial, sin importar qué rol se haya elegido al registrarse. Un
+ * usuario normal (dueño publicando su propia casa) rara vez pasa de 1-2;
+ * alguien con cartera de verdad topa rápido y necesita un plan.
+ *
+ * ⚠️ Esto es una verificación de FRONTEND, evadible como cualquier otra en
+ * esta simulación de un solo navegador (localStorage, sin `Property.userId`
+ * real) — borrar el storage o abrir otro navegador la resetea. La versión
+ * que de verdad cumple esto tiene que vivir en el backend nuevo — ver
+ * docs/BACKEND.md §3 (nota "Límite de propiedades activas por cuenta").
+ */
+export const LIMITE_PROPIEDADES_GRATIS = 4;
+
+/** Cuenta las propiedades ACTIVAS de "mis propiedades" (creadas en este
+ *  navegador + el catálogo demo con sus overrides) — mismo criterio que ya
+ *  usa el resto de la plataforma para "activa" (ver EstadoPublicacion).
+ *  Debe llamarse solo desde un efecto de cliente, mismo motivo que
+ *  `getMisPropiedadesConOverrides` (lee localStorage). */
+export function contarPropiedadesActivas(): number {
+  return getMisPropiedadesConOverrides(getMisPropiedadesDemo())
+    .filter((mp) => mp.estado === 'activa')
+    .length;
 }
 
 /**

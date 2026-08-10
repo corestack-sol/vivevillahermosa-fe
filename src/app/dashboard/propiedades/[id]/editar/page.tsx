@@ -48,6 +48,7 @@ export default function EditarPropiedadPage() {
     register, handleSubmit, reset, watch,
     formState: { errors, isSubmitting },
   } = useForm<PublishFormData>({ resolver: zodResolver(publishSchema) });
+  const tipoActual = watch('tipo');
 
   // Resolver en un efecto (no en el useState inicial) evita depender de
   // localStorage antes de la hidratación — mismo patrón que el resto del
@@ -170,6 +171,21 @@ export default function EditarPropiedadPage() {
 
         <Input label="Precio (MXN)" type="number" error={errors.precio?.message} {...register('precio', { valueAsNumber: true })} />
 
+        {/* Antes ocultaba m² construidos/recámaras/baños por completo para
+            "terreno" (mismo ajuste recién revertido en PublishForm.tsx) —
+            un terreno puede venderse con una casa ya construida y el
+            resto del lote disponible, así que sí necesita poder editar
+            esos datos. "m² de terreno" faltaba por completo aquí, se
+            agrega para terreno/bodega igual que en el formulario de
+            publicar. */}
+        {(tipoActual === 'terreno' || tipoActual === 'bodega') && (
+          <Input label="m² de terreno" type="number" {...register('m2Terreno', { valueAsNumber: true })} />
+        )}
+        {tipoActual === 'terreno' && (
+          <p className="text-xs text-gray-400">
+            Si el terreno ya tiene una construcción (ej. una casa, con el resto del lote disponible), indícalo aquí. Si está vacío, déjalo en 0.
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <Input label="m² construidos" type="number" {...register('m2Construidos', { valueAsNumber: true })} />
           <Input label="Recámaras" type="number" {...register('recamaras', { valueAsNumber: true })} />

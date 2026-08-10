@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
-  SlidersHorizontal, X, ChevronLeft, ChevronDown, Navigation,
+  SlidersHorizontal, X, ChevronLeft, Navigation,
   Satellite, Map as MapIcon, Info, MapPin, ArrowRight,
-  Droplets, Check, Home, RotateCw, List,
+  Droplets, Check, RotateCw, List,
 } from 'lucide-react';
 import Link from 'next/link';
 import type { Property } from '@/types/property';
@@ -13,8 +13,10 @@ import { useFilters } from '@/hooks/useFilters';
 import { applyFilters } from '@/lib/filters';
 import { FilterPanel } from '@/components/search/FilterPanel';
 import { MapViewDynamic } from '@/components/map/MapViewDynamic';
-import { formatPrice, formatPriceShort } from '@/lib/format';
+import { formatPriceShort } from '@/lib/format';
 import { getPropertyTypeConfig } from '@/lib/propertyTypeConfig';
+import { getColoniasRankedByPropiedades } from '@/lib/api';
+import { matchColonia } from '@/lib/colonias';
 import type { MapMarker, MapControls, MapBounds } from '@/components/map/MapView';
 import { aplicarOverridesPublicos, PROPIEDADES_LOCALES_EVENT } from '@/lib/propiedadesLocales';
 import { ESTADO_OVERRIDE_EVENT } from '@/lib/estadoOverrides';
@@ -47,20 +49,14 @@ const OP_CHIPS: { value: OperationType | ''; label: string }[] = [
   { value: 'renta',  label: 'Renta'  },
 ];
 
-// Coordenadas alineadas con src/data/zones.json (fuente de verdad de las
-// colonias) — antes esta lista era independiente y había divergido: 6 de 7
-// zonas apuntaban entre 2 y 6 km lejos de su ubicación real en zones.json
-// (ej. "Tab. 2000" mandaba a 6km de la colonia real). zoom/radius son solo
-// configuración visual, no coordenadas, así que se mantienen igual.
-const ZONES = [
-  { label: 'Centro',       lat: 17.9895, lng: -92.9478, zoom: 15, radius: 700  },
-  { label: 'Tab. 2000',    lat: 17.9994, lng: -92.9316, zoom: 15, radius: 950  },
-  { label: 'Gaviotas',     lat: 18.0141, lng: -92.9312, zoom: 15, radius: 850  },
-  { label: 'Atasta',       lat: 17.9923, lng: -92.9178, zoom: 15, radius: 700  },
-  { label: 'Olmeca',       lat: 17.9812, lng: -92.9502, zoom: 15, radius: 800  },
-  { label: 'Carrizal',     lat: 17.9875, lng: -92.9421, zoom: 15, radius: 900  },
-  { label: 'Framboyanes',  lat: 18.0056, lng: -92.9288, zoom: 15, radius: 750  },
-];
+// "Ir a zona" ya no es una lista fija — se construye a partir de
+// getColoniasRankedByPropiedades() (2026-08-09, pedido explícito), la
+// misma fuente real y en vivo que ya usan /zonas y el Home: las colonias
+// con más propiedades activas, no una selección editorial. ZOOM_ZONA es
+// fijo (nivel razonable para ver una colonia completa) porque no es un
+// dato de la colonia en sí, solo configuración visual del mapa.
+const ZOOM_ZONA = 15;
+const MAX_ZONAS_IR_A = 7; // mismo tope que la lista fija anterior
 
 const RIESGO_LABEL: Record<string, string> = {
   bajo: 'Bajo historial de inundaciones', medio: 'Inundaciones menores ocasionales', alto: 'Históricamente inundable',
@@ -229,7 +225,26 @@ export function MapaClient({ allProperties }: Props) {
   const [activeZone,    setActiveZone]    = useState<string | null>(null);
   const [geoLoading,    setGeoLoading]    = useState(false);
   const [geoError,      setGeoError]      = useState('');
-  const [listOpen,      setListOpen]      = useState(true);
+
+  // "Ir a zona" — top colonias reales por cantidad de propiedades activas
+  // (mismo criterio que /zonas y Home, ver getColoniasRankedByPropiedades),
+  // resolviendo cada una contra el catálogo de coordenadas verificadas
+  // (matchColonia) para obtener lat/lng/radio reales. Se calcula una sola
+  // vez sobre el catálogo estático del servidor — igual que /zonas y Home
+  // (páginas de servidor), no reacciona a publicaciones locales de este
+  // navegador; sería inconsistente que el mapa mostrara una colonia
+  // "de moda" que nadie más ve. Las colonias rankeadas que no tengan
+  // coordenada verificada (ej. detectadas por texto libre, sin catálogo)
+  // se descartan aquí — no hay a dónde volar sin lat/lng real.
+  const zonasIrA = useMemo(() => {
+    return getColoniasRankedByPropiedades()
+      .map((c) => {
+        const coord = matchColonia(c.nombre);
+        return coord ? { label: c.nombre, lat: coord.lat, lng: coord.lng, radius: coord.radioKm * 1000 } : null;
+      })
+      .filter((z): z is { label: string; lat: number; lng: number; radius: number } => z !== null)
+      .slice(0, MAX_ZONAS_IR_A);
+  }, []);
 
   // El primer "moveend" lo dispara Leaflet al montar el mapa (no una
   // interacción real del usuario) — se ignora para no filtrar antes de que
@@ -436,13 +451,16 @@ export function MapaClient({ allProperties }: Props) {
             </div>
           </div>
 
-          {/* Ir a zona */}
+          {/* Ir a zona — oculta por completo si ninguna colonia rankeada
+              resolvió coordenada verificada, en vez de mostrar una
+              tarjeta vacía. */}
+          {zonasIrA.length > 0 && (
           <div className="bg-brand-dark rounded-xl shadow-xl p-3">
             <p className="flex items-center gap-1.5 text-xs font-bold text-white/40 uppercase tracking-wider mb-2.5">
               <MapPin size={12} /> Ir a zona
             </p>
             <div className="flex flex-col gap-0.5">
-              {ZONES.map((zone) => {
+              {zonasIrA.map((zone) => {
                 const isActive = activeZone === zone.label;
                 return (
                   <button
@@ -453,7 +471,7 @@ export function MapaClient({ allProperties }: Props) {
                         mapControls?.clearZoneCircle();
                         setActiveZone(null);
                       } else {
-                        mapControls?.flyTo(zone.lat, zone.lng, zone.zoom);
+                        mapControls?.flyTo(zone.lat, zone.lng, ZOOM_ZONA);
                         mapControls?.showZoneCircle(zone.lat, zone.lng, zone.radius);
                         setActiveZone(zone.label);
                       }
@@ -465,59 +483,14 @@ export function MapaClient({ allProperties }: Props) {
                     }`}
                   >
                     {isActive && <span className="w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0" />}
-                    {zone.label}
+                    <span className="truncate">{zone.label}</span>
                   </button>
                 );
               })}
             </div>
           </div>
+          )}
 
-          {/* Propiedades */}
-          <div className="bg-brand-dark rounded-xl shadow-xl overflow-hidden">
-            <button
-              onClick={() => setListOpen((o) => !o)}
-              className="w-full flex items-center justify-between px-3 py-2.5"
-            >
-              <p className="flex items-center gap-1.5 text-xs font-bold text-white/40 uppercase tracking-wider">
-                <Home size={12} /> {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
-              </p>
-              <ChevronDown
-                size={13}
-                className={`text-white/40 transition-transform duration-200 ${listOpen ? 'rotate-180' : ''}`}
-              />
-            </button>
-            {listOpen && (
-              <div className="border-t border-white/10 max-h-52 overflow-y-auto">
-                {filtered.length === 0 ? (
-                  <p className="text-xs text-center text-white/35 py-4">Sin resultados.</p>
-                ) : (
-                  <>
-                    {filtered.slice(0, 20).map((p) => {
-                      const itemCfg = getPropertyTypeConfig(p.tipo);
-                      return (
-                      <Link
-                        key={p.id}
-                        href={`/propiedades/${p.slug}`}
-                        className="flex items-start gap-2 px-3 py-2 border-b border-white/8 hover:bg-white/10 transition-colors"
-                      >
-                        <itemCfg.Icon size={15} strokeWidth={2} className="flex-shrink-0 mt-0.5 text-white/60" />
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold text-white/90 truncate leading-snug">{p.titulo}</p>
-                          <p className="text-xs font-bold text-accent mt-0.5">{formatPrice(p.precio, p.operacion)}</p>
-                        </div>
-                      </Link>
-                      );
-                    })}
-                    {filtered.length > 20 && (
-                      <p className="text-xs text-center text-white/35 py-2">
-                        +{filtered.length - 20} más
-                      </p>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
         </div>
 
         {/* ── Top overlay ── */}
@@ -588,12 +561,20 @@ export function MapaClient({ allProperties }: Props) {
 
         {/* ── Right floating buttons ── */}
         <div className="absolute bottom-20 right-3 z-[1001] flex flex-col gap-2">
-          {/* Satellite toggle — mobile only (desktop uses sidebar) */}
+          {/* Satellite toggle — equivalente táctil del toggle Mapa/Satélite
+              del panel de escritorio (hidden lg:pointer-fine:flex más
+              arriba). Antes decía "mobile only" pero estaba gateado por
+              lg:hidden (ancho), no por tipo de entrada — un tablet táctil
+              en horizontal a 1024px+ no obtenía ni el panel de escritorio
+              (excluido a propósito, es solo para mouse) ni este botón
+              (excluido por ancho): el control desaparecía por completo.
+              pointer-coarse: lo muestra para cualquier dispositivo táctil
+              sin importar el ancho, cerrando ese hueco. */}
           <button
             onClick={() => setTileType((t) => (t === 'street' ? 'satellite' : 'street'))}
             title={tileType === 'street' ? 'Ver satélite' : 'Ver mapa'}
-            className="lg:hidden w-10 h-10 bg-white shadow-lg border border-gray-200 rounded-xl
-                       flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
+            className="hidden pointer-coarse:flex w-10 h-10 bg-white shadow-lg border border-gray-200 rounded-xl
+                       items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
           >
             {tileType === 'street' ? <Satellite size={16} /> : <MapIcon size={16} />}
           </button>
@@ -622,9 +603,15 @@ export function MapaClient({ allProperties }: Props) {
           </div>
         )}
 
-        {/* ── Mobile: flood risk legend ── */}
+        {/* ── Flood risk legend — equivalente táctil de "Inundación" del
+            panel de escritorio, mismo motivo/mismo arreglo que el botón
+            de satélite de arriba: antes gateado por lg:hidden (ancho),
+            así que un tablet táctil ancho se quedaba sin este filtro por
+            completo (FilterPanel, usado en el sidebar/drawer, no tiene
+            filtro de riesgo de inundación). pointer-coarse: cierra el
+            hueco sin importar el ancho. ── */}
         <div className="absolute bottom-6 left-3 bg-white rounded-xl shadow-md border border-gray-200
-                        px-3 py-2 lg:hidden z-[1001]">
+                        px-3 py-2 hidden pointer-coarse:block z-[1001]">
           <p className="flex items-center gap-1.5 text-xs text-gray-400 mb-1.5">
             <Droplets size={12} className="flex-shrink-0" /> Riesgo — toca para filtrar
           </p>

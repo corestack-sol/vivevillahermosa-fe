@@ -9,7 +9,7 @@ import { getMisPropiedadesDemo, ESTADOS_ARCHIVADOS, ESTADO_CFG, type EstadoPubli
 import { getEstadoOverride, setEstadoOverride, ESTADO_OVERRIDE_EVENT } from '@/lib/estadoOverrides';
 import {
   getMisPropiedadesConOverrides, eliminarPropiedad, destacarPropiedad, getDestacadoHasta,
-  PROPIEDADES_LOCALES_EVENT,
+  PROPIEDADES_LOCALES_EVENT, contarPropiedadesActivas, LIMITE_PROPIEDADES_GRATIS,
 } from '@/lib/propiedadesLocales';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { ArchivarPropiedadModal } from '@/components/property/ArchivarPropiedadModal';
@@ -86,6 +86,12 @@ export function OwnerActionsBar({ propertyId }: { propertyId: string }) {
   // Pausar/reactivar, y también "reactivar" desde vendida/rentada (por si se
   // archivó por error) — vencida se maneja aparte con "Renovar" (pendiente).
   function togglePausa() {
+    // Mismo chequeo que dashboard/propiedades/page.tsx — reactivar suma una
+    // propiedad activa más, respeta el mismo límite gratuito que publicar.
+    if (estado !== 'activa' && contarPropiedadesActivas() >= LIMITE_PROPIEDADES_GRATIS) {
+      toast.error(`Ya tienes ${LIMITE_PROPIEDADES_GRATIS} propiedades activas — el máximo gratuito. Contáctanos para un plan profesional si necesitas reactivar más.`);
+      return;
+    }
     setEstado((prev) => {
       if (!prev) return prev;
       const next = prev === 'activa' ? 'pausada' : 'activa';

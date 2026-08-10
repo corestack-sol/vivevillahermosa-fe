@@ -52,6 +52,20 @@ interface MapViewProps {
    */
   approximate?: boolean;
   approximateRadius?: number;
+  /**
+   * Ajusta el encuadre para que TODOS los marcadores queden visibles, en
+   * vez de usar `center`/`zoom` fijos — pensado para mapas de "resumen"
+   * sin panel de filtros ni navegación manual (ClickableMap, hoy solo el
+   * mini-mapa de destacadas del Home). Bug real encontrado (2026-08-09):
+   * ese mapa mandaba `zoom={11}` sin `center`, así que caía en el default
+   * de Centro/Villahermosa — 3 de las 5 propiedades destacadas quedaban
+   * dentro del encuadre (a 2-3km del centro) y 2 (en Paraíso, a ~53km)
+   * quedaban completamente fuera de vista, sin ningún aviso de que
+   * existían. `false` por default para no romper /mapa (MapaClient) ni el
+   * mapa embebido de /propiedades, que sí dependen de `center`/`zoom`
+   * explícitos porque el usuario navega/filtra el mapa a mano.
+   */
+  fitToMarkers?: boolean;
 }
 
 const FLOOD_COLORS = { alto: '#EF4444', medio: '#F59E0B', bajo: '#10B981' } as const;
@@ -104,6 +118,7 @@ export function MapView({
   onMapReady,
   approximate = false,
   approximateRadius = 350,
+  fitToMarkers = false,
 }: MapViewProps) {
   const containerRef    = useRef<HTMLDivElement>(null);
   const mapRef          = useRef<any>(null);
@@ -237,6 +252,37 @@ export function MapView({
       lmRef.current.forEach((m) => m.remove());
       lmRef.current.clear();
 
+      // Protección de respaldo — solo importa cuando `hasCluster` es false
+      // (el import dinámico de leaflet.markercluster falló): en ese modo no
+      // hay spiderfy que separe pines apilados en el mismo punto al llegar
+      // a maxZoom, así que dos propiedades muy cercanas quedarían una
+      // tapando a la otra, inalcanzable. `jitterCoord` ya reparte cada
+      // propiedad en hasta 120m según su id, así que una colisión real es
+      // poco común, pero no imposible (dos ids con ángulo/distancia
+      // parecidos) — esto la resuelve de forma determinista en vez de
+      // confiar en que nunca pase.
+      const posicionesUsadas: [number, number][] = [];
+      const MIN_SEPARACION_GRADOS = 0.00015; // ~15-17m, visible incluso a zoom máximo
+      function separarSiColisiona(lat: number, lng: number, id: string): [number, number] {
+        let finalLat = lat;
+        let finalLng = lng;
+        let intento = 0;
+        while (
+          intento < 12 &&
+          posicionesUsadas.some(
+            ([pl, pn]) => Math.abs(pl - finalLat) < MIN_SEPARACION_GRADOS && Math.abs(pn - finalLng) < MIN_SEPARACION_GRADOS
+          )
+        ) {
+          intento++;
+          const angle = ((id.charCodeAt(0) * 37 + intento * 47) % 360) * (Math.PI / 180);
+          const dist = MIN_SEPARACION_GRADOS * 1.3 * intento;
+          finalLat = lat + dist * Math.cos(angle);
+          finalLng = lng + dist * Math.sin(angle);
+        }
+        posicionesUsadas.push([finalLat, finalLng]);
+        return [finalLat, finalLng];
+      }
+
       let container: any;
       if (hasCluster) {
         clusterRef.current = (L as any).markerClusterGroup({
@@ -276,7 +322,9 @@ export function MapView({
           iconAnchor: [38, 29] as [number, number],
         });
 
-        const lm = L.marker(jitterCoord(m.id, m.lat, m.lng), { icon, zIndexOffset: active ? 1000 : 0 });
+        const [jLat, jLng] = jitterCoord(m.id, m.lat, m.lng);
+        const posicionFinal = hasCluster ? [jLat, jLng] as [number, number] : separarSiColisiona(jLat, jLng, m.id);
+        const lm = L.marker(posicionFinal, { icon, zIndexOffset: active ? 1000 : 0 });
         lm.on('click', (e: any) => {
           e.originalEvent?.stopPropagation();
           skipMapClickRef.current = true;
@@ -287,8 +335,24 @@ export function MapView({
       });
 
       if (hasCluster) mapRef.current.addLayer(clusterRef.current);
+
+      // Ver el comentario de `fitToMarkers` en MapViewProps — encuadra
+      // sobre las posiciones YA colocadas (lmRef, después del jitter de
+      // privacidad), no sobre `markers` crudo, para que el encuadre
+      // coincida exactamente con dónde están los pines de verdad.
+      if (fitToMarkers && lmRef.current.size > 0) {
+        const coords: [number, number][] = Array.from(lmRef.current.values()).map((lm) => {
+          const ll = lm.getLatLng();
+          return [ll.lat, ll.lng];
+        });
+        if (coords.length === 1) {
+          mapRef.current.setView(coords[0], Math.max(zoom, 13));
+        } else {
+          mapRef.current.fitBounds(L.latLngBounds(coords), { padding: [32, 32], maxZoom: 14 });
+        }
+      }
     })();
-  }, [markers, selectedId, ready, onMarkerSelect]);
+  }, [markers, selectedId, ready, onMarkerSelect, fitToMarkers, zoom]);
 
   return <div ref={containerRef} style={{ height, width: '100%' }} />;
 }

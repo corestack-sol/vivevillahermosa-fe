@@ -59,9 +59,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={value}>
       {children}
 
-      {/* aria-live: anuncia cada toast a lectores de pantalla sin robar el foco */}
+      {/* aria-live: anuncia cada toast a lectores de pantalla sin robar el foco.
+          z-[100] -> z-[1500] junto con el z-[1400] de Modal.tsx — un toast
+          debe seguir viéndose por encima de un modal abierto (ej. "reporte
+          enviado" mientras el modal todavía cierra), mismo orden relativo
+          que ya existía (100 > 50), solo corrido para ganarle a los mapas. */}
       <div
-        className="fixed inset-x-0 bottom-0 z-[100] flex flex-col items-stretch sm:items-end gap-2 p-4 sm:right-4 sm:left-auto sm:bottom-4 sm:max-w-sm pointer-events-none"
+        className="fixed inset-x-0 bottom-0 z-[1500] flex flex-col items-stretch sm:items-end gap-2 p-4 sm:right-4 sm:left-auto sm:bottom-4 sm:max-w-sm pointer-events-none"
         aria-live="polite"
         aria-atomic="false"
       >

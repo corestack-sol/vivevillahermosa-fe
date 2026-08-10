@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { SearchBar } from '@/components/search/SearchBar';
 import { ClickableMap } from '@/components/map/ClickableMap';
-import { getFeaturedProperties, getColoniasRankedByPropiedades, getStats } from '@/lib/api';
+import { getFeaturedProperties, getAllProperties, getColoniasRankedByPropiedades, getStats } from '@/lib/api';
 import { buttonClasses } from '@/components/ui/Button';
 import { RecentlyViewedSection } from '@/components/property/RecentlyViewedSection';
 import { PropertyCard } from '@/components/property/PropertyCard';
@@ -84,7 +84,15 @@ export default function HomePage() {
   const zones = getColoniasRankedByPropiedades().slice(0, 4);
   const stats = getStats();
 
-  const markers = featured.map((p) => ({
+  // getAllProperties (no `featured`) — pedido explícito (2026-08-09): el
+  // mapa mostraba solo las 5 propiedades marcadas `featured:true`, la
+  // misma curación editorial que ya usan las tarjetas de abajo, aunque el
+  // catálogo real tiene 31. El mapa no es una vitrina curada como las
+  // tarjetas — su valor es mostrar dónde hay propiedades reales en todo
+  // Tabasco, así que usa el catálogo completo. `fitToMarkers` en
+  // ClickableMap (ver ese componente) ya encuadra para que se vean todas,
+  // sin importar cuántas ni qué tan dispersas estén.
+  const markers = getAllProperties().map((p) => ({
     id: p.id, slug: p.slug, lat: p.lat, lng: p.lng,
     titulo: p.titulo, precio: p.precio, operacion: p.operacion,
     tipo: p.tipo, colonia: p.colonia, foto: p.fotos[0] ?? null,
@@ -176,8 +184,8 @@ export default function HomePage() {
               abajo — hay que promover el nivel que en verdad compite con
               ese hermano, no un nieto más adentro. */}
           <div className="relative z-20 max-w-2xl animate-fade-up" style={{ animationDelay: '270ms' }}>
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-brand uppercase tracking-wide bg-brand-pale px-2 py-0.5 rounded-full mb-2">
-              <Bot size={12} /> Búsqueda con IA
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-brand uppercase tracking-wide bg-brand-pale px-3 py-1 rounded-full mb-2">
+              <Bot size={14} /> Búsqueda con IA
             </span>
             <SearchBar placeholder="Ej: casa cerca de Dos Bocas que no se inunde, renta hasta $12,000" />
             <p className="text-xs text-gray-400 mt-2">
@@ -219,8 +227,11 @@ export default function HomePage() {
           <div
             className="py-6"
             style={{
-              maskImage: 'linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%)',
-              WebkitMaskImage: 'linear-gradient(to right, transparent 0, black 20px, black calc(100% - 20px), transparent 100%)',
+              // 20px -> 90px: el fade original apenas se notaba en una
+              // ventana de 900px (2% del ancho por lado) — los bloques
+              // aparecían/desaparecían casi de golpe en vez de disolverse.
+              maskImage: 'linear-gradient(to right, transparent 0, black 90px, black calc(100% - 90px), transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to right, transparent 0, black 90px, black calc(100% - 90px), transparent 100%)',
             }}
           >
             <div className="flex w-max animate-marquee hover:[animation-play-state:paused]">

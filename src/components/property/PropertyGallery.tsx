@@ -181,13 +181,16 @@ export function PropertyGallery({ fotos, titulo, tipo }: PropertyGalleryProps) {
             </button>
           </div>
 
-          {/* Main image + arrows — px-16 fijo dejaba solo ~250px de foto
-              real en un teléfono de 375px (128px se iban en el padding
-              para las flechas); en móvil se navega por swipe, así que el
-              padding lateral solo hace falta a partir de md (donde ya no
-              hay swipe y las flechas necesitan su espacio). */}
+          {/* Main image + arrows — antes gateado por md: (ancho), no por
+              tipo de entrada: una laptop con la ventana angostada (mouse,
+              sin touch) perdía las flechas Y el hint de swipe a la vez,
+              sin ninguna forma de navegar más que la tira de miniaturas.
+              pointer-fine: (mouse/trackpad) muestra las flechas sin
+              importar el ancho; pointer-coarse: (dedo) muestra el hint de
+              swipe en su lugar — el criterio real es el método de
+              entrada, no cuánto espacio hay. */}
           <div
-            className="flex-1 flex items-center justify-center relative px-4 md:px-16 min-h-0"
+            className="flex-1 flex items-center justify-center relative px-4 pointer-fine:px-16 min-h-0"
             onClick={(e) => e.stopPropagation()}
             onTouchStart={swipe.onTouchStart}
             onTouchEnd={swipe.onTouchEnd}
@@ -195,7 +198,7 @@ export function PropertyGallery({ fotos, titulo, tipo }: PropertyGalleryProps) {
             {total > 1 && (
               <button
                 onClick={prev}
-                className="hidden md:flex absolute left-4 bg-white/10 hover:bg-white/25 text-white p-3 rounded-full transition-all shadow-lg"
+                className="hidden pointer-fine:flex absolute left-4 bg-white/10 hover:bg-white/25 text-white p-3 rounded-full transition-all shadow-lg"
                 aria-label="Anterior"
               >
                 <ChevronLeft size={24} />
@@ -209,7 +212,7 @@ export function PropertyGallery({ fotos, titulo, tipo }: PropertyGalleryProps) {
             {total > 1 && (
               <button
                 onClick={next}
-                className="hidden md:flex absolute right-4 bg-white/10 hover:bg-white/25 text-white p-3 rounded-full transition-all shadow-lg"
+                className="hidden pointer-fine:flex absolute right-4 bg-white/10 hover:bg-white/25 text-white p-3 rounded-full transition-all shadow-lg"
                 aria-label="Siguiente"
               >
                 <ChevronRight size={24} />
@@ -221,7 +224,7 @@ export function PropertyGallery({ fotos, titulo, tipo }: PropertyGalleryProps) {
           <div className="flex-shrink-0 pb-6 pt-4 px-5 flex flex-col items-center gap-3" onClick={(e) => e.stopPropagation()}>
             <p className="text-white/50 text-sm">
               {active + 1} de {total}
-              <span className="md:hidden"> · desliza para ver más</span>
+              <span className="hidden pointer-coarse:inline"> · desliza para ver más</span>
             </p>
 
             {total > 1 && (

@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -19,6 +20,26 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'md' }: Mod
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
+  // Subir el z-index no alcanzaba: este modal se renderizaba inline, donde
+  // sea que <Modal> apareciera en el árbol de JSX (ej. dentro del panel de
+  // acciones de PropertyDetailView.tsx) — si CUALQUIER ancestro entre ahí
+  // y <body> crea su propio contexto de apilamiento (una tarjeta con
+  // rounded-2xl+overflow-hidden combinado con position, una animación de
+  // transform/opacity, etc.), el z-index del modal solo gana DENTRO de ese
+  // contexto — nunca contra un mapa de Leaflet que vive en otra rama del
+  // árbol. Mismo tipo de bug que ya se corrigió en el dropdown de
+  // SearchBar.tsx esta sesión, pero ahí alcanzaba con promover al padre
+  // correcto porque los dos elementos compartían el mismo contexto; aquí
+  // el modal y el mapa NO comparten un ancestro común útil, así que la
+  // única forma robusta es no depender de la cascada en absoluto:
+  // createPortal saca el modal del árbol de React y lo monta como hijo
+  // directo de <body>, al margen de cualquier contexto de apilamiento de
+  // sus ancestros originales.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    function marcarMontado() { setMounted(true); }
+    marcarMontado();
+  }, []);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -58,10 +79,16 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'md' }: Mod
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  return createPortal(
+    // z-[1400]: valor de sobra por encima de cualquier mapa (Leaflet usa
+    // hasta z-index 1300 en esta app, ver MapaClient.tsx/MapView.tsx) —
+    // ya no depende de la cascada de contextos de apilamiento gracias al
+    // portal de arriba, pero se deja alto de todas formas para no tener
+    // que pensarlo de nuevo si algún día se agrega algo con z-index aún
+    // más alto en el propio <body>.
+    <div className="fixed inset-0 z-[1400] flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
@@ -89,6 +116,7 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'md' }: Mod
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

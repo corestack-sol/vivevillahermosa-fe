@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { SlidersHorizontal, X, Map, LayoutGrid, Search, ChevronDown, Loader2, Sparkles, MapPin, Clock } from 'lucide-react';
 import type { Property } from '@/types/property';
 import type { SearchFilters } from '@/types/search';
@@ -116,6 +118,10 @@ const GRID_CLASSES =
 
 export function PropertiesClient({ allProperties }: Props) {
   const { filters, updateFilters, clearFilters, activeCount } = useFilters();
+  // Para el link "Ver en mapa" de abajo — reenvía los filtros activos tal
+  // cual, sin reconstruir el query string a mano: /mapa usa el mismo
+  // useFilters(), así que lee estos mismos parámetros de la URL solo.
+  const searchParams = useSearchParams();
   // Arranca con el catálogo estático que ya vino del servidor (para que el
   // primer render coincida con el de SSR) y se completa con lo publicado/
   // editado/pausado/eliminado en este navegador justo después de montar —
@@ -399,6 +405,22 @@ export function PropertiesClient({ allProperties }: Props) {
                   <Map size={15} />
                 </button>
               </div>
+
+              {/* Ver en mapa (solo <640px) — el toggle de arriba (grid/mapa
+                  embebido) se oculta a este ancho, y el mapa embebido en
+                  sí es una versión pelona (MapViewDynamic sin satélite, sin
+                  "ir a zona", sin leyenda de riesgo, sin el aviso de
+                  rotación ya corregido para touch) comparada con /mapa, que
+                  ya tiene todo eso. En vez de duplicar esos controles aquí,
+                  se manda directo a /mapa con los mismos filtros activos —
+                  un solo mapa "bueno" en la plataforma, no uno completo y
+                  uno a medias. */}
+              <Link
+                href={`/mapa${searchParams.toString() ? `?${searchParams.toString()}` : ''}`}
+                className="sm:hidden flex items-center gap-1.5 bg-white border-2 border-gray-200 hover:border-brand/40 text-gray-700 text-sm font-semibold px-3.5 py-2 rounded-xl shadow-sm transition-colors"
+              >
+                <Map size={14} /> Ver en mapa
+              </Link>
 
               {/* Sort */}
               <div className="hidden sm:block">

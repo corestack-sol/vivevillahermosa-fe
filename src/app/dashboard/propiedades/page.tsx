@@ -9,7 +9,7 @@ import { getMisPropiedadesDemo, ESTADOS_ARCHIVADOS, ESTADO_CFG, type EstadoPubli
 import { getEstadoOverride, setEstadoOverride, ESTADO_OVERRIDE_EVENT } from '@/lib/estadoOverrides';
 import {
   getMisPropiedadesConOverrides, eliminarPropiedad, destacarPropiedad, getDestacadoHasta, diasRestantesDestacado,
-  PROPIEDADES_LOCALES_EVENT,
+  PROPIEDADES_LOCALES_EVENT, contarPropiedadesActivas, LIMITE_PROPIEDADES_GRATIS,
 } from '@/lib/propiedadesLocales';
 import { esPropiedadLocal } from '@/lib/idsLocales';
 import { getPropertyTypeConfig } from '@/lib/propertyTypeConfig';
@@ -104,6 +104,16 @@ export default function MisPropiedadesPage() {
   }
 
   function togglePausa(id: string) {
+    const actual = items.find((it) => it.property.id === id);
+    // Reactivar (pausada/vendida/rentada → activa) suma una propiedad activa
+    // más, así que respeta el mismo límite gratuito que publicar — sin este
+    // chequeo, pausar y reactivar era una forma trivial de saltarse el tope
+    // de PublishForm.tsx (ver el comentario grande en contarPropiedadesActivas,
+    // propiedadesLocales.ts).
+    if (actual && actual.estado !== 'activa' && contarPropiedadesActivas() >= LIMITE_PROPIEDADES_GRATIS) {
+      toast.error(`Ya tienes ${LIMITE_PROPIEDADES_GRATIS} propiedades activas — el máximo gratuito. Contáctanos para un plan profesional si necesitas reactivar más.`);
+      return;
+    }
     // Persiste en localStorage (ver src/lib/estadoOverrides.ts) para que el
     // cambio se refleje también en la ficha pública de la propiedad y se
     // mantenga al recargar — sigue siendo una simulación de un solo

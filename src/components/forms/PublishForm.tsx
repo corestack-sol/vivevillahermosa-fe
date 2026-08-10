@@ -1,17 +1,18 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { Button } from '@/components/ui/Button';
+import { Button, buttonClasses } from '@/components/ui/Button';
 import {
   CheckCircle, ChevronRight, ChevronLeft, Sparkles, ImagePlus, X, Images, AlertCircle,
   Home, DollarSign, MapPin, FileText, Camera, Phone, Info, ShieldAlert, ShieldX, Droplets,
-  Tag, Key, Lightbulb, ShieldCheck, Loader2, EyeOff, RefreshCw,
+  Tag, Key, Lightbulb, ShieldCheck, Loader2, EyeOff, RefreshCw, TrendingUp,
 } from 'lucide-react';
 import { SERVICIOS_RENTA } from '@/lib/servicios';
 import { detectarLenguajeSensible } from '@/lib/contentModeration';
@@ -22,7 +23,7 @@ import { FloodRiskBadge } from '@/components/property/FloodRiskBadge';
 import { TermsModal } from './TermsModal';
 import { useToast } from '@/context/ToastContext';
 import { useAuth } from '@/context/AuthContext';
-import { crearPropiedad } from '@/lib/propiedadesLocales';
+import { crearPropiedad, contarPropiedadesActivas, LIMITE_PROPIEDADES_GRATIS } from '@/lib/propiedadesLocales';
 import { getPuntoPublico, matchColonia, distanciaKm } from '@/lib/colonias';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { generarIdLocal, generarSlugLocal } from '@/lib/idsLocales';
@@ -131,6 +132,21 @@ export function PublishForm() {
   const router = useRouter();
   const toast  = useToast();
   const { user } = useAuth();
+
+  // Límite gratuito de propiedades activas (ver el comentario grande en
+  // contarPropiedadesActivas, propiedadesLocales.ts) — se resuelve en un
+  // efecto, no como valor inicial de useState, porque lee localStorage
+  // (mismo motivo que getMisPropiedadesConOverrides). Empieza en `false`
+  // para no bloquear el primer render en servidor; si de verdad está en el
+  // límite, el gate de abajo reemplaza el formulario en cuanto el efecto
+  // corre — un parpadeo breve es preferible a un mismatch de hidratación.
+  const [limiteAlcanzado, setLimiteAlcanzado] = useState(false);
+  useEffect(() => {
+    function verificarLimite() {
+      setLimiteAlcanzado(contarPropiedadesActivas() >= LIMITE_PROPIEDADES_GRATIS);
+    }
+    verificarLimite();
+  }, []);
 
   function addFiles(files: FileList | File[]) {
     const arr = Array.from(files).filter((f) => f.type.startsWith('image/'));
@@ -532,6 +548,32 @@ export function PublishForm() {
   // sin haber llenado nada.
   const progressPct = Math.round((step / STEPS.length) * 100);
 
+  // Gate de límite gratuito — reemplaza el formulario entero en vez de
+  // dejar avanzar los 6 pasos para recién bloquear en el envío final; es
+  // más honesto no hacer perder el tiempo a quien ya topó.
+  if (limiteAlcanzado) {
+    return (
+      <div className="max-w-lg mx-auto text-center bg-white border border-gray-100 rounded-3xl shadow-xl shadow-gray-200/60 p-8 md:p-10">
+        <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-5">
+          <TrendingUp size={26} className="text-amber-500" />
+        </div>
+        <h2 className="text-xl font-heading font-bold text-gray-900 mb-2">Llegaste al límite gratuito</h2>
+        <p className="text-sm text-gray-500 leading-relaxed mb-6">
+          Ya tienes {LIMITE_PROPIEDADES_GRATIS} propiedades activas — el máximo gratuito por cuenta. Si manejas más propiedades (agente independiente o inmobiliaria), contáctanos para un plan profesional.
+        </p>
+        <a
+          href="mailto:hola@vivevillahermosa.mx?subject=Quiero%20un%20plan%20profesional"
+          className={buttonClasses('primary', 'lg', 'w-full')}
+        >
+          Contactar para un plan
+        </a>
+        <Link href="/dashboard/propiedades" className="block mt-3 text-sm text-gray-400 hover:text-gray-600 transition-colors">
+          Ver mis propiedades
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className={`mx-auto ${step === 2 ? 'max-w-4xl' : 'max-w-2xl'}`}>
       <div className={step === 2 ? 'lg:grid lg:grid-cols-[1fr_300px] lg:gap-6 lg:items-start' : ''}>
@@ -625,18 +667,26 @@ export function PublishForm() {
         {step === 1 && (
           <>
             <Input label="Precio (MXN)" type="number" placeholder={watch('operacion') === 'renta' ? 'Precio mensual' : 'Precio de venta'} error={errors.precio?.message} {...register('precio', { valueAsNumber: true })} />
-            {tipo !== 'terreno' && (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <Input label="m² construidos" type="number" placeholder="0" {...register('m2Construidos', { valueAsNumber: true })} />
-                  <Input label="Recámaras" type="number" placeholder="0" {...register('recamaras', { valueAsNumber: true })} />
-                </div>
-                <Input label="Baños" type="number" placeholder="0" {...register('banos', { valueAsNumber: true })} />
-              </>
-            )}
             {(tipo === 'terreno' || tipo === 'bodega') && (
               <Input label="m² de terreno" type="number" placeholder="0" {...register('m2Terreno', { valueAsNumber: true })} />
             )}
+            {/* Antes m² construidos/recámaras/baños se ocultaban por
+                completo para "terreno", asumiendo que un terreno siempre
+                está vacío — pero un terreno puede venderse con una casa
+                ya construida y el resto del lote disponible, así que sí
+                necesita poder capturar esos datos. Se dejan visibles para
+                todos los tipos; el placeholder "0" y la nota de abajo
+                dejan claro que son opcionales cuando no aplica. */}
+            {tipo === 'terreno' && (
+              <p className="text-xs text-gray-400 -mt-1">
+                Si el terreno ya tiene una construcción (ej. una casa, con el resto del lote disponible), indícalo aquí. Si está vacío, déjalo en 0.
+              </p>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="m² construidos" type="number" placeholder="0" {...register('m2Construidos', { valueAsNumber: true })} />
+              <Input label="Recámaras" type="number" placeholder="0" {...register('recamaras', { valueAsNumber: true })} />
+            </div>
+            <Input label="Baños" type="number" placeholder="0" {...register('banos', { valueAsNumber: true })} />
             {watch('operacion') === 'renta' && (
               <div className="pt-1">
                 <p className="text-sm font-medium text-gray-700 mb-1">Servicios incluidos</p>
