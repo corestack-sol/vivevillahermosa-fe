@@ -65,6 +65,33 @@ function buildMenuGroups(esProfesional: boolean, esAdmin: boolean): MenuGroup[] 
   ];
 }
 
+// Se usa como `fallback` del <Suspense> que envuelve <Navbar/> en
+// layout.tsx (necesario porque Navbar usa useSearchParams(), y sin ese
+// límite Next.js no puede pre-renderizar la Home como estática). Sin un
+// fallback del mismo alto, ese hueco se rellenaba con NADA hasta que el
+// cliente hidrataba — el header de 64px aparecía de golpe empujando el
+// Hero hacia abajo, el "brinco" entre hero y header al terminar de
+// cargar. Mismo alto/fondo/logo que el header real, sin los enlaces ni
+// botones que dependen de hooks de cliente (esos si pueden aparecer un
+// instante después sin mover nada, porque el alto ya estaba reservado).
+export function NavbarFallback() {
+  return (
+    <header className="sticky top-0 z-40 bg-brand-dark/97 backdrop-blur-md border-b border-white/10 shadow-lg shadow-black/10">
+      <nav className="px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center h-16 gap-8">
+          <div className="flex items-center gap-2.5 flex-shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/logo-mark.png" alt="" className="h-9 w-auto flex-shrink-0" />
+            <span className="font-display font-black text-[17px] leading-none tracking-tight text-white">
+              Vive <span className="text-coral">Villahermosa</span>
+            </span>
+          </div>
+        </div>
+      </nav>
+    </header>
+  );
+}
+
 export function Navbar() {
   const [isOpen, setIsOpen]         = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -92,6 +119,8 @@ export function Navbar() {
     // Header oscuro a propósito — el resto del sitio es blanco/gris claro,
     // así que un header en brand-dark es lo que da el golpe de marca desde
     // el primer scroll, en vez de fundirse con el contenido de abajo.
+    // (theme-tabasco ya se aplica sitio-completo en layout.tsx — el header
+    // hereda la paleta sin necesitar su propia clase condicional.)
     <header className="sticky top-0 z-40 bg-brand-dark/97 backdrop-blur-md border-b border-white/10 shadow-lg shadow-black/10">
       {/* El header es chrome global, no contenido de página — a propósito
           NO lleva max-w-7xl mx-auto como el resto del sitio. Con eso, en
@@ -112,13 +141,19 @@ export function Navbar() {
           {/* Logo + nav — un solo grupo a la izquierda */}
           <div className="flex items-center gap-8 min-w-0">
             <Link href="/" className="flex items-center gap-2.5 flex-shrink-0" onClick={() => setIsOpen(false)}>
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center shadow-sm ring-1 ring-white/15 bg-gradient-to-br from-brand to-brand-light">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
-                  <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-                </svg>
-              </div>
+              {/* Logo real (src/assets/logo.png, recortado a su contenido y
+                  con el fondo casi-blanco vuelto transparente — ver
+                  public/images/logo-mark.png) en vez del ícono de casa
+                  genérico. Ya trae su propio color, así que no lleva
+                  contenedor con degradado detrás como el ícono anterior. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/images/logo-mark.png" alt="" className="h-9 w-auto flex-shrink-0" />
               <span className="font-display font-black text-[17px] leading-none tracking-tight text-white">
-                Vive <span className="text-accent">Villahermosa</span>
+                {/* coral, no accent — accent (terracota) se ve apagado
+                    contra el header oscuro; coral es el acento "vivo" que
+                    ya se usa en el resto del Hero (punto del eyebrow, "Sin
+                    comisión", etc.), mejor contraste aquí también. */}
+                Vive <span className="text-coral">Villahermosa</span>
               </span>
             </Link>
 
@@ -130,7 +165,7 @@ export function Navbar() {
                     className={`relative px-3.5 py-2 rounded-xl text-sm font-medium transition-colors ${
                       active
                         ? 'text-white'
-                        : 'text-white/60 hover:text-white hover:bg-white/8'
+                        : 'text-white hover:bg-white/8'
                     }`}
                   >
                     {link.label}
@@ -148,7 +183,7 @@ export function Navbar() {
           <div className="hidden md:flex items-center gap-3">
             {esProfesional && (
               <Link href="/dashboard/propiedades"
-                className="flex items-center gap-1.5 text-sm font-medium text-white/80 hover:text-white border border-white/20 hover:border-white/40 rounded-xl px-3.5 py-2 transition-colors">
+                className="flex items-center gap-1.5 text-sm font-medium text-white border border-white/20 hover:border-white/40 rounded-xl px-3.5 py-2 transition-colors">
                 <Building2 size={14} /> Panel profesional
               </Link>
             )}
@@ -168,10 +203,10 @@ export function Navbar() {
                     <div className="w-7 h-7 rounded-lg ring-1 ring-white/15 bg-gradient-to-br from-brand to-brand-light flex items-center justify-center text-white text-xs font-bold">
                       {user.nombre.charAt(0).toUpperCase()}
                     </div>
-                    <span className="font-medium max-w-24 truncate text-white/90">
+                    <span className="font-medium max-w-24 truncate text-white">
                       {user.nombre.split(' ')[0]}
                     </span>
-                    <ChevronDown size={13} className={`transition-transform text-white/40 ${userMenuOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown size={13} className={`transition-transform text-white ${userMenuOpen ? 'rotate-180' : ''}`} />
                   </button>
 
                   {userMenuOpen && (
@@ -204,7 +239,7 @@ export function Navbar() {
                 </div>
               ) : (
                 <Link href="/auth/login"
-                  className="flex items-center gap-1.5 border text-sm font-medium px-3.5 py-2 rounded-xl transition-colors text-white/70 hover:text-white border-white/20 hover:border-white/40">
+                  className="flex items-center gap-1.5 border text-sm font-medium px-3.5 py-2 rounded-xl transition-colors text-white border-white/20 hover:border-white/40">
                   <User size={14} /> Entrar
                 </Link>
               )
@@ -215,7 +250,7 @@ export function Navbar() {
           <div className="md:hidden flex items-center gap-1">
             {!loading && user && <NotificationBell />}
             <button
-              className="p-2 rounded-xl transition-colors text-white/70 hover:bg-white/10"
+              className="p-2 rounded-xl transition-colors text-white hover:bg-white/10"
               onClick={() => setIsOpen(!isOpen)}
               aria-label={isOpen ? 'Cerrar menú' : 'Abrir menú'}
             >
@@ -233,7 +268,7 @@ export function Navbar() {
                 className={`flex items-center px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                   isActive(link)
                     ? 'text-white bg-white/10'
-                    : 'text-white/70 hover:text-white hover:bg-white/8'
+                    : 'text-white hover:bg-white/8'
                 }`}>
                 {link.label}
               </Link>
@@ -251,11 +286,11 @@ export function Navbar() {
                 {buildMenuGroups(esProfesional, !!user.esAdmin).map((group, gi) => (
                   <div key={gi} className={`space-y-0.5 ${gi > 0 ? 'border-t border-white/10 mt-2 pt-2' : ''}`}>
                     {group.label && (
-                      <p className="px-4 pt-1 pb-1 text-[10px] font-bold text-white/40 uppercase tracking-wide">{group.label}</p>
+                      <p className="px-4 pt-1 pb-1 text-[10px] font-bold text-white uppercase tracking-wide">{group.label}</p>
                     )}
                     {group.items.map((item) => (
                       <Link key={item.href} href={item.href} onClick={() => setIsOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm rounded-xl text-white/75 hover:text-white hover:bg-white/8">
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm rounded-xl text-white hover:bg-white/8">
                         <item.icon size={14} /> {item.label}
                       </Link>
                     ))}

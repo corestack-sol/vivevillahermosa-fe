@@ -42,7 +42,22 @@ export function applyFilters(properties: Property[], filters: SearchFilters): Pr
     // gana precisión donde ya la verificamos.
     const coord = matchColonia(filters.colonia);
     if (coord) {
-      result = result.filter((p) => distanciaKm(p.lat, p.lng, coord.lat, coord.lng) <= coord.radioKm);
+      result = result.filter((p) => {
+        if (distanciaKm(p.lat, p.lng, coord.lat, coord.lng) > coord.radioKm) return false;
+        // Que el radio se traslape no basta: si la propiedad ya tiene su
+        // PROPIA colonia catalogada y es una distinta a la buscada, no
+        // cuenta como "cerca de X" — caso real confirmado (2026-08-08):
+        // "locales cerca de Tabasco 2000" traía un local de Centro
+        // Histórico, a solo 1.15km de distancia (dentro del radio de
+        // 1.3km) pero con nombre e identidad propios, nada que ver con
+        // Tabasco 2000. En el centro de Villahermosa las colonias
+        // catalogadas están muy juntas entre sí, así que este cruce se
+        // repite fácilmente con cualquier par de colonias vecinas — no es
+        // un caso aislado de esta sola.
+        const coloniaPropia = matchColonia(p.colonia);
+        if (coloniaPropia && coloniaPropia.key !== coord.key) return false;
+        return true;
+      });
     } else {
       const q = filters.colonia.toLowerCase();
       result = result.filter(
@@ -241,11 +256,24 @@ function cumpleCriterio(p: Property, filters: SearchFilters, criterio: CriterioC
   }
 }
 
+// "tipo" y "operacion" nunca se relajan, ni siquiera en "todo lo demás" —
+// caso real confirmado (2026-08-08): pedir "locales cerca de Tabasco 2000"
+// mostraba casas/departamentos/terrenos ahí solo porque coincidían en
+// colonia/precio/etc., aunque no fueran ni remotamente el tipo de
+// propiedad pedido. Un local no es "parecido" a una casa solo por estar en
+// la misma cuadra — son categorías distintas, no un mismo tipo con algún
+// detalle de menos. Renta vs. venta es el mismo caso: son compromisos
+// financieros distintos, no una variación menor. El resto de los
+// criterios (ubicación exacta, precio, recámaras, m2, amenidad...) sí son
+// razonables de relajar para un "lo más parecido que encontramos".
+const CRITERIOS_DUROS: readonly CriterioClave[] = ['tipo', 'operacion'];
+
 /**
  * "Todo lo demás" — propiedades que NO cumplen los filtros completos
  * (ya excluidas de `applyFilters`) pero sí coinciden con AL MENOS uno de
- * los criterios activos, ordenadas por cuántos criterios cumplen (más
- * coincidencias primero). Nunca reemplaza `applyFilters` — es un
+ * los criterios SUAVES activos, ordenadas por cuántos cumplen (más
+ * coincidencias primero) — siempre respetando tipo/operación si se
+ * pidieron (ver CRITERIOS_DUROS). Nunca reemplaza `applyFilters` — es un
  * complemento para no dejar a alguien viendo cero resultados relacionados
  * cuando su búsqueda fue razonable pero muy específica.
  */
@@ -257,9 +285,15 @@ export function getResultadosSimilares(
 ): Property[] {
   const criterios = criteriosActivos(filters);
   if (criterios.length === 0) return [];
+
+  const duros = criterios.filter((c) => CRITERIOS_DUROS.includes(c));
+  const suaves = criterios.filter((c) => !CRITERIOS_DUROS.includes(c));
+  if (suaves.length === 0) return []; // solo pidió tipo/operación — no hay nada más "parecido" que ofrecer
+
   return properties
     .filter((p) => !excluirIds.has(p.id))
-    .map((p) => ({ p, score: criterios.filter((c) => cumpleCriterio(p, filters, c)).length }))
+    .filter((p) => duros.every((c) => cumpleCriterio(p, filters, c)))
+    .map((p) => ({ p, score: suaves.filter((c) => cumpleCriterio(p, filters, c)).length }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score || a.p.precio - b.p.precio)
     .slice(0, max)

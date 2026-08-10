@@ -167,16 +167,24 @@ export default async function ZonaDetailPage({ params }: Props) {
               </Link>
             </div>
 
+            {/* Antes decía "Tip de inversión" con afirmaciones de demanda/
+                plusvalía sin ningún dato real detrás — el caso genérico
+                (ninguna colonia catalogada como Dos Bocas o municipio)
+                literalmente repetía la misma frase ("una de las zonas más
+                consolidadas... buena plusvalía") para cualquier colonia,
+                lo cual es falso para casi todas por definición. Ahora solo
+                hechos verificables: ubicación real, sin adjetivos de
+                oportunidad/demanda/plusvalía. */}
             <div className="bg-brand-pale rounded-2xl p-4">
               <p className="text-xs font-semibold text-brand-dark mb-2 flex items-center gap-1">
-                <TrendingUp size={13} /> Tip de inversión
+                <TrendingUp size={13} /> Sobre la zona
               </p>
               <p className="text-xs text-gray-600">
                 {isCercaDosoBocas
-                  ? 'Zona con alta demanda por la Refinería Dos Bocas. Excelente oportunidad de renta para trabajadores PEMEX y contratistas.'
+                  ? 'Ubicada cerca de la Refinería Dos Bocas / Pemex.'
                   : isMunicipality
-                  ? `${name} ofrece precios más accesibles que Villahermosa con buena conectividad vial al centro del estado.`
-                  : `${name} es una de las zonas más consolidadas de Villahermosa. Buena plusvalía y servicios completos.`}
+                  ? `${name} es un municipio fuera de Villahermosa, conectado por carretera al centro del estado.`
+                  : `${name} es una colonia del municipio de ${zone!.municipio}.`}
               </p>
             </div>
           </div>

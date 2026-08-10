@@ -41,11 +41,11 @@ export default function ZonasPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="mb-10">
-        <p className="text-xs font-bold text-brand uppercase tracking-[0.15em] mb-1.5">Todo Tabasco</p>
-        <h1 className="text-3xl font-display font-black text-gray-900 mb-2">
+        <p className="text-xs font-bold text-brand uppercase tracking-[0.15em] mb-1.5 animate-fade-up">Todo Tabasco</p>
+        <h1 className="text-3xl font-display font-black text-gray-900 mb-2 animate-fade-up" style={{ animationDelay: '80ms' }}>
           ¿En qué parte de Tabasco quieres vivir?
         </h1>
-        <p className="text-gray-500">
+        <p className="text-gray-500 animate-fade-up" style={{ animationDelay: '160ms' }}>
           Empieza por la colonia con más movimiento, o explora los 17 municipios del estado.
         </p>
       </div>

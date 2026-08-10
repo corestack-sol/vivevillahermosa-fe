@@ -13,6 +13,14 @@
   --color-accent-dark:  #D97706;
   --color-accent-pale:  #FEF3C7;
 
+  /* Botón principal (CTA) — separado de accent a propósito: dentro de
+     .theme-tabasco (Home) necesita un color distinto al de accent (que ahí
+     sigue siendo el wordmark del logo y el indicador de nav activo), así
+     que no puede ser el mismo token. Fuera de Home, mismo valor que accent
+     — cero cambio de comportamiento en el resto del sitio. */
+  --color-cta:          #F59E0B;
+  --color-cta-dark:     #D97706;
+
   /* Semánticos */
   --color-success:      #10B981;
   --color-danger:       #EF4444;
@@ -31,6 +39,120 @@
   --font-display:  var(--font-inter), system-ui, sans-serif;
   --font-heading:  var(--font-inter), system-ui, sans-serif;
   --font-body:     var(--font-inter), system-ui, sans-serif;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Paleta experimental "Tabasco patio" (2026-08-08) — extraída por muestreo
+   real de píxeles de src/assets/3.jpeg (patio colonial: pared verde
+   patina envejecida, piso de barro/terracota, madera oscura, flores
+   coral). Redefine los mismos tokens de @theme de arriba, así que
+   cualquier utilidad Tailwind ya existente (bg-brand, text-accent-dark,
+   bg-brand-pale, etc.) los hereda automáticamente sin tocar componentes.
+   Escalada a propósito: solo pinta lo que esté envuelto en
+   `.theme-tabasco` (hoy nada más el contenido de Home, ver src/app/
+   page.tsx) — Navbar/Footer y el resto del sitio se quedan con la
+   paleta de siempre. Si no gusta, basta con quitar la clase del wrapper
+   o borrar este bloque; no hay que revertir nada más. */
+.theme-tabasco {
+  --color-brand:        #3F6B4A; /* musgo/patina — antes #0D7065 (teal) */
+  --color-brand-dark:   #1D4A2C; /* verde bosque, más saturado que la primera versión (#24392A) — esa se sentía apagada/casi negra en bloques grandes (header, footer, CTA) */
+
+  /* Solo para el titular del Hero ("Sin agente."/"Encuentra hoy.") — un
+     bloque de texto grande y en negritas puede sostener más viveza que un
+     fondo grande sin sentirse pesado, así que lleva su propio verde más
+     saturado en vez de reusar brand-dark tal cual. */
+  --color-brand-headline: #0E6B3D;
+  --color-brand-mid:    #4C7D57; /* antes #0F8577 */
+  --color-brand-light:  #6E9166; /* antes #14A097 */
+  --color-brand-pale:   #E9EDE1; /* salvia muy pálido — antes #E6F5F4 (menta) */
+
+  --color-accent:       #B5643A; /* terracota/barro — antes #F59E0B (ámbar) */
+  --color-accent-dark:  #8A4A29; /* antes #D97706 */
+  --color-accent-pale:  #F2E1D2; /* antes #FEF3C7 */
+
+  /* Botones (Button.tsx variant="primary" → "Publicar gratis" ×2) — rojo
+     cereza, no naranja/amarillo a propósito (pedido explícito): con el
+     verde ya de por sí ocupando header/footer/CTA y coral ya en varios
+     detalles puntuales, el botón principal necesita un tono que contraste
+     con AMBOS sin sumar un tercer naranja a la mezcla. */
+  --color-cta:          #C4344A;
+  --color-cta-dark:     #A02839;
+
+  --color-sand:         #F0E6D6; /* pergamino cálido — antes #F5F0E8 */
+
+  /* "Vida" — un tercer acento puntual, no otro tono apagado más. Viene de
+     las flores coral de src/assets/3.jpeg: en la foto de referencia son
+     justo lo que rompe el verde/terracota apagados de la pared y el piso,
+     el único punto de color vivo en toda la escena. `--color-coral` ya
+     existía en @theme pero no lo usaba ningún componente — se reaprovecha
+     aquí en vez de crear un token nuevo. Úsalo con moderación (detalles
+     puntuales: un punto, un ícono, una tarjeta de cada tantas), no como
+     fondo grande — para eso ya está brand/accent. */
+  --color-coral:        #EF6C2E; /* naranja vivo — versión más saturada del coral de las flores, a propósito más "vivo" que el resto de la paleta (todo lo demás es apagado/tierra) */
+
+  /* La marca (arriba) solo cubre botones/links/badges puntuales — el peso
+     visual real de la página (títulos, texto de cuerpo, fondos blancos,
+     bordes) vive en la escala neutra de Tailwind (gray-50…900, white), que
+     nunca hereda de @theme igual que brand/accent porque Tailwind ya la
+     define entera en :root con su propio valor. Sin redefinirla aquí
+     también, cambiar brand/accent no alcanza a "verse" en el conjunto —
+     títulos, párrafos y tarjetas se quedan con el gris frío de siempre.
+     Misma escalera de luminosidad que el gray de Tailwind (mismo contraste
+     texto/fondo), solo con temperatura cálida en vez de fría-azulada. */
+  --color-white:   #FFFCF6; /* antes #ffffff */
+  --color-gray-50:  #F8F5EF; /* antes #f9fafb */
+  --color-gray-100: #F0EBE0; /* antes #f3f4f6 */
+  --color-gray-200: #E1D9C8; /* antes #e5e7eb */
+  --color-gray-300: #C9BCA3; /* antes #d1d5dc */
+  --color-gray-400: #A5957A; /* antes #99a1af */
+  --color-gray-500: #7C6F58; /* antes #6a7282 */
+  --color-gray-600: #5A4F3D; /* antes #4a5565 */
+  --color-gray-700: #40372A; /* antes #364153 */
+  --color-gray-800: #2A2419; /* antes #1e2939 */
+  --color-gray-900: #1A1610; /* antes #101828 */
+
+  /* Color por tipo de propiedad (PropertyCard, MapaClient, FilterPanel,
+     comparar, dashboard/propiedades) — antes un arcoíris de colores
+     Tailwind genéricos sin relación con la marca (ámbar/azul/verde/
+     naranja/violeta/gris/rosa). Familia terrosa "Tabasco patio",
+     manteniendo cada tipo distinguible por matiz (ícono + color siguen
+     haciendo la diferencia, no solo el color). Ver el `var(--type-X, Y)`
+     con fallback en propertyTypeConfig.ts: en cualquier página SIN esta
+     clase, sigue viéndose el arcoíris original sin cambio alguno. */
+  --type-casa-from:          #F8F0DE;
+  --type-casa-to:            #E8C98A;
+  --type-casa-accent:        #8A5A1E; /* ocre/mostaza */
+  --type-casa-glow:          #C89A4A;
+
+  --type-departamento-from:   #EDF2F5;
+  --type-departamento-to:     #A9C2CE;
+  --type-departamento-accent: #3D6478; /* azul pizarra, río */
+  --type-departamento-glow:   #5C8AA0;
+
+  --type-terreno-from:        #F3EBDD;
+  --type-terreno-to:          #D2B48C;
+  --type-terreno-accent:      #7C5A32; /* tierra/barro */
+  --type-terreno-glow:        #A8824F;
+
+  --type-local-from:          #F6E6DE;
+  --type-local-to:            #DFA88C;
+  --type-local-accent:        #9C4A2E; /* ladrillo/adobe */
+  --type-local-glow:          #C2653F;
+
+  --type-oficina-from:        #F0E7E8;
+  --type-oficina-to:          #C9A3A8;
+  --type-oficina-accent:      #6B3A42; /* vino */
+  --type-oficina-glow:        #8F5560;
+
+  --type-bodega-from:         #EFEAE1;
+  --type-bodega-to:           #B8AC97;
+  --type-bodega-accent:       #4A4335; /* piedra/carbón cálido */
+  --type-bodega-glow:         #6B6250;
+
+  --type-habitacion-from:     #F3E8EC;
+  --type-habitacion-to:       #D6AFC0;
+  --type-habitacion-accent:   #7A4A5C; /* malva */
+  --type-habitacion-glow:     #9C6478;
 }
 
 @layer base {
@@ -139,5 +261,24 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-up, .animate-slide-in, .animate-count, .animate-shimmer, .animate-toast-in, .animate-marquee {
     animation: none !important;
+  }
+}
+
+/* Aviso "gira tu dispositivo" en /mapa (MapaClient.tsx) — el mapa se
+   navega mucho mejor en horizontal (más contexto lateral para el área
+   visible) que en vertical. Detección 100% CSS: mismo punto de quiebre
+   que ya separa el sidebar de escritorio del layout mobile (lg, 1024px)
+   + orientation:portrait. A propósito NO se usa la Screen Orientation
+   API (screen.orientation.lock) — no existe en Safari de iOS (ningún
+   iPhone/iPad), y en Android solo funciona dentro de pantalla completa y
+   casi siempre requiere un toque previo, así que "automático" de verdad
+   con esa API no es real para una buena parte de quienes visitan el
+   sitio. Este aviso sí funciona igual en cualquier dispositivo. */
+.rotate-hint {
+  display: none;
+}
+@media (max-width: 1023px) and (orientation: portrait) {
+  .rotate-hint {
+    display: flex;
   }
 }

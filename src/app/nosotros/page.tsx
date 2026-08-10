@@ -38,14 +38,14 @@ export default function NosotrosPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       {/* Hero */}
       <div className="max-w-3xl mx-auto text-center mb-16">
-        <div className="inline-flex items-center gap-2 bg-brand-pale text-brand text-sm font-semibold px-4 py-1.5 rounded-full mb-4">
+        <div className="inline-flex items-center gap-2 bg-brand-pale text-brand text-sm font-semibold px-4 py-1.5 rounded-full mb-4 animate-fade-up">
           <MapPin size={14} /> Hecho en Tabasco
         </div>
-        <h1 className="text-4xl md:text-5xl font-display font-black text-gray-900 mb-4">
+        <h1 className="text-4xl md:text-5xl font-display font-black text-gray-900 mb-4 animate-fade-up" style={{ animationDelay: '80ms' }}>
           La plataforma inmobiliaria que Tabasco
           <span className="text-brand"> merecía</span>
         </h1>
-        <p className="text-lg text-gray-500">
+        <p className="text-lg text-gray-500 animate-fade-up" style={{ animationDelay: '160ms' }}>
           Vive Villahermosa nació de una pregunta sencilla: ¿por qué es tan difícil encontrar casa en Tabasco?
           Creamos la plataforma que nos hubiera gustado tener cuando nosotros buscábamos.
         </p>

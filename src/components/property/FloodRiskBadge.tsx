@@ -6,9 +6,12 @@ interface FloodRiskBadgeProps {
   compact?: boolean;
 }
 
+// Mismo criterio que src/lib/floodColors.ts: describe el registro
+// histórico (Atlas de Riesgos), no una predicción de la plataforma —
+// "Riesgo Alto/Medio/Bajo" sonaba a que estuviéramos pronosticando algo.
 const config = {
   alto: {
-    label: 'Riesgo Alto',
+    label: 'Históricamente inundable',
     description: 'Esta zona tiene historial de inundaciones severas según el Atlas de Riesgos Municipal.',
     classes: 'bg-red-50 text-red-700 border-red-200',
     iconClass: 'text-red-500',
@@ -16,7 +19,7 @@ const config = {
     compactText: 'text-red-300',
   },
   medio: {
-    label: 'Riesgo Medio',
+    label: 'Inundaciones menores ocasionales',
     description: 'Zona con anegamiento ocasional en temporada de lluvias según el Atlas de Riesgos Municipal.',
     classes: 'bg-amber-50 text-amber-700 border-amber-200',
     iconClass: 'text-amber-500',
@@ -24,7 +27,7 @@ const config = {
     compactText: 'text-amber-300',
   },
   bajo: {
-    label: 'Riesgo Bajo',
+    label: 'Bajo historial de inundaciones',
     description: 'Zona con bajo historial de inundaciones según el Atlas de Riesgos Municipal.',
     classes: 'bg-green-50 text-green-700 border-green-200',
     iconClass: 'text-green-500',
@@ -50,7 +53,7 @@ export function FloodRiskBadge({ nivel, compact = false }: FloodRiskBadgeProps) 
       <div className={`flex gap-3 p-4 rounded-xl border ${c.classes}`}>
         <Droplets className={`flex-shrink-0 mt-1 ${c.iconClass}`} size={22} />
         <div className="min-w-0">
-          <p className="font-bold text-xl leading-tight">{c.label} de inundación</p>
+          <p className="font-bold text-xl leading-tight">{c.label}</p>
           <p className="text-base mt-1 opacity-80">{c.description}</p>
           <p className="text-xs opacity-40 mt-2 leading-relaxed">
             Atlas de Riesgos del Municipio de Centro, 2023. Ayuntamiento de Centro. P 377

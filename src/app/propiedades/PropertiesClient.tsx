@@ -86,6 +86,34 @@ function heroLabel(sort: SearchFilters['sort']): string | null {
   }
 }
 
+// Grilla dinámica de tarjetas (auto-fit + minmax), no columnas fijas por
+// breakpoint — el número de columnas sale solo de cuánto ancho hay
+// disponible, en vez de saltar en escalones rígidos. minWidth crece por
+// breakpoint (más chico en móvil, para garantizar 2 columnas incluso en
+// un teléfono angosto; más grande en escritorio) porque un solo valor no
+// puede servir para "mínimo 2 en móvil" Y "3 columnas alrededor de
+// 1366-1600px de ancho" a la vez — pedido explícito (2026-08-09): mínimo
+// 2, máximo 5, y que 3 sea el punto natural en resoluciones de laptop
+// grande/escritorio estándar.
+//
+// Matemática de los puntos de quiebre (ancho de grilla ya sin sidebar/
+// padding/gaps, con gap-4 = 16px entre tarjetas):
+//   móvil  (<640px):  minmax(140px,1fr) → nunca baja de 2 columnas
+//   sm     (≥640px):  minmax(220px,1fr) → 2-3 según ancho
+//   lg     (≥1024px): minmax(260px,1fr) → 2-3, sidebar de filtros ya visible
+//   xl     (≥1280px): minmax(300px,1fr) → 3 columnas ~1010-1600px de
+//                      grilla (cubre laptop/escritorio estándar), 4 a
+//                      partir de ~1600px, 5 a partir de ~1920px.
+// El techo de nunca pasar de 5 lo pone el contenedor (max-w-[2200px] más
+// abajo), no esta clase — con minWidth=300px, una 6ª columna
+// matemáticamente no cabe en 2200px de contenedor.
+const GRID_CLASSES =
+  'grid gap-4 ' +
+  'grid-cols-[repeat(auto-fit,minmax(140px,1fr))] ' +
+  'sm:grid-cols-[repeat(auto-fit,minmax(220px,1fr))] ' +
+  'lg:grid-cols-[repeat(auto-fit,minmax(260px,1fr))] ' +
+  'xl:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]';
+
 export function PropertiesClient({ allProperties }: Props) {
   const { filters, updateFilters, clearFilters, activeCount } = useFilters();
   // Arranca con el catálogo estático que ya vino del servidor (para que el
@@ -307,9 +335,16 @@ export function PropertiesClient({ allProperties }: Props) {
   // completo), nunca se deja a la persona con cero resultados relacionados
   // ni con los que sí coinciden mezclados sin explicar por qué salieron —
   // se etiquetan como dos grupos: lo que sí cumple todo lo pedido
-  // ("Resultados encontrados por la IA"), y lo más parecido que no cumplió
-  // todo pero sí algo ("Todo lo demás"), calculado sobre el catálogo
-  // completo (`properties`), no solo sobre la página ya cargada.
+  // ("Resultados"), y lo más parecido que no cumplió todo pero sí algo
+  // ("Todo lo demás"), calculado sobre el catálogo completo (`properties`),
+  // no solo sobre la página ya cargada.
+  // Ninguno de los dos grupos lleva la etiqueta "IA": el filtrado en sí
+  // (esta función, applyFilters) es lógica determinista, no un resultado
+  // de la IA — la IA (interpretarBusqueda) solo interviene, si acaso,
+  // antes de esto, para traducir una frase en filtros. Etiquetar el
+  // resultado del filtro como "encontrado por la IA" era falso incluso
+  // cuando la búsqueda sí pasó por la IA, y directamente engañoso cuando
+  // la búsqueda activa venía solo del panel de filtros manuales.
   const hayBusquedaActiva = activeCount > 0;
   const idsExactos = useMemo(() => new Set(allResults.map((p) => p.id)), [allResults]);
   const resultadosSimilares = useMemo(
@@ -321,8 +356,12 @@ export function PropertiesClient({ allProperties }: Props) {
     <div className="min-h-screen bg-page">
 
       {/* ── Page header ── */}
-      <div className="bg-white border-b border-gray-100 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      {/* animate-fade-up (globals.css) — entra una sola vez al montar la
+          página. No se vuelve a disparar en cada cambio de filtro porque
+          React reconcilia el mismo nodo (mismo className), solo cambia el
+          texto/contenido de adentro. */}
+      <div className="bg-white border-b border-gray-100 shadow-sm animate-fade-up">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
 
           {/* Row 1: title + controls */}
           <div className="flex items-start sm:items-center justify-between gap-3 mb-3">
@@ -383,9 +422,14 @@ export function PropertiesClient({ allProperties }: Props) {
           </div>
 
           {/* Row 2: Inline search */}
+          {/* z-20 en el <form>, no solo en el <ul> del dropdown (mismo bug
+              corregido en SearchBar.tsx) — sin promover este contenedor, el
+              z-30 del <ul> solo gana dentro de su propio contexto de
+              apilamiento y "Row 3: Filtros activos" (hermano, después en
+              el DOM) podía pintarse encima del dropdown. */}
           <form
             ref={searchFormRef}
-            className="relative mb-3"
+            className="relative z-20 mb-3"
             onSubmit={(e) => { e.preventDefault(); setSearchOpen(false); aplicarBusquedaIA(filters.q ?? ''); }}
           >
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -451,7 +495,16 @@ export function PropertiesClient({ allProperties }: Props) {
       </div>
 
       {/* ── Body ── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+      {/* max-w-[2200px] — el contenedor del header (arriba) se queda en
+          1440px a propósito (ahí vive el buscador, que no debe volverse
+          absurdamente ancho), pero el área de resultados sí necesita
+          espacio real para que la grilla dinámica de abajo pueda llegar a
+          4-5 columnas en monitores grandes. 2200px es el techo exacto
+          donde, con el minmax(300px,1fr) del breakpoint xl: de la grilla,
+          matemáticamente nunca cabe una 6ª columna (6×300px + 5×gap
+          supera ese ancho) — no es un número arbitrario, es el límite
+          real del "máximo 5" pedido. */}
+      <div className="max-w-[2200px] mx-auto px-4 sm:px-6 lg:px-8 py-5">
         <div className="flex gap-5">
 
           {/* ── Sidebar (grid mode only) ── */}
@@ -523,7 +576,7 @@ export function PropertiesClient({ allProperties }: Props) {
             {viewMode === 'grid' && (
               <>
                 {isLoading ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className={GRID_CLASSES}>
                     {Array.from({ length: skeletonCount }).map((_, i) => (
                       <Skeleton key={i} variant="card" />
                     ))}
@@ -540,7 +593,7 @@ export function PropertiesClient({ allProperties }: Props) {
                       {esBusquedaSinInterpretar(filters)
                         ? 'Prueba con menos palabras (ej. solo el lugar que buscas) o usa los filtros para acotar a mano.'
                         : resultadosSimilares.length > 0
-                          ? 'No encontramos propiedades con esos filtros exactos — esto es lo más parecido que encontró la IA:'
+                          ? 'No encontramos propiedades con esos filtros exactos — esto es lo más parecido:'
                           : 'No encontramos propiedades con esos filtros.'}
                     </p>
                     <button onClick={clearFilters}
@@ -548,7 +601,7 @@ export function PropertiesClient({ allProperties }: Props) {
                       Quitar filtros
                     </button>
                     {resultadosSimilares.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+                      <div className={`${GRID_CLASSES} w-full`}>
                         {resultadosSimilares.map((p) => (
                           <PropertyCard key={p.id} property={p} landmarkQuery={landmarkQuery} />
                         ))}
@@ -562,9 +615,8 @@ export function PropertiesClient({ allProperties }: Props) {
                 ) : (
                   <>
                     {hayBusquedaActiva && (
-                      <p className="flex items-center gap-1.5 text-xs font-bold text-brand uppercase tracking-wide mb-3">
-                        <Sparkles size={13} />
-                        Resultados encontrados por la IA ({results.length})
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">
+                        Resultados ({results.length})
                       </p>
                     )}
                     {heroProperty && (
@@ -581,7 +633,7 @@ export function PropertiesClient({ allProperties }: Props) {
                         )}
                       </div>
                     )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className={GRID_CLASSES}>
                       {restoResultados.map((p) => (
                         <PropertyCard key={p.id} property={p} landmarkQuery={landmarkQuery} />
                       ))}
@@ -611,7 +663,7 @@ export function PropertiesClient({ allProperties }: Props) {
                         <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">
                           Todo lo demás ({resultadosSimilares.length})
                         </p>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className={GRID_CLASSES}>
                           {resultadosSimilares.map((p) => (
                             <PropertyCard key={p.id} property={p} landmarkQuery={landmarkQuery} />
                           ))}

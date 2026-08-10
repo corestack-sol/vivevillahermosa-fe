@@ -21,10 +21,10 @@ export default function BlogPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="mb-10">
-        <h1 className="text-3xl font-heading font-bold text-gray-900 mb-2">
+        <h1 className="text-3xl font-heading font-bold text-gray-900 mb-2 animate-fade-up">
           Blog inmobiliario de Tabasco
         </h1>
-        <p className="text-gray-500">
+        <p className="text-gray-500 animate-fade-up" style={{ animationDelay: '80ms' }}>
           Todo lo que necesitas saber para encontrar, rentar o vender una propiedad en Tabasco.
         </p>
       </div>

@@ -178,7 +178,12 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
   }, []);
 
   return (
-    <form ref={containerRef} onSubmit={handleSubmit} className={`relative ${className}`}>
+    // z-20 aquí, no solo en el <ul> del dropdown — un z-index en un hijo
+    // profundo solo gana dentro de SU PROPIO contexto de apilamiento; para
+    // que el dropdown pinte encima de hermanos de este <form> (en Home, la
+    // barra de "31+ / 17 mun / $0 / 5 min" justo debajo), hace falta
+    // promover el contexto de este contenedor entero, no solo el <ul>.
+    <form ref={containerRef} onSubmit={handleSubmit} className={`relative z-20 ${className}`}>
       {/* Borde real (no solo un ring blanco pensado para fondos oscuros) —
           así la tarjeta se define igual sobre un hero claro que sobre uno oscuro. */}
       <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl shadow-2xl px-5 py-4"

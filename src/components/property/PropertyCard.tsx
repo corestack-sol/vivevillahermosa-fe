@@ -56,8 +56,12 @@ export function PropertyCard({ property, landmarkQuery }: PropertyCardProps) {
         {/* Velo de color de abajo hacia arriba — el mismo lenguaje que
             card2.png, pero con el tono propio de cada tipo de propiedad
             en vez de un solo naranja fijo. */}
+        {/* color-mix() en vez de concatenar dígitos hex de opacidad
+            (`${cfg.accent}F2`) — cfg.accent ahora puede ser un `var(...)`
+            (ver propertyTypeConfig.ts, tema Tabasco de Home), y pegarle
+            texto hex directo a una función CSS da un valor inválido. */}
         <div className="absolute inset-0" style={{
-          background: `linear-gradient(to top, ${cfg.accent}F2 0%, ${cfg.accent}B8 30%, ${cfg.accent}00 65%)`,
+          background: `linear-gradient(to top, color-mix(in srgb, ${cfg.accent} 95%, transparent) 0%, color-mix(in srgb, ${cfg.accent} 72%, transparent) 30%, transparent 65%)`,
         }} />
 
         {/* Operación — único badge, minimalista */}
@@ -86,7 +90,15 @@ export function PropertyCard({ property, landmarkQuery }: PropertyCardProps) {
           </p>
 
           <div className="flex items-end justify-between gap-2">
-            <div className="flex items-center gap-2.5 text-white/90 text-[11px] font-semibold">
+            {/* min-w-0 + overflow-hidden — sin esto, un flex item nunca se
+                encoge por debajo del ancho de su contenido (min-width:auto
+                por defecto), así que con specs largas (m² + recámaras +
+                baños + precio/m²) en una tarjeta angosta (4 columnas en
+                xl:), esta fila se desbordaba y empujaba el botón circular
+                de flecha fuera de su lugar en vez de recortarse ella
+                misma. Ahora lo que no cabe se recorta aquí, y el botón
+                (flex-shrink-0) siempre queda fijo a la derecha. */}
+            <div className="flex items-center gap-2.5 text-white/90 text-[11px] font-semibold min-w-0 overflow-hidden">
               {property.m2Construidos > 0 && (
                 <span className="flex items-center gap-1"><Maximize size={11} />{property.m2Construidos}m²</span>
               )}

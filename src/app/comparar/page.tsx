@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Scale, X, ArrowRight, Sparkles } from 'lucide-react';
+import {
+  ArrowLeft, Scale, X, ArrowRight, DollarSign, Ruler, Tag, ArrowLeftRight,
+  Maximize, LandPlot, BedDouble, Bath, Car, Calendar, Droplets, Zap, Leaf, Sparkles, Clock,
+} from 'lucide-react';
 import { useCompare } from '@/context/CompareContext';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { getAllProperties, getPriceContext } from '@/lib/api';
 import { aplicarOverridesPublicos, PROPIEDADES_LOCALES_EVENT } from '@/lib/propiedadesLocales';
 import { ESTADO_OVERRIDE_EVENT } from '@/lib/estadoOverrides';
@@ -32,10 +36,26 @@ function bestIndex(values: (number | null)[], direction: 'min' | 'max'): number 
   return winners.length === 1 ? winners[0].i : null;
 }
 
-function BestTag() {
+// Antes decía "Mejor" (con un ícono de estrella) en la fila con el valor
+// más alto/bajo — declarar un "ganador" es un juicio de valor que ni
+// nosotros ni una IA deberíamos hacer por la persona: más recámaras, más
+// m² o el precio más bajo no es objetivamente "mejor" para todos, depende
+// de lo que cada quien busca. Ahora es un dato neutral y sutil (texto gris
+// pequeño, sin insignia de color ni ícono de premio) — informa el hecho
+// ("el más bajo", "el más grande") sin opinar.
+function HighlightTag({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-brand bg-brand-pale px-2 py-0.5 rounded-full mt-1.5">
-      <Sparkles size={9} /> Mejor
+    <span className="block text-[10px] text-gray-400 font-medium mt-1">{label}</span>
+  );
+}
+
+/** Ícono + texto consistente para cada fila — ayuda a ubicarse rápido en
+ *  una tabla de 15 filas sin tener que leer cada etiqueta letra por letra. */
+function RowLabel({ icon: Icon, children }: { icon: typeof DollarSign; children: React.ReactNode }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <Icon size={12} className="text-gray-300 flex-shrink-0" />
+      {children}
     </span>
   );
 }
@@ -64,7 +84,7 @@ export default function CompararPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="flex items-center justify-between gap-3 mb-8">
+      <div className="flex items-center justify-between gap-3 mb-8 animate-fade-up">
         <div className="flex items-center gap-3">
           <Link href="/propiedades" className="text-gray-400 hover:text-brand transition-colors">
             <ArrowLeft size={20} />
@@ -109,13 +129,29 @@ export default function CompararPage() {
 function ComparisonTable({ properties, onRemove }: { properties: Property[]; onRemove: (id: string) => void }) {
   const priceCtx = properties.map((p) => getPriceContext(p));
 
-  const precioBest    = bestIndex(properties.map((p) => p.precio), 'min');
+  // Comparar el precio de una propiedad en venta contra una en renta no
+  // tiene sentido — uno es el total a pagar de una vez, el otro es una
+  // mensualidad, no son la misma unidad aunque ambos sean "precio". Si se
+  // mezclan operaciones en la comparación, ninguna se resalta como más
+  // baja (mixedOperacion === true corta bestIndex antes de calcular).
+  const mixedOperacion = new Set(properties.map((p) => p.operacion)).size > 1;
+  const precioBest    = mixedOperacion ? null : bestIndex(properties.map((p) => p.precio), 'min');
   const m2Best         = bestIndex(properties.map((p) => (p.m2Construidos > 0 ? p.m2Construidos : null)), 'max');
   const recamarasBest  = bestIndex(properties.map((p) => (p.recamaras > 0 ? p.recamaras : null)), 'max');
   const banosBest      = bestIndex(properties.map((p) => (p.banos + p.mediosBanos > 0 ? p.banos + p.mediosBanos : null)), 'max');
   const antiguedadBest = bestIndex(properties.map((p) => (p.operacion === 'venta' ? p.antiguedad : null)), 'min');
-  const riesgoRank: Record<string, number> = { bajo: 0, medio: 1, alto: 2 };
-  const riesgoBest     = bestIndex(properties.map((p) => riesgoRank[p.riesgoInundacion]), 'min');
+  // "Cerca de Dos Bocas" solo es relevante para la franja costera
+  // (Paraíso y alrededores) — para el resto del estado, mostrarla como
+  // fila fija con "No" en todas las columnas es ruido, no un criterio de
+  // comparación real. Se oculta por completo salvo que aplique a al
+  // menos una de las propiedades que se están comparando.
+  const showDosBocas = properties.some((p) => p.cercaDosoBocas);
+  // Riesgo de inundación NUNCA lleva highlight comparativo entre
+  // propiedades (a diferencia de precio/m²/recámaras/etc.) — a diferencia
+  // de esos datos, "riesgo" es información que puede afectar cómo se
+  // percibe la propiedad de un dueño frente a la de otro; cada quien ve su
+  // propio nivel (el punto de color + la palabra bajo/medio/alto), sin que
+  // la plataforma señale cuál sale "mejor parada" que la otra.
 
   // Mismo lenguaje que PropertyCard: sin líneas de rejilla ni cebra —
   // filas planas separadas por un borde muy sutil, más aire, la fila de
@@ -123,9 +159,15 @@ function ComparisonTable({ properties, onRemove }: { properties: Property[]; onR
   // Sin color de fondo aquí a propósito — cada fila lo define una sola vez
   // (no concatenado con este base) para no tener dos clases bg-* peleando
   // por especificidad en el mismo elemento sticky.
-  const thBase = 'sticky left-0 z-10 text-left align-middle px-4 py-4 text-[11px] font-bold uppercase tracking-wide text-gray-400 whitespace-nowrap';
-  const tdBase = 'align-middle px-4 py-4 text-sm text-gray-700 min-w-[180px]';
-  const rowBorder = 'border-b border-gray-100';
+  // `group-hover:` en vez de un `:hover` normal — el trigger vive en el
+  // <tr> (className="group"), y tanto el <th> sticky como los <td> lo
+  // heredan, así la fila entera cambia de color junta al pasar el mouse,
+  // no solo la celda apuntada. Tailwind emite los estilos `group-hover:`
+  // después de los `bg-*` base en el CSS generado, así que sí le gana al
+  // `bg-white`/`bg-brand-pale` de cada celda aunque compartan especificidad.
+  const thBase = 'sticky left-0 z-10 text-left align-middle px-4 py-4 text-[11px] font-bold uppercase tracking-wide text-gray-400 whitespace-nowrap group-hover:bg-brand-pale/70 transition-colors';
+  const tdBase = 'align-middle px-4 py-4 text-sm text-gray-700 min-w-[180px] group-hover:bg-brand-pale/25 transition-colors';
+  const rowBorder = 'group border-b border-gray-100';
 
   return (
     <>
@@ -157,8 +199,11 @@ function ComparisonTable({ properties, onRemove }: { properties: Property[]; onR
                     <div className="absolute inset-0 flex items-start justify-center pt-5">
                       <cfg.Icon size={44} strokeWidth={1} style={{ color: cfg.accent, opacity: 0.18 }} />
                     </div>
+                    {/* color-mix() en vez de concatenar dígitos hex de
+                        opacidad — cfg.accent puede ser un var(...), ver
+                        el mismo fix en PropertyCard.tsx. */}
                     <div className="absolute inset-0" style={{
-                      background: `linear-gradient(to top, ${cfg.accent}F2 0%, ${cfg.accent}B8 38%, ${cfg.accent}00 75%)`,
+                      background: `linear-gradient(to top, color-mix(in srgb, ${cfg.accent} 95%, transparent) 0%, color-mix(in srgb, ${cfg.accent} 72%, transparent) 38%, transparent 75%)`,
                     }} />
                     <button
                       onClick={() => onRemove(p.id)}
@@ -185,118 +230,141 @@ function ComparisonTable({ properties, onRemove }: { properties: Property[]; onR
           </tr>
         </thead>
         <tbody>
-          <tr className="bg-brand-pale/40">
-            <th scope="row" className={`${thBase} bg-brand-pale`}>Precio</th>
+          <tr className="group bg-brand-pale/40">
+            <th scope="row" className={`${thBase} bg-brand-pale`}><RowLabel icon={DollarSign}>Precio</RowLabel></th>
             {properties.map((p, i) => (
               <td key={p.id} className={tdBase}>
                 <span className="text-lg font-black text-gray-900">{fmtMoney(p.precio)}</span>
                 {p.operacion === 'renta' && <span className="text-xs text-gray-400">/mes</span>}
-                {precioBest === i && <BestTag />}
+                {precioBest === i && <HighlightTag label="El precio más bajo" />}
+                {/* Explica por qué ninguna se resalta aquí, en vez de dejar
+                    la ausencia del dato sin explicación. */}
+                {mixedOperacion && i === 0 && (
+                  <span className="block text-[10px] text-gray-400 font-medium mt-1">Venta y renta no son comparables directamente</span>
+                )}
               </td>
             ))}
           </tr>
           <tr className={rowBorder}>
-            <th scope="row" className={`${thBase} bg-white`}>Precio por m²</th>
+            <th scope="row" className={`${thBase} bg-white`}><RowLabel icon={Ruler}>Precio por m²</RowLabel></th>
             {properties.map((p, i) => (
               <td key={p.id} className={tdBase}>
-                {priceCtx[i].precioPorM2 !== null ? `$${priceCtx[i].precioPorM2!.toLocaleString('es-MX')}/m²` : '—'}
+                {/* Bug real encontrado en auditoría (2026-08-08): esta fila
+                    nunca aclaraba "/mes" para renta, a diferencia de la fila
+                    Precio de arriba — mostraba, por ejemplo, "$120/m²" de una
+                    renta mensual justo al lado de "$18,000/m²" de una venta
+                    total, sin nada que avisara que son unidades distintas. */}
+                {priceCtx[i].precioPorM2 !== null
+                  ? `$${priceCtx[i].precioPorM2!.toLocaleString('es-MX')}/m²${p.operacion === 'renta' ? '/mes' : ''}`
+                  : '—'}
               </td>
             ))}
           </tr>
           <tr className={rowBorder}>
-            <th scope="row" className={`${thBase} bg-white`}>Tipo</th>
+            <th scope="row" className={`${thBase} bg-white`}><RowLabel icon={Tag}>Tipo</RowLabel></th>
             {properties.map((p) => (
               <td key={p.id} className={tdBase}>{TIPO_LABEL[p.tipo] ?? p.tipo}</td>
             ))}
           </tr>
           <tr className={rowBorder}>
-            <th scope="row" className={`${thBase} bg-white`}>Operación</th>
+            <th scope="row" className={`${thBase} bg-white`}><RowLabel icon={ArrowLeftRight}>Operación</RowLabel></th>
             {properties.map((p) => (
               <td key={p.id} className={tdBase}>{p.operacion === 'venta' ? 'Venta' : 'Renta'}</td>
             ))}
           </tr>
           <tr className={rowBorder}>
-            <th scope="row" className={`${thBase} bg-white`}>m² construidos</th>
+            <th scope="row" className={`${thBase} bg-white`}><RowLabel icon={Maximize}>m² construidos</RowLabel></th>
             {properties.map((p, i) => (
               <td key={p.id} className={tdBase}>
                 {p.m2Construidos > 0 ? `${p.m2Construidos} m²` : '—'}
-                {m2Best === i && <BestTag />}
+                {m2Best === i && <HighlightTag label="La más grande" />}
               </td>
             ))}
           </tr>
           <tr className={rowBorder}>
-            <th scope="row" className={`${thBase} bg-white`}>m² de terreno</th>
+            <th scope="row" className={`${thBase} bg-white`}><RowLabel icon={LandPlot}>m² de terreno</RowLabel></th>
             {properties.map((p) => (
               <td key={p.id} className={tdBase}>{p.m2Terreno > 0 ? `${p.m2Terreno} m²` : '—'}</td>
             ))}
           </tr>
           <tr className={rowBorder}>
-            <th scope="row" className={`${thBase} bg-white`}>Recámaras</th>
+            <th scope="row" className={`${thBase} bg-white`}><RowLabel icon={BedDouble}>Recámaras</RowLabel></th>
             {properties.map((p, i) => (
               <td key={p.id} className={tdBase}>
                 {p.recamaras > 0 ? p.recamaras : '—'}
-                {recamarasBest === i && <BestTag />}
+                {recamarasBest === i && <HighlightTag label="Más recámaras" />}
               </td>
             ))}
           </tr>
           <tr className={rowBorder}>
-            <th scope="row" className={`${thBase} bg-white`}>Baños</th>
+            <th scope="row" className={`${thBase} bg-white`}><RowLabel icon={Bath}>Baños</RowLabel></th>
             {properties.map((p, i) => (
               <td key={p.id} className={tdBase}>
                 {p.banos + p.mediosBanos > 0 ? p.banos + p.mediosBanos : '—'}
-                {banosBest === i && <BestTag />}
+                {banosBest === i && <HighlightTag label="Más baños" />}
               </td>
             ))}
           </tr>
           <tr className={rowBorder}>
-            <th scope="row" className={`${thBase} bg-white`}>Estacionamientos</th>
+            <th scope="row" className={`${thBase} bg-white`}><RowLabel icon={Car}>Estacionamientos</RowLabel></th>
             {properties.map((p) => (
               <td key={p.id} className={tdBase}>{p.estacionamientos > 0 ? p.estacionamientos : '—'}</td>
             ))}
           </tr>
           <tr className={rowBorder}>
-            <th scope="row" className={`${thBase} bg-white`}>Antigüedad</th>
+            <th scope="row" className={`${thBase} bg-white`}><RowLabel icon={Calendar}>Antigüedad</RowLabel></th>
             {properties.map((p, i) => (
               <td key={p.id} className={tdBase}>
                 {p.operacion === 'venta' ? (p.antiguedad > 0 ? `${p.antiguedad} años` : 'Nueva') : '—'}
-                {antiguedadBest === i && <BestTag />}
+                {antiguedadBest === i && <HighlightTag label="La más nueva" />}
               </td>
             ))}
           </tr>
           <tr className={rowBorder}>
-            <th scope="row" className={`${thBase} bg-white`}>Riesgo de inundación</th>
-            {properties.map((p, i) => (
+            <th scope="row" className={`${thBase} bg-white`}><RowLabel icon={Droplets}>Riesgo de inundación</RowLabel></th>
+            {properties.map((p) => (
               <td key={p.id} className={tdBase}>
                 <span className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: FLOOD_COLOR[p.riesgoInundacion] }}>
                   <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: FLOOD_COLOR[p.riesgoInundacion] }} />
                   {FLOOD_LABEL[p.riesgoInundacion]}
                 </span>
-                {riesgoBest === i && <BestTag />}
               </td>
             ))}
           </tr>
+          {showDosBocas && (
+            <tr className={rowBorder}>
+              <th scope="row" className={`${thBase} bg-white`}><RowLabel icon={Zap}>Cerca de Dos Bocas</RowLabel></th>
+              {properties.map((p) => (
+                <td key={p.id} className={tdBase}>{p.cercaDosoBocas ? 'Sí' : 'No'}</td>
+              ))}
+            </tr>
+          )}
           <tr className={rowBorder}>
-            <th scope="row" className={`${thBase} bg-white`}>Cerca de Dos Bocas</th>
-            {properties.map((p) => (
-              <td key={p.id} className={tdBase}>{p.cercaDosoBocas ? 'Sí' : 'No'}</td>
-            ))}
-          </tr>
-          <tr className={rowBorder}>
-            <th scope="row" className={`${thBase} bg-white`}>Zona ecológica</th>
+            <th scope="row" className={`${thBase} bg-white`}><RowLabel icon={Leaf}>Zona ecológica</RowLabel></th>
             {properties.map((p) => (
               <td key={p.id} className={tdBase}>{p.zonaEcologica ? 'Sí' : 'No'}</td>
             ))}
           </tr>
           <tr className={rowBorder}>
-            <th scope="row" className={`${thBase} bg-white`}>Amenidades</th>
-            {properties.map((p) => (
-              <td key={p.id} className={tdBase}>
-                {p.amenidades.length > 0 ? `${p.amenidades.length} — ${p.amenidades.slice(0, 2).join(', ')}${p.amenidades.length > 2 ? '…' : ''}` : '—'}
-              </td>
-            ))}
+            <th scope="row" className={`${thBase} bg-white`}><RowLabel icon={Sparkles}>Amenidades</RowLabel></th>
+            {properties.map((p) => {
+              const cortada = p.amenidades.length > 2;
+              const texto = p.amenidades.length > 0
+                ? `${p.amenidades.length} — ${p.amenidades.slice(0, 2).join(', ')}${cortada ? '…' : ''}`
+                : '—';
+              return (
+                <td key={p.id} className={tdBase}>
+                  {cortada ? (
+                    <Tooltip label={p.amenidades.join(', ')} wrap>
+                      <span className="underline decoration-dotted decoration-gray-300 underline-offset-2 cursor-help">{texto}</span>
+                    </Tooltip>
+                  ) : texto}
+                </td>
+              );
+            })}
           </tr>
-          <tr>
-            <th scope="row" className={`${thBase} bg-white`}>Publicada</th>
+          <tr className="group">
+            <th scope="row" className={`${thBase} bg-white`}><RowLabel icon={Clock}>Publicada</RowLabel></th>
             {properties.map((p) => (
               <td key={p.id} className={tdBase}>{formatRelativeDate(p.fechaPublicacion)}</td>
             ))}

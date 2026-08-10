@@ -23,14 +23,19 @@ const zoneLinks = [
 ];
 
 function FooterMinimal() {
+  // Mismo trío cálido del Hero (brand-pale → blanco → sand, ver page.tsx)
+  // en vez de un bg-white plano — así el footer, aunque minimalista, no
+  // se siente desconectado del resto de la paleta Tabasco. Muy diluido
+  // (/30) porque es una barra angosta de una sola línea, no un fondo
+  // protagonista como el del Hero.
   return (
-    <footer className="bg-white border-t border-brand/10">
+    <footer className="bg-gradient-to-r from-brand-pale/30 via-white to-sand/30 border-t border-brand/15">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-1.5">
         <p className="text-sm text-brand-dark/70">
           © {new Date().getFullYear()} Vive Villahermosa. Todos los derechos reservados.
         </p>
         <p className="text-sm text-brand/50">
-          Plataforma inmobiliaria local · Tabasco, México
+          Villahermosa · Tabasco, México
         </p>
       </div>
     </footer>
@@ -39,6 +44,8 @@ function FooterMinimal() {
 
 function FooterFull() {
   return (
+    // theme-tabasco ya se aplica sitio-completo en layout.tsx — no hace
+    // falta repetirla aquí (ver el mismo cambio en Navbar.tsx).
     <footer className="bg-brand-dark text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -49,7 +56,9 @@ function FooterFull() {
                 <Home size={16} className="text-white" />
               </span>
               <span className="font-display font-bold text-lg">
-                Vive <span className="text-accent">Villahermosa</span>
+                {/* coral, no accent — mismo cambio que el wordmark del Navbar,
+                    para que "Villahermosa" se vea del mismo color en los dos. */}
+                Vive <span className="text-coral">Villahermosa</span>
               </span>
             </div>
             <p className="text-sm text-white/70 leading-relaxed mb-4">
@@ -141,11 +150,19 @@ function FooterFull() {
               </li>
             </ul>
 
-            <div className="mt-6 p-3 bg-white/10 rounded-xl flex gap-2">
-              <Droplets size={14} className="flex-shrink-0 mt-0.5 text-white/60" />
-              <p className="text-xs text-white/60 leading-relaxed">
-                <strong className="text-white/80">¿Sabías?</strong> En Tabasco las lluvias importan.
-                Por eso cada propiedad muestra si su zona se inunda. Solo en Vive Villahermosa.
+            {/* Mismo lenguaje visual que la barra de features debajo del
+                Hero (page.tsx): ícono en placa de color en vez de ícono
+                suelto semi-transparente, texto con jerarquía (título +
+                descripción) en vez de un párrafo con <strong> inline.
+                Mismo azul cielo que el feature "Alerta de inundación" —
+                mismo ícono, mismo significado, coherencia entre secciones. */}
+            <div className="mt-6 p-3 bg-white/10 rounded-xl flex items-start gap-3">
+              <span className="w-9 h-9 rounded-lg bg-sky/15 text-sky flex items-center justify-center flex-shrink-0">
+                <Droplets size={16} />
+              </span>
+              <p className="text-xs text-white/70 leading-relaxed">
+                <strong className="block text-white text-sm mb-0.5">¿Sabías?</strong>
+                En Tabasco las lluvias importan. Por eso cada propiedad muestra si su zona se inunda. Solo en Vive Villahermosa.
               </p>
             </div>
           </div>
@@ -156,7 +173,7 @@ function FooterFull() {
             © {new Date().getFullYear()} Vive Villahermosa. Todos los derechos reservados.
           </p>
           <p className="text-xs text-white/40">
-            Plataforma inmobiliaria local · Tabasco, México
+            Villahermosa · Tabasco, México
           </p>
         </div>
       </div>
@@ -166,6 +183,13 @@ function FooterFull() {
 
 export function Footer() {
   const pathname = usePathname();
+  // /mapa se queda sin footer a propósito: el mapa ocupa exactamente
+  // 100vh menos el navbar (ver h-[calc(100vh-64px)] en MapaClient.tsx);
+  // agregar cualquier footer ahí rompería esa cuenta.
   if (pathname.startsWith('/mapa')) return null;
-  return pathname.startsWith('/propiedades') ? <FooterMinimal /> : <FooterFull />;
+  // Solo Home lleva el footer completo (sitemap + "¿Sabías?" + contacto)
+  // — a pedido explícito (2026-08-08), el resto de la plataforma
+  // (incluyendo /comparar, /dashboard/*, /admin/*) usa el footer mínimo
+  // de /propiedades, no una versión reducida por sección.
+  return pathname === '/' ? <FooterFull /> : <FooterMinimal />;
 }

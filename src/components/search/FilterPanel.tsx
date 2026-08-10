@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import type { SearchFilters } from '@/types/search';
 import type { OperationType } from '@/types/property';
-import { X, Zap, Check } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 import { PROPERTY_TYPE_CONFIG } from '@/lib/propertyTypeConfig';
 import { MUNICIPIO_OPTIONS } from '@/lib/publishSchema';
 
@@ -248,31 +248,6 @@ export function FilterPanel({ filters, onUpdate, onClear, activeCount, total }: 
             );
           })}
         </div>
-      </Section>
-
-      <div className="h-px bg-white/10" />
-
-      {/* ⑥ Dos Bocas */}
-      <Section title="Zona especial">
-        <button
-          onClick={() => onUpdate({ cercaDosoBocas: filters.cercaDosoBocas ? undefined : true })}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all text-left ${
-            filters.cercaDosoBocas
-              ? 'bg-amber-400/20 border-amber-400 text-amber-300'
-              : 'bg-white/10 border-white/15 text-white/65 hover:border-white/35 hover:bg-white/15 hover:text-white'
-          }`}
-        >
-          <Zap size={18} className="flex-shrink-0" strokeWidth={2} />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold leading-none mb-0.5">Cerca de Dos Bocas</p>
-            <p className={`text-xs leading-none mt-0.5 ${
-              filters.cercaDosoBocas ? 'text-amber-400/60' : 'text-white/35'
-            }`}>
-              Refinería Olmeca / PEMEX
-            </p>
-          </div>
-          {filters.cercaDosoBocas && <Check size={14} className="text-amber-400 flex-shrink-0" strokeWidth={2.5} />}
-        </button>
       </Section>
 
       {/* Contador */}

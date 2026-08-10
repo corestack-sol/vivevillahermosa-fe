@@ -2,11 +2,11 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import {
   ChevronRight, Shield, ArrowRight, Zap,
-  MessageCircle, Droplets, Camera, CheckCircle2, Sparkles,
+  MessageCircle, Droplets, Camera, CheckCircle2, Sparkles, Bot,
 } from 'lucide-react';
 import { SearchBar } from '@/components/search/SearchBar';
 import { ClickableMap } from '@/components/map/ClickableMap';
-import { getFeaturedProperties, getFeaturedZones, getStats } from '@/lib/api';
+import { getFeaturedProperties, getColoniasRankedByPropiedades, getStats } from '@/lib/api';
 import { buttonClasses } from '@/components/ui/Button';
 import { RecentlyViewedSection } from '@/components/property/RecentlyViewedSection';
 import { PropertyCard } from '@/components/property/PropertyCard';
@@ -38,22 +38,50 @@ const QUICK_LINKS: { href: string; label: string; Icon?: typeof Zap }[] = [
   { href: '/propiedades?dosBocas=true',              label: 'Dos Bocas', Icon: Zap },
 ];
 
+// Mismo criterio que FEATURES arriba: un color por ícono en vez del mismo
+// bg-white/8 repetido ×4 — sobre fondo oscuro, así que van con /20 en vez
+// de /15 para que el tinte se note contra el verde bosque.
 const PUBLISH_STEPS = [
-  { time: '2 min', label: 'Subes fotos y datos', Icon: Camera },
-  { time: 'Inmediato', label: 'Tu anuncio se publica', Icon: CheckCircle2 },
-  { time: 'Ese día', label: 'Recibes mensajes', Icon: MessageCircle },
-  { time: '$0', label: 'Sin comisión, siempre', Icon: Sparkles },
+  { time: '5 min', label: 'Subes fotos y datos', Icon: Camera, bg: 'bg-brand-light/20', fg: 'text-brand-light' },
+  { time: 'Inmediato', label: 'Tu anuncio se publica', Icon: CheckCircle2, bg: 'bg-sky/20', fg: 'text-sky' },
+  {
+    // "Ese día" prometía un tiempo que la plataforma no controla (depende
+    // de que un interesado real escriba, no de nosotros) — "Directo" habla
+    // de CÓMO llega el mensaje (sin intermediarios/filtros), no de CUÁNDO.
+    time: 'Directo', label: 'Recibes mensajes', Icon: MessageCircle, bg: 'bg-coral/20', fg: 'text-coral',
+  },
+  { time: '$0', label: 'Sin comisión', Icon: Sparkles, bg: 'bg-cta/20', fg: 'text-cta' },
 ];
 
+// Un color distinto por ícono en vez del mismo bg-brand-pale repetido ×3 —
+// Droplets ya usa el azul semántico de "agua" (coincide con el badge de
+// riesgo de inundación más abajo en la página), Zap usa coral ("vida"/
+// energía), MessageCircle se queda en el verde de marca.
 const FEATURES = [
-  { Icon: MessageCircle, title: 'WhatsApp o correo', sub: 'Tú eliges cómo te contactan: por WhatsApp, correo, o ambos.' },
-  { Icon: Droplets, title: 'Alerta de inundación', sub: 'La única plataforma en Tabasco que te dice si la zona se inunda.' },
-  { Icon: Zap, title: 'Anuncio activo en 5 min', sub: 'Sube fotos, llena datos, publica. Sin comisión, sin trámites.' },
+  { Icon: MessageCircle, title: 'WhatsApp o correo', sub: 'Tú eliges cómo te contactan: por WhatsApp, correo, o ambos.', bg: 'bg-brand-pale', fg: 'text-brand' },
+  // "si la zona se inunda" sonaba a predicción propia (¿ahora? ¿va a
+  // inundarse?) — el dato real es el registro histórico del Atlas de
+  // Riesgos, mismo criterio ya aplicado en FLOOD_LABEL (floodColors.ts:
+  // "Riesgo alto de inundación" → "Históricamente inundable"). Se
+  // acortó de paso (line-clamp-2 en una tarjeta de 300px de ancho no
+  // tiene margen para una oración larga) y de paso queda igual de
+  // conciso que las otras dos tarjetas del carrusel.
+  { Icon: Droplets, title: 'Alerta de inundación', sub: 'Te decimos qué zonas de Tabasco se han inundado históricamente.', bg: 'bg-sky/15', fg: 'text-sky' },
+  { Icon: Zap, title: 'Anuncio activo en 5 min', sub: 'Sube fotos, llena datos, publica. Sin comisión, sin trámites.', bg: 'bg-coral/15', fg: 'text-coral' },
 ];
 
 export default function HomePage() {
   const featured = getFeaturedProperties();
-  const zones = getFeaturedZones().slice(0, 4);
+  // getColoniasRankedByPropiedades (no getFeaturedZones/`destacada`) — misma
+  // fuente que ya usa /zonas para sus tarjetas grandes: ranking real por
+  // cantidad de propiedades activas, no una curación manual. Antes esta
+  // sección mostraba las colonias marcadas `destacada:true` a mano en
+  // zones.json, sin ninguna señal real detrás de esa selección — mismo
+  // problema que ya se había corregido en /zonas (ver el comentario de esa
+  // función en api.ts). Pedido explícito (2026-08-09): nada en la
+  // plataforma debe quedarse en datos sueltos/editoriales si ya existe una
+  // fuente real que se pueda usar en su lugar.
+  const zones = getColoniasRankedByPropiedades().slice(0, 4);
   const stats = getStats();
 
   const markers = featured.map((p) => ({
@@ -64,15 +92,33 @@ export default function HomePage() {
   }));
 
   return (
-    <>
+    <div>
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ HERO ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {/* Un fondo oscuro no es el registro correcto para una inmobiliaria —
           Zillow, Airbnb, Redfin, Idealista van a fondos claros y cálidos
           porque el producto es "encontrar un hogar", no algo corporativo.
           Este hero es claro y cálido (brand-pale → sand), y es justo ese
           contraste — verde oscuro arriba, claro abajo — lo que hace que el
-          header no se pierda, sin sacrificar la sensación de la marca. */}
-      <section className="relative bg-gradient-to-br from-brand-pale via-white to-sand">
+          header no se pierda, sin sacrificar la sensación de la marca.
+
+          Collage de íconos de Tabasco (cacao, marimba, pejelagarto, cabeza
+          olmeca, iguana, garza, sombrero, canoa, torre petrolera, puente,
+          skyline) — public/images/hero-bg-collage.svg, generado en Canva a
+          partir de src/assets/bgcollage.svg — se apila sobre el mismo
+          degradado de antes (no lo reemplaza) vía `background-image` con
+          dos capas, porque el collage no es un patrón que se repita sin
+          costura (960×540 fijo): "cover" lo estira/recorta según la
+          pantalla, y el degradado se sigue viendo en cualquier borde que
+          el collage no alcance a cubrir. */}
+      <section
+        className="relative"
+        style={{
+          backgroundImage: 'url(/images/hero-bg-collage.svg), linear-gradient(to bottom right, var(--color-brand-pale), #ffffff, var(--color-sand))',
+          backgroundSize: 'cover, cover',
+          backgroundPosition: 'center, center',
+          backgroundRepeat: 'no-repeat, no-repeat',
+        }}
+      >
         {/* Glow — muy sutil, textura y no bloque de color. El overflow-hidden
             vive en este wrapper (no en la <section>) a propósito: es solo
             para recortar estos círculos de brillo, que se salen del borde
@@ -81,34 +127,57 @@ export default function HomePage() {
             posicionado absoluto más abajo), dejándolo cortado detrás del
             carrusel de la sección siguiente. */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-20 right-0 w-[550px] h-[450px] rounded-full blur-[130px]" style={{ background: 'radial-gradient(ellipse, rgba(13,112,101,0.12) 0%, transparent 70%)' }} />
-          <div className="absolute bottom-0 left-0 w-[350px] h-[350px] rounded-full blur-[110px]" style={{ background: 'radial-gradient(ellipse, rgba(245,158,11,0.14) 0%, transparent 70%)' }} />
+          {/* rgba en vez de var(--color-brand)/var(--color-accent): un
+              radial-gradient necesita el color con su propio alpha, y
+              CSS no puede componer una var() de #hex con una opacidad
+              aparte dentro del mismo valor — se escriben literales,
+              actualizados a mano junto con .theme-tabasco (globals.css)
+              cada vez que cambie la paleta. */}
+          <div className="absolute -top-20 right-0 w-[550px] h-[450px] rounded-full blur-[130px]" style={{ background: 'radial-gradient(ellipse, rgba(63,107,74,0.12) 0%, transparent 70%)' }} />
+          <div className="absolute bottom-0 left-0 w-[350px] h-[350px] rounded-full blur-[110px]" style={{ background: 'radial-gradient(ellipse, rgba(181,100,58,0.14) 0%, transparent 70%)' }} />
         </div>
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-20 md:pt-20 md:pb-28">
           {/* Eyebrow */}
-          <div className="flex items-center gap-2 mb-6">
-            <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+          {/* Entrada escalonada al cargar la página — mismo keyframe
+              fadeUp/animate-fade-up que ya existía en globals.css (pensado
+              para esto) pero que nunca se usaba fuera de PublishForm. El
+              delay creciente por elemento (animationDelay inline, no una
+              clase nueva por cada valor) hace que la sección completa entre
+              en cascada en vez de todos los bloques apareciendo a la vez. */}
+          <div className="flex items-center gap-2 mb-6 animate-fade-up">
+            <span className="w-2 h-2 rounded-full bg-coral animate-pulse" />
             <span className="text-xs font-semibold text-gray-500 uppercase tracking-[0.2em]">Tabasco · México · 100% gratuito</span>
           </div>
 
           {/* Headline — the whole pitch in 4 words */}
-          <h1 className="font-display font-black text-brand-dark leading-[0.92] mb-6"
-            style={{ fontSize: 'clamp(2.8rem, 8vw, 5.5rem)', letterSpacing: '-0.03em' }}>
+          {/* Verde propio (--color-brand-headline, globals.css), no
+              text-brand-dark — el mismo tono que header/footer se sentía
+              plano en un titular grande, este es más saturado a propósito. */}
+          <h1 className="font-display font-black leading-[0.92] mb-6 animate-fade-up"
+            style={{ fontSize: 'clamp(2.8rem, 8vw, 5.5rem)', letterSpacing: '-0.03em', color: 'var(--color-brand-headline, #0A4F48)', animationDelay: '90ms' }}>
             Sin agente.<br />
-            <span className="text-accent-dark">Sin comisión.</span><br />
+            <span className="text-coral">Sin comisión.</span><br />
             Encuentra hoy.
           </h1>
 
-          <p className="text-gray-600 text-base md:text-lg mb-8 max-w-lg leading-relaxed">
+          <p className="text-gray-600 text-base md:text-lg mb-8 max-w-lg leading-relaxed animate-fade-up" style={{ animationDelay: '180ms' }}>
             Más de {stats.propiedadesActivas} propiedades en Tabasco. Hablas directo con el dueño.
             Sin formularios, sin esperas, sin intermediarios.
           </p>
 
           {/* Search */}
-          <div className="max-w-2xl">
+          {/* relative z-20 aquí, no solo en el <form> de SearchBar — este
+              div anima transform/opacity (animate-fade-up), y eso crea su
+              propio contexto de apilamiento en los navegadores reales
+              (aunque la animación ya haya terminado). El z-20 que se le
+              puso al <form> quedaba atrapado DENTRO de este contenedor, sin
+              poder competir contra "Social proof bar" (su hermano) más
+              abajo — hay que promover el nivel que en verdad compite con
+              ese hermano, no un nieto más adentro. */}
+          <div className="relative z-20 max-w-2xl animate-fade-up" style={{ animationDelay: '270ms' }}>
             <span className="inline-flex items-center gap-1 text-[11px] font-bold text-brand uppercase tracking-wide bg-brand-pale px-2 py-0.5 rounded-full mb-2">
-              <Sparkles size={11} /> Búsqueda con IA
+              <Bot size={12} /> Búsqueda con IA
             </span>
             <SearchBar placeholder="Ej: casa cerca de Dos Bocas que no se inunde, renta hasta $12,000" />
             <p className="text-xs text-gray-400 mt-2">
@@ -116,15 +185,17 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Social proof bar */}
+          {/* Social proof bar — animate-count (globals.css) ya existía
+              justo para números de estadística; cada cifra entra por
+              separado, un pelín después de la búsqueda. */}
           <div className="flex flex-wrap items-center gap-5 mt-10 pt-8 border-t border-gray-900/10">
             {[
               { n: `${stats.propiedadesActivas}+`, label: 'propiedades activas' },
               { n: `${stats.municipiosCubiertos}`,  label: 'municipios cubiertos' },
               { n: '$0',                             label: 'para publicar' },
               { n: '5 min',                          label: 'para tener tu anuncio activo' },
-            ].map((s) => (
-              <div key={s.label} className="flex items-baseline gap-1.5">
+            ].map((s, i) => (
+              <div key={s.label} className="flex items-baseline gap-1.5 animate-count" style={{ animationDelay: `${360 + i * 60}ms` }}>
                 <span className="font-display font-black text-2xl text-brand-dark">{s.n}</span>
                 <span className="text-gray-400 text-xs">{s.label}</span>
               </div>
@@ -155,7 +226,7 @@ export default function HomePage() {
             <div className="flex w-max animate-marquee hover:[animation-play-state:paused]">
               {[...FEATURES, ...FEATURES].map((f, i) => (
                 <div key={i} className="flex items-start gap-3 w-[300px] flex-shrink-0 px-4">
-                  <span className="w-10 h-10 rounded-xl bg-brand-pale text-brand flex items-center justify-center flex-shrink-0">
+                  <span className={`w-10 h-10 rounded-xl ${f.bg} ${f.fg} flex items-center justify-center flex-shrink-0`}>
                     <f.Icon size={18} strokeWidth={1.75} />
                   </span>
                   <div className="min-w-0">
@@ -218,9 +289,9 @@ export default function HomePage() {
               </p>
               <div className="space-y-3 mb-7">
                 {[
-                  { color: '#10B981', bg: '#D1FAE5', label: 'Zona segura', desc: 'Sin historial de inundaciones' },
-                  { color: '#F59E0B', bg: '#FEF3C7', label: 'Riesgo medio', desc: 'Inundaciones menores posibles' },
-                  { color: '#EF4444', bg: '#FEE2E2', label: 'Riesgo alto',  desc: 'Historial de inundaciones severas' },
+                  { color: '#10B981', bg: '#D1FAE5', label: 'Bajo historial de inundaciones', desc: 'Pocas o ninguna inundación registrada' },
+                  { color: '#F59E0B', bg: '#FEF3C7', label: 'Inundaciones menores ocasionales', desc: 'Anegamiento leve en temporada de lluvias' },
+                  { color: '#EF4444', bg: '#FEE2E2', label: 'Históricamente inundable',  desc: 'Inundaciones severas documentadas' },
                 ].map((r) => (
                   <div key={r.label} className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: r.bg }}>
@@ -251,23 +322,52 @@ export default function HomePage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         <div className="flex items-end justify-between mb-7">
           <div>
-            <p className="text-xs font-bold text-brand uppercase tracking-[0.15em] mb-1.5">Las más buscadas</p>
-            <h2 className="text-3xl font-display font-black text-gray-900 leading-tight">Zonas populares</h2>
+            {/* "Las más buscadas"/"Zonas populares" afirmaban una demanda
+                que nadie mide, y luego "Selección del equipo" (aquí)
+                afirmaba una curación editorial que tampoco era real: en
+                ambos casos, no había ningún dato detrás de la elección.
+                Corregido igual que /zonas (ver getColoniasRankedByPropiedades
+                en api.ts): ranking real por propiedades activas, la misma
+                fuente que usa /zonas para sus tarjetas grandes — ya no hay
+                una selección aparte que mantener sincronizada a mano. Sigue
+                siendo por OFERTA, no por demanda (búsquedas/vistas/
+                contactos) — ver docs/BACKEND.md §9.1 para el endpoint real
+                de demanda; en cuanto exista, tanto esta sección como /zonas
+                lo consumen igual, sin volver a fabricar el dato. */}
+            <p className="text-xs font-bold text-brand uppercase tracking-[0.15em] mb-1.5">Datos en tiempo real</p>
+            <h2 className="text-3xl font-display font-black text-gray-900 leading-tight">Colonias con más propiedades</h2>
           </div>
           <Link href="/zonas" className="flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-dark group">
             Ver todas <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
 
-        {/* Antes cada tarjeta tenía un color distinto (esmeralda, azul, ámbar,
-            violeta, teal, rosa) — un arcoíris compitiendo por atención. Un
-            solo tono de marca, repetido, se siente más minimalista y deja
-            que el nombre de la zona sea lo que distingue cada tarjeta. */}
+        {/* Antes cada tarjeta tenía un color distinto sin relación entre sí
+            (esmeralda, azul, ámbar, violeta, teal, rosa) — un arcoíris
+            compitiendo por atención, así que se unificó a un solo tono de
+            marca repetido. Eso dejó las 4 tarjetas planas/apagadas — ahora
+            alternan 3 variantes DENTRO de la misma familia (marca/acento/
+            coral), no un arcoíris de vuelta: distinguibles entre sí sin
+            perder cohesión. Gradiente por `style` (no clases from-X/to-X)
+            porque "coral" necesita un stop oscurecido con color-mix() que
+            Tailwind no genera como utilidad. */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {zones.map((zone) => {
+          {zones.map((zone, i) => {
+            const gradientes = [
+              'linear-gradient(to bottom right, var(--color-brand-dark), var(--color-brand))',
+              'linear-gradient(to bottom right, var(--color-accent-dark), var(--color-accent))',
+              'linear-gradient(to bottom right, color-mix(in srgb, var(--color-coral) 55%, black), var(--color-coral))',
+            ];
+            // Sin ficha editorial en zones.json, zone.slug es null (colonia
+            // real detectada solo por sus propiedades, sin página propia
+            // todavía) — mismo fallback que ya usa /zonas/page.tsx: enlaza
+            // al catálogo filtrado por nombre en vez de a un slug que no
+            // existe.
+            const href = zone.slug ? `/zonas/${zone.slug}` : `/propiedades?q=${encodeURIComponent(zone.nombre)}`;
             return (
-              <Link key={zone.id} href={`/zonas/${zone.slug}`}
-                className="group relative h-40 rounded-2xl overflow-hidden bg-gradient-to-br from-brand-dark to-brand shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+              <Link key={zone.nombre} href={href}
+                style={{ background: gradientes[i % gradientes.length] }}
+                className="group relative h-40 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
                 <div className="absolute inset-0 flex flex-col justify-end p-4">
                   <p className="font-heading font-bold text-white text-sm leading-snug">{zone.nombre}</p>
@@ -295,14 +395,14 @@ export default function HomePage() {
         <div className="relative rounded-3xl overflow-hidden bg-brand-dark">
           {/* Glow — un solo acento sutil, no el fondo entero */}
           <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute bottom-0 left-1/3 w-[400px] h-[200px] rounded-full blur-[90px]" style={{ background: 'rgba(20,160,151,0.18)' }} />
+            <div className="absolute bottom-0 left-1/3 w-[400px] h-[200px] rounded-full blur-[90px]" style={{ background: 'rgba(110,145,102,0.18)' }} />
           </div>
 
           <div className="relative p-8 md:p-12">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
               {/* Left */}
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] mb-3" style={{ color: '#FDE68A' }}>Para propietarios</p>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] mb-3" style={{ color: '#F3C89A' }}>Para propietarios</p>
                 <h2 className="font-display font-black text-white leading-tight mb-4"
                   style={{ fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', letterSpacing: '-0.03em' }}>
                   Tu propiedad activa<br />en 5 minutos.
@@ -312,7 +412,7 @@ export default function HomePage() {
                 </p>
                 <Link href="/publicar"
                   className={buttonClasses('primary', 'xl', 'group shadow-lg')}
-                  style={{ boxShadow: '0 8px 30px rgba(245,158,11,0.3)' }}>
+                  style={{ boxShadow: '0 8px 30px rgba(196,52,74,0.35)' }}>
                   Publicar gratis ahora
                   <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                 </Link>
@@ -322,7 +422,7 @@ export default function HomePage() {
               <div className="space-y-3">
                 {PUBLISH_STEPS.map((step, i) => (
                   <div key={step.label} className="flex items-center gap-4 bg-white/5 hover:bg-white/8 border border-white/8 rounded-2xl px-5 py-4 transition-colors">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-white/8 text-white/80">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${step.bg} ${step.fg}`}>
                       <step.Icon size={18} strokeWidth={1.75} />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -330,7 +430,7 @@ export default function HomePage() {
                     </div>
                     <div className="flex-shrink-0 text-right">
                       <span className="text-xs font-bold px-2.5 py-1 rounded-full"
-                        style={{ background: i === 3 ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.08)', color: i === 3 ? '#FDE68A' : 'rgba(255,255,255,0.5)' }}>
+                        style={{ background: i === 3 ? 'rgba(196,52,74,0.25)' : 'rgba(255,255,255,0.08)', color: i === 3 ? '#F0A0AC' : 'rgba(255,255,255,0.5)' }}>
                         {step.time}
                       </span>
                     </div>
@@ -344,6 +444,6 @@ export default function HomePage() {
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ PLANES ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {/* Oculto a propósito — ver el comentario junto al import de PlanesInmobiliaria arriba. */}
-    </>
+    </div>
   );
 }

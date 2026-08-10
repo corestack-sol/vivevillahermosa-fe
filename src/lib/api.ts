@@ -143,15 +143,50 @@ export function getPropertiesByMunicipality(municipioSlug: string): Property[] {
   );
 }
 
+// ±25% de tolerancia para "precio parecido" / "tamaño parecido" — igual de
+// laxo en ambos, no hay una razón para que uno sea más estricto que el otro.
+const SIMILAR_TOLERANCIA = 0.25;
+
+function dentroDeTolerancia(valor: number, base: number, tolerancia: number): boolean {
+  return base > 0 && Math.abs(valor - base) / base <= tolerancia;
+}
+
+// Puntúa qué tan parecida es `p` a la propiedad que se está viendo — mismo
+// espíritu que el scoring de getResultadosSimilares en filters.ts (más
+// coincidencias primero), pero comparado contra los valores de ESTA
+// propiedad en vez de contra filtros de búsqueda activos (esta función no
+// recibe SearchFilters, solo la propiedad). Colonia/municipio son
+// acumulativos, no alternativos: mismo municipio ya suma, mismo colonia
+// (que implica mismo municipio) suma más encima, no en su lugar.
+function scoreSimilitud(p: Property, base: Property): number {
+  let score = 0;
+  if (p.municipio === base.municipio) {
+    score += 3;
+    if (p.colonia.toLowerCase() === base.colonia.toLowerCase()) score += 2;
+  }
+  if (dentroDeTolerancia(p.precio, base.precio, SIMILAR_TOLERANCIA)) score += 2;
+  if (base.recamaras > 0 && p.recamaras === base.recamaras) score += 1;
+  if (base.banos > 0 && p.banos === base.banos) score += 1;
+  if (dentroDeTolerancia(p.m2Construidos, base.m2Construidos, SIMILAR_TOLERANCIA)) score += 1;
+  return score;
+}
+
 export function getSimilarProperties(property: Property, limit = 3): Property[] {
-  return getAllProperties()
-    .filter(
-      (p) =>
-        p.id !== property.id &&
-        p.tipo === property.tipo &&
-        p.operacion === property.operacion
-    )
-    .slice(0, limit);
+  // tipo/operación siguen siendo el único filtro duro (mismo criterio que
+  // CRITERIOS_DUROS en filters.ts) — un local no es "parecido" a una casa
+  // solo por estar en la misma colonia o tener precio similar.
+  const candidatos = getAllProperties().filter(
+    (p) =>
+      p.id !== property.id &&
+      p.tipo === property.tipo &&
+      p.operacion === property.operacion
+  );
+
+  return candidatos
+    .map((p) => ({ p, score: scoreSimilitud(p, property) }))
+    .sort((a, b) => b.score - a.score || Math.abs(a.p.precio - property.precio) - Math.abs(b.p.precio - property.precio))
+    .slice(0, limit)
+    .map((x) => x.p);
 }
 
 export function getAllMunicipalities(): Municipality[] {
@@ -164,10 +199,6 @@ export function getMunicipalityBySlug(slug: string): Municipality | undefined {
 
 export function getAllZones(): Zone[] {
   return zonesData as Zone[];
-}
-
-export function getFeaturedZones(): Zone[] {
-  return getAllZones().filter((z) => z.destacada);
 }
 
 export function getZoneBySlug(slug: string): Zone | undefined {

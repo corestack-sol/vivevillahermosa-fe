@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   SlidersHorizontal, X, ChevronLeft, ChevronDown, Navigation,
   Satellite, Map as MapIcon, Info, MapPin, ArrowRight,
-  Droplets, Check, Home,
+  Droplets, Check, Home, RotateCw, List,
 } from 'lucide-react';
 import Link from 'next/link';
 import type { Property } from '@/types/property';
@@ -24,10 +24,12 @@ import { ESTADO_OVERRIDE_EVENT } from '@/lib/estadoOverrides';
 type RiesgoLevel = 'bajo' | 'medio' | 'alto';
 type TileType    = 'street' | 'satellite';
 
+// Mismo criterio que src/lib/floodColors.ts — describe el registro
+// histórico, no una predicción de la plataforma.
 const RIESGO_CFG = [
-  { level: 'bajo'  as RiesgoLevel, color: '#10B981', short: 'Bajo',  long: 'Bajo / Zona segura' },
-  { level: 'medio' as RiesgoLevel, color: '#F59E0B', short: 'Medio', long: 'Riesgo medio'        },
-  { level: 'alto'  as RiesgoLevel, color: '#EF4444', short: 'Alto',  long: 'Riesgo alto'          },
+  { level: 'bajo'  as RiesgoLevel, color: '#10B981', short: 'Bajo',  long: 'Bajo historial de inundaciones' },
+  { level: 'medio' as RiesgoLevel, color: '#F59E0B', short: 'Medio', long: 'Inundaciones menores ocasionales' },
+  { level: 'alto'  as RiesgoLevel, color: '#EF4444', short: 'Alto',  long: 'Históricamente inundable' },
 ];
 
 const TYPE_CHIPS: { value: PropertyType | ''; label: string }[] = [
@@ -61,7 +63,7 @@ const ZONES = [
 ];
 
 const RIESGO_LABEL: Record<string, string> = {
-  bajo: 'Zona segura', medio: 'Riesgo medio', alto: 'Riesgo alto',
+  bajo: 'Bajo historial de inundaciones', medio: 'Inundaciones menores ocasionales', alto: 'Históricamente inundable',
 };
 
 const RIESGO_COLOR: Record<string, string> = {
@@ -105,8 +107,11 @@ function SelectedCard({ marker, onClose }: { marker: MapMarker; onClose: () => v
       <div
         className="relative h-60 overflow-hidden flex items-center justify-center"
         style={{
+          // color-mix() en vez de concatenar dígitos hex de opacidad —
+          // colors.glow puede ser un var(...) (propertyTypeConfig.ts),
+          // pegarle texto hex directo da un valor de color inválido.
           background: `
-            radial-gradient(ellipse at 30% 50%, ${colors.glow}30 0%, transparent 65%),
+            radial-gradient(ellipse at 30% 50%, color-mix(in srgb, ${colors.glow} 19%, transparent) 0%, transparent 65%),
             linear-gradient(150deg, ${colors.from} 0%, ${colors.to} 100%)
           `,
         }}
@@ -123,7 +128,7 @@ function SelectedCard({ marker, onClose }: { marker: MapMarker; onClose: () => v
         {!showImg && (
           <div
             className="w-20 h-20 rounded-2xl flex items-center justify-center"
-            style={{ background: `${colors.accent}15`, border: `1.5px solid ${colors.accent}28`, color: colors.accent }}
+            style={{ background: `color-mix(in srgb, ${colors.accent} 8%, transparent)`, border: `1.5px solid color-mix(in srgb, ${colors.accent} 16%, transparent)`, color: colors.accent }}
           >
             <typeCfg.Icon size={32} strokeWidth={1.5} />
           </div>
@@ -292,6 +297,36 @@ export function MapaClient({ allProperties }: Props) {
     // hermanos fuera de él una vez que este div tiene su propio z-index.
     <div className="relative z-0 flex h-[calc(100vh-64px)]">
 
+      {/* ══ Aviso "gira tu dispositivo" — solo móvil/tablet en vertical ══
+          .rotate-hint (globals.css) lo muestra solo por CSS (max-width
+          1023px + orientation:portrait), sin JS ni permisos. Es "fixed
+          inset-0" con z-index más alto que el Navbar (sticky, z-40), así
+          que también lo tapa — por eso trae sus propios enlaces de
+          salida (Inicio / Ver como lista) en vez de dejar a la persona
+          sin ninguna forma de salir del mapa si no quiere girar el
+          teléfono. */}
+      <div className="rotate-hint fixed inset-0 z-[1300] bg-brand-dark flex-col items-center justify-center text-center px-8 gap-5">
+        <span className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center">
+          <RotateCw size={28} className="text-white" />
+        </span>
+        <div>
+          <p className="font-heading font-bold text-lg text-white mb-1.5">Gira tu dispositivo</p>
+          <p className="text-sm text-white/50 max-w-xs">
+            El mapa se explora mucho mejor en horizontal. Gira tu teléfono o tablet para verlo completo.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2 w-full max-w-[220px] mt-2">
+          <Link href="/propiedades"
+            className="flex items-center justify-center gap-2 bg-white text-brand-dark font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-white/90 transition-colors">
+            <List size={15} /> Ver como lista
+          </Link>
+          <Link href="/"
+            className="flex items-center justify-center gap-2 text-white/60 hover:text-white text-sm px-4 py-2 transition-colors">
+            <ChevronLeft size={15} /> Volver al inicio
+          </Link>
+        </div>
+      </div>
+
       {/* ══ Desktop Sidebar ══════════════════════════════════════════════ */}
       <aside className="hidden lg:flex flex-col w-72 flex-shrink-0 bg-brand-dark border-r border-white/10 overflow-y-auto">
 
@@ -332,8 +367,19 @@ export function MapaClient({ allProperties }: Props) {
           onMapReady={handleMapReady}
         />
 
-        {/* ══ Right map panel — desktop only ══════════════════════════════ */}
-        <div className="absolute top-3 right-3 z-[1001] hidden lg:flex flex-col gap-2 w-56">
+        {/* ══ Right map panel — desktop only ══════════════════════════════
+            hidden lg:pointer-fine:flex, no solo hidden lg:flex — un
+            iPad/tablet en horizontal fácilmente cruza los 1024px de "lg"
+            (más ahora que /mapa empuja a girar el dispositivo), así que
+            el ancho solo no basta para distinguir tablet de escritorio
+            real. pointer:fine detecta mouse/trackpad (desktop) vs. dedo
+            (pointer:coarse, cualquier móvil o tablet) sin importar el
+            ancho — así este panel (Inundación, Ir a zona, N resultados)
+            nunca aparece en touch, pedido explícito. El equivalente
+            táctil de Mapa/Satélite ya existe aparte más abajo (botón
+            flotante lg:hidden), así que ocultar todo el panel en touch no
+            quita esa función en tablet/móvil. */}
+        <div className="absolute top-3 right-3 z-[1001] hidden lg:pointer-fine:flex flex-col gap-2 w-56">
 
           {/* Mapa / Satélite */}
           <div className="bg-brand-dark rounded-xl shadow-xl overflow-hidden flex">
