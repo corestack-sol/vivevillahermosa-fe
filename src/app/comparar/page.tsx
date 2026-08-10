@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useCompare } from '@/context/CompareContext';
 import { Tooltip } from '@/components/ui/Tooltip';
-import { getAllProperties, getPriceContext } from '@/lib/api';
+import { getAllProperties, getPriceContext, type PriceContext } from '@/lib/api';
 import { aplicarOverridesPublicos, PROPIEDADES_LOCALES_EVENT } from '@/lib/propiedadesLocales';
 import { ESTADO_OVERRIDE_EVENT } from '@/lib/estadoOverrides';
 import { getPropertyTypeConfig } from '@/lib/propertyTypeConfig';
@@ -68,8 +68,10 @@ export default function CompararPage() {
   // el comentario de aplicarOverridesPublicos en propiedadesLocales.ts.
   useEffect(() => {
     function cargarPropiedades() {
-      const all = aplicarOverridesPublicos(getAllProperties());
-      setProperties(ids.map((id) => all.find((p) => p.id === id)).filter((p): p is Property => Boolean(p)));
+      getAllProperties().then((all) => {
+        const overridden = aplicarOverridesPublicos(all);
+        setProperties(ids.map((id) => overridden.find((p) => p.id === id)).filter((p): p is Property => Boolean(p)));
+      });
     }
     cargarPropiedades();
     window.addEventListener(PROPIEDADES_LOCALES_EVENT, cargarPropiedades);
@@ -127,7 +129,16 @@ export default function CompararPage() {
 }
 
 function ComparisonTable({ properties, onRemove }: { properties: Property[]; onRemove: (id: string) => void }) {
-  const priceCtx = properties.map((p) => getPriceContext(p));
+  const [priceCtx, setPriceCtx] = useState<PriceContext[]>(
+    properties.map(() => ({ precioPorM2: null, promedioZona: null, totalComparables: 0, m2Ref: 0 })),
+  );
+  useEffect(() => {
+    let cancelado = false;
+    Promise.all(properties.map((p) => getPriceContext(p))).then((ctx) => {
+      if (!cancelado) setPriceCtx(ctx);
+    });
+    return () => { cancelado = true; };
+  }, [properties]);
 
   // Comparar el precio de una propiedad en venta contra una en renta no
   // tiene sentido — uno es el total a pagar de una vez, el otro es una

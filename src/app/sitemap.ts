@@ -3,8 +3,8 @@ import { getAllProperties, getAllMunicipalities, getAllZones } from '@/lib/api';
 
 const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://vivevillahermosa.mx';
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const properties = getAllProperties();
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const properties = await getAllProperties();
   const municipalities = getAllMunicipalities();
   const zones = getAllZones();
 

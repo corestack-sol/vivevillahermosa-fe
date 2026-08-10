@@ -1,4 +1,3 @@
-import { getPropertyById } from './api';
 import type { Property } from '@/types/property';
 
 export type EstadoPublicacion = 'activa' | 'pausada' | 'vencida' | 'vendida' | 'rentada';
@@ -39,26 +38,14 @@ export interface MiPropiedad {
  * esta función se reemplaza por esa llamada real, sin tocar el resto de la
  * página.
  */
+// ⚠️ 2026-08-10: getPropertyById ya no lee src/data/properties.json (ver
+// api.ts) — estos 4 ids de muestra ya no resuelven a nada real, así que esta
+// función devuelve vacío desde esta fase. Se queda síncrona y así de
+// simple a propósito por muy poco tiempo: la fase siguiente reemplaza por
+// completo este archivo y sus consumidores (OwnerActionsBar.tsx,
+// dashboard/propiedades) por GET /propiedades/mias real — no vale la pena
+// volverla async ni parchear datos de muestra que están a punto de
+// borrarse junto con todos sus call-sites.
 export function getMisPropiedadesDemo(): MiPropiedad[] {
-  const ids = ['prop-001', 'prop-002', 'prop-003', 'prop-004'];
-  const estados: EstadoPublicacion[] = ['activa', 'activa', 'pausada', 'vencida'];
-  const vistas = [142, 87, 34, 12];
-  const contactos = [9, 5, 1, 0];
-  const favoritos = [12, 6, 2, 1];
-  const publicadaHace = ['hace 5 días', 'hace 12 días', 'hace 1 mes', 'hace 58 días'];
-
-  return ids
-    .map((id, i) => {
-      const property = getPropertyById(id);
-      if (!property) return null;
-      return {
-        property,
-        estado: estados[i],
-        vistas: vistas[i],
-        contactos: contactos[i],
-        favoritos: favoritos[i],
-        publicadaHace: publicadaHace[i],
-      };
-    })
-    .filter((p): p is MiPropiedad => p !== null);
+  return [];
 }

@@ -1,12 +1,34 @@
+import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getAllProperties, getPropertyById } from '@/lib/api';
+import { mapBackendProperty, type BackendPublicProperty } from '@/lib/api';
+import { backendFetchServer } from '@/lib/backendApiServer';
+import { BackendApiError } from '@/lib/backendApi';
 import { buildPropertyMetadata } from '@/lib/seo';
 import { getLandmark, distanciaKm, distanciaMinimaACategoria, CATEGORIAS_GENERICAS } from '@/lib/landmarks';
 import { getColoniaByKey } from '@/lib/colonias';
 import { obtenerColoniaDescubiertaPorKey } from '@/lib/coloniaDiscovery';
 import { estaEnRevision } from '@/lib/moderacionBusqueda';
 import { PropertyDetailView } from '@/components/property/PropertyDetailView';
-import { LocalPropertyDetail } from '@/components/property/LocalPropertyDetail';
+
+/**
+ * Reenvía la cookie de sesión (backendFetchServer) — a diferencia de
+ * getPropertyById de api.ts (siempre anónimo, usable desde cualquier
+ * contexto), esta página necesita que el backend sepa si quien pide la
+ * propiedad es su propio dueño, para poder mostrarla aunque esté pausada
+ * (ver criterio de aceptación #3, BACKEND.md §3) y con lat/lng y contacto
+ * reales en vez del punto público.
+ */
+async function fetchProperty(id: string) {
+  try {
+    const bp = await backendFetchServer<BackendPublicProperty>(
+      `/propiedades/${encodeURIComponent(id)}`,
+    );
+    return mapBackendProperty(bp);
+  } catch (err) {
+    if (err instanceof BackendApiError && err.status === 404) return undefined;
+    throw err;
+  }
+}
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -27,53 +49,26 @@ function landmarkMasCercanoDeCategoria(lat: number, lng: number, categoria: stri
   return distancia === null ? null : { label: puntos.label, distancia };
 }
 
-export async function generateStaticParams() {
-  return getAllProperties().map((p) => ({ id: p.slug }));
-}
+// Property ya es real en el backend (docs/BACKEND.md §3) — las propiedades
+// se crean/pausan/eliminan en cualquier momento, así que ya no se pueden
+// conocer todos los slugs válidos en build time. `dynamicParams: true`
+// (default) deja que Next resuelva cada uno on-demand y lo cachee con ISR.
+export const revalidate = 60;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const property = getPropertyById(id);
+  const property = await fetchProperty(id);
   if (property) return buildPropertyMetadata(property);
-  // No está en el catálogo estático — puede ser una propiedad publicada en
-  // este navegador (vive en localStorage de quien la publicó, ver
-  // propiedadesLocales.ts), que este Server Component no puede leer. No es
-  // que "no exista", solo no se puede resolver aquí — título neutro en vez
-  // de "no encontrada" mientras el cliente todavía no cargó los datos
-  // reales.
   return { title: 'Propiedad | Vive Villahermosa' };
 }
 
 export default async function PropertyDetailPage({ params, searchParams }: Props) {
   const { id } = await params;
 
-  const property = getPropertyById(id);
+  const property = await fetchProperty(id);
 
   if (!property) {
-    // No está en el catálogo estático — puede ser una propiedad publicada
-    // en este navegador (PublishForm.tsx la guarda en localStorage, ver
-    // propiedadesLocales.ts), que este Server Component no puede leer. Se
-    // delega sin condición a un componente cliente que resuelve el mismo
-    // id O slug desde localStorage.
-    //
-    // Antes esto se decidía con `esPropiedadLocal(id)` (¿el id empieza con
-    // "local-"?) — pero los enlaces reales usan `property.slug`
-    // (generarSlugLocal), que nunca lleva ese prefijo, solo `property.id`
-    // sí. Entrar por el slug (como hace cualquier tarjeta/resultado de
-    // búsqueda) daba 404 siempre para una propiedad local, aunque
-    // existiera — bug real, reportado por un usuario. Intentar primero el
-    // catálogo estático y caer aquí si no aparece cubre ambos casos (id o
-    // slug, local o simplemente no encontrada) sin adivinar por el formato
-    // del texto.
-    //
-    // ⚠️ BACKEND: esta rama (y LocalPropertyDetail.tsx entero) existe
-    // solo por la ausencia de Property real en la base de datos — ver el
-    // modelo sugerido al final de prisma/schema.prisma. Con
-    // `GET /api/propiedades/:id` real, esta página vuelve a ser un solo
-    // camino: `getPropertyById(id)` seguido de `notFound()` si no existe,
-    // sin este if.
-    const sp = await searchParams;
-    return <LocalPropertyDetail id={id} cerca={sp.cerca} cercaTipo={sp.cercaTipo} cercaColonia={sp.cercaColonia} />;
+    notFound();
   }
 
   // Cuando se llega desde una búsqueda "cerca de X" (el enlace de la

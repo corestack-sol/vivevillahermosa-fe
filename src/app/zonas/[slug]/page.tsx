@@ -13,16 +13,24 @@ interface Props {
 }
 
 export async function generateStaticParams() {
+  // Zonas/municipios siguen siendo catálogo editorial estático (BACKEND.md
+  // §9.3, todavía no es una tabla real) — a diferencia de Property, esta
+  // lista de slugs válidos sí se conoce completa en build time.
   const zones = getAllZones().map((z) => ({ slug: z.slug }));
   const municipalities = getAllMunicipalities().map((m) => ({ slug: m.slug }));
   return [...zones, ...municipalities];
 }
 
+// Los conteos/precios en vivo de más abajo sí dependen de Property (real
+// desde esta fase) — ISR para que no se queden congelados en el valor del
+// build.
+export const revalidate = 60;
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const zone = getZonesWithLiveStats().find((z) => z.slug === slug);
+  const zone = (await getZonesWithLiveStats()).find((z) => z.slug === slug);
   if (zone) return buildZoneMetadata(zone, 'zone');
-  const municipality = getMunicipalitiesWithLiveStats().find((m) => m.slug === slug);
+  const municipality = (await getMunicipalitiesWithLiveStats()).find((m) => m.slug === slug);
   if (municipality) return buildZoneMetadata(municipality, 'municipality');
   return { title: 'Zona no encontrada | Vive Villahermosa' };
 }
@@ -33,12 +41,12 @@ export default async function ZonaDetailPage({ params }: Props) {
   // Stats en vivo (conteo y precio promedio calculados desde el catálogo
   // real, no el valor editorial fijo de zones.json/municipalities.json —
   // mismo dato que ya muestra el listado en /zonas, ver src/lib/api.ts).
-  const zone = getZonesWithLiveStats().find((z) => z.slug === slug);
-  const municipality = !zone ? getMunicipalitiesWithLiveStats().find((m) => m.slug === slug) : undefined;
+  const zone = (await getZonesWithLiveStats()).find((z) => z.slug === slug);
+  const municipality = !zone ? (await getMunicipalitiesWithLiveStats()).find((m) => m.slug === slug) : undefined;
 
   if (!zone && !municipality) notFound();
 
-  const allProperties = getAllProperties();
+  const allProperties = await getAllProperties();
 
   const zoneProperties = zone
     ? allProperties.filter((p) => p.colonia.toLowerCase() === zone.nombre.toLowerCase())

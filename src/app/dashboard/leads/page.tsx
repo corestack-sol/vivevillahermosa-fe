@@ -44,6 +44,7 @@ export default function LeadsPage() {
   const [leads, setLeads] = useState<LeadConEstado[]>(getLeadsDemo());
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [ocultas, setOcultas] = useState<Set<EstadoLead>>(new Set());
+  const [propiedadesPorId, setPropiedadesPorId] = useState<Record<string, { slug: string; titulo: string }>>({});
 
   // Los cambios de estado y las columnas ocultas guardadas solo existen en
   // cliente — se aplican en un efecto para que el primer render (servidor y
@@ -55,6 +56,19 @@ export default function LeadsPage() {
     }
     aplicar();
   }, []);
+
+  useEffect(() => {
+    const ids = Array.from(new Set(leads.map((l) => l.propiedadId).filter((id): id is string => Boolean(id))));
+    if (ids.length === 0) return;
+    let cancelado = false;
+    Promise.all(ids.map((id) => getPropertyById(id))).then((props) => {
+      if (cancelado) return;
+      const map: Record<string, { slug: string; titulo: string }> = {};
+      props.forEach((p, i) => { if (p) map[ids[i]] = { slug: p.slug, titulo: p.titulo }; });
+      setPropiedadesPorId(map);
+    });
+    return () => { cancelado = true; };
+  }, [leads]);
 
   function handleMover(id: string, estado: EstadoLead) {
     moverLead(id, estado);
@@ -143,7 +157,7 @@ export default function LeadsPage() {
                 {columna.length === 0 ? (
                   <p className="text-xs text-gray-300 text-center py-6">Sin leads aquí</p>
                 ) : columna.map((lead) => {
-                  const propiedad = lead.propiedadId ? getPropertyById(lead.propiedadId) : undefined;
+                  const propiedad = lead.propiedadId ? propiedadesPorId[lead.propiedadId] : undefined;
                   return (
                     <div key={lead.id}
                       onClick={() => setDetalleId(lead.id)}
@@ -209,7 +223,7 @@ export default function LeadsPage() {
                 </a>
               )}
               {detalleLead.propiedadId && (() => {
-                const propiedad = getPropertyById(detalleLead.propiedadId);
+                const propiedad = propiedadesPorId[detalleLead.propiedadId];
                 return propiedad ? (
                   <Link href={`/propiedades/${propiedad.slug}`} className="flex items-center gap-2 text-brand hover:underline">
                     <MapPin size={14} className="flex-shrink-0" /> {propiedad.titulo}

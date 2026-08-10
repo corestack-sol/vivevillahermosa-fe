@@ -1,146 +1,157 @@
-import type { Property, PropertiesResponse } from '@/types/property';
+import type { FloodRisk, OperationType, Property, PropertyType } from '@/types/property';
 import type { Municipality, Zone } from '@/types/zone';
 import type { Agent } from '@/types/agent';
 
-import propertiesData from '@/data/properties.json';
 import municipalitiesData from '@/data/municipalities.json';
 import zonesData from '@/data/zones.json';
 import agentsData from '@/data/agents.json';
+import { backendFetch } from '@/lib/backendApi';
 
-// El JSON de muestra ya NO trae `lat`/`lng` reales — solo `latPublico`/
-// `lngPublico` (centroide de colonia o jitter amplio, precalculados una
-// vez, ver .tmp-migration/ en el historial de git y `getPuntoPublico` en
-// colonias.ts). Es a propósito: este archivo se importa también desde
-// componentes cliente (PropertyCard, SearchBar…), así que cualquier campo
-// que viva aquí termina en el bundle del navegador tal cual — antes de
-// este cambio, la coordenada exacta de cada propiedad viajaba a CUALQUIER
-// página que rendericé una tarjeta, sin importar qué prop se le pasara a
-// cada componente (enmascarar solo al construir los `markers` del mapa no
-// alcanzaba, porque el JSON crudo con las coordenadas reales igual quedaba
-// bundleado). Que el propio archivo fuente nunca tenga la coordenada real
-// es la única forma de que de verdad no llegue al navegador.
-type PropertySeed = Omit<Property, 'lat' | 'lng'>;
-interface PropertiesSeedResponse {
-  meta: PropertiesResponse['meta'];
-  data: PropertySeed[];
+// ⚠️ 2026-08-10 (docs/BACKEND.md §3): Property ya es real en el backend
+// separado — esta capa le hace fetch a GET /propiedades en vez de leer
+// src/data/properties.json. `getAllProperties()` sigue siendo la función
+// bisagra (todo lo demás llama a esa o filtra su resultado), pero ahora es
+// async. `all=true` trae el catálogo activo completo sin paginar — el mismo
+// parámetro que ya usan internamente sitemap.ts y las stats de zona/colonia
+// de más abajo; la búsqueda server-side con filtros reales (landmark, zona
+// destacada, etc., ya soportados por el backend) queda pendiente como
+// optimización futura, no bloqueante — el filtrado client-side existente
+// (src/lib/filters.ts) sigue funcionando igual sobre datos reales.
+//
+// getAgenteContacto() sigue leyendo el JSON estático por ahora — se corrige
+// en la fase siguiente (contacto/reportes, BACKEND.md §10) junto con
+// GET /propiedades/:id/contacto real. Hasta entonces, el tel/email/whatsapp
+// de una propiedad creada de verdad (no del catálogo de muestra) no se
+// resuelve por este camino.
+import propertiesData from '@/data/properties.json';
+
+export interface BackendPublicProperty {
+  id: string;
+  slug: string;
+  titulo: string;
+  descripcion: string;
+  tipo: PropertyType;
+  operacion: OperationType;
+  precio: number;
+  m2Construidos: number | null;
+  m2Terreno: number | null;
+  recamaras: number | null;
+  banos: number | null;
+  mediosBanos: number | null;
+  estacionamientos: number | null;
+  antiguedad: number | null;
+  amenidades: string[];
+  servicios: string[];
+  fotos: string[];
+  municipio: string;
+  colonia: string;
+  direccion: string;
+  latPublico: number;
+  lngPublico: number;
+  riesgoInundacion: FloodRisk;
+  zonaEcologica: boolean;
+  cercaDosoBocas: boolean;
+  featured: boolean;
+  activa: boolean;
+  agente: { nombre: string; foto: string | null; verificado: boolean };
+  createdAt: string;
+  updatedAt: string;
+  // Presentes SOLO cuando GET /propiedades/:id lo devuelve a su propio
+  // dueño (OwnerProperty en el backend) — ausentes en la vista pública.
+  lat?: number;
+  lng?: number;
+  alertaFraude?: { señales: string[] } | null;
+  agenteTel?: string | null;
+  agenteEmail?: string | null;
+  agenteWhatsapp?: string | null;
+  requiereMensajePrimero?: boolean;
 }
 
-// ⚠️ BACKEND PENDIENTE (docs/BACKEND.md §3 — el backend real es ahora un
-// proyecto aparte, no Prisma dentro de este mismo archivo, ver el aviso de
-// arquitectura al inicio del documento): esta
-// capa entera lee un JSON estático, nunca una
-// base de datos. `getAllProperties()` es la función más importante de
-// reemplazar — todo lo demás en este archivo (getPropertyById,
-// getFeaturedProperties, getPropertiesByMunicipality, getSimilarProperties,
-// getPriceContext, las stats de municipios/zonas/colonias…) llama a esa
-// función o filtra sobre su resultado, así que un solo cambio ahí (por
-// `const res = await fetch(\`${API_URL}/propiedades\`)` contra el backend
-// separado, en vez de `prisma.property.findMany` local) debería bastar
-// para que el resto del archivo siga funcionando sin tocarlo — mismo
-// patrón "quirúrgico" que ya usa src/lib/propiedadesLocales.ts para su
-// propia simulación en localStorage,
-// que hoy se le pega ENCIMA de este archivo del lado del cliente (ver
-// aplicarOverridesPublicos/getMisPropiedadesConOverrides ahí) precisamente
-// porque este archivo no puede leer nada creado/editado/eliminado por un
-// usuario real. Con Property en Prisma, esa capa de merge en el cliente
-// deja de hacer falta — el backend ya devolvería el dato correcto de una
-// vez.
-const PER_PAGE = 12;
-
-/**
- * Fuente de verdad de verificación: el registro de agentes (agents.json), no la
- * copia embebida en cada propiedad. Evita que "Agente verificado" se muestre
- * para todos aunque el agente real no esté verificado.
- *
- * `verificado` en agents.json está en `false` para los 5 agentes de muestra
- * a propósito (2026-08-08, hallazgo de auditoría) — no existe ningún proceso
- * real de verificación de agentes en la plataforma todavía (mismo motivo por
- * el que `PlanesInmobiliaria` está oculto en Home, ver ese comentario), así
- * que el badge "Agente verificado" (BadgeCheck, AgentCard.tsx) nunca debe
- * aparecer hasta que exista uno real. No reactivar manualmente en datos de
- * muestra solo para que la demo se vea "más creíble".
- */
-function getAgentVerification(whatsapp?: string): boolean {
-  if (!whatsapp) return false;
-  const agent = (agentsData as Agent[]).find((a) => a.whatsapp === whatsapp);
-  return agent?.verificado ?? false;
+export function mapBackendProperty(bp: BackendPublicProperty): Property {
+  return {
+    id: bp.id,
+    slug: bp.slug,
+    titulo: bp.titulo,
+    descripcion: bp.descripcion,
+    tipo: bp.tipo,
+    operacion: bp.operacion,
+    precio: bp.precio,
+    moneda: 'MXN',
+    m2Construidos: bp.m2Construidos ?? 0,
+    m2Terreno: bp.m2Terreno ?? 0,
+    recamaras: bp.recamaras ?? 0,
+    banos: bp.banos ?? 0,
+    mediosBanos: bp.mediosBanos ?? 0,
+    estacionamientos: bp.estacionamientos ?? 0,
+    antiguedad: bp.antiguedad ?? 0,
+    amenidades: bp.amenidades,
+    servicios: bp.servicios,
+    fotos: bp.fotos,
+    municipio: bp.municipio,
+    colonia: bp.colonia,
+    direccion: bp.direccion,
+    // lat/lng reales solo llegan cuando el backend confirmó que quien pide
+    // esta propiedad es su propio dueño — para cualquier otro caso, mismo
+    // criterio que ya tenía este archivo con el JSON estático: nunca más
+    // preciso que el punto público.
+    lat: bp.lat ?? bp.latPublico,
+    lng: bp.lng ?? bp.lngPublico,
+    latPublico: bp.latPublico,
+    lngPublico: bp.lngPublico,
+    riesgoInundacion: bp.riesgoInundacion,
+    zonaEcologica: bp.zonaEcologica,
+    cercaDosoBocas: bp.cercaDosoBocas,
+    featured: bp.featured,
+    alertaFraude: bp.alertaFraude ?? undefined,
+    agente: {
+      nombre: bp.agente.nombre,
+      foto: bp.agente.foto ?? '',
+      verificado: bp.agente.verificado,
+      tel: bp.agenteTel ?? undefined,
+      email: bp.agenteEmail ?? undefined,
+      whatsapp: bp.agenteWhatsapp ?? undefined,
+    },
+    requiereMensajePrimero: bp.requiereMensajePrimero,
+    fechaPublicacion: bp.createdAt,
+    activa: bp.activa,
+  };
 }
 
-export function getAllProperties(): Property[] {
-  return (propertiesData as PropertiesSeedResponse).data
-    .filter((p) => p.activa)
-    .map((p) => ({
-      ...p,
-      // Mismo problema que ya se corrigió con lat/lng, aplicado a
-      // tel/email/whatsapp: este archivo se importa también desde
-      // componentes cliente (PropertyCard, SearchBar…), así que cualquier
-      // campo que viva en el `agente` que se devuelve aquí termina en el
-      // bundle del navegador de CUALQUIER página que muestre una tarjeta —
-      // sin sesión, sin pasar por el botón "revelar contacto". Confirmado
-      // en vivo: /propiedades sin iniciar sesión traía el teléfono/correo
-      // real de cada agente repetido una vez por cada una de sus
-      // propiedades. `agente.tel`/`email`/`whatsapp` se omiten a propósito
-      // (quedan `undefined`, el tipo ya los declara opcionales) — el único
-      // camino real para obtenerlos es `getAgenteContacto()` más abajo,
-      // usado exclusivamente por el endpoint gateado por sesión
-      // (GET /api/propiedades/[id]/contacto).
-      agente: {
-        nombre: p.agente.nombre,
-        foto: p.agente.foto,
-        verificado: getAgentVerification(p.agente.whatsapp),
-      },
-      // `lat`/`lng` del tipo `Property` quedan aquí como alias del punto
-      // público — este archivo nunca tuvo ni tiene acceso a la coordenada
-      // real de una propiedad de muestra, así que no hay nada más preciso
-      // que copiar. Sigue siendo correcto usar `p.latPublico`/`p.lngPublico`
-      // explícitamente en componentes de mapa (más a prueba de futuro si
-      // algún día una propiedad SÍ trae coordenada real desde otro origen).
-      lat: p.latPublico,
-      lng: p.lngPublico,
-    }));
+export async function getAllProperties(): Promise<Property[]> {
+  const { propiedades } = await backendFetch<{
+    propiedades: BackendPublicProperty[];
+  }>('/propiedades?all=true');
+  return propiedades.map(mapBackendProperty);
 }
 
 /**
  * Único camino real para obtener el tel/email/whatsapp de contacto de una
- * propiedad de muestra — lee directo del JSON crudo (`propertiesData`),
- * nunca de `getAllProperties()`, que a propósito ya no los incluye (ver
- * comentario ahí arriba). Debe usarse SOLO desde código que corre
- * exclusivamente en el servidor y ya verificó sesión antes de llamarla
- * (hoy, únicamente `GET /api/propiedades/[id]/contacto`) — nunca desde un
- * componente cliente, ni siquiera indirectamente vía una función que
- * también use el resultado para otra cosa.
+ * propiedad de muestra — lee directo del JSON estático, nunca de
+ * getAllProperties(). ⚠️ Temporal: solo resuelve propiedades del catálogo de
+ * muestra, no propiedades reales creadas vía el backend — se reemplaza por
+ * GET /propiedades/:id/contacto en la fase de contacto/reportes.
  */
 export function getAgenteContacto(id: string): Pick<Property['agente'], 'tel' | 'email' | 'whatsapp'> | undefined {
-  const seed = (propertiesData as PropertiesSeedResponse).data.find((p) => p.id === id || p.slug === id);
+  const seed = (propertiesData as { data: { id: string; slug: string; agente: { tel?: string; email?: string; whatsapp?: string } }[] }).data
+    .find((p) => p.id === id || p.slug === id);
   if (!seed) return undefined;
   const { tel, email, whatsapp } = seed.agente;
   return { tel, email, whatsapp };
 }
 
-export function getFeaturedProperties(): Property[] {
-  return getAllProperties().filter((p) => p.featured);
+export async function getFeaturedProperties(): Promise<Property[]> {
+  return (await getAllProperties()).filter((p) => p.featured);
 }
 
-export function getPropertyById(id: string): Property | undefined {
-  return getAllProperties().find((p) => p.id === id || p.slug === id);
-}
-
-export function getPropertiesByPage(page: number = 1): PropertiesResponse {
-  const all = getAllProperties();
-  const start = (page - 1) * PER_PAGE;
-  return {
-    meta: { total: all.length, page, perPage: PER_PAGE },
-    data: all.slice(start, start + PER_PAGE),
-  };
-}
-
-export function getPropertiesByMunicipality(municipioSlug: string): Property[] {
-  const mun = getMunicipalityBySlug(municipioSlug);
-  if (!mun) return [];
-  return getAllProperties().filter(
-    (p) => p.municipio.toLowerCase() === mun.nombre.replace(' (Villahermosa)', '').toLowerCase()
-      || p.municipio === 'Centro' && municipioSlug === 'villahermosa'
-  );
+export async function getPropertyById(id: string): Promise<Property | undefined> {
+  try {
+    const bp = await backendFetch<BackendPublicProperty>(
+      `/propiedades/${encodeURIComponent(id)}`,
+    );
+    return mapBackendProperty(bp);
+  } catch {
+    return undefined;
+  }
 }
 
 // ±25% de tolerancia para "precio parecido" / "tamaño parecido" — igual de
@@ -171,16 +182,16 @@ function scoreSimilitud(p: Property, base: Property): number {
   return score;
 }
 
-export function getSimilarProperties(property: Property, limit = 3): Property[] {
+export async function getSimilarProperties(property: Property, limit = 3): Promise<Property[]> {
   // tipo/operación siguen siendo el único filtro duro (mismo criterio que
   // CRITERIOS_DUROS en filters.ts) — un local no es "parecido" a una casa
   // solo por estar en la misma colonia o tener precio similar.
-  const candidatos = getAllProperties().filter(
-    (p) =>
-      p.id !== property.id &&
-      p.tipo === property.tipo &&
-      p.operacion === property.operacion
+  const { propiedades } = await backendFetch<{ propiedades: BackendPublicProperty[] }>(
+    `/propiedades?all=true&tipo=${encodeURIComponent(property.tipo)}&operacion=${encodeURIComponent(property.operacion)}`,
   );
+  const candidatos = propiedades
+    .map(mapBackendProperty)
+    .filter((p) => p.id !== property.id);
 
   return candidatos
     .map((p) => ({ p, score: scoreSimilitud(p, property) }))
@@ -219,39 +230,23 @@ function propertiesInZone(all: Property[], z: Zone): Property[] {
 
 /**
  * `propiedades`/`precioPromedio*` en zones.json y municipalities.json son
- * valores editoriales fijos, capturados a mano cuando se armó el catálogo de
- * muestra — no se recalculan solos según crece `properties.json`. La ficha
- * de cada zona (`/zonas/[slug]`) ya calculaba su conteo en vivo; estas
- * funciones lo hacen también disponible para el listado (`/zonas`), y caen
- * de vuelta al valor editorial solo cuando de verdad no hay propiedades
- * reales que promediar (para no mostrar $0).
- *
- * Los municipios (`getMunicipalitiesWithLiveStats`) NO tienen precio
- * promedio — se quitó a propósito: con 1-2 propiedades por municipio en el
- * catálogo, un "promedio" no es más que el precio de esa única propiedad
- * disfrazado de estadística de mercado, y el valor editorial de respaldo
- * tampoco salía de ningún dato real. Mismo criterio que ya exige
- * `getPriceContext` (`totalComparables >= 2` antes de decir algo) — aquí,
- * en vez de imponer un mínimo de muestra, se decidió no mostrar ningún
- * precio a nivel municipio por ahora.
+ * valores editoriales fijos (catálogo de zonas/municipios con ficha —
+ * BACKEND.md §9.3, todavía no es una tabla real). Esta función solo
+ * recalcula el conteo en vivo contra Property, que sí es real desde esta
+ * fase.
  */
-export function getMunicipalitiesWithLiveStats(): Municipality[] {
-  const all = getAllProperties();
+export async function getMunicipalitiesWithLiveStats(): Promise<Municipality[]> {
+  const all = await getAllProperties();
   return getAllMunicipalities().map((m) => {
     const props = propertiesInMunicipality(all, m);
     return { ...m, propiedades: props.length };
   });
 }
 
-export function getZonesWithLiveStats(): Zone[] {
-  const all = getAllProperties();
+export async function getZonesWithLiveStats(): Promise<Zone[]> {
+  const all = await getAllProperties();
   return getAllZones().map((z) => {
     const props = propertiesInZone(all, z);
-    // Mismo caso que getMunicipalitiesWithLiveStats de arriba: zones.json
-    // trae precios editoriales fijos que hay que apagar si de verdad no
-    // queda ninguna propiedad real detrás — no visible hoy (ninguna zona
-    // del catálogo de muestra tiene 0), pero es el mismo bug latente si una
-    // colonia se queda sin propiedades activas.
     if (props.length === 0) return { ...z, propiedades: 0, precioPromedioRenta: 0, precioPromedioVenta: 0 };
     const rentas = props.filter((p) => p.operacion === 'renta').map((p) => p.precio);
     const ventas = props.filter((p) => p.operacion === 'venta').map((p) => p.precio);
@@ -277,19 +272,11 @@ export interface ColoniaCard {
 /**
  * Todas las colonias con propiedades reales — tengan o no ficha editorial
  * en zones.json —, ordenadas de mayor a menor por cantidad de propiedades.
- * Es la fuente única para decidir qué colonias se ven como tarjeta grande
- * en /zonas y cuáles como chip: no depende de curación manual (`destacada`),
- * así que según crece el catálogo el orden se recalcula solo, sin que nadie
- * tenga que tocar zones.json. Las colonias sin propiedades no aparecen —
- * una tarjeta o chip que lleva a "nada" no le sirve a nadie.
- *
  * Ranking por OFERTA (cuántas propiedades activas tiene la colonia), no por
- * DEMANDA (búsquedas/vistas/contactos) — ese segundo dato no existe todavía
- * en la plataforma, ver docs/BACKEND.md §9 para el requisito real ("colonias
- * más solicitadas del momento").
+ * DEMANDA — ver docs/BACKEND.md §9.1.
  */
-export function getColoniasRankedByPropiedades(): ColoniaCard[] {
-  const all = getAllProperties();
+export async function getColoniasRankedByPropiedades(): Promise<ColoniaCard[]> {
+  const all = await getAllProperties();
   const curatedByName = new Map(getAllZones().map((z) => [z.nombre.toLowerCase(), z]));
 
   const porColonia = new Map<string, { nombre: string; municipio: string; propiedades: number; rentas: number[] }>();
@@ -323,17 +310,9 @@ export function getAllAgents(): Agent[] {
   return agentsData as Agent[];
 }
 
-// Antes leía un src/data/stats.json estático que se quedaba desactualizado
-// (propiedadesActivas fijo en 24 mientras el catálogo real ya tenía más) y
-// traía campos que nunca se usaron en ninguna pantalla y nadie calculaba de
-// verdad (busquedasMes, agentesRegistrados, precioPromedio*) — un archivo
-// con datos inventados sin que nada lo mantuviera actualizado. Ahora
-// `propiedadesActivas` sale del catálogo real cada vez; `municipiosCubiertos`
-// es un hecho estable (los 17 municipios de Tabasco que la plataforma
-// soporta, ver MUNICIPIO_OPTIONS), no un conteo que dependa de datos.
-export function getStats() {
+export async function getStats() {
   return {
-    propiedadesActivas: getAllProperties().length,
+    propiedadesActivas: (await getAllProperties()).length,
     municipiosCubiertos: 17,
   };
 }
@@ -345,7 +324,7 @@ export interface PriceContext {
   m2Ref: number;
 }
 
-export function getPriceContext(property: Property): PriceContext {
+export async function getPriceContext(property: Property): Promise<PriceContext> {
   const m2Ref = property.tipo === 'terreno'
     ? property.m2Terreno
     : property.m2Construidos;
@@ -356,13 +335,15 @@ export function getPriceContext(property: Property): PriceContext {
 
   const precioPorM2 = Math.round(property.precio / m2Ref);
 
-  const comparables = getAllProperties().filter((p) =>
-    p.id !== property.id &&
-    p.tipo === property.tipo &&
-    p.operacion === property.operacion &&
-    p.municipio === property.municipio &&
-    (property.tipo === 'terreno' ? p.m2Terreno > 0 : p.m2Construidos > 0)
+  const { propiedades } = await backendFetch<{ propiedades: BackendPublicProperty[] }>(
+    `/propiedades?all=true&tipo=${encodeURIComponent(property.tipo)}&operacion=${encodeURIComponent(property.operacion)}&municipio=${encodeURIComponent(property.municipio)}`,
   );
+  const comparables = propiedades
+    .map(mapBackendProperty)
+    .filter((p) =>
+      p.id !== property.id &&
+      (property.tipo === 'terreno' ? p.m2Terreno > 0 : p.m2Construidos > 0)
+    );
 
   if (comparables.length === 0) {
     return { precioPorM2, promedioZona: null, totalComparables: 0, m2Ref };

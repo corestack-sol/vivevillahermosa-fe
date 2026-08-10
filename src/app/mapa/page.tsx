@@ -9,8 +9,8 @@ export const metadata: Metadata = {
     'Explora casas, departamentos y terrenos en Villahermosa en un mapa interactivo con indicador de zonas inundables. Filtra por precio, tipo y riesgo hídrico.',
 };
 
-export default function MapaPage() {
-  const allProperties = getAllProperties();
+export default async function MapaPage() {
+  const allProperties = await getAllProperties();
   return (
     <Suspense>
       <MapaClient allProperties={allProperties} />

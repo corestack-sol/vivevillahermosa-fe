@@ -9,8 +9,8 @@ export const metadata: Metadata = {
     'Encuentra casas, departamentos, terrenos y habitaciones en Villahermosa, Paraíso, Cárdenas y todo Tabasco. Filtra por precio, colonia y riesgo de inundación. Sin comisiones.',
 };
 
-export default function PropiedadesPage() {
-  const allProperties = getAllProperties();
+export default async function PropiedadesPage() {
+  const allProperties = await getAllProperties();
   return (
     <Suspense>
       <PropertiesClient allProperties={allProperties} />

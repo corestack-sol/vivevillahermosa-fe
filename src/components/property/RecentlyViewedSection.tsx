@@ -27,12 +27,13 @@ export function RecentlyViewedSection({ excludeId, limit = 4 }: RecentlyViewedSe
     function cargarVistosRecientemente() {
       const ids = getRecentlyViewedIds().filter((id) => id !== excludeId);
       if (ids.length === 0) { setProperties([]); return; }
-      const all = getAllProperties();
-      const found = ids
-        .map((id) => all.find((p) => p.id === id))
-        .filter((p): p is Property => Boolean(p))
-        .slice(0, limit);
-      setProperties(found);
+      getAllProperties().then((all) => {
+        const found = ids
+          .map((id) => all.find((p) => p.id === id))
+          .filter((p): p is Property => Boolean(p))
+          .slice(0, limit);
+        setProperties(found);
+      });
     }
     cargarVistosRecientemente();
   }, [excludeId, limit]);

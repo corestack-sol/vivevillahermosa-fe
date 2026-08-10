@@ -13,14 +13,24 @@ import type { Property } from '@/types/property';
 
 export default function FavoritosPage() {
   const { user, loading } = useAuth();
-  const [favIds, setFavIds] = useState<string[]>([]);
+  const [favorites, setFavorites] = useState<Property[]>([]);
   const [fetching, setFetching] = useState(true);
 
+  // ⚠️ BACKEND: deja de hacer falta con `GET /api/propiedades` real — ver
+  // el comentario de aplicarOverridesPublicos en propiedadesLocales.ts.
   useEffect(() => {
     function cargarFavoritos() {
       if (!user) { setFetching(false); return; }
-      backendFetch<{ favoritos: string[] }>('/favoritos')
-        .then((d) => setFavIds(d.favoritos ?? []))
+      Promise.all([
+        backendFetch<{ favoritos: string[] }>('/favoritos'),
+        getAllProperties(),
+      ])
+        .then(([{ favoritos: favIds }, allProperties]) => {
+          const allProps = aplicarOverridesPublicos(allProperties);
+          setFavorites(
+            favIds.map((id) => allProps.find((p) => p.id === id)).filter(Boolean) as Property[],
+          );
+        })
         .finally(() => setFetching(false));
     }
     cargarFavoritos();
@@ -55,15 +65,6 @@ export default function FavoritosPage() {
     );
   }
 
-  // Seguro llamarlo aquí (no en un efecto aparte): este punto del render
-  // solo se alcanza cuando `fetching` ya es false, lo que solo pasa después
-  // de que el efecto de arriba corrió — es decir, ya después de hidratar.
-  // ⚠️ BACKEND: deja de hacer falta con `GET /api/propiedades` real — ver
-  // el comentario de aplicarOverridesPublicos en propiedadesLocales.ts.
-  const allProps = aplicarOverridesPublicos(getAllProperties());
-  const favorites: Property[] = favIds
-    .map((id) => allProps.find((p) => p.id === id))
-    .filter(Boolean) as Property[];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
