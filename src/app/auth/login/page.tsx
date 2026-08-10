@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { Eye, EyeOff, Shield, MapPin, Bell } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { safeRedirectPath } from '@/lib/safeRedirect';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
 const schema = z.object({
   email:    z.string().email('Email inválido'),
@@ -65,16 +66,17 @@ function LoginContent() {
   async function onSubmit(data: FormData) {
     setServerError('');
     setCuentaBloqueada(false);
-    const res  = await fetch('/api/auth/login', {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(data),
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      setServerError(json.error);
-      setCuentaBloqueada(res.status === 403);
-      setEmailIntentado(data.email);
+    try {
+      await backendFetch('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    } catch (err) {
+      if (err instanceof BackendApiError) {
+        setServerError(err.message);
+        setCuentaBloqueada(err.status === 403);
+        setEmailIntentado(data.email);
+      }
       return;
     }
     await refresh();
@@ -153,7 +155,7 @@ function LoginContent() {
             {/* OAuth buttons */}
             <div className="space-y-2.5 mb-5">
               <a
-                href={`/api/auth/google?next=${encodeURIComponent(next)}`}
+                href={`${process.env.NEXT_PUBLIC_API_URL}/auth/google?next=${encodeURIComponent(next)}`}
                 className="w-full flex items-center justify-center gap-3 border border-gray-200
                            hover:border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold
                            text-sm py-3 rounded-xl transition-all"
@@ -162,7 +164,7 @@ function LoginContent() {
                 Continuar con Google
               </a>
               <a
-                href={`/api/auth/facebook?next=${encodeURIComponent(next)}`}
+                href={`${process.env.NEXT_PUBLIC_API_URL}/auth/facebook?next=${encodeURIComponent(next)}`}
                 className="w-full flex items-center justify-center gap-3 font-semibold
                            text-sm py-3 rounded-xl transition-colors text-white"
                 style={{ background: '#1877F2' }}
