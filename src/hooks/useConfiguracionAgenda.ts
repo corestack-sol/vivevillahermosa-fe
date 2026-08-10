@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { backendFetch } from '@/lib/backendApi';
 
 export interface ConfiguracionAgenda {
   id: string;
@@ -21,8 +22,7 @@ export function useConfiguracionAgenda(enabled: boolean) {
   useEffect(() => {
     function cargar() {
       if (!enabled) { setLoading(false); return; }
-      fetch('/api/configuracion-agenda')
-        .then((r) => r.json())
+      backendFetch<{ config: ConfiguracionAgenda | null }>('/configuracion-agenda')
         .then((d) => setConfig(d.config ?? null))
         .catch(() => {})
         .finally(() => setLoading(false));

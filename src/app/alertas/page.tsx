@@ -9,6 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
+import { backendFetch } from '@/lib/backendApi';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { MUNICIPIO_OPTIONS } from '@/lib/publishSchema';
 
@@ -61,8 +62,7 @@ export default function AlertasPage() {
   useEffect(() => {
     if (!loading && !user) { router.push('/auth/login'); return; }
     if (!user) return;
-    fetch('/api/alertas')
-      .then((r) => r.json())
+    backendFetch<{ alertas: Alerta[] }>('/alertas')
       .then((d) => setAlertas(d.alertas ?? []))
       .finally(() => setFetching(false));
   }, [user, loading, router]);
@@ -76,17 +76,15 @@ export default function AlertasPage() {
       dosBocas: data.dosBocas,
       sinRiesgo: data.sinRiesgo,
     };
-    const res = await fetch('/api/alertas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (res.ok) {
-      const d = await res.json();
+    try {
+      const d = await backendFetch<{ alerta: Alerta }>('/alertas', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
       setAlertas((prev) => [d.alerta, ...prev]);
       reset();
       toast.success('Alerta creada — te avisaremos cuando haya coincidencias.');
-    } else {
+    } catch {
       // Antes fallaba en silencio: el usuario no se enteraba si la alerta
       // no se guardó (ej. por rate limit o error del servidor).
       toast.error('No se pudo crear la alerta. Intenta de nuevo.');
@@ -98,8 +96,7 @@ export default function AlertasPage() {
     const removed  = previous.find((a) => a.id === id);
     setAlertas((prev) => prev.filter((a) => a.id !== id)); // optimista
     try {
-      const res = await fetch(`/api/alertas?id=${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('request failed');
+      await backendFetch(`/alertas?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       toast.success('Alerta eliminada.', removed ? { label: 'Deshacer', onClick: () => restoreAlerta(removed) } : undefined);
     } catch {
       setAlertas(previous); // revertir
@@ -111,23 +108,21 @@ export default function AlertasPage() {
   // confirmó en el servidor, así que restaurar es un POST nuevo, no revertir
   // la misma fila (tendrá un id distinto, pero el mismo efecto para el usuario).
   async function restoreAlerta(a: Alerta) {
-    const res = await fetch('/api/alertas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        municipio: a.municipio ?? undefined,
-        tipo: a.tipo ?? undefined,
-        operacion: a.operacion ?? undefined,
-        precioMax: a.precioMax ?? undefined,
-        dosBocas: a.dosBocas,
-        sinRiesgo: a.sinRiesgo,
-      }),
-    });
-    if (res.ok) {
-      const d = await res.json();
+    try {
+      const d = await backendFetch<{ alerta: Alerta }>('/alertas', {
+        method: 'POST',
+        body: JSON.stringify({
+          municipio: a.municipio ?? undefined,
+          tipo: a.tipo ?? undefined,
+          operacion: a.operacion ?? undefined,
+          precioMax: a.precioMax ?? undefined,
+          dosBocas: a.dosBocas,
+          sinRiesgo: a.sinRiesgo,
+        }),
+      });
       setAlertas((prev) => [d.alerta, ...prev]);
       toast.success('Alerta restaurada.');
-    } else {
+    } catch {
       toast.error('No se pudo restaurar la alerta.');
     }
   }
