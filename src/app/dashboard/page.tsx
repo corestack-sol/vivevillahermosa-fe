@@ -7,7 +7,8 @@ import { Heart, Bell, Plus, Eye, TrendingUp, Home, LayoutDashboard, Lightbulb, M
 import { useAuth } from '@/context/AuthContext';
 import { backendFetch } from '@/lib/backendApi';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { getMisPropiedadesDemo } from '@/lib/misPropiedadesDemo';
+import { mapMiaBackend, type MiPropiedad } from '@/lib/misPropiedadesDemo';
+import type { BackendPublicProperty } from '@/lib/api';
 import { generarReporteDesempeno } from '@/lib/reportePdf';
 import { obtenerResumenReporte } from '@/lib/aiClient';
 import { usePerfilInmobiliaria } from '@/hooks/usePerfilInmobiliaria';
@@ -25,11 +26,11 @@ export default function DashboardPage() {
   const router = useRouter();
   const [favCount, setFavCount] = useState(0);
   const [alertaCount, setAlertaCount] = useState(0);
-  const [vistasCount, setVistasCount] = useState(0);
-  const [contactosCount, setContactosCount] = useState(0);
+  const [misPropiedades, setMisPropiedades] = useState<MiPropiedad[]>([]);
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [generandoReporte, setGenerandoReporte] = useState(false);
-  const perfil = usePerfilInmobiliaria(!!user && user.rol !== 'buscador');
+  const esProfesional = user ? user.rol !== 'buscador' : false;
+  const perfil = usePerfilInmobiliaria(!!user && esProfesional);
 
   useEffect(() => {
     if (!loading && !user) { router.push('/auth/login'); return; }
@@ -37,16 +38,15 @@ export default function DashboardPage() {
     Promise.all([
       backendFetch<{ favoritos: string[] }>('/favoritos'),
       backendFetch<{ alertas: unknown[] }>('/alertas'),
-      fetch('/api/me/stats').then((r) => r.json()),
+      esProfesional ? backendFetch<{ propiedades: BackendPublicProperty[] }>('/propiedades/mias') : Promise.resolve(null),
       backendFetch<{ notificaciones: Notificacion[] }>('/notificaciones'),
-    ]).then(([favData, alertData, statsData, notifData]) => {
+    ]).then(([favData, alertData, propiedadesData, notifData]) => {
       setFavCount(favData.favoritos?.length ?? 0);
       setAlertaCount(alertData.alertas?.length ?? 0);
-      setVistasCount(statsData.vistas ?? 0);
-      setContactosCount(statsData.contactos ?? 0);
+      setMisPropiedades(propiedadesData?.propiedades.map(mapMiaBackend) ?? []);
       setNotificaciones(notifData.notificaciones ?? []);
     }).catch(() => {});
-  }, [user, loading, router]);
+  }, [user, loading, router, esProfesional]);
 
   async function marcarNotificacionesLeidas() {
     setNotificaciones((prev) => prev.map((n) => ({ ...n, leida: true })));
@@ -84,11 +84,7 @@ export default function DashboardPage() {
 
   // Propietarios/agentes gestionan una cartera de propiedades — les importan
   // sus propias publicaciones, no cuántas vio como comprador. Buscadores ven
-  // las 4 métricas originales; el resto ve las suyas (hoy con datos de
-  // muestra, ver src/lib/misPropiedadesDemo.ts).
-  const esProfesional = user.rol !== 'buscador';
-  const misPropiedades = esProfesional ? getMisPropiedadesDemo() : [];
-
+  // las 4 métricas originales.
   const stats = esProfesional
     ? [
         { icon: Building2, label: 'Propiedades publicadas', value: misPropiedades.length, href: '/dashboard/propiedades', color: 'text-brand', bg: 'bg-brand-pale' },
@@ -99,8 +95,10 @@ export default function DashboardPage() {
     : [
         { icon: Heart, label: 'Favoritos guardados', value: favCount, href: '/favoritos', color: 'text-red-500', bg: 'bg-red-50' },
         { icon: Bell, label: 'Alertas activas', value: alertaCount, href: '/alertas', color: 'text-amber-500', bg: 'bg-amber-50' },
-        { icon: Eye, label: 'Propiedades vistas', value: vistasCount, href: '/propiedades', color: 'text-blue-500', bg: 'bg-blue-50' },
-        { icon: TrendingUp, label: 'Contactos enviados', value: contactosCount, href: '/propiedades', color: 'text-brand', bg: 'bg-brand-pale' },
+        // Sin backend de analítica todavía (BACKEND.md §12, fuera del MVP) —
+        // ceros honestos en vez del mock determinístico que traía GET /api/me/stats.
+        { icon: Eye, label: 'Propiedades vistas', value: 0, href: '/propiedades', color: 'text-blue-500', bg: 'bg-blue-50' },
+        { icon: TrendingUp, label: 'Contactos enviados', value: 0, href: '/propiedades', color: 'text-brand', bg: 'bg-brand-pale' },
       ];
 
   async function descargarReporte() {
@@ -165,17 +163,14 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Aviso de datos de muestra — mismo criterio que /dashboard/analitica,
-          /dashboard/leads y /dashboard/propiedades (ver misPropiedadesDemo.ts
-          y GET /api/me/stats): "Vistas"/"Contactos" de aquí abajo todavía no
-          cuentan nada real, sin esto era la única pantalla del panel que
-          mostraba estos números sin ninguna advertencia. */}
+      {/* Mismo criterio que /dashboard/analitica y /dashboard/propiedades
+          (ver misPropiedadesDemo.ts, BACKEND.md §12): las propiedades ya son
+          reales, "Vistas"/"Contactos" todavía no cuentan actividad real. */}
       <div className="flex items-start gap-2.5 bg-brand-pale border border-brand/20 rounded-xl px-4 py-3 mb-6">
         <Info size={15} className="text-brand flex-shrink-0 mt-0.5" />
         <p className="text-xs text-brand-dark leading-relaxed">
-          <strong>Vista previa con datos de muestra.</strong> Vistas y contactos todavía no cuentan actividad
-          real — cuando exista una tabla de eventos con fecha (Fase 2), estos números reflejarán tu
-          desempeño de verdad.
+          <strong>Vistas y contactos todavía no cuentan actividad real</strong> — cuando exista una tabla de
+          eventos con fecha, estos números reflejarán tu desempeño de verdad.
         </p>
       </div>
 

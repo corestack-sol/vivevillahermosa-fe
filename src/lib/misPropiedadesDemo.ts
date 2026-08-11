@@ -1,4 +1,6 @@
 import type { Property } from '@/types/property';
+import { mapBackendProperty, type BackendPublicProperty } from '@/lib/api';
+import { formatRelativeDate } from '@/lib/format';
 
 export type EstadoPublicacion = 'activa' | 'pausada' | 'vencida' | 'vendida' | 'rentada';
 
@@ -29,23 +31,19 @@ export interface MiPropiedad {
 }
 
 /**
- * ⚠️ DATOS DE MUESTRA — el Módulo 2 de fase2-spec.md (Panel de Propietario)
- * todavía no tiene backend real: no existe `Propiedad.userId` en la base de
- * datos, así que hoy no hay forma de saber qué propiedades son "de" un
- * usuario. Esto reutiliza 4 propiedades reales del catálogo para que el
- * panel se pueda diseñar y probar de punta a punta — cuando exista
- * `GET /api/propiedades/mias` (ver docs/BACKEND.md),
- * esta función se reemplaza por esa llamada real, sin tocar el resto de la
- * página.
+ * Adapta una propiedad del backend (GET /propiedades/mias) a la forma que
+ * usa el panel del dueño — compartida por dashboard/propiedades,
+ * dashboard/analitica y dashboard/page.tsx para no triplicar el mapeo.
+ * vistas/contactos/favoritos en 0: sin backend de analítica todavía
+ * (BACKEND.md §12, fuera del MVP).
  */
-// ⚠️ 2026-08-10: getPropertyById ya no lee src/data/properties.json (ver
-// api.ts) — estos 4 ids de muestra ya no resuelven a nada real, así que esta
-// función devuelve vacío desde esta fase. Se queda síncrona y así de
-// simple a propósito por muy poco tiempo: la fase siguiente reemplaza por
-// completo este archivo y sus consumidores (OwnerActionsBar.tsx,
-// dashboard/propiedades) por GET /propiedades/mias real — no vale la pena
-// volverla async ni parchear datos de muestra que están a punto de
-// borrarse junto con todos sus call-sites.
-export function getMisPropiedadesDemo(): MiPropiedad[] {
-  return [];
+export function mapMiaBackend(bp: BackendPublicProperty): MiPropiedad {
+  return {
+    property: mapBackendProperty(bp),
+    estado: bp.estado as EstadoPublicacion,
+    vistas: 0,
+    contactos: 0,
+    favoritos: 0,
+    publicadaHace: formatRelativeDate(bp.createdAt),
+  };
 }

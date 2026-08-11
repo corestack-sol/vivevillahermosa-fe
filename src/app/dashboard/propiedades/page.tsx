@@ -5,16 +5,15 @@ import Link from 'next/link';
 import {
   ArrowLeft, Plus, Info, Pencil, Trash2, Play, Pause, Archive, Star, Building2, Download, Upload, TrendingUp, Loader2,
 } from 'lucide-react';
-import { ESTADOS_ARCHIVADOS, ESTADO_CFG, type EstadoPublicacion, type MiPropiedad } from '@/lib/misPropiedadesDemo';
+import { ESTADOS_ARCHIVADOS, ESTADO_CFG, mapMiaBackend, type EstadoPublicacion, type MiPropiedad } from '@/lib/misPropiedadesDemo';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
-import { mapBackendProperty, type BackendPublicProperty } from '@/lib/api';
+import { type BackendPublicProperty } from '@/lib/api';
 import { getPropertyTypeConfig } from '@/lib/propertyTypeConfig';
 import { generarReporteDesempeno } from '@/lib/reportePdf';
 import { obtenerResumenReporte } from '@/lib/aiClient';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { usePerfilInmobiliaria } from '@/hooks/usePerfilInmobiliaria';
-import { formatRelativeDate } from '@/lib/format';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { ArchivarPropiedadModal } from '@/components/property/ArchivarPropiedadModal';
 import { EliminarPropiedadModal } from '@/components/property/EliminarPropiedadModal';
@@ -26,19 +25,6 @@ import { DestacarPropiedadModal } from '@/components/property/DestacarPropiedadM
 const LIMITE_PROPIEDADES = 4;
 
 type FiltroEstado = EstadoPublicacion | 'todas' | 'archivada';
-
-function mapMiaBackend(bp: BackendPublicProperty): MiPropiedad {
-  return {
-    property: mapBackendProperty(bp),
-    estado: bp.estado as EstadoPublicacion,
-    // Sin backend de analítica todavía (BACKEND.md §12, fuera del MVP) —
-    // ceros honestos en vez de los números de muestra que traía la demo.
-    vistas: 0,
-    contactos: 0,
-    favoritos: 0,
-    publicadaHace: formatRelativeDate(bp.createdAt),
-  };
-}
 
 const FILTERS: { value: FiltroEstado; label: string }[] = [
   { value: 'todas',     label: 'Todas' },
