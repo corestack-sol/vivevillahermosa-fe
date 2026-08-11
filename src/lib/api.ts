@@ -18,13 +18,6 @@ import { backendFetch } from '@/lib/backendApi';
 // optimización futura, no bloqueante — el filtrado client-side existente
 // (src/lib/filters.ts) sigue funcionando igual sobre datos reales.
 //
-// getAgenteContacto() sigue leyendo el JSON estático por ahora — se corrige
-// en la fase siguiente (contacto/reportes, BACKEND.md §10) junto con
-// GET /propiedades/:id/contacto real. Hasta entonces, el tel/email/whatsapp
-// de una propiedad creada de verdad (no del catálogo de muestra) no se
-// resuelve por este camino.
-import propertiesData from '@/data/properties.json';
-
 export interface BackendPublicProperty {
   id: string;
   slug: string;
@@ -123,21 +116,6 @@ export async function getAllProperties(): Promise<Property[]> {
     propiedades: BackendPublicProperty[];
   }>('/propiedades?all=true');
   return propiedades.map(mapBackendProperty);
-}
-
-/**
- * Único camino real para obtener el tel/email/whatsapp de contacto de una
- * propiedad de muestra — lee directo del JSON estático, nunca de
- * getAllProperties(). ⚠️ Temporal: solo resuelve propiedades del catálogo de
- * muestra, no propiedades reales creadas vía el backend — se reemplaza por
- * GET /propiedades/:id/contacto en la fase de contacto/reportes.
- */
-export function getAgenteContacto(id: string): Pick<Property['agente'], 'tel' | 'email' | 'whatsapp'> | undefined {
-  const seed = (propertiesData as { data: { id: string; slug: string; agente: { tel?: string; email?: string; whatsapp?: string } }[] }).data
-    .find((p) => p.id === id || p.slug === id);
-  if (!seed) return undefined;
-  const { tel, email, whatsapp } = seed.agente;
-  return { tel, email, whatsapp };
 }
 
 export async function getFeaturedProperties(): Promise<Property[]> {

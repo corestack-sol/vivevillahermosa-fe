@@ -70,60 +70,6 @@ export async function sendAlertaEmail(params: AlertaEmailParams): Promise<boolea
   }
 }
 
-interface ContactoPropiedadEmailParams {
-  to: string;
-  propertyTitle: string;
-  propertyUrl: string | null;
-  interesado: { nombre: string; telefono: string; email: string; mensaje: string };
-}
-
-/**
- * El correo que reemplaza la exposición directa del WhatsApp del
- * propietario (ver AgentCard.tsx) — en vez de que cualquier visitante vea
- * el número de inmediato, este correo le llega al propietario con el
- * mensaje y los datos de quien pregunta; es EL PROPIETARIO quien decide
- * si responde y comparte su número, usando el link de WhatsApp de abajo
- * para escribirle él primero al interesado (nunca al revés).
- */
-export async function sendContactoPropiedadEmail(params: ContactoPropiedadEmailParams): Promise<boolean> {
-  if (!resend) {
-    console.warn(`[email] RESEND_API_KEY no configurado — no se envió el mensaje de contacto a ${params.to}`);
-    return false;
-  }
-
-  const telLimpio = params.interesado.telefono.replace(/[^\d+]/g, '');
-  const waTexto = encodeURIComponent(`Hola ${params.interesado.nombre}, vi tu mensaje sobre "${params.propertyTitle}" en Vive Villahermosa.`);
-  const waUrl = `https://wa.me/${telLimpio}?text=${waTexto}`;
-
-  try {
-    const { error } = await resend.emails.send({
-      from: FROM,
-      to: params.to,
-      subject: `Alguien preguntó por: ${params.propertyTitle}`,
-      html: `
-        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-          <p><strong>${escapeHtml(params.interesado.nombre)}</strong> está interesado en tu propiedad:</p>
-          <p style="font-size: 16px; font-weight: bold; margin: 16px 0 4px;">${escapeHtml(params.propertyTitle)}</p>
-          ${params.propertyUrl ? `<a href="${encodeURI(params.propertyUrl)}" style="color:#0D7065;">Ver la propiedad</a>` : ''}
-          <p style="color:#444; margin: 16px 0 4px;">Su mensaje:</p>
-          <p style="background:#f5f5f5; border-radius:8px; padding:12px 14px; color:#333; white-space:pre-wrap;">${escapeHtml(params.interesado.mensaje)}</p>
-          <p style="color:#444; margin: 16px 0 4px;">📞 ${escapeHtml(params.interesado.telefono)} &nbsp;·&nbsp; ✉️ ${escapeHtml(params.interesado.email)}</p>
-          <a href="${waUrl}" style="display:inline-block;background:#25D366;color:#fff;padding:10px 20px;border-radius:10px;text-decoration:none;margin-top:12px;">Responderle por WhatsApp</a>
-          <p style="color:#888; font-size:12px; margin-top:24px;">Tu número de WhatsApp nunca se muestra a nadie automáticamente en Vive Villahermosa — solo tú decides si le escribes. Nunca compartas datos bancarios ni aceptes pagos antes de conocer a la persona.</p>
-        </div>
-      `,
-    });
-    if (error) {
-      console.error('[email] Resend devolvió un error', error);
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error('[email] Error enviando correo', err);
-    return false;
-  }
-}
-
 interface CitaRecordatorioEmailParams {
   to: string;
   nombreDestinatario: string;

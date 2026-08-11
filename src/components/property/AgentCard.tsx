@@ -8,6 +8,7 @@ import { Mail, BadgeCheck, Eye, Loader2, PauseCircle, Archive, MessageCircle, Ph
 import { usePropiedadEstado } from '@/hooks/usePropiedadEstado';
 import { useAuth } from '@/context/AuthContext';
 import { loginRedirectUrl } from '@/lib/authRedirect';
+import { backendFetch } from '@/lib/backendApi';
 
 // Subconjunto público y seguro de mostrar de entrada — nombre y estado de
 // verificación no son datos sensibles.
@@ -48,9 +49,7 @@ export function AgentCard({ agent, propiedadId, propertyTitle, requiereMensajePr
     setLoading(true);
     setError(false);
     try {
-      const res = await fetch(`/api/propiedades/${propiedadId}/contacto`);
-      if (!res.ok) throw new Error('request failed');
-      const data: Contacto = await res.json();
+      const data = await backendFetch<Contacto>(`/propiedades/${propiedadId}/contacto`);
       setContacto(data);
     } catch {
       setError(true);

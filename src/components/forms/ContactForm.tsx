@@ -12,6 +12,7 @@ import { CheckCircle, ShieldAlert, LogIn, ArrowRight, PauseCircle, Archive } fro
 import { useAuth } from '@/context/AuthContext';
 import { loginRedirectUrl } from '@/lib/authRedirect';
 import { usePropiedadEstado } from '@/hooks/usePropiedadEstado';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
 const schema = z.object({
   nombre: z.string().min(2, 'Ingresa tu nombre completo'),
@@ -59,18 +60,13 @@ export function ContactForm({ propertyTitle, propertyId, dark = false }: Contact
   const onSubmit = async (data: FormData) => {
     setSendError(null);
     try {
-      const res = await fetch(`/api/propiedades/${propertyId}/contactar`, {
+      await backendFetch(`/propiedades/${propertyId}/contactar`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error || 'No se pudo enviar el mensaje');
-      }
       setSent(true);
     } catch (err) {
-      setSendError(err instanceof Error ? err.message : 'No se pudo enviar el mensaje, intenta de nuevo.');
+      setSendError(err instanceof BackendApiError ? err.message : 'No se pudo enviar el mensaje, intenta de nuevo.');
     }
   };
 
