@@ -1,60 +1,59 @@
 import Link from 'next/link';
-import { Users, ShieldAlert, FileWarning, FlagTriangleRight, Heart, Bell, CalendarDays, Wrench, Ban, Mail, Cpu, Eye } from 'lucide-react';
+import { redirect } from 'next/navigation';
+import { Users, FileWarning, FlagTriangleRight, Heart, Bell, CalendarDays, Wrench, Ban, Mail, Cpu, Eye, Home } from 'lucide-react';
 import { prisma } from '@/lib/db';
-import { requireAdmin } from '@/lib/adminAuth';
+import { getSession } from '@/lib/auth';
+import { backendFetchServer } from '@/lib/backendApiServer';
 import { getBusquedaStats } from '@/lib/busquedaStats';
 
-// Server Component — llama directo a Prisma en vez de fetch a su propia API
-// (evita un roundtrip HTTP innecesario a sí mismo en el primer render).
-// Mismas queries y mismos nombres que GET /api/admin/metricas (que el
-// backend separado replicará) — solo se agrega `admins`, propio de esta
-// página, para no divergir del contrato documentado en docs/BACKEND.md §16.
+interface MetricasBackend {
+  usuarios: { total: number; bloqueados: number };
+  propiedades: { total: number; activas: number; pausadas: number };
+  solicitudesRevision: { total: number; pendientes: number };
+  reportes: { total: number; pendientes: number };
+  intentosSospechosos: number;
+  favoritos: number;
+  alertas: number;
+  citas: number;
+  integraciones: { resend: boolean; openRouter: boolean; gemini: boolean };
+}
+
+// GET /admin/metricas (BACKEND.md §16) ya viene del backend real — el único
+// dato que sigue local es "Servicios activos" (el módulo Servicios sigue en
+// pausa, §11) y el contador de IA de búsqueda (en memoria de este proceso,
+// /ia/* tampoco migró todavía, §8). Sin tile de "Admins activos" — el
+// backend no expone ese conteo en /admin/metricas y no vale la pena un
+// fetch aparte solo por esa cifra.
 async function getMetricas() {
-  const [
-    totalUsuarios, usuariosBloqueados, admins, solicitudesPendientes, reportesPendientes,
-    intentosSospechosos7d, totalFavoritos, totalAlertas, totalCitas, totalServicios,
-  ] = await Promise.all([
-    prisma.user.count(),
-    prisma.user.count({ where: { bloqueado: true } }),
-    prisma.user.count({ where: { esAdmin: true } }),
-    prisma.solicitudRevision.count({ where: { estado: 'pendiente' } }),
-    prisma.reporteAnuncio.count({ where: { estado: 'pendiente' } }),
-    prisma.intentoSospechoso.count({ where: { createdAt: { gte: new Date(Date.now() - 7 * 86_400_000) } } }),
-    prisma.favorito.count(),
-    prisma.alerta.count(),
-    prisma.cita.count(),
+  const [metricas, totalServicios] = await Promise.all([
+    backendFetchServer<MetricasBackend>('/admin/metricas'),
     prisma.servicioProveedor.count({ where: { activo: true } }),
   ]);
-  return {
-    totalUsuarios, usuariosBloqueados, admins, solicitudesPendientes, reportesPendientes,
-    intentosSospechosos7d, totalFavoritos, totalAlertas, totalCitas, totalServicios,
-    resendConfigurado: !!process.env.RESEND_API_KEY,
-    openrouterConfigurado: !!process.env.OPENROUTER_API_KEY,
-    geminiConfigurado: !!process.env.GEMINI_API_KEY,
-  };
+  return { ...metricas, totalServicios };
 }
 
 export default async function AdminPage() {
-  const session = await getSessionOrRedirect();
+  const session = await getSession();
+  if (!session) redirect('/');
   const m = await getMetricas();
 
   const tiles = [
-    { icon: Users, label: 'Usuarios totales', value: m.totalUsuarios, color: 'text-brand', bg: 'bg-brand-pale' },
-    { icon: Ban, label: 'Cuentas bloqueadas', value: m.usuariosBloqueados, color: 'text-red-500', bg: 'bg-red-50' },
-    { icon: ShieldAlert, label: 'Admins activos', value: m.admins, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { icon: FileWarning, label: 'Solicitudes de revisión pendientes', value: m.solicitudesPendientes, color: 'text-amber-500', bg: 'bg-amber-50', href: '/admin/solicitudes' },
-    { icon: FlagTriangleRight, label: 'Reportes pendientes', value: m.reportesPendientes, color: 'text-amber-500', bg: 'bg-amber-50', href: '/admin/reportes' },
-    { icon: Eye, label: 'Intentos sospechosos (7 días)', value: m.intentosSospechosos7d, color: 'text-purple-500', bg: 'bg-purple-50', href: '/admin/intentos-sospechosos' },
-    { icon: Heart, label: 'Favoritos guardados', value: m.totalFavoritos, color: 'text-pink-500', bg: 'bg-pink-50' },
-    { icon: Bell, label: 'Alertas activas', value: m.totalAlertas, color: 'text-orange-500', bg: 'bg-orange-50' },
-    { icon: CalendarDays, label: 'Citas agendadas', value: m.totalCitas, color: 'text-sky-500', bg: 'bg-sky-50' },
+    { icon: Users, label: 'Usuarios totales', value: m.usuarios.total, color: 'text-brand', bg: 'bg-brand-pale' },
+    { icon: Ban, label: 'Cuentas bloqueadas', value: m.usuarios.bloqueados, color: 'text-red-500', bg: 'bg-red-50' },
+    { icon: Home, label: 'Propiedades activas', value: m.propiedades.activas, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { icon: FileWarning, label: 'Solicitudes de revisión pendientes', value: m.solicitudesRevision.pendientes, color: 'text-amber-500', bg: 'bg-amber-50', href: '/admin/solicitudes' },
+    { icon: FlagTriangleRight, label: 'Reportes pendientes', value: m.reportes.pendientes, color: 'text-amber-500', bg: 'bg-amber-50', href: '/admin/reportes' },
+    { icon: Eye, label: 'Intentos sospechosos', value: m.intentosSospechosos, color: 'text-purple-500', bg: 'bg-purple-50', href: '/admin/intentos-sospechosos' },
+    { icon: Heart, label: 'Favoritos guardados', value: m.favoritos, color: 'text-pink-500', bg: 'bg-pink-50' },
+    { icon: Bell, label: 'Alertas activas', value: m.alertas, color: 'text-orange-500', bg: 'bg-orange-50' },
+    { icon: CalendarDays, label: 'Citas agendadas', value: m.citas, color: 'text-sky-500', bg: 'bg-sky-50' },
     { icon: Wrench, label: 'Servicios activos', value: m.totalServicios, color: 'text-teal-500', bg: 'bg-teal-50', href: '/admin/servicios' },
   ];
 
   const config = [
-    { icon: Mail, label: 'Resend (correo)', ok: m.resendConfigurado },
-    { icon: Cpu, label: 'OpenRouter (IA texto)', ok: m.openrouterConfigurado },
-    { icon: Cpu, label: 'Gemini (IA foto)', ok: m.geminiConfigurado },
+    { icon: Mail, label: 'Resend (correo)', ok: m.integraciones.resend },
+    { icon: Cpu, label: 'OpenRouter (IA texto)', ok: m.integraciones.openRouter },
+    { icon: Cpu, label: 'Gemini (IA foto)', ok: m.integraciones.gemini },
   ];
 
   const busqueda = getBusquedaStats();
@@ -66,8 +65,6 @@ export default async function AdminPage() {
         Hola, <strong className="text-gray-700">{session.nombre}</strong> — solo cuentas con <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">esAdmin</code> ven este panel.
       </p>
 
-      {/* Sin ningún tile de propiedades a propósito — Property no es una
-          tabla real todavía, mostrar un número ahí sería inventar un dato. */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         {tiles.map((t) => {
           const tileClass = `bg-white rounded-2xl border border-gray-200 p-5 ${t.href ? 'hover:border-brand/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200' : ''}`;
@@ -138,7 +135,7 @@ export default async function AdminPage() {
               )}
             </p>
             <p className="text-xs text-gray-400 mb-4">
-              Único dato de uso real que hay hoy — las &quot;vistas&quot; de propiedades en otros lados de la plataforma son de muestra, no tráfico real (<code className="bg-gray-100 px-1 py-0.5 rounded">Property</code> no es una tabla real todavía).
+              El buscador de IA todavía es el único que corre contra este backend en Next.js (docs/BACKEND.md §8) — el resto de la plataforma, incluidas las propiedades de arriba, ya viene del backend separado.
             </p>
             <div className="flex items-end gap-1 h-32">
               {busqueda.porHora.map((valor, hora) => {
@@ -166,10 +163,4 @@ export default async function AdminPage() {
       </div>
     </div>
   );
-}
-
-async function getSessionOrRedirect() {
-  const admin = await requireAdmin();
-  if (!admin.ok) throw new Error('El layout ya garantiza sesión de admin — no debería llegar aquí');
-  return admin.session;
 }

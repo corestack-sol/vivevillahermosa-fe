@@ -7,16 +7,6 @@ export interface SessionPayload {
   email: string;
   nombre: string;
   rol: string;
-  /**
-   * ⚠️ 2026-08-10 — con la sesión ahora emitida y verificada por el backend
-   * separado (docs/BACKEND.md §13), este campo ya NO se puebla nunca aquí:
-   * GET /auth/me del backend no expone `esAdmin` (el panel /admin sigue
-   * corriendo contra Prisma local, con su propio corte pendiente). El
-   * resultado es que requireAdmin() (src/lib/adminAuth.ts) niega a todos
-   * hasta que ese corte pase — falla cerrado, no es una regresión de
-   * seguridad, pero si /admin deja de funcionar en desarrollo es por esto,
-   * no un bug.
-   */
   esAdmin?: boolean;
 }
 
@@ -40,6 +30,7 @@ export async function getSession(): Promise<SessionPayload | null> {
       email: user.email,
       nombre: user.nombre,
       rol: user.rol,
+      esAdmin: user.esAdmin,
     };
   } catch {
     return null;
