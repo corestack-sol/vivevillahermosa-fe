@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
 import { formatRelativeDate } from '@/lib/format';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
 interface Usuario {
   id: string;
@@ -41,8 +42,7 @@ export default function AdminUsuariosPage() {
     const params = new URLSearchParams({ page: String(page) });
     if (q.trim()) params.set('q', q.trim());
     if (soloBloqueados) params.set('bloqueados', '1');
-    const res = await fetch(`/api/admin/usuarios?${params}`, { cache: 'no-store' });
-    const data = await res.json();
+    const data = await backendFetch<{ usuarios: Usuario[]; total: number }>(`/admin/usuarios?${params}`);
     setUsuarios(data.usuarios ?? []);
     setTotal(data.total ?? 0);
     setLoading(false);
@@ -64,19 +64,18 @@ export default function AdminUsuariosPage() {
     }
     setEnviando(true);
     setError('');
-    const res = await fetch(`/api/admin/usuarios/${modal.usuario.id}/${modal.accion}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: modal.accion === 'bloquear' ? JSON.stringify({ motivo }) : undefined,
-    });
-    setEnviando(false);
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error ?? 'Ocurrió un error');
-      return;
+    try {
+      await backendFetch(`/admin/usuarios/${modal.usuario.id}/${modal.accion}`, {
+        method: 'POST',
+        body: modal.accion === 'bloquear' ? JSON.stringify({ motivo }) : undefined,
+      });
+      setModal(null);
+      cargar();
+    } catch (err) {
+      setError(err instanceof BackendApiError ? err.message : 'Ocurrió un error');
+    } finally {
+      setEnviando(false);
     }
-    setModal(null);
-    cargar();
   }
 
   const totalPages = Math.max(1, Math.ceil(total / perPage));

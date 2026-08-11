@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Ban, CheckCircle2 } from 'lucide-react';
 import { formatRelativeDate } from '@/lib/format';
+import { backendFetch } from '@/lib/backendApi';
 
 interface Intento {
   id: string;
@@ -18,9 +19,8 @@ export default function AdminIntentosSospechososPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/admin/intentos-sospechosos', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((data) => setIntentos(data.intentos ?? []))
+    backendFetch<Intento[]>('/admin/intentos-sospechosos')
+      .then((intentos) => setIntentos(intentos ?? []))
       .finally(() => setLoading(false));
   }, []);
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { formatRelativeDate } from '@/lib/format';
+import { backendFetch } from '@/lib/backendApi';
 
 interface Accion {
   id: string;
@@ -29,9 +30,8 @@ export default function AdminAuditoriaPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/admin/auditoria', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((data) => setAcciones(data.acciones ?? []))
+    backendFetch<Accion[]>('/admin/auditoria')
+      .then((acciones) => setAcciones(acciones ?? []))
       .finally(() => setLoading(false));
   }, []);
 

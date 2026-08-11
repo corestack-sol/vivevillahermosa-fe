@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Loader2, CheckCircle2, XCircle, Info } from 'lucide-react';
+import Link from 'next/link';
+import { Loader2, CheckCircle2, XCircle, ArrowUpRight } from 'lucide-react';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { formatRelativeDate } from '@/lib/format';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
 interface Reporte {
   id: string;
@@ -37,12 +39,12 @@ export default function AdminReportesPage() {
   const [loading, setLoading] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [confirmar, setConfirmar] = useState<{ reporte: Reporte; nuevoEstado: 'revisado' | 'descartado' } | null>(null);
+  const [error, setError] = useState('');
 
   const cargar = useCallback(async () => {
     setLoading(true);
-    const res = await fetch(`/api/admin/reportes?estado=${estado}`, { cache: 'no-store' });
-    const data = await res.json();
-    setReportes(data.reportes ?? []);
+    const reportes = await backendFetch<Reporte[]>(`/admin/reportes?estado=${estado}`);
+    setReportes(reportes ?? []);
     setLoading(false);
   }, [estado]);
 
@@ -51,22 +53,26 @@ export default function AdminReportesPage() {
   async function resolver() {
     if (!confirmar) return;
     setEnviando(true);
-    await fetch(`/api/admin/reportes/${confirmar.reporte.id}/resolver`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado: confirmar.nuevoEstado }),
-    });
-    setEnviando(false);
-    setConfirmar(null);
-    cargar();
+    setError('');
+    try {
+      await backendFetch(`/admin/reportes/${confirmar.reporte.id}/resolver`, {
+        method: 'POST',
+        body: JSON.stringify({ estado: confirmar.nuevoEstado }),
+      });
+      setConfirmar(null);
+      cargar();
+    } catch (err) {
+      setError(err instanceof BackendApiError ? err.message : 'Ocurrió un error');
+    } finally {
+      setEnviando(false);
+    }
   }
 
   return (
     <div>
       <h1 className="text-2xl font-heading font-bold text-gray-900 mb-1">Reportes de publicaciones</h1>
-      <p className="text-gray-500 text-sm mb-6 max-w-2xl flex items-start gap-1.5">
-        <Info size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
-        Property no es todavía una tabla real del backend — muchos de estos IDs corresponden a publicaciones locales del navegador de quien reportó y no se pueden abrir ni verificar desde aquí.
+      <p className="text-gray-500 text-sm mb-6 max-w-2xl">
+        Cada reporte queda ligado a una propiedad real (borrar la propiedad borra sus reportes en cascada) — usa el enlace de cada tarjeta para revisar la publicación antes de resolver.
       </p>
 
       <div className="w-52 mb-5">
@@ -84,9 +90,15 @@ export default function AdminReportesPage() {
               <div className="flex items-start justify-between gap-4 mb-2">
                 <div>
                   <span className="inline-block text-xs font-semibold text-brand bg-brand-pale px-2 py-0.5 rounded-full mb-1.5">{MOTIVO_LABEL[r.motivo] ?? r.motivo}</span>
-                  <p className="text-xs text-gray-400">Publicación: <code className="bg-gray-50 px-1 py-0.5 rounded">{r.propiedadId}</code></p>
                   <p className="text-xs text-gray-400">{r.userId ? 'Reportado por un usuario con sesión' : 'Reportado de forma anónima'} · {formatRelativeDate(r.createdAt)}</p>
                 </div>
+                <Link
+                  href={`/propiedades/${r.propiedadId}`}
+                  target="_blank"
+                  className="flex items-center gap-1 text-xs font-semibold text-brand hover:underline flex-shrink-0"
+                >
+                  Ver publicación <ArrowUpRight size={12} />
+                </Link>
               </div>
               {r.comentario && <p className="text-sm text-gray-700 bg-gray-50 rounded-xl p-3 mb-3">{r.comentario}</p>}
               {r.estado === 'pendiente' && (
@@ -118,6 +130,7 @@ export default function AdminReportesPage() {
               <code className="bg-gray-50 px-1 py-0.5 rounded text-gray-800">{confirmar.reporte.propiedadId}</code>
               {' '}({MOTIVO_LABEL[confirmar.reporte.motivo] ?? confirmar.reporte.motivo}). Esta acción no se puede deshacer desde aquí.
             </p>
+            {error && <p className="text-sm text-danger">{error}</p>}
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setConfirmar(null)}>Cancelar</Button>
               <Button

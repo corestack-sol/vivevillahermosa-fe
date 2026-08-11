@@ -6,6 +6,7 @@ import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { formatRelativeDate } from '@/lib/format';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
 interface Solicitud {
   id: string;
@@ -31,12 +32,12 @@ export default function AdminSolicitudesPage() {
   const [respuesta, setRespuesta] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [confirmar, setConfirmar] = useState<{ solicitud: Solicitud; nuevoEstado: 'aprobada' | 'rechazada' } | null>(null);
+  const [error, setError] = useState('');
 
   const cargar = useCallback(async () => {
     setLoading(true);
-    const res = await fetch(`/api/admin/solicitudes-revision?estado=${estado}`, { cache: 'no-store' });
-    const data = await res.json();
-    setSolicitudes(data.solicitudes ?? []);
+    const solicitudes = await backendFetch<Solicitud[]>(`/admin/solicitudes-revision?estado=${estado}`);
+    setSolicitudes(solicitudes ?? []);
     setLoading(false);
   }, [estado]);
 
@@ -45,16 +46,21 @@ export default function AdminSolicitudesPage() {
   async function resolver() {
     if (!confirmar) return;
     setEnviando(true);
-    await fetch(`/api/admin/solicitudes-revision/${confirmar.solicitud.id}/resolver`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado: confirmar.nuevoEstado, respuestaAdmin: respuesta.trim() || undefined }),
-    });
-    setEnviando(false);
-    setConfirmar(null);
-    setAbierta(null);
-    setRespuesta('');
-    cargar();
+    setError('');
+    try {
+      await backendFetch(`/admin/solicitudes-revision/${confirmar.solicitud.id}/resolver`, {
+        method: 'POST',
+        body: JSON.stringify({ estado: confirmar.nuevoEstado, respuestaAdmin: respuesta.trim() || undefined }),
+      });
+      setConfirmar(null);
+      setAbierta(null);
+      setRespuesta('');
+      cargar();
+    } catch (err) {
+      setError(err instanceof BackendApiError ? err.message : 'Ocurrió un error');
+    } finally {
+      setEnviando(false);
+    }
   }
 
   return (
@@ -137,6 +143,7 @@ export default function AdminSolicitudesPage() {
               <strong className="text-gray-800">{confirmar.solicitud.user.nombre}</strong> ({confirmar.solicitud.user.email}) —
               se le enviará un correo con el resultado{respuesta.trim() ? ' y tu respuesta' : ''}.
             </p>
+            {error && <p className="text-sm text-danger">{error}</p>}
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setConfirmar(null)}>Cancelar</Button>
               <Button
