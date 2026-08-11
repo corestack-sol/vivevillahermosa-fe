@@ -1,110 +1,94 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Building2, Eye, MessageCircle, Heart, Pencil, Trash2, Play, Pause, Archive, Star, ArrowRight } from 'lucide-react';
+import { Building2, Pencil, Trash2, Play, Pause, Archive, Star, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { getMisPropiedadesDemo, ESTADOS_ARCHIVADOS, ESTADO_CFG, type EstadoPublicacion, type MiPropiedad } from '@/lib/misPropiedadesDemo';
-import { getEstadoOverride, setEstadoOverride, ESTADO_OVERRIDE_EVENT } from '@/lib/estadoOverrides';
-import {
-  getMisPropiedadesConOverrides, eliminarPropiedad, destacarPropiedad, getDestacadoHasta,
-  PROPIEDADES_LOCALES_EVENT, contarPropiedadesActivas, LIMITE_PROPIEDADES_GRATIS,
-} from '@/lib/propiedadesLocales';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
+import { ESTADOS_ARCHIVADOS, ESTADO_CFG, type EstadoPublicacion } from '@/lib/misPropiedadesDemo';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { ArchivarPropiedadModal } from '@/components/property/ArchivarPropiedadModal';
 import { EliminarPropiedadModal } from '@/components/property/EliminarPropiedadModal';
 import { DestacarPropiedadModal } from '@/components/property/DestacarPropiedadModal';
 import { useRouter } from 'next/navigation';
 
+// Debe coincidir con LIMITE_PROPIEDADES_ACTIVAS en el backend
+// (properties.service.ts) — solo se usa para el mensaje de error, el
+// servidor es quien de verdad lo hace cumplir (código LIMITE_PROPIEDADES_ALCANZADO).
+const LIMITE_PROPIEDADES = 4;
+
+interface MiaBackend {
+  id: string;
+  titulo: string;
+  operacion: 'venta' | 'renta';
+  estado: EstadoPublicacion;
+  featured: boolean;
+}
+
 /**
- * Banner de gestión visible solo si la propiedad que se está viendo es "tuya"
- * (según los datos de muestra de src/lib/misPropiedadesDemo.ts, más lo que
- * hayas publicado/editado en este navegador). Mismas acciones que
- * /dashboard/propiedades, para no tener que salir de la ficha pública para
- * gestionarla — disponible para cualquier cuenta, no solo inmobiliarias: el
- * publicar/gestionar/eliminar una propiedad propia no depende de tener
- * activado el modo Inmobiliaria (eso solo agrega branding opcional al
- * anuncio, ver usePerfilInmobiliaria).
+ * Banner de gestión visible solo si la propiedad que se está viendo es tuya
+ * de verdad — GET /propiedades/mias real (BACKEND.md §3), ya no datos de
+ * muestra ni localStorage. Mismas acciones que /dashboard/propiedades, para
+ * no tener que salir de la ficha pública para gestionarla.
  */
 export function OwnerActionsBar({ propertyId }: { propertyId: string }) {
   const { user } = useAuth();
   const toast = useToast();
   const router = useRouter();
-  const misPropiedadesBase = useMemo(() => getMisPropiedadesDemo(), []);
-  const baseMine = misPropiedadesBase.find((m) => m.property.id === propertyId);
 
-  const [mine, setMine] = useState<MiPropiedad | null>(baseMine ?? null);
-  const [estado, setEstado] = useState<EstadoPublicacion | null>(baseMine?.estado ?? null);
+  const [mine, setMine] = useState<MiaBackend | null>(null);
   const [showArchivar, setShowArchivar] = useState(false);
   const [showEliminar, setShowEliminar] = useState(false);
   const [showDestacar, setShowDestacar] = useState(false);
 
-  // El override de localStorage (estado + ediciones/eliminadas) solo existe
-  // en cliente — se aplica en un efecto para que el primer render (servidor
-  // y cliente) coincida.
   useEffect(() => {
-    function aplicarOverride() {
-      const conLocales = getMisPropiedadesConOverrides(misPropiedadesBase);
-      const encontrada = conLocales.find((m) => m.property.id === propertyId) ?? null;
-      setMine(encontrada);
-      if (!encontrada) { setEstado(null); return; }
-      const override = getEstadoOverride(propertyId);
-      setEstado(override ?? encontrada.estado);
-    }
-    aplicarOverride();
-    window.addEventListener(ESTADO_OVERRIDE_EVENT, aplicarOverride);
-    window.addEventListener(PROPIEDADES_LOCALES_EVENT, aplicarOverride);
-    return () => {
-      window.removeEventListener(ESTADO_OVERRIDE_EVENT, aplicarOverride);
-      window.removeEventListener(PROPIEDADES_LOCALES_EVENT, aplicarOverride);
-    };
-  }, [misPropiedadesBase, propertyId]);
+    if (!user) return;
+    let cancelado = false;
+    backendFetch<{ propiedades: MiaBackend[] }>('/propiedades/mias')
+      .then(({ propiedades }) => {
+        if (cancelado) return;
+        setMine(propiedades.find((p) => p.id === propertyId) ?? null);
+      })
+      .catch(() => {});
+    return () => { cancelado = true; };
+  }, [user, propertyId]);
 
-  if (!user || !mine || !estado) return null;
+  if (!user || !mine) return null;
 
-  const estadoCfg = ESTADO_CFG[estado];
-  const destacadoHasta = getDestacadoHasta(propertyId);
+  const estadoCfg = ESTADO_CFG[mine.estado];
 
   function pendiente(accion: string) {
     toast.info(`"${accion}" estará disponible cuando se conecte el panel real de propiedades (Módulo 2, Fase 2).`);
   }
 
-  // ⚠️ BACKEND: togglePausa/archivar/destacarPropiedad (abajo) y
-  // eliminarPropiedad (en el modal, ver onConfirm de EliminarPropiedadModal
-  // más abajo en este archivo) hoy solo escriben en localStorage
-  // (src/lib/estadoOverrides.ts y src/lib/propiedadesLocales.ts). Deben
-  // convertirse en `PATCH /api/propiedades/:id` (para estado/destacado) y
-  // `DELETE /api/propiedades/:id` reales, validando `session.userId` contra
-  // el dueño — ver el modelo Property sugerido al final de
-  // prisma/schema.prisma. Mientras tanto, "dueño" se determina comparando
-  // contra `getMisPropiedadesDemo()` (4 propiedades de muestra fijas, ver
-  // src/lib/misPropiedadesDemo.ts) más lo creado en este navegador — no
-  // contra una relación real, así que hoy CUALQUIER cuenta ve estas mismas
-  // 4 propiedades como "suyas" si entra a su ficha.
-  //
-  // Pausar/reactivar, y también "reactivar" desde vendida/rentada (por si se
-  // archivó por error) — vencida se maneja aparte con "Renovar" (pendiente).
-  function togglePausa() {
-    // Mismo chequeo que dashboard/propiedades/page.tsx — reactivar suma una
-    // propiedad activa más, respeta el mismo límite gratuito que publicar.
-    if (estado !== 'activa' && contarPropiedadesActivas() >= LIMITE_PROPIEDADES_GRATIS) {
-      toast.error(`Ya tienes ${LIMITE_PROPIEDADES_GRATIS} propiedades activas — el máximo gratuito. Contáctanos para un plan profesional si necesitas reactivar más.`);
-      return;
+  async function actualizarEstado(nuevo: EstadoPublicacion) {
+    try {
+      await backendFetch(`/propiedades/${propertyId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ estado: nuevo }),
+      });
+      setMine((prev) => (prev ? { ...prev, estado: nuevo } : prev));
+    } catch (err) {
+      if (err instanceof BackendApiError) {
+        const code = (err.body as { code?: string } | null)?.code;
+        toast.error(
+          code === 'LIMITE_PROPIEDADES_ALCANZADO'
+            ? `Ya tienes ${LIMITE_PROPIEDADES} propiedades activas — el máximo gratuito. Contáctanos para un plan profesional si necesitas reactivar más.`
+            : err.message,
+        );
+        return;
+      }
+      toast.error('No se pudo actualizar la propiedad.');
     }
-    setEstado((prev) => {
-      if (!prev) return prev;
-      const next = prev === 'activa' ? 'pausada' : 'activa';
-      setEstadoOverride(propertyId, next);
-      return next;
-    });
+  }
+
+  function togglePausa() {
+    actualizarEstado(mine!.estado === 'activa' ? 'pausada' : 'activa');
   }
 
   function archivar() {
-    if (!mine) return;
-    const next: EstadoPublicacion = mine.property.operacion === 'venta' ? 'vendida' : 'rentada';
-    setEstado(next);
-    setEstadoOverride(propertyId, next);
+    actualizarEstado(mine!.operacion === 'venta' ? 'vendida' : 'rentada');
   }
 
   return (
@@ -119,54 +103,43 @@ export function OwnerActionsBar({ propertyId }: { propertyId: string }) {
             <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${estadoCfg.cls}`}>
               {estadoCfg.label}
             </span>
-            {destacadoHasta && (
+            {mine.featured && (
               <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
                 <Star size={9} className="fill-current" /> Destacada
               </span>
             )}
-          </div>
-          <div className="flex items-center gap-3 text-xs text-brand-dark/60 mt-0.5">
-            <Tooltip label="Vistas (dato de muestra — todavía no cuenta actividad real)">
-              <span className="flex items-center gap-1" title="Vistas (dato de muestra)"><Eye size={12} /> {mine.vistas}</span>
-            </Tooltip>
-            <Tooltip label="Contactos recibidos (dato de muestra — todavía no cuenta actividad real)">
-              <span className="flex items-center gap-1" title="Contactos recibidos (dato de muestra)"><MessageCircle size={12} /> {mine.contactos}</span>
-            </Tooltip>
-            <Tooltip label="Favoritos (dato de muestra — todavía no cuenta actividad real)">
-              <span className="flex items-center gap-1" title="Favoritos (dato de muestra)"><Heart size={12} /> {mine.favoritos}</span>
-            </Tooltip>
           </div>
         </div>
       </div>
 
       <div className="flex items-center gap-1.5 flex-shrink-0">
         <Tooltip label={
-          estado === 'activa' ? 'Pausar publicación'
-            : estado === 'pausada' ? 'Reactivar publicación'
-            : estado === 'vencida' ? 'Renovar publicación'
+          mine.estado === 'activa' ? 'Pausar publicación'
+            : mine.estado === 'pausada' ? 'Reactivar publicación'
+            : mine.estado === 'vencida' ? 'Renovar publicación'
             : 'Reactivar publicación'
         }>
           <button
             type="button"
-            onClick={() => (estado === 'vencida' ? pendiente('Renovar') : togglePausa())}
+            onClick={() => (mine.estado === 'vencida' ? pendiente('Renovar') : togglePausa())}
             className="w-9 h-9 rounded-xl flex items-center justify-center text-brand-dark/60 hover:text-brand hover:bg-white transition-colors"
           >
-            {estado === 'activa' ? <Pause size={16} /> : <Play size={16} />}
+            {mine.estado === 'activa' ? <Pause size={16} /> : <Play size={16} />}
           </button>
         </Tooltip>
-        {estado && !ESTADOS_ARCHIVADOS.includes(estado) && (
+        {!ESTADOS_ARCHIVADOS.includes(mine.estado) && (
           <>
-            <Tooltip label={destacadoHasta ? 'Ya está destacada' : 'Destacar propiedad'}>
+            <Tooltip label={mine.featured ? 'Ya está destacada' : 'Destacar propiedad'}>
               <button
                 type="button"
-                disabled={!!destacadoHasta}
+                disabled={mine.featured}
                 onClick={() => setShowDestacar(true)}
                 className="w-9 h-9 rounded-xl flex items-center justify-center text-brand-dark/60 hover:text-amber-500 hover:bg-white transition-colors disabled:opacity-40 disabled:hover:text-brand-dark/60 disabled:hover:bg-transparent disabled:cursor-default"
               >
-                <Star size={16} className={destacadoHasta ? 'fill-current text-amber-400' : ''} />
+                <Star size={16} className={mine.featured ? 'fill-current text-amber-400' : ''} />
               </button>
             </Tooltip>
-            <Tooltip label={mine.property.operacion === 'venta' ? 'Marcar como vendida' : 'Marcar como rentada'}>
+            <Tooltip label={mine.operacion === 'venta' ? 'Marcar como vendida' : 'Marcar como rentada'}>
               <button
                 type="button"
                 onClick={() => setShowArchivar(true)}
@@ -202,27 +175,39 @@ export function OwnerActionsBar({ propertyId }: { propertyId: string }) {
       <ArchivarPropiedadModal
         isOpen={showArchivar}
         onClose={() => setShowArchivar(false)}
-        propertyTitle={mine.property.titulo}
-        operacion={mine.property.operacion}
+        propertyTitle={mine.titulo}
+        operacion={mine.operacion}
         onConfirm={archivar}
       />
       <EliminarPropiedadModal
         isOpen={showEliminar}
         onClose={() => setShowEliminar(false)}
-        propertyTitle={mine.property.titulo}
-        onConfirm={() => {
-          eliminarPropiedad(propertyId);
-          toast.success('Propiedad eliminada.');
-          router.push('/dashboard/propiedades');
+        propertyTitle={mine.titulo}
+        onConfirm={async () => {
+          try {
+            await backendFetch(`/propiedades/${propertyId}`, { method: 'DELETE' });
+            toast.success('Propiedad eliminada.');
+            router.push('/dashboard/propiedades');
+          } catch {
+            toast.error('No se pudo eliminar la propiedad.');
+          }
         }}
       />
       <DestacarPropiedadModal
         isOpen={showDestacar}
         onClose={() => setShowDestacar(false)}
-        propertyTitle={mine.property.titulo}
-        onConfirm={(dias) => {
-          destacarPropiedad(propertyId, dias);
-          toast.success(`Propiedad destacada por ${dias} días.`);
+        propertyTitle={mine.titulo}
+        onConfirm={async (dias) => {
+          try {
+            await backendFetch(`/propiedades/${propertyId}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ featured: true }),
+            });
+            setMine((prev) => (prev ? { ...prev, featured: true } : prev));
+            toast.success(`Propiedad destacada por ${dias} días.`);
+          } catch {
+            toast.error('No se pudo destacar la propiedad.');
+          }
         }}
       />
     </div>

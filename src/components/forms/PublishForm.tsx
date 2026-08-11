@@ -22,17 +22,14 @@ import type { Coords } from './MapPicker';
 import { FloodRiskBadge } from '@/components/property/FloodRiskBadge';
 import { TermsModal } from './TermsModal';
 import { useToast } from '@/context/ToastContext';
-import { useAuth } from '@/context/AuthContext';
-import { crearPropiedad, contarPropiedadesActivas, LIMITE_PROPIEDADES_GRATIS } from '@/lib/propiedadesLocales';
-import { getPuntoPublico, matchColonia, distanciaKm } from '@/lib/colonias';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
+import { matchColonia, distanciaKm } from '@/lib/colonias';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
-import { generarIdLocal, generarSlugLocal } from '@/lib/idsLocales';
 import { resizeImageToDataUrl } from '@/lib/imageResize';
 import {
   publishSchema, type PublishFormData,
   TIPO_OPTIONS, MUNICIPIO_OPTIONS, MUNICIPIO_CENTERS, METODO_CONTACTO_OPTIONS, construirAgenteContacto,
 } from '@/lib/publishSchema';
-import type { Property } from '@/types/property';
 import type { ResultadoImagenIA } from '@/lib/aiVision';
 
 type AnalisisFoto = 'pendiente' | ResultadoImagenIA;
@@ -84,6 +81,11 @@ const STEP_SUBTITLES = [
   '¿Cómo te pueden contactar?',
 ];
 const MAX_FOTOS = 4;
+// Debe coincidir con LIMITE_PROPIEDADES_ACTIVAS en el backend
+// (properties.service.ts) — el servidor es quien de verdad lo hace cumplir
+// (código LIMITE_PROPIEDADES_ALCANZADO), esto solo evita hacer perder el
+// tiempo a quien ya topó antes de llenar los 6 pasos del formulario.
+const LIMITE_PROPIEDADES = 4;
 
 // Nombres legibles para el resumen de "campos por corregir" — sin esto, la
 // lista mostraría las llaves crudas del schema (ej. "riesgoInundacion" en
@@ -131,21 +133,23 @@ export function PublishForm() {
   const fileInputRef            = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const toast  = useToast();
-  const { user } = useAuth();
 
-  // Límite gratuito de propiedades activas (ver el comentario grande en
-  // contarPropiedadesActivas, propiedadesLocales.ts) — se resuelve en un
-  // efecto, no como valor inicial de useState, porque lee localStorage
-  // (mismo motivo que getMisPropiedadesConOverrides). Empieza en `false`
-  // para no bloquear el primer render en servidor; si de verdad está en el
-  // límite, el gate de abajo reemplaza el formulario en cuanto el efecto
-  // corre — un parpadeo breve es preferible a un mismatch de hidratación.
+  // Límite gratuito de propiedades activas — pre-chequeo contra
+  // GET /propiedades/mias real (BACKEND.md §3 punto 13), el servidor es
+  // quien de verdad lo hace cumplir. Empieza en `false` para no bloquear el
+  // primer render; si de verdad está en el límite, el gate de abajo
+  // reemplaza el formulario en cuanto el efecto corre.
   const [limiteAlcanzado, setLimiteAlcanzado] = useState(false);
   useEffect(() => {
-    function verificarLimite() {
-      setLimiteAlcanzado(contarPropiedadesActivas() >= LIMITE_PROPIEDADES_GRATIS);
-    }
-    verificarLimite();
+    let cancelado = false;
+    backendFetch<{ propiedades: { estado: string }[] }>('/propiedades/mias')
+      .then(({ propiedades }) => {
+        if (cancelado) return;
+        const activas = propiedades.filter((p) => p.estado === 'activa').length;
+        setLimiteAlcanzado(activas >= LIMITE_PROPIEDADES);
+      })
+      .catch(() => {});
+    return () => { cancelado = true; };
   }, []);
 
   function addFiles(files: FileList | File[]) {
@@ -397,141 +401,89 @@ export function PublishForm() {
       setStep(2);
       return;
     }
-    // ⚠️ BACKEND PENDIENTE — esto persiste en localStorage (ver
-    // src/lib/propiedadesLocales.ts), no en una base de datos real. Cuando
-    // exista `POST /api/propiedades` (docs/BACKEND.md §3), esta llamada
-    // se reemplaza por el fetch real sin tocar el resto del formulario —
-    // mismos requisitos server-side pendientes:
-    //   - Volver a llamar analizarFraude() (src/lib/ai.ts, ya real vía OpenRouter,
-    //     no mock) EN EL SERVIDOR con los datos recién recibidos. Si
-    //     resultado.bloqueado === true, rechazar con 400 — hoy esa decisión
-    //     la toma el navegador (`publicacionBloqueada` arriba) y cualquiera
-    //     con devtools puede saltársela.
-    //   - `alertaFraude` (src/types/property.ts) debe calcularlo el
-    //     servidor a partir de SU PROPIO resultado de analizarFraude() —
-    //     nunca aceptar un valor de alertaFraude que venga en el body del
-    //     request, el cliente podría mandar cualquier cosa (o nada).
-    //   - Volver a llamar analizarImagenPropiedad() (src/lib/aiVision.ts,
-    //     real vía Gemini) por cada foto EN EL SERVIDOR — mismo problema:
-    //     hoy `fotoNoApta` es una decisión del navegador.
-    //   - detectarLenguajeSensible, moderación, timestamp de aceptación de
-    //     términos, rate-limit por usuario/IP.
-    //   - Validar `municipio` contra los 17 valores de MUNICIPIO_OPTIONS
-    //     (src/lib/publishSchema.ts) — el navegador ya solo deja elegir uno
-    //     válido, pero el servidor no debe confiar en eso.
-    //   - Repetir el chequeo `estaEnTabasco(lat, lng)` de arriba
-    //     (src/lib/tabascoBoundary.ts) contra las coordenadas ya resueltas
-    //     (`lat`/`lng` más abajo, no `coords` — ese puede venir vacío y caer
-    //     al centro del municipio) — mismo motivo que el resto de esta
-    //     lista, el navegador ya no deja avanzar con un pin fuera del
-    //     estado, pero nada impide que alguien mande el request directo.
-    //   - Fotos: hoy van como data URI base64 completas dentro del objeto
-    //     Property (fotosDataUrls abajo) — no van a escalar en una columna
-    //     de base de datos. El servidor debe recibir los archivos aparte y
-    //     subirlos a storage real (Cloudinary/S3, ver fase2-spec.md),
-    //     guardando solo URLs en `Property.fotos`.
-    //   - `id`/`slug` los genera el cliente (generarIdLocal/generarSlugLocal,
-    //     con prefijo "local-") solo porque no hay backend que asigne un id
-    //     real — el servidor debe generar los suyos (@default(cuid()) en
-    //     Prisma más `slugify(titulo)`), ignorando cualquier id que venga
-    //     del cliente.
-    // Ver el modelo Property sugerido al final de prisma/schema.prisma y
-    // la guía completa (endpoints, orden de implementación) en docs/BACKEND.md.
-    const id = generarIdLocal();
-    const slug = generarSlugLocal(data.titulo);
-
-    // Cada foto se resuelve por separado — si una falla (archivo corrupto,
-    // etc.) se omite en vez de perder toda la publicación por una sola foto.
-    const fotosDataUrls: string[] = [];
+    // Cada foto se sube por separado a POST /propiedades/fotos (multipart) —
+    // el servidor vuelve a analizarla (Gemini) antes de aceptarla y sube a
+    // Cloudinary, devolviendo la URL real; `Property.fotos` solo guarda esas
+    // URLs, nunca base64. Si una foto falla se omite, igual que antes, en
+    // vez de perder toda la publicación por una sola.
+    const fotosUrls: string[] = [];
     for (const f of fotos.slice(0, MAX_FOTOS)) {
       try {
-        fotosDataUrls.push(await resizeImageToDataUrl(f.file, 640));
+        const dataUrl = await resizeImageToDataUrl(f.file, 1280, 'image/jpeg', 0.85);
+        const blob = await (await fetch(dataUrl)).blob();
+        const body = new FormData();
+        body.append('file', blob, f.file.name);
+        const { url } = await backendFetch<{ url: string }>('/propiedades/fotos', {
+          method: 'POST',
+          body,
+        });
+        fotosUrls.push(url);
       } catch { /* se omite esa foto */ }
     }
 
     const centro = MUNICIPIO_CENTERS[data.municipio] ?? MUNICIPIO_CENTERS['Centro'];
     const lat = coords?.lat ?? centro[0];
     const lng = coords?.lng ?? centro[1];
-    const puntoPublico = getPuntoPublico(id, lat, lng, data.colonia);
+    const agente = construirAgenteContacto(data.nombreContacto, data.metodoContacto, data.telefonoContacto, data.emailContacto);
 
-    const property: Property = {
-      id,
-      slug,
-      titulo: data.titulo,
-      descripcion: data.descripcion,
-      tipo: data.tipo as Property['tipo'],
-      operacion: data.operacion as Property['operacion'],
-      precio: data.precio,
-      moneda: 'MXN',
-      m2Construidos: data.m2Construidos ?? 0,
-      m2Terreno: data.m2Terreno ?? 0,
-      recamaras: data.recamaras ?? 0,
-      banos: data.banos ?? 0,
-      mediosBanos: 0,
-      estacionamientos: 0,
-      antiguedad: 0,
-      amenidades: [],
-      servicios: servicios.length > 0 ? servicios : undefined,
-      fotos: fotosDataUrls,
-      municipio: data.municipio,
-      colonia: data.colonia,
-      direccion: '',
-      lat,
-      lng,
-      latPublico: puntoPublico.lat,
-      lngPublico: puntoPublico.lng,
-      riesgoInundacion: data.riesgoInundacion,
-      zonaEcologica: false,
-      cercaDosoBocas: data.municipio === 'Paraíso',
-      featured: false,
-      alertaFraude: fraudCheck?.riesgo === 'alto' ? { señales: fraudCheck.señales } : undefined,
-      agente: {
-        ...construirAgenteContacto(data.nombreContacto, data.metodoContacto, data.telefonoContacto, data.emailContacto),
-        foto: '',
-        verificado: false,
-      },
-      // Correo de la cuenta, no el de contacto público — ver el comentario
-      // en src/types/property.ts. Se guarda siempre, sin importar qué
-      // metodoContacto haya elegido para mostrar a los visitantes.
-      emailCuenta: user?.email,
-      requiereMensajePrimero: data.requiereMensajePrimero || undefined,
-      fechaPublicacion: new Date().toISOString(),
-      activa: true,
-    };
-
-    crearPropiedad(property);
+    let created: { id: string };
+    try {
+      created = await backendFetch<{ id: string }>('/propiedades', {
+        method: 'POST',
+        body: JSON.stringify({
+          titulo: data.titulo,
+          descripcion: data.descripcion,
+          tipo: data.tipo,
+          operacion: data.operacion,
+          precio: data.precio,
+          m2Construidos: data.m2Construidos || undefined,
+          m2Terreno: data.m2Terreno || undefined,
+          recamaras: data.recamaras || undefined,
+          banos: data.banos || undefined,
+          amenidades: [],
+          servicios: servicios.length > 0 ? servicios : undefined,
+          fotos: fotosUrls,
+          municipio: data.municipio,
+          colonia: data.colonia,
+          // Dirección exacta todavía no se recolecta en el formulario —
+          // nunca se muestra públicamente de todos modos (solo
+          // latPublico/lngPublico, ver el aviso de privacidad en §1).
+          direccion: `${data.colonia}, ${data.municipio}`,
+          lat,
+          lng,
+          riesgoInundacion: data.riesgoInundacion,
+          cercaDosoBocas: data.municipio === 'Paraíso',
+          agenteNombre: agente.nombre,
+          agenteTel: agente.tel,
+          agenteEmail: agente.email,
+          agenteWhatsapp: agente.whatsapp,
+          requiereMensajePrimero: data.requiereMensajePrimero || undefined,
+        }),
+      });
+    } catch (err) {
+      if (err instanceof BackendApiError) {
+        const code = (err.body as { code?: string } | null)?.code;
+        if (code === 'LIMITE_PROPIEDADES_ALCANZADO') {
+          setLimiteAlcanzado(true);
+          return;
+        }
+        toast.error(err.message);
+        return;
+      }
+      toast.error('No se pudo publicar tu propiedad. Intenta de nuevo.');
+      return;
+    }
 
     // No se guarda nombreContacto/telefonoContacto/emailContacto en
     // sessionStorage: son datos personales que la página de "gracias" no
     // necesita (solo lee `id`), y dejarlos ahí sería una exposición
     // innecesaria de PII (hallazgo H3 de la auditoría).
-    sessionStorage.setItem('lastPublishedProperty', JSON.stringify({ id }));
+    sessionStorage.setItem('lastPublishedProperty', JSON.stringify({ id: created.id }));
 
-    // Compara contra las alertas guardadas y notifica a quien coincida (correo
-    // + notificación real en su panel) — no bloquea el flujo de publicación
-    // si falla, es un efecto secundario, no el resultado principal de este
-    // formulario. Ver docs/BACKEND.md.
-    try {
-      const res = await fetch('/api/alertas/notificar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          titulo: data.titulo,
-          tipo: data.tipo,
-          operacion: data.operacion,
-          municipio: data.municipio,
-          precio: data.precio,
-          riesgoInundacion: data.riesgoInundacion,
-        }),
-      });
-      if (res.ok) {
-        const d = await res.json();
-        if (d.matches > 0) {
-          toast.success(`${d.matches} persona${d.matches > 1 ? 's' : ''} con alertas coincidentes fueron notificadas.`);
-        }
-      }
-    } catch { /* no crítico para el flujo de publicación */ }
+    // El matching contra alertas guardadas y la notificación (correo +
+    // panel) ya los dispara el backend al crear la propiedad
+    // (AlertaMatchingService, BACKEND.md §3 punto 10) — no hace falta
+    // llamar nada aparte desde aquí como antes.
 
     // Gestionar/editar/pausar/eliminar ya funciona igual para cualquier
     // cuenta (ver OwnerActionsBar.tsx y Navbar.tsx) — antes solo las cuentas
@@ -559,7 +511,7 @@ export function PublishForm() {
         </div>
         <h2 className="text-xl font-heading font-bold text-gray-900 mb-2">Llegaste al límite gratuito</h2>
         <p className="text-sm text-gray-500 leading-relaxed mb-6">
-          Ya tienes {LIMITE_PROPIEDADES_GRATIS} propiedades activas — el máximo gratuito por cuenta. Si manejas más propiedades (agente independiente o inmobiliaria), contáctanos para un plan profesional.
+          Ya tienes {LIMITE_PROPIEDADES} propiedades activas — el máximo gratuito por cuenta. Si manejas más propiedades (agente independiente o inmobiliaria), contáctanos para un plan profesional.
         </p>
         <a
           href="mailto:hola@vivevillahermosa.mx?subject=Quiero%20un%20plan%20profesional"

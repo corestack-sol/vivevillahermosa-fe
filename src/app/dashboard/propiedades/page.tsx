@@ -3,27 +3,42 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  ArrowLeft, Plus, Info, Eye, MessageCircle, Heart, Pencil, Trash2, Play, Pause, Archive, Star, Building2, Download, Upload, TrendingUp, Loader2,
+  ArrowLeft, Plus, Info, Pencil, Trash2, Play, Pause, Archive, Star, Building2, Download, Upload, TrendingUp, Loader2,
 } from 'lucide-react';
-import { getMisPropiedadesDemo, ESTADOS_ARCHIVADOS, ESTADO_CFG, type EstadoPublicacion } from '@/lib/misPropiedadesDemo';
-import { getEstadoOverride, setEstadoOverride, ESTADO_OVERRIDE_EVENT } from '@/lib/estadoOverrides';
-import {
-  getMisPropiedadesConOverrides, eliminarPropiedad, destacarPropiedad, getDestacadoHasta, diasRestantesDestacado,
-  PROPIEDADES_LOCALES_EVENT, contarPropiedadesActivas, LIMITE_PROPIEDADES_GRATIS,
-} from '@/lib/propiedadesLocales';
-import { esPropiedadLocal } from '@/lib/idsLocales';
+import { ESTADOS_ARCHIVADOS, ESTADO_CFG, type EstadoPublicacion, type MiPropiedad } from '@/lib/misPropiedadesDemo';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
+import { mapBackendProperty, type BackendPublicProperty } from '@/lib/api';
 import { getPropertyTypeConfig } from '@/lib/propertyTypeConfig';
 import { generarReporteDesempeno } from '@/lib/reportePdf';
 import { obtenerResumenReporte } from '@/lib/aiClient';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { usePerfilInmobiliaria } from '@/hooks/usePerfilInmobiliaria';
+import { formatRelativeDate } from '@/lib/format';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { ArchivarPropiedadModal } from '@/components/property/ArchivarPropiedadModal';
 import { EliminarPropiedadModal } from '@/components/property/EliminarPropiedadModal';
 import { DestacarPropiedadModal } from '@/components/property/DestacarPropiedadModal';
 
+// Debe coincidir con LIMITE_PROPIEDADES_ACTIVAS en el backend
+// (properties.service.ts) — solo para el mensaje, el servidor lo hace
+// cumplir de verdad (código LIMITE_PROPIEDADES_ALCANZADO).
+const LIMITE_PROPIEDADES = 4;
+
 type FiltroEstado = EstadoPublicacion | 'todas' | 'archivada';
+
+function mapMiaBackend(bp: BackendPublicProperty): MiPropiedad {
+  return {
+    property: mapBackendProperty(bp),
+    estado: bp.estado as EstadoPublicacion,
+    // Sin backend de analítica todavía (BACKEND.md §12, fuera del MVP) —
+    // ceros honestos en vez de los números de muestra que traía la demo.
+    vistas: 0,
+    contactos: 0,
+    favoritos: 0,
+    publicadaHace: formatRelativeDate(bp.createdAt),
+  };
+}
 
 const FILTERS: { value: FiltroEstado; label: string }[] = [
   { value: 'todas',     label: 'Todas' },
@@ -42,33 +57,23 @@ export default function MisPropiedadesPage() {
   const toast = useToast();
   const perfil = usePerfilInmobiliaria(true);
   const [filter, setFilter] = useState<FiltroEstado>('todas');
-  const [items, setItems] = useState(getMisPropiedadesDemo());
+  const [items, setItems] = useState<MiPropiedad[]>([]);
   const [archivando, setArchivando] = useState<string | null>(null);
   const [eliminando, setEliminando] = useState<string | null>(null);
   const [destacando, setDestacando] = useState<string | null>(null);
   const [generandoReporte, setGenerandoReporte] = useState(false);
 
-  // Aplica overrides de localStorage recién en cliente (no en el useState
-  // inicial) para que el primer render coincida con el del servidor y no
-  // haya parpadeo/mismatch de hidratación. Se vuelve a correr cuando cambia
-  // cualquiera de los dos overrides (estado o creadas/ediciones/eliminadas)
-  // para que Publicar/Editar/Eliminar/Importar se reflejen sin recargar.
+  const cargarPropiedades = () => {
+    if (!user) return;
+    backendFetch<{ propiedades: BackendPublicProperty[] }>('/propiedades/mias')
+      .then(({ propiedades }) => setItems(propiedades.map(mapMiaBackend)))
+      .catch(() => toast.error('No se pudieron cargar tus propiedades.'));
+  };
+
   useEffect(() => {
-    function aplicarOverrides() {
-      const conLocales = getMisPropiedadesConOverrides(getMisPropiedadesDemo());
-      setItems(conLocales.map((it) => {
-        const override = getEstadoOverride(it.property.id);
-        return override ? { ...it, estado: override } : it;
-      }));
-    }
-    aplicarOverrides();
-    window.addEventListener(ESTADO_OVERRIDE_EVENT, aplicarOverrides);
-    window.addEventListener(PROPIEDADES_LOCALES_EVENT, aplicarOverrides);
-    return () => {
-      window.removeEventListener(ESTADO_OVERRIDE_EVENT, aplicarOverrides);
-      window.removeEventListener(PROPIEDADES_LOCALES_EVENT, aplicarOverrides);
-    };
-  }, []);
+    cargarPropiedades();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const filtered = filter === 'todas'
     ? items
@@ -103,52 +108,66 @@ export default function MisPropiedadesPage() {
     toast.success('Reporte descargado.');
   }
 
+  async function actualizarEstado(id: string, nextEstado: EstadoPublicacion) {
+    try {
+      await backendFetch(`/propiedades/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ estado: nextEstado }),
+      });
+      setItems((prev) => prev.map((it) => (it.property.id === id ? { ...it, estado: nextEstado } : it)));
+    } catch (err) {
+      if (err instanceof BackendApiError) {
+        const code = (err.body as { code?: string } | null)?.code;
+        toast.error(
+          code === 'LIMITE_PROPIEDADES_ALCANZADO'
+            ? `Ya tienes ${LIMITE_PROPIEDADES} propiedades activas — el máximo gratuito. Contáctanos para un plan profesional si necesitas reactivar más.`
+            : err.message,
+        );
+        return;
+      }
+      toast.error('No se pudo actualizar la propiedad.');
+    }
+  }
+
+  // También sirve para "reactivar" desde vendida/rentada por si se archivó
+  // por error — vencida se maneja aparte con "Renovar" (pendiente).
   function togglePausa(id: string) {
     const actual = items.find((it) => it.property.id === id);
-    // Reactivar (pausada/vendida/rentada → activa) suma una propiedad activa
-    // más, así que respeta el mismo límite gratuito que publicar — sin este
-    // chequeo, pausar y reactivar era una forma trivial de saltarse el tope
-    // de PublishForm.tsx (ver el comentario grande en contarPropiedadesActivas,
-    // propiedadesLocales.ts).
-    if (actual && actual.estado !== 'activa' && contarPropiedadesActivas() >= LIMITE_PROPIEDADES_GRATIS) {
-      toast.error(`Ya tienes ${LIMITE_PROPIEDADES_GRATIS} propiedades activas — el máximo gratuito. Contáctanos para un plan profesional si necesitas reactivar más.`);
-      return;
-    }
-    // Persiste en localStorage (ver src/lib/estadoOverrides.ts) para que el
-    // cambio se refleje también en la ficha pública de la propiedad y se
-    // mantenga al recargar — sigue siendo una simulación de un solo
-    // navegador hasta que exista PATCH /api/propiedades/[id]/estado real.
-    // También sirve para "reactivar" desde vendida/rentada por si se
-    // archivó por error — vencida se maneja aparte con "Renovar" (pendiente).
-    setItems((prev) => prev.map((it) => {
-      if (it.property.id !== id) return it;
-      const nextEstado: EstadoPublicacion = it.estado === 'activa' ? 'pausada' : 'activa';
-      setEstadoOverride(id, nextEstado);
-      return { ...it, estado: nextEstado };
-    }));
+    if (!actual) return;
+    actualizarEstado(id, actual.estado === 'activa' ? 'pausada' : 'activa');
   }
 
   function archivar(id: string, operacion: 'venta' | 'renta') {
-    const nextEstado: EstadoPublicacion = operacion === 'venta' ? 'vendida' : 'rentada';
-    setItems((prev) => prev.map((it) => {
-      if (it.property.id !== id) return it;
-      setEstadoOverride(id, nextEstado);
-      return { ...it, estado: nextEstado };
-    }));
+    actualizarEstado(id, operacion === 'venta' ? 'vendida' : 'rentada');
   }
 
   const propiedadArchivando = archivando ? items.find((i) => i.property.id === archivando) : undefined;
   const propiedadEliminando = eliminando ? items.find((i) => i.property.id === eliminando) : undefined;
   const propiedadDestacando = destacando ? items.find((i) => i.property.id === destacando) : undefined;
 
-  function confirmarEliminar(id: string) {
-    eliminarPropiedad(id);
-    toast.success('Propiedad eliminada.');
+  async function confirmarEliminar(id: string) {
+    try {
+      await backendFetch(`/propiedades/${id}`, { method: 'DELETE' });
+      setItems((prev) => prev.filter((it) => it.property.id !== id));
+      toast.success('Propiedad eliminada.');
+    } catch {
+      toast.error('No se pudo eliminar la propiedad.');
+    }
   }
 
-  function confirmarDestacar(id: string, dias: number) {
-    destacarPropiedad(id, dias);
-    toast.success(`Propiedad destacada por ${dias} días.`);
+  async function confirmarDestacar(id: string, dias: number) {
+    try {
+      await backendFetch(`/propiedades/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ featured: true }),
+      });
+      setItems((prev) => prev.map((it) => (
+        it.property.id === id ? { ...it, property: { ...it.property, featured: true } } : it
+      )));
+      toast.success(`Propiedad destacada por ${dias} días.`);
+    } catch {
+      toast.error('No se pudo destacar la propiedad.');
+    }
   }
 
   return (
@@ -196,15 +215,13 @@ export default function MisPropiedadesPage() {
         </div>
       </div>
 
-      {/* Aviso de vista previa — honesto sobre que este panel corre con
-          datos de muestra hasta que exista persistencia real (Módulo 1/2
-          de fase2-spec.md). */}
+      {/* Estadísticas de vistas/contactos todavía no existen (BACKEND.md
+          §12, analítica fuera del alcance del MVP) — honesto sobre esa
+          única pieza que sigue pendiente, las propiedades ya son reales. */}
       <div className="flex items-start gap-2.5 bg-brand-pale border border-brand/20 rounded-xl px-4 py-3 mb-6">
         <Info size={15} className="text-brand flex-shrink-0 mt-0.5" />
         <p className="text-xs text-brand-dark leading-relaxed">
-          <strong>Vista previa del panel profesional.</strong> Estas propiedades son datos de muestra —
-          cuando se conecte la publicación con persistencia real (Fase 2), aquí verás y gestionarás tus
-          propiedades de verdad, con estadísticas reales de vistas y contactos.
+          Las estadísticas de vistas y contactos todavía no están disponibles — llegan en una fase futura.
         </p>
       </div>
 
@@ -247,13 +264,11 @@ export default function MisPropiedadesPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map(({ property: p, estado, vistas, contactos, favoritos, publicadaHace }) => {
+          {filtered.map(({ property: p, estado, publicadaHace }) => {
             const cfg = getPropertyTypeConfig(p.tipo);
             const estadoCfg = ESTADO_CFG[estado];
-            const esLocal = esPropiedadLocal(p.id);
-            const destacadoHasta = getDestacadoHasta(p.id);
             return (
-              // flex-col en móvil, flex-row desde sm: — con los 5 íconos de
+              // flex-col en móvil, flex-row desde sm: — con los íconos de
               // acción siempre visibles (w-8 cada uno) más la miniatura, no
               // quedaba ancho real para el título/ubicación en una sola fila
               // angosta y se truncaban a "Casa e...", "Tabasco ..." (bug
@@ -263,19 +278,11 @@ export default function MisPropiedadesPage() {
               // desde sm: vuelve al layout original de una sola fila.
               <div key={p.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-white border border-gray-100 rounded-2xl p-3.5 hover:border-brand/30 hover:shadow-sm transition-all">
                 <div className="flex items-center gap-4 min-w-0">
-                  {esLocal ? (
-                    <div
-                      className="flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center"
-                      style={{ background: `linear-gradient(160deg, ${cfg.from} 0%, ${cfg.to} 100%)` }}>
-                      <cfg.Icon size={22} style={{ color: cfg.accent }} strokeWidth={1.75} />
-                    </div>
-                  ) : (
-                    <Link href={`/propiedades/${p.slug}`}
-                      className="flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center"
-                      style={{ background: `linear-gradient(160deg, ${cfg.from} 0%, ${cfg.to} 100%)` }}>
-                      <cfg.Icon size={22} style={{ color: cfg.accent }} strokeWidth={1.75} />
-                    </Link>
-                  )}
+                  <Link href={`/propiedades/${p.slug}`}
+                    className="flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center"
+                    style={{ background: `linear-gradient(160deg, ${cfg.from} 0%, ${cfg.to} 100%)` }}>
+                    <cfg.Icon size={22} style={{ color: cfg.accent }} strokeWidth={1.75} />
+                  </Link>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5 flex-wrap">
@@ -283,26 +290,15 @@ export default function MisPropiedadesPage() {
                         {estadoCfg.label}
                       </span>
                       <span className="text-xs text-gray-400">Publicada {publicadaHace}</span>
-                      {destacadoHasta && (
-                        <Tooltip label={`Destacada — vence en ${diasRestantesDestacado(destacadoHasta)} día${diasRestantesDestacado(destacadoHasta) !== 1 ? 's' : ''}`}>
-                          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
-                            <Star size={9} className="fill-current" /> Destacada
-                          </span>
-                        </Tooltip>
-                      )}
-                      {esLocal && (
-                        <Tooltip label="Publicada en esta vista previa — no tiene ficha pública todavía. Cuando exista el backend real, tu propiedad tendrá su propia página al publicarla.">
-                          <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full cursor-help">Vista previa</span>
-                        </Tooltip>
+                      {p.featured && (
+                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
+                          <Star size={9} className="fill-current" /> Destacada
+                        </span>
                       )}
                     </div>
-                    {esLocal ? (
-                      <p className="font-semibold text-gray-900 text-sm truncate">{p.titulo}</p>
-                    ) : (
-                      <Link href={`/propiedades/${p.slug}`} className="font-semibold text-gray-900 text-sm truncate block hover:text-brand transition-colors">
-                        {p.titulo}
-                      </Link>
-                    )}
+                    <Link href={`/propiedades/${p.slug}`} className="font-semibold text-gray-900 text-sm truncate block hover:text-brand transition-colors">
+                      {p.titulo}
+                    </Link>
                     <p className="text-xs text-gray-400 truncate">{p.colonia}, {p.municipio === 'Centro' ? 'Villahermosa' : p.municipio}</p>
                   </div>
                 </div>
@@ -310,18 +306,6 @@ export default function MisPropiedadesPage() {
                 <p className="hidden sm:block flex-shrink-0 font-bold text-gray-900 text-sm w-28 text-right">
                   {fmtMoney(p.precio)}{p.operacion === 'renta' && <span className="text-xs font-normal text-gray-400">/mes</span>}
                 </p>
-
-                <div className="hidden md:flex items-center gap-3 flex-shrink-0 text-xs text-gray-500 w-32">
-                  <Tooltip label="Vistas">
-                    <span className="flex items-center gap-1" title="Vistas"><Eye size={13} className="text-gray-300" /> {vistas}</span>
-                  </Tooltip>
-                  <Tooltip label="Contactos recibidos">
-                    <span className="flex items-center gap-1" title="Contactos recibidos"><MessageCircle size={13} className="text-gray-300" /> {contactos}</span>
-                  </Tooltip>
-                  <Tooltip label="Favoritos">
-                    <span className="flex items-center gap-1" title="Favoritos"><Heart size={13} className="text-gray-300" /> {favoritos}</span>
-                  </Tooltip>
-                </div>
 
                 <div className="flex items-center gap-1 flex-shrink-0 self-end sm:self-auto">
                   <Tooltip label={
@@ -340,14 +324,14 @@ export default function MisPropiedadesPage() {
                   </Tooltip>
                   {!ESTADOS_ARCHIVADOS.includes(estado) && (
                     <>
-                      <Tooltip label={destacadoHasta ? 'Ya está destacada' : 'Destacar propiedad'}>
+                      <Tooltip label={p.featured ? 'Ya está destacada' : 'Destacar propiedad'}>
                         <button
                           type="button"
-                          disabled={!!destacadoHasta}
+                          disabled={p.featured}
                           onClick={() => setDestacando(p.id)}
                           className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-amber-500 hover:bg-amber-50 transition-colors disabled:opacity-40 disabled:hover:text-gray-400 disabled:hover:bg-transparent disabled:cursor-default"
                         >
-                          <Star size={15} className={destacadoHasta ? 'fill-current text-amber-400' : ''} />
+                          <Star size={15} className={p.featured ? 'fill-current text-amber-400' : ''} />
                         </button>
                       </Tooltip>
                       <Tooltip label={p.operacion === 'venta' ? 'Marcar como vendida' : 'Marcar como rentada'}>

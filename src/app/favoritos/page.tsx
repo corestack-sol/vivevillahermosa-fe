@@ -6,7 +6,6 @@ import { Heart, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { backendFetch } from '@/lib/backendApi';
 import { getAllProperties } from '@/lib/api';
-import { aplicarOverridesPublicos } from '@/lib/propiedadesLocales';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { Property } from '@/types/property';
@@ -16,8 +15,6 @@ export default function FavoritosPage() {
   const [favorites, setFavorites] = useState<Property[]>([]);
   const [fetching, setFetching] = useState(true);
 
-  // ⚠️ BACKEND: deja de hacer falta con `GET /api/propiedades` real — ver
-  // el comentario de aplicarOverridesPublicos en propiedadesLocales.ts.
   useEffect(() => {
     function cargarFavoritos() {
       if (!user) { setFetching(false); return; }
@@ -25,8 +22,7 @@ export default function FavoritosPage() {
         backendFetch<{ favoritos: string[] }>('/favoritos'),
         getAllProperties(),
       ])
-        .then(([{ favoritos: favIds }, allProperties]) => {
-          const allProps = aplicarOverridesPublicos(allProperties);
+        .then(([{ favoritos: favIds }, allProps]) => {
           setFavorites(
             favIds.map((id) => allProps.find((p) => p.id === id)).filter(Boolean) as Property[],
           );

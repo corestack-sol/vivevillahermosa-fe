@@ -1,39 +1,40 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getMisPropiedadesDemo, type EstadoPublicacion } from '@/lib/misPropiedadesDemo';
-import { getEstadoOverride, ESTADO_OVERRIDE_EVENT } from '@/lib/estadoOverrides';
+import { useAuth } from '@/context/AuthContext';
+import { backendFetch } from '@/lib/backendApi';
+import type { EstadoPublicacion } from '@/lib/misPropiedadesDemo';
 
 /**
- * Resuelve el estado actual (con override de localStorage aplicado) de esta
- * propiedad si es una de las "mis propiedades" de muestra, devolviendo
- * `null` cuando está activa o cuando no es una propiedad con dueño simulado
- * — en ambos casos no hay nada que ocultar. Para cualquier otro estado
- * (pausada/vencida/vendida/rentada) devuelve el estado puntual, para que
- * quien lo consuma pueda mostrar el motivo correcto en vez de asumir
- * siempre "pausada".
+ * Resuelve el estado actual de esta propiedad contra GET /propiedades/mias
+ * (BACKEND.md §3) si es tuya, devolviendo `null` cuando está activa o
+ * cuando no es tuya — en ambos casos no hay nada que ocultar. Solo un
+ * dueño puede llegar aquí con una propiedad no-activa de todos modos: el
+ * backend ya devuelve 404 a cualquier otra persona que pida una propiedad
+ * pausada/vendida/rentada (findOne, properties.service.ts).
  *
  * Empieza en null y se resuelve en un efecto — así el render en servidor
- * nunca difiere del primer render en cliente. También escucha
- * ESTADO_OVERRIDE_EVENT: sin esto, archivar/pausar desde OwnerActionsBar
- * cambiaba localStorage pero ContactForm/AgentCard en esa misma página no
- * se enteraban hasta recargar (el evento nativo "storage" no dispara en la
- * pestaña que hizo el cambio).
+ * nunca difiere del primer render en cliente.
  */
 export function usePropiedadEstado(propertyId: string): EstadoPublicacion | null {
+  const { user } = useAuth();
   const [estado, setEstado] = useState<EstadoPublicacion | null>(null);
 
   useEffect(() => {
-    function recalcular() {
-      const mine = getMisPropiedadesDemo().find((m) => m.property.id === propertyId);
-      if (!mine) { setEstado(null); return; }
-      const resuelto = getEstadoOverride(propertyId) ?? mine.estado;
-      setEstado(resuelto === 'activa' ? null : resuelto);
-    }
-    recalcular();
-    window.addEventListener(ESTADO_OVERRIDE_EVENT, recalcular);
-    return () => window.removeEventListener(ESTADO_OVERRIDE_EVENT, recalcular);
-  }, [propertyId]);
+    // Sin sesión no hay nada que resolver — se queda en el `null` inicial
+    // (nunca hubo una razón previa para que valiera otra cosa: sin user no
+    // se dispara el fetch de abajo en ningún render anterior tampoco).
+    if (!user) return;
+    let cancelado = false;
+    backendFetch<{ propiedades: { id: string; estado: EstadoPublicacion }[] }>('/propiedades/mias')
+      .then(({ propiedades }) => {
+        if (cancelado) return;
+        const mine = propiedades.find((p) => p.id === propertyId);
+        setEstado(!mine || mine.estado === 'activa' ? null : mine.estado);
+      })
+      .catch(() => { if (!cancelado) setEstado(null); });
+    return () => { cancelado = true; };
+  }, [user, propertyId]);
 
   return estado;
 }
