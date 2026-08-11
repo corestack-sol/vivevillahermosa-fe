@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Flag, CheckCircle } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
 interface ReportButtonProps {
   propiedadId: string;
@@ -23,23 +24,26 @@ export function ReportButton({ propiedadId }: ReportButtonProps) {
   const [comentario, setComentario] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function close() {
     setOpen(false);
     // Reset tras la animación de cierre
-    setTimeout(() => { setMotivo(''); setComentario(''); setSent(false); }, 200);
+    setTimeout(() => { setMotivo(''); setComentario(''); setSent(false); setError(null); }, 200);
   }
 
   async function submit() {
     if (!motivo) return;
     setSending(true);
+    setError(null);
     try {
-      await fetch('/api/propiedades/reportar', {
+      await backendFetch('/propiedades/reportar', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ propiedadId, motivo, comentario: comentario || undefined }),
       });
       setSent(true);
+    } catch (err) {
+      setError(err instanceof BackendApiError ? err.message : 'No se pudo enviar el reporte, intenta de nuevo.');
     } finally {
       setSending(false);
     }
@@ -60,10 +64,10 @@ export function ReportButton({ propiedadId }: ReportButtonProps) {
           <div className="text-center py-4">
             <CheckCircle className="mx-auto mb-3 text-success" size={36} />
             <p className="font-semibold text-gray-800 mb-1">Gracias por avisarnos</p>
-            {/* Copy ajustado (hallazgo H5 de la auditoría): la moderación real
-                aún no existe (ver /api/propiedades/reportar), así que no se
-                promete una revisión que hoy no ocurre. */}
-            <p className="text-sm text-gray-500">Recibimos tu reporte. Esta función está en desarrollo — pronto un equipo de moderación lo revisará.</p>
+            {/* POST /propiedades/reportar (backend real, BACKEND.md §10) ya
+                persiste el reporte y, si se acumulan 3+ de fraude/info falsa,
+                marca la propiedad requiereModeracion=true automáticamente. */}
+            <p className="text-sm text-gray-500">Recibimos tu reporte y quedó registrado. Si varias personas reportan lo mismo, la publicación se marca para revisión automáticamente.</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -91,6 +95,9 @@ export function ReportButton({ propiedadId }: ReportButtonProps) {
               maxLength={500}
               className="w-full rounded-xl border border-gray-200 px-3 py-2 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand resize-none"
             />
+            {error && (
+              <p className="text-xs text-danger text-center">{error}</p>
+            )}
             <Button
               type="button"
               variant="danger"
