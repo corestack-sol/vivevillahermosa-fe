@@ -64,12 +64,30 @@ Todo lo de abajo ya está integrado en las secciones correspondientes (§2, §3,
 
 ---
 
+## 📋 Registro de cambios de hoy (2026-08-10) — el corte de backend YA EMPEZÓ, es parcial
+
+**El backend nuevo existe y ya está en producción para una parte real de la plataforma — esto deja de ser 100% "contrato a replicar" y pasa a ser, para los módulos de abajo, "lo que ya pasó, verificado leyendo el código fusionado".** §13 (más abajo) se reescribió con estado por punto (✅ hecho / ⚠️ parcial / ⏳ pendiente) en vez de una lista plana de tareas — no lo vuelvas a leer como un plan a futuro sin más.
+
+**Módulos que YA hablan con el backend nuevo (`NEXT_PUBLIC_API_URL`, `src/lib/backendApi.ts`/`backendApiServer.ts`, cookie `vivevillahermosa_session` reenviada con `credentials: 'include'`):**
+- Autenticación completa (§2) — login, registro, logout, `/auth/me`, OAuth. `AuthContext.tsx` ya no llama a ningún `/api/auth/*` de Next.js.
+- Favoritos (§4), Alertas + Notificaciones (§5), Citas + Configuración de agenda (§6), Perfil de inmobiliaria (§7).
+- **Propiedades — SOLO LECTURA** (§3): `GET /propiedades`, `GET /propiedades/:id` ya vienen del backend nuevo (`src/lib/api.ts`, `propiedades/[id]/page.tsx` con `backendFetchServer` + `revalidate = 60`, ya no `generateStaticParams`). **Crear/editar/pausar/eliminar una propiedad SIGUE siendo 100% local todavía** — `PublishForm.tsx` sigue llamando `crearPropiedad()` de `propiedadesLocales.ts` (localStorage), no hay ningún `POST/PATCH/DELETE /propiedades` real todavía. No asumas que "Propiedades" ya migró completo por leer que §3 dejó de decir "NUEVO, no existe hoy" — la lectura sí es real, la escritura no.
+- Como consecuencia de lo anterior, `src/app/api/auth/**`, `src/app/api/favoritos`, `src/app/api/alertas` (la principal, no `alertas/notificar`), `src/app/api/notificaciones`, `src/app/api/citas/**`, `src/app/api/configuracion-agenda` y `src/app/api/perfil-inmobiliaria` **ya se borraron** de Next.js (§13 punto 1, ✅ para estos).
+
+**Módulos que TODAVÍA viven 100% dentro de Next.js (`src/app/api/**` real, con Prisma/SQLite local — no son un stub, siguen siendo el backend real de estas rutas por ahora):** admin/** completo (§16), IA (§8, las 5 rutas de `/ia/*`), colonias descubiertas (§9), `cuenta/solicitar-revision` (§16), `propiedades/:id/contacto` + `/contactar` + `/reportar` (§10), servicios/** completo (§11), `alertas/notificar`, `me/stats` (§12). **Por eso `JWT_SECRET`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `RESEND_API_KEY` siguen siendo obligatorios en el `.env.local` de Next.js** — §13 punto 9 (más abajo) decía que estos se mudarían por completo; con la migración parcial, siguen haciendo falta aquí mientras estas rutas no se muden también.
+
+**Decisión que ya se tomó (ya no está "abierta"), al menos para desarrollo local — ver "Decisiones abiertas" #1 al final:** cookie `HttpOnly` de mismo origen, reenviada con `credentials: 'include'` (cliente) o leída de `next/headers` y reenviada a mano en el header `Cookie` (Server Components, `backendFetchServer`). `src/proxy.ts` **no se rediseñó** — sigue verificando el JWT localmente con `jwtVerify`/`JWT_SECRET` compartido (la tercera opción que ya planteaba el punto 4 de §13, "si se elige secreto compartido, proxy.ts no cambia"). Falta confirmar si este mismo mecanismo sigue siendo válido una vez haya dominios reales de producción (la pregunta de fondo del punto 1 de "Decisiones abiertas" sigue sin resolver para ESE caso).
+
+> ⚠️ **Gap real encontrado al revisar esto (2026-08-10), no corregido todavía — reportado, no arreglado en este documento:** `BackendUser` (`src/lib/backendApi.ts`) no incluye `esAdmin`, y `AuthContext.tsx` no lo mapea al armar `AuthUser` — significa que `user.esAdmin` del lado del cliente **siempre es `undefined`** ahora mismo, así que el link "Panel de administración" del menú de `Navbar.tsx` no se muestra ni para una cuenta admin real. **No es un problema del gate real** (`admin/layout.tsx` usa `getSession()` de `src/lib/auth.ts`, que sigue consultando Prisma local directo — ese sí ve `esAdmin` fresco y sigue bloqueando correctamente), solo del link de navegación que ayuda a llegar ahí. Falta agregar `esAdmin` a la respuesta de `GET /auth/me` del backend nuevo y a `BackendUser`/el mapeo de `AuthContext.tsx`.
+
+---
+
 ## Índice
 
 0. [Decisiones abiertas](#decisiones-abiertas--leer-primero) — léela antes que nada, aunque esté al final del documento.
 1. [Modelo de datos completo](#1-modelo-de-datos-completo)
 2. [Autenticación](#2-autenticación)
-3. [Propiedades — NUEVO, no existe hoy](#3-propiedades--nuevo-no-existe-hoy)
+3. [Propiedades — lectura migrada, escritura pendiente](#3-propiedades--lectura-migrada-escritura-pendiente)
 4. [Favoritos](#4-favoritos)
 5. [Alertas y notificaciones](#5-alertas-y-notificaciones)
 6. [Citas y configuración de agenda](#6-citas-y-configuración-de-agenda)
@@ -190,9 +208,9 @@ userId, createdAt, updatedAt
 
 ---
 
-## 3. Propiedades — NUEVO, no existe hoy
+## 3. Propiedades — lectura migrada, escritura pendiente
 
-Este es el módulo que no existe en ningún lado todavía — ni en Next.js ni en ningún backend. Usa el modelo `Property` de §1.
+> **Actualizado 2026-08-10 (ver registro de cambios de esa fecha, antes del Índice).** `GET /propiedades` y `GET /propiedades/:id` ya son reales contra el backend nuevo — dejaron de ser "no existe en ningún lado". **Todo lo demás de esta sección (`POST`/`PATCH`/`DELETE`, el endpoint de fotos, las validaciones obligatorias) sigue sin existir todavía** — `PublishForm.tsx` y `dashboard/propiedades/page.tsx` del frontend siguen simulando la escritura en `localStorage` (`src/lib/propiedadesLocales.ts`/`estadoOverrides.ts`, ver §13 punto 11). El resto de esta sección describe el contrato completo (lectura ya cubierta, escritura todavía por construir) — sigue siendo la referencia a implementar para lo que falta, no algo ya resuelto en su totalidad. Usa el modelo `Property` de §1.
 
 | Endpoint | Método | Auth | Qué hace |
 |---|---|---|---|
@@ -420,26 +438,21 @@ Categorías válidas: `plomeria, pintura, mudanza, remodelacion, albanileria, el
 
 ## 13. Cambios necesarios en el frontend Next.js
 
-Con el backend en un proyecto separado, esto deja de ser "frontend + backend en un repo" y pasa a ser dos servicios:
+Con el backend en un proyecto separado, esto deja de ser "frontend + backend en un repo" y pasa a ser dos servicios. **El corte empezó 2026-08-10 y es parcial** (ver el registro de cambios de esa fecha, arriba) — cada punto de abajo ya trae su estado real, verificado leyendo el código fusionado, no supuesto:
 
-1. **Borrar `src/app/api/**`** (los 33 archivos `route.ts` listados arriba) una vez el backend nuevo cubra el mismo contrato — no antes, para no romper la app a mitad de migración.
-2. **Nueva variable de entorno** `NEXT_PUBLIC_API_URL` (o similar) apuntando al backend nuevo.
-3. **Actualizar cada `fetch('/api/...')`** en el código del frontend para apuntar a `${NEXT_PUBLIC_API_URL}/...` en vez de una ruta relativa. Son decenas de call-sites — buscar con `grep -rn "fetch('/api" src/` para ubicarlos todos.
-4. **`src/proxy.ts` (el guard de rutas protegidas) necesita rediseñarse** — hoy verifica el JWT localmente con `jwtVerify` porque comparte `JWT_SECRET` con las API routes del mismo proceso. Sin ese secreto compartido (ver Decisiones Abiertas, punto 1), ya no puede validar el token él solo — las opciones son:
-   - Llamar al backend nuevo (`GET /auth/me` equivalente) desde el propio `proxy.ts` para verificar sesión en cada navegación a una ruta protegida (agrega latencia de red a cada navegación).
-   - Mover todo el gate de rutas protegidas al cliente (perder la protección server-side que hoy existe — regresión de seguridad, ver hallazgo M1 en §14).
-   - (Si se elige la opción de secreto compartido después de todo, `proxy.ts` no cambia.)
-5. **`AuthContext.tsx`** — sigue funcionando igual en términos de forma de datos (`{ id, email, nombre, rol }`) si el backend nuevo mantiene el mismo payload de JWT; si cambia el mecanismo de entrega del token (cookie → Bearer), este archivo sí necesita cambios para guardar/enviar el token manualmente.
-6. **CORS — no todas las llamadas lo necesitan por igual.** Distinguir dos tipos de consumo, porque hoy casi todo es lo primero y con el backend nuevo una parte importante pasa a ser lo segundo:
-   - **Server-to-server** (Server Components de Next.js, ej. `/propiedades` renderizando la lista, `generateMetadata`) — el propio servidor de Next.js le hace `fetch` al backend nuevo. No es un request de navegador, no necesita CORS, pero sí necesita que el backend nuevo sea alcanzable desde donde corra Next.js.
-   - **Client-side** (casi todas las mutaciones: publicar, favoritos, editar, eliminar, contacto, y cualquier lectura que hoy dispara un componente `'use client'`) — corre en el navegador del usuario, SÍ necesita CORS explícito (origen exacto, no `*`) y es donde el mecanismo de token cross-origin (Decisión abierta #1) importa de verdad.
-7. **SSG de fichas de propiedad y zonas se rompe con datos dinámicos.** `propiedades/[id]/page.tsx` y `zonas/[slug]/page.tsx` usan `generateStaticParams` — genera las páginas **en build time**. Con `Property` real (propiedades que se crean después del último deploy), una propiedad publicada hoy nunca tendría ficha hasta el próximo build+deploy completo. Hay que cambiar a ISR (`export const revalidate = <segundos>`) o renderizado dinámico (`export const dynamic = 'force-dynamic'`) en ambas páginas, y quitar o ajustar `generateStaticParams` en consecuencia.
-8. **Estrategia de caché explícita en cada `fetch()` nuevo.** Next.js cachea `fetch()` por defecto (comportamiento propio del App Router, no configurable "para todos a la vez"). Sin `cache: 'no-store'` o `next: { revalidate: N }` explícito en cada llamada al backend nuevo, una propiedad recién publicada/editada podría no reflejarse para otros usuarios hasta que expire un caché que nadie decidió a propósito — revisar caso por caso cuál necesita datos siempre frescos (búsqueda, ficha de detalle) vs. cuál puede tolerar unos segundos/minutos de caché (stats de zonas).
-9. **El `.env.local` de Next.js se reduce bastante** — `JWT_SECRET`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `RESEND_API_KEY`, `CRON_SECRET`, credenciales de OAuth (`GOOGLE_CLIENT_ID/SECRET`, `FACEBOOK_APP_ID/SECRET`) dejan de hacerle falta a Next.js por completo — se mueven al `.env` del backend nuevo. Next.js se queda solo con `NEXT_PUBLIC_API_URL` y `NEXT_PUBLIC_BASE_URL`.
-10. **`src/app/robots.ts`** bloquea `/api/*` hoy — esa ruta deja de existir en el dominio de Next.js, ajustar la regla (ya no hace falta, o apunta a otra cosa si el backend nuevo queda en un subdominio distinto).
+1. **✅ Parcial — Borrar `src/app/api/**` módulo por módulo, según ese módulo se cubra en el backend nuevo.** Ya borrados: todo `auth/**`, `favoritos`, `alertas` (la principal), `notificaciones`, `citas/**`, `configuracion-agenda`, `perfil-inmobiliaria`. **Siguen existiendo a propósito** (el backend nuevo todavía no los cubre): `admin/**`, `ia/**`, `colonias/descubiertas`, `cuenta/solicitar-revision`, `propiedades/:id/contacto`+`/contactar`, `propiedades/reportar`, `servicios/**`, `alertas/notificar`, `me/stats`. No asumas que por haber borrado varios ya no queda ninguno.
+2. **✅ Hecho** — `NEXT_PUBLIC_API_URL` existe (`src/lib/backendApi.ts`, `.env.example`), la app no arranca sin ella (falla rápido a propósito, mismo criterio que `JWT_SECRET` en `auth.ts`).
+3. **✅ Parcial** — los módulos ya migrados (punto 1) usan `backendFetch`/`backendFetchServer` apuntando a `${NEXT_PUBLIC_API_URL}/...`. Los que siguen en Next.js todavía usan `fetch('/api/...')` relativo — es lo correcto mientras esas rutas sigan siendo Next.js real, no queda ningún `fetch('/api/...')` huérfano apuntando a una ruta ya borrada (verificado, la app compila y corre).
+4. **⏳ No se rediseñó — se tomó la tercera opción que este mismo punto ya planteaba.** `src/proxy.ts` sigue verificando el JWT localmente con `jwtVerify`/`JWT_SECRET` compartido, sin llamar al backend nuevo. Válido mientras el secreto siga siendo compartido (ver Decisiones Abiertas #1) — si esa decisión cambia para producción, este punto vuelve a estar abierto.
+5. **✅ Hecho, con un gap encontrado.** `AuthContext.tsx` ya llama a `backendFetch('/auth/me')` en vez de `/api/auth/me`, misma forma de datos (`{ id, email, nombre, rol }`). **Gap real (ver registro 2026-08-10 arriba, no corregido en este documento):** `esAdmin` no viaja en `BackendUser`/`AuthUser`, así que el link de admin del menú no se muestra aunque la sesión sí sea de un admin real — el gate del panel (`admin/layout.tsx`) no depende de esto y sigue funcionando bien porque usa `getSession()` local, que sí ve `esAdmin` fresco de Prisma.
+6. **⏳ No verificado desde este repo** — CORS es configuración del lado del backend nuevo (otro repositorio), no hay nada que inspeccionar aquí para confirmar si ya distingue server-to-server vs. client-side como pide este punto. Confirmar directamente con quien tenga el repo del backend.
+7. **✅ Hecho para Propiedades, N/A para Zonas.** `propiedades/[id]/page.tsx` ya usa `export const revalidate = 60` y **ya no tiene `generateStaticParams`** — resuelto. `zonas/[slug]/page.tsx` sigue usando `generateStaticParams` + `revalidate = 60` a la vez, y **eso está bien así por ahora**: el catálogo de zonas todavía es el JSON estático de §9.3 (no migrado), no datos que cambien fuera de un deploy.
+8. **⚠️ Parcial, no verificado caso por caso.** Los `backendFetch`/`backendFetchServer` nuevos no traen `cache`/`next.revalidate` explícito en todos los call-sites (se apoyan en el default de Next.js o en el `revalidate` de la página, según el caso) — falta una revisión dedicada call-site por call-site como pide este punto, no asumir que está resuelto solo porque la app funciona en desarrollo.
+9. **❌ Todavía no — corregido en este documento, el punto original asumía migración completa.** Con la migración parcial (punto 1), `JWT_SECRET` (lo sigue usando `proxy.ts` y todas las rutas que quedan en Next.js), `OPENROUTER_API_KEY`/`GEMINI_API_KEY` (rutas `ia/**`), `RESEND_API_KEY` (`alertas/notificar`, correos de admin) **siguen siendo obligatorios** en el `.env.local` de Next.js. Solo se reduce del todo cuando TODOS los módulos que los usan también se muden.
+10. **N/A por ahora, no es un error.** `src/app/robots.ts` sigue bloqueando `/api/*` sin cambios — correcto, porque `/api/*` todavía tiene rutas reales en Next.js (punto 1). Revisar este punto de nuevo cuando la migración esté completa.
 11. **Todo lo que hoy simula backend guardando en `localStorage` del navegador se borra por completo** — no se migra, no se conserva como fallback, se reemplaza directo por llamadas reales. Cada archivo ya tiene su propio comentario `⚠️ BACKEND` explicándolo; esta es la lista completa en un solo lugar:
-    - `src/lib/propiedadesLocales.ts` — propiedades creadas/editadas/eliminadas/destacadas desde `/publicar` o `/dashboard/propiedades/importar`. Se reemplaza por `POST`/`PATCH`/`DELETE /propiedades` reales (§3).
-    - `src/lib/estadoOverrides.ts` — pausar/archivar/reactivar una propiedad. Se reemplaza por el campo `estado` real de `Property` (§3), vía `PATCH /propiedades/:id`.
+    - **⏳ Pendiente — sigue exactamente igual hoy.** `src/lib/propiedadesLocales.ts` — propiedades creadas/editadas/eliminadas/destacadas desde `/publicar` o `/dashboard/propiedades/importar`. `PublishForm.tsx` sigue llamando `crearPropiedad()` de este archivo — no hay todavía ningún `POST`/`PATCH`/`DELETE /propiedades` real que lo reemplace (§3, la lectura ya migró, la escritura no).
+    - **⏳ Pendiente, mismo motivo que el punto anterior.** `src/lib/estadoOverrides.ts` — pausar/archivar/reactivar una propiedad. Se reemplaza por el campo `estado` real de `Property` (§3), vía `PATCH /propiedades/:id`, que todavía no existe.
     - `src/lib/leadsDemo.ts` — en qué etapa del pipeline está cada lead del CRM ligero (`/dashboard/leads`). No hay modelo de leads real todavía en ningún lado de este documento — si el CRM se construye de verdad, necesita su propio modelo nuevo (`Lead` o similar), fuera de alcance del MVP descrito aquí (ver §15).
     - `src/app/dashboard/leads/page.tsx` (columnas ocultas del tablero) — esta sí podría quedarse como preferencia de UI en el navegador aun con backend real (no es un dato que otra persona necesite ver), a discreción de quien construya esa pantalla.
     - `src/lib/equipoDemo.ts` — miembros de equipo simulados en `/dashboard/equipo`; hoy "invitar" no manda nada real. Necesita un modelo de verdad (cuentas vinculadas a una `PerfilInmobiliaria`) si esta función se construye — no está especificado en este documento.
@@ -528,7 +541,7 @@ No construir como parte de este trabajo — el foco es replicar §1-§10, 12-14 
 
 Preguntas de arquitectura sin responder todavía. No inventar una respuesta por conveniencia — confirmar antes de construir, porque cambian el diseño de varios módulos de arriba:
 
-1. **¿Cómo viaja el token entre los dos servicios?**
+1. **¿Cómo viaja el token entre los dos servicios?** — ✅ **Ya decidido para desarrollo/localhost (2026-08-10), verificado en código real: cookie HttpOnly de mismo origen.** `src/lib/backendApi.ts` (`backendFetch`, cliente) usa `credentials: 'include'`; `src/lib/backendApiServer.ts` (`backendFetchServer`, Server Components) lee la cookie de `next/headers` y la reenvía a mano en el header `Cookie`. `src/proxy.ts` sigue validando el JWT localmente con el secreto compartido (no llama al backend nuevo). **Sigue sin resolver, y esto sí importa antes de desplegar:** si el backend nuevo termina en un dominio sin relación con el de Next.js (no un subdominio del mismo dominio raíz), este mecanismo deja de funcionar tal cual y hay que revisar esta decisión con la información real de hosting/dominio — la explicación completa de por qué, y las dos alternativas, se conservan abajo para ese momento.
 
    **Explicación en simple, para quien no venga del lado de infraestructura:** cuando alguien inicia sesión, el servidor necesita "recordar" quién es en cada clic siguiente — para eso sirve una **cookie**: un dato que el navegador guarda y **manda solo, automáticamente**, en cada petición a ese sitio. "HttpOnly" significa que JavaScript no puede leerla (protección extra si algún día hay un bug de XSS) — el navegador la maneja solo, sin que el código del sitio tenga que hacer nada.
 
