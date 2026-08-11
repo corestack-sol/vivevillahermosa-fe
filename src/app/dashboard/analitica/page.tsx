@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Info, Eye, MessageCircle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import type { MiPropiedad } from '@/lib/misPropiedadesDemo';
+import { mapMiaBackend, type MiPropiedad } from '@/lib/misPropiedadesDemo';
 import { backendFetch } from '@/lib/backendApi';
-import { mapBackendProperty, type BackendPublicProperty } from '@/lib/api';
+import type { BackendPublicProperty } from '@/lib/api';
 import { getSerieDemo, sumar, cambioPorcentual } from '@/lib/analiticaDemo';
 import { useAuth } from '@/context/AuthContext';
 import { Sparkline } from '@/components/dashboard/Sparkline';
@@ -33,14 +33,7 @@ export default function AnaliticaPage() {
   useEffect(() => {
     if (!user) return;
     backendFetch<{ propiedades: BackendPublicProperty[] }>('/propiedades/mias')
-      .then(({ propiedades }) => setItems(propiedades.map((bp) => ({
-        property: mapBackendProperty(bp),
-        estado: bp.estado as MiPropiedad['estado'],
-        vistas: 0,
-        contactos: 0,
-        favoritos: 0,
-        publicadaHace: '',
-      }))))
+      .then(({ propiedades }) => setItems(propiedades.map(mapMiaBackend)))
       .catch(() => {});
   }, [user]);
 

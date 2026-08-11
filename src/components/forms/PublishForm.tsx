@@ -69,7 +69,7 @@ const MapPicker = dynamic(
 const STEPS = ['Tipo', 'Detalles', 'Ubicación', 'Descripción', 'Fotos', 'Contacto'];
 const STEP_ICONS = [Home, DollarSign, MapPin, FileText, Camera, Phone] as const;
 // El paso de fotos decía "3× más contactos" — un multiplicador preciso que
-// nadie mide aquí (no hay tabla de eventos real, ver GET /api/me/stats).
+// nadie mide aquí (no hay tabla de eventos real, BACKEND.md §12).
 // Se quita el número inventado, se conserva el consejo (universalmente
 // cierto en bienes raíces) sin presentarlo como un dato propio medido.
 const STEP_SUBTITLES = [
