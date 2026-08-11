@@ -64,6 +64,21 @@ Todo lo de abajo ya está integrado en las secciones correspondientes (§2, §3,
 
 ---
 
+## 📋 Registro de cambios de hoy (2026-08-11) — Propiedades ya migró completo (lectura + escritura + contacto/reportes)
+
+**Cierra el punto que el registro del 2026-08-10 (justo abajo) dejaba abierto: "la lectura sí es real, la escritura no".** Ya no es así — §3 completo (crear/editar/pausar/archivar/destacar/eliminar) y §10 completo (contacto/contactar/reportar) hablan con el backend nuevo. Detalle:
+
+- **Propiedades — escritura** (§3): `PublishForm.tsx` (incluye subida de fotos vía `POST /propiedades/fotos`, multipart), `OwnerActionsBar.tsx`, `dashboard/propiedades/**` (listar/pausar/reactivar/archivar/destacar/eliminar/editar/importar CSV), `usePropiedadEstado.ts`. Los 3 módulos de simulación en localStorage que quedaban (`propiedadesLocales.ts`, `estadoOverrides.ts`, `idsLocales.ts`) se borraron — cero importadores reales restantes.
+  - Bug real encontrado y corregido en el backend durante estas pruebas: `GET /propiedades/mias` no filtraba por `activa`, así que una propiedad eliminada (`DELETE`, soft-delete) seguía apareciendo en el dashboard del propio dueño.
+  - Vistas/contactos/favoritos siguen sin modelo real (§12, fuera de MVP) — se muestran honestos en 0 en vez de cifras de demo fabricadas contra propiedades reales.
+- **Contacto y reportes** (§10): `AgentCard.tsx` (`GET /propiedades/:id/contacto`), `ContactForm.tsx` (`POST /propiedades/:id/contactar`), `ReportButton.tsx` (`POST /propiedades/reportar`, que ya persistía completo del lado del backend nuevo, incluida la regla de 3+ reportes → `requiereModeracion=true`). Las 3 rutas locales (`src/app/api/propiedades/**`) y dos helpers que quedaron sin uso (`getAgenteContacto()`, `sendContactoPropiedadEmail()`) se borraron.
+  - **Gap nuevo que esto abre, documentado, no corregido:** `/admin/reportes` (§16) sigue leyendo Prisma local — un reporte sobre una propiedad real ahora se guarda solo en la base del backend nuevo, invisible para ese panel todavía. No es una regresión de este cambio: una propiedad real ya no existía en la base local de todos modos desde que `PublishForm.tsx` empezó a publicar contra el backend nuevo (registro de abajo).
+- **Gap `esAdmin` (reportado el 2026-08-10, corregido hoy):** `PublicUser`/`toPublicUser()` del backend ahora incluye `esAdmin`, y `BackendUser`/`AuthContext.tsx` lo mapean — el link "Panel de administración" de `Navbar.tsx` ya aparece para una cuenta admin real. Verificado en vivo (registro → `esAdmin:false` → `admin:promote` → `esAdmin:true` en `/auth/me`). El candado real (`admin/layout.tsx`) no cambió — seguía funcionando incluso con el link oculto.
+- **Auditado y descartado, no era necesario portar:** los 3 bugs de heurística de búsqueda IA corregidos el 2026-08-10 en `src/lib/ai.ts` (frontend, todavía la ruta activa de `/ia/busqueda-inteligente`) no tienen equivalente en `heuristica-busqueda.util.ts` del backend nuevo — ese archivo se reescribió con una arquitectura más conservadora (precio solo con palabra gatillo explícita tipo "hasta"/"desde", nunca escaneo de números sueltos; sin soporte de "k" como abreviación de mil; sin extracción de `m2Min`/`m2Max` en absoluto, ni siquiera en el prompt real de OpenRouter) — la superficie donde vivían esos 3 bugs no existe ahí.
+- **Con esto, todo lo que sigue 100% dentro de Next.js** (línea 77, registro de abajo) se reduce a: `admin/**` completo, IA (`/ia/*`), colonias descubiertas, `alertas/notificar`, `me/stats`, y `servicios/**` (en pausa). Empieza ahora la migración del panel de administración — el backend ya tiene los 12 endpoints de `/admin/**` completos (§16), falta solo el lado del frontend.
+
+---
+
 ## 📋 Registro de cambios de hoy (2026-08-10) — el corte de backend YA EMPEZÓ, es parcial
 
 **El backend nuevo existe y ya está en producción para una parte real de la plataforma — esto deja de ser 100% "contrato a replicar" y pasa a ser, para los módulos de abajo, "lo que ya pasó, verificado leyendo el código fusionado".** §13 (más abajo) se reescribió con estado por punto (✅ hecho / ⚠️ parcial / ⏳ pendiente) en vez de una lista plana de tareas — no lo vuelvas a leer como un plan a futuro sin más.
