@@ -41,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               email: backendUser.email,
               nombre: backendUser.nombre,
               rol: backendUser.rol,
+              esAdmin: backendUser.esAdmin,
             }
           : null,
       );
