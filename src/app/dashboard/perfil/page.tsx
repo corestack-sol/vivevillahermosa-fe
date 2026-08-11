@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Building2, Image as ImageIcon, Trash2, ShieldCheck, FileUp, Clock, Users, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
+import { backendFetch } from '@/lib/backendApi';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -30,8 +31,7 @@ export default function PerfilInmobiliariaPage() {
   useEffect(() => {
     if (!loading && !user) { router.push('/auth/login'); return; }
     if (!user) return;
-    fetch('/api/perfil-inmobiliaria')
-      .then((r) => r.json())
+    backendFetch<{ perfil: { nombreEmpresa: string | null; logoDataUrl: string | null } | null }>('/perfil-inmobiliaria')
       .then((d) => {
         setNombreEmpresa(d.perfil?.nombreEmpresa ?? '');
         setLogoDataUrl(d.perfil?.logoDataUrl ?? null);
@@ -77,12 +77,10 @@ export default function PerfilInmobiliariaPage() {
   async function handleGuardar() {
     setSaving(true);
     try {
-      const res = await fetch('/api/perfil-inmobiliaria', {
+      await backendFetch('/perfil-inmobiliaria', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nombreEmpresa: nombreEmpresa.trim() || null, logoDataUrl }),
       });
-      if (!res.ok) throw new Error();
       toast.success('Perfil de la inmobiliaria actualizado.');
     } catch {
       toast.error('No se pudo guardar el perfil. Intenta de nuevo.');

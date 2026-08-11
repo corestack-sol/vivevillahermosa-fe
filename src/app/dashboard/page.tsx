@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Heart, Bell, Plus, Eye, TrendingUp, Home, LayoutDashboard, Lightbulb, MessageCircle, Building2, Download, CalendarDays, Users, Loader2, Info } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { backendFetch } from '@/lib/backendApi';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { getMisPropiedadesDemo } from '@/lib/misPropiedadesDemo';
 import { generarReporteDesempeno } from '@/lib/reportePdf';
@@ -34,10 +35,10 @@ export default function DashboardPage() {
     if (!loading && !user) { router.push('/auth/login'); return; }
     if (!user) return;
     Promise.all([
-      fetch('/api/favoritos').then((r) => r.json()),
-      fetch('/api/alertas').then((r) => r.json()),
+      backendFetch<{ favoritos: string[] }>('/favoritos'),
+      backendFetch<{ alertas: unknown[] }>('/alertas'),
       fetch('/api/me/stats').then((r) => r.json()),
-      fetch('/api/notificaciones').then((r) => r.json()),
+      backendFetch<{ notificaciones: Notificacion[] }>('/notificaciones'),
     ]).then(([favData, alertData, statsData, notifData]) => {
       setFavCount(favData.favoritos?.length ?? 0);
       setAlertaCount(alertData.alertas?.length ?? 0);
@@ -50,9 +51,8 @@ export default function DashboardPage() {
   async function marcarNotificacionesLeidas() {
     setNotificaciones((prev) => prev.map((n) => ({ ...n, leida: true })));
     try {
-      await fetch('/api/notificaciones', {
+      await backendFetch('/notificaciones', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ all: true }),
       });
     } catch { /* estado optimista ya aplicado */ }

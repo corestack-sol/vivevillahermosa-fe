@@ -46,11 +46,11 @@ const TIPO_LABEL: Record<string, string> = {
  * porque ambos caminos (servidor y cliente) pueden llamar a las mismas
  * funciones puras de src/lib/api.ts sin problema — solo leen JSON estático.
  */
-export function PropertyDetailView({ property, extras }: { property: Property; extras: PropertyDetailExtras }) {
+export async function PropertyDetailView({ property, extras }: { property: Property; extras: PropertyDetailExtras }) {
   const { landmarkCercano, distanciaLandmark, categoriaCercana, coloniaCercana, distanciaColonia, enRevision } = extras;
 
-  const similar = getSimilarProperties(property, 3);
-  const priceCtx = getPriceContext(property);
+  const similar = await getSimilarProperties(property, 3);
+  const priceCtx = await getPriceContext(property);
   // Señal de alerta (no de bloqueo): un precio muy por debajo del promedio de
   // comparables en la misma zona es uno de los indicadores más comunes de
   // estafa de renta/venta en México — advertimos sin impedir el contacto.

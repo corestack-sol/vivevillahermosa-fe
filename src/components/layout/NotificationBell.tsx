@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Bell } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useClickOutside } from '@/hooks/useClickOutside';
+import { backendFetch } from '@/lib/backendApi';
 
 export interface Notificacion {
   id: string;
@@ -25,8 +26,7 @@ export function NotificationBell() {
 
   useEffect(() => {
     if (!user) return;
-    fetch('/api/notificaciones')
-      .then((r) => r.json())
+    backendFetch<{ notificaciones: Notificacion[] }>('/notificaciones')
       .then((d) => setItems(d.notificaciones ?? []))
       .catch(() => {});
   }, [user]);
@@ -34,9 +34,8 @@ export function NotificationBell() {
   async function marcarTodasLeidas() {
     setItems((prev) => prev.map((n) => ({ ...n, leida: true })));
     try {
-      await fetch('/api/notificaciones', {
+      await backendFetch('/notificaciones', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ all: true }),
       });
     } catch { /* estado optimista ya aplicado; se resincroniza en la próxima carga */ }
@@ -45,9 +44,8 @@ export function NotificationBell() {
   async function marcarLeida(id: string) {
     setItems((prev) => prev.map((n) => (n.id === id ? { ...n, leida: true } : n)));
     try {
-      await fetch('/api/notificaciones', {
+      await backendFetch('/notificaciones', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
       });
     } catch { /* idem */ }

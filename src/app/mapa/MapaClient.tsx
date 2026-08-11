@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   SlidersHorizontal, X, ChevronLeft, Navigation,
   Satellite, Map as MapIcon, Info, MapPin, ArrowRight,
@@ -236,14 +236,22 @@ export function MapaClient({ allProperties }: Props) {
   // "de moda" que nadie más ve. Las colonias rankeadas que no tengan
   // coordenada verificada (ej. detectadas por texto libre, sin catálogo)
   // se descartan aquí — no hay a dónde volar sin lat/lng real.
-  const zonasIrA = useMemo(() => {
-    return getColoniasRankedByPropiedades()
-      .map((c) => {
-        const coord = matchColonia(c.nombre);
-        return coord ? { label: c.nombre, lat: coord.lat, lng: coord.lng, radius: coord.radioKm * 1000 } : null;
-      })
-      .filter((z): z is { label: string; lat: number; lng: number; radius: number } => z !== null)
-      .slice(0, MAX_ZONAS_IR_A);
+  const [zonasIrA, setZonasIrA] = useState<{ label: string; lat: number; lng: number; radius: number }[]>([]);
+  useEffect(() => {
+    let cancelado = false;
+    getColoniasRankedByPropiedades().then((coloniasRanked) => {
+      if (cancelado) return;
+      setZonasIrA(
+        coloniasRanked
+          .map((c) => {
+            const coord = matchColonia(c.nombre);
+            return coord ? { label: c.nombre, lat: coord.lat, lng: coord.lng, radius: coord.radioKm * 1000 } : null;
+          })
+          .filter((z): z is { label: string; lat: number; lng: number; radius: number } => z !== null)
+          .slice(0, MAX_ZONAS_IR_A)
+      );
+    });
+    return () => { cancelado = true; };
   }, []);
 
   // El primer "moveend" lo dispara Leaflet al montar el mapa (no una

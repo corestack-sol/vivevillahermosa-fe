@@ -70,8 +70,8 @@ const FEATURES = [
   { Icon: Zap, title: 'Anuncio activo en 5 min', sub: 'Sube fotos, llena datos, publica. Sin comisión, sin trámites.', bg: 'bg-coral/15', fg: 'text-coral' },
 ];
 
-export default function HomePage() {
-  const featured = getFeaturedProperties();
+export default async function HomePage() {
+  const featured = await getFeaturedProperties();
   // getColoniasRankedByPropiedades (no getFeaturedZones/`destacada`) — misma
   // fuente que ya usa /zonas para sus tarjetas grandes: ranking real por
   // cantidad de propiedades activas, no una curación manual. Antes esta
@@ -81,8 +81,8 @@ export default function HomePage() {
   // función en api.ts). Pedido explícito (2026-08-09): nada en la
   // plataforma debe quedarse en datos sueltos/editoriales si ya existe una
   // fuente real que se pueda usar en su lugar.
-  const zones = getColoniasRankedByPropiedades().slice(0, 4);
-  const stats = getStats();
+  const zones = (await getColoniasRankedByPropiedades()).slice(0, 4);
+  const stats = await getStats();
 
   // getAllProperties (no `featured`) — pedido explícito (2026-08-09): el
   // mapa mostraba solo las 5 propiedades marcadas `featured:true`, la
@@ -92,7 +92,7 @@ export default function HomePage() {
   // Tabasco, así que usa el catálogo completo. `fitToMarkers` en
   // ClickableMap (ver ese componente) ya encuadra para que se vean todas,
   // sin importar cuántas ni qué tan dispersas estén.
-  const markers = getAllProperties().map((p) => ({
+  const markers = (await getAllProperties()).map((p) => ({
     id: p.id, slug: p.slug, lat: p.lat, lng: p.lng,
     titulo: p.titulo, precio: p.precio, operacion: p.operacion,
     tipo: p.tipo, colonia: p.colonia, foto: p.fotos[0] ?? null,

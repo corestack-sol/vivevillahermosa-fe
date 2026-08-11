@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
+import { backendFetch } from '@/lib/backendApi';
 
 interface FavoriteButtonProps {
   propiedadId: string;
@@ -18,8 +19,7 @@ export function FavoriteButton({ propiedadId, size = 'md' }: FavoriteButtonProps
 
   useEffect(() => {
     if (!user) return;
-    fetch('/api/favoritos')
-      .then((r) => r.json())
+    backendFetch<{ favoritos: string[] }>('/favoritos')
       .then((data) => {
         if (data.favoritos) setIsFav(data.favoritos.includes(propiedadId));
       })
@@ -37,13 +37,10 @@ export function FavoriteButton({ propiedadId, size = 'md' }: FavoriteButtonProps
     setIsFav(next);
     setPending(true);
     try {
-      const res = await fetch('/api/favoritos', {
+      const data = await backendFetch<{ favorito: boolean }>('/favoritos', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ propiedadId }),
       });
-      if (!res.ok) throw new Error('request failed');
-      const data = await res.json();
       setIsFav(data.favorito);
     } catch {
       setIsFav(!next); // revertir

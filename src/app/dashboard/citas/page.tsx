@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
+import { backendFetch } from '@/lib/backendApi';
 import { useConfiguracionAgenda } from '@/hooks/useConfiguracionAgenda';
 import { getPropertyById } from '@/lib/api';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -72,6 +73,20 @@ export default function CitasPage() {
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [citas, setCitas] = useState<Cita[]>([]);
   const [citasLoading, setCitasLoading] = useState(true);
+  const [propiedadesPorId, setPropiedadesPorId] = useState<Record<string, { slug: string; titulo: string }>>({});
+
+  useEffect(() => {
+    const ids = Array.from(new Set(citas.map((c) => c.propiedadId).filter((id): id is string => Boolean(id))));
+    if (ids.length === 0) return;
+    let cancelado = false;
+    Promise.all(ids.map((id) => getPropertyById(id))).then((props) => {
+      if (cancelado) return;
+      const map: Record<string, { slug: string; titulo: string }> = {};
+      props.forEach((p, i) => { if (p) map[ids[i]] = { slug: p.slug, titulo: p.titulo }; });
+      setPropiedadesPorId(map);
+    });
+    return () => { cancelado = true; };
+  }, [citas]);
   const [showNueva, setShowNueva] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
 
@@ -87,9 +102,8 @@ export default function CitasPage() {
     setCitasLoading(true);
     const desde = subDays(startOfMonth(month), 7);
     const hasta = addDays(endOfMonth(month), 7);
-    fetch(`/api/citas?desde=${desde.toISOString()}&hasta=${hasta.toISOString()}`)
-      .then((r) => r.json())
-      .then((d) => setCitas(d.citas ?? []))
+    backendFetch<Cita[]>(`/citas?desde=${desde.toISOString()}&hasta=${hasta.toISOString()}`)
+      .then((d) => setCitas(d ?? []))
       .catch(() => {})
       .finally(() => setCitasLoading(false));
   }, [month, esProfesional]);
@@ -124,12 +138,10 @@ export default function CitasPage() {
     const previous = citas;
     setCitas((prev) => prev.map((c) => (c.id === id ? { ...c, estado } : c)));
     try {
-      const res = await fetch(`/api/citas/${id}`, {
+      await backendFetch(`/citas/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ estado }),
       });
-      if (!res.ok) throw new Error();
       toast.success(estado === 'cancelada' ? 'Cita cancelada.' : 'Cita marcada como completada.');
     } catch {
       setCitas(previous);
@@ -141,8 +153,7 @@ export default function CitasPage() {
     const previous = citas;
     setCitas((prev) => prev.filter((c) => c.id !== id));
     try {
-      const res = await fetch(`/api/citas/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error();
+      await backendFetch(`/citas/${id}`, { method: 'DELETE' });
       toast.success('Cita eliminada.');
     } catch {
       setCitas(previous);
@@ -262,7 +273,7 @@ export default function CitasPage() {
           ) : (
             <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1 -mr-1">
               {citasDelDia.map((cita) => {
-                const propiedad = cita.propiedadId ? getPropertyById(cita.propiedadId) : undefined;
+                const propiedad = cita.propiedadId ? propiedadesPorId[cita.propiedadId] : undefined;
                 const estadoCfg = ESTADO_CFG[cita.estado];
                 return (
                   <div key={cita.id} className="border border-gray-100 rounded-xl p-3.5">

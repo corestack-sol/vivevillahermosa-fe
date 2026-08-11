@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, MapPin, Clock, X, Loader2 } from 'lucide-react';
 import { getAllProperties } from '@/lib/api';
@@ -34,13 +34,19 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
   // propiedad real detrás. Ahora las sugerencias salen del catálogo real
   // (colonias + municipios con al menos una propiedad), así nunca se
   // sugiere un lugar donde el usuario luego encuentra "sin resultados".
-  const places = useMemo(() => {
-    const set = new Set<string>();
-    for (const p of getAllProperties()) {
-      set.add(p.colonia);
-      set.add(p.municipio === 'Centro' ? 'Villahermosa' : p.municipio);
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'));
+  const [places, setPlaces] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelado = false;
+    getAllProperties().then((props) => {
+      if (cancelado) return;
+      const set = new Set<string>();
+      for (const p of props) {
+        set.add(p.colonia);
+        set.add(p.municipio === 'Centro' ? 'Villahermosa' : p.municipio);
+      }
+      setPlaces(Array.from(set).sort((a, b) => a.localeCompare(b, 'es')));
+    });
+    return () => { cancelado = true; };
   }, []);
 
   useEffect(() => {

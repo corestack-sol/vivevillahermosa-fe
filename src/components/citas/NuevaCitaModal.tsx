@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
+import { backendFetch } from '@/lib/backendApi';
 import { getAllProperties } from '@/lib/api';
 
 const DURACION_OPTIONS = [15, 30, 45, 60, 90, 120].map((m) => ({ value: String(m), label: `${m} min` }));
@@ -37,10 +38,14 @@ interface NuevaCitaModalProps {
 
 export function NuevaCitaModal({ isOpen, onClose, fechaInicial, duracionDefault, onCreated }: NuevaCitaModalProps) {
   const toast = useToast();
-  const propiedadOptions = useMemo(
-    () => getAllProperties().slice(0, 100).map((p) => ({ value: p.id, label: p.titulo })),
-    []
-  );
+  const [propiedadOptions, setPropiedadOptions] = useState<{ value: string; label: string }[]>([]);
+  useEffect(() => {
+    let cancelado = false;
+    getAllProperties().then((props) => {
+      if (!cancelado) setPropiedadOptions(props.slice(0, 100).map((p) => ({ value: p.id, label: p.titulo })));
+    });
+    return () => { cancelado = true; };
+  }, []);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -79,9 +84,8 @@ export function NuevaCitaModal({ isOpen, onClose, fechaInicial, duracionDefault,
       return;
     }
     try {
-      const res = await fetch('/api/citas', {
+      await backendFetch('/citas', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           titulo: data.titulo,
           nombreCliente: data.nombreCliente,
@@ -93,7 +97,6 @@ export function NuevaCitaModal({ isOpen, onClose, fechaInicial, duracionDefault,
           duracionMin: Number(data.duracionMin),
         }),
       });
-      if (!res.ok) throw new Error();
       toast.success('Cita agendada.');
       onCreated();
       onClose();

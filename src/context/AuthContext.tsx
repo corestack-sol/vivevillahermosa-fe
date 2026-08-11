@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { backendFetch, type BackendUser } from '@/lib/backendApi';
 
 export interface AuthUser {
   userId: string;
@@ -30,9 +31,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch('/api/auth/me');
-      const data = await res.json();
-      setUser(data.user ?? null);
+      const { user: backendUser } = await backendFetch<{
+        user: BackendUser | null;
+      }>('/auth/me');
+      setUser(
+        backendUser
+          ? {
+              userId: backendUser.id,
+              email: backendUser.email,
+              nombre: backendUser.nombre,
+              rol: backendUser.rol,
+            }
+          : null,
+      );
     } catch {
       setUser(null);
     } finally {
@@ -41,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await backendFetch('/auth/logout', { method: 'POST' });
     setUser(null);
   }, []);
 
