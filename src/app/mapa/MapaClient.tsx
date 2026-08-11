@@ -18,8 +18,6 @@ import { getPropertyTypeConfig } from '@/lib/propertyTypeConfig';
 import { getColoniasRankedByPropiedades } from '@/lib/api';
 import { matchColonia } from '@/lib/colonias';
 import type { MapMarker, MapControls, MapBounds } from '@/components/map/MapView';
-import { aplicarOverridesPublicos, PROPIEDADES_LOCALES_EVENT } from '@/lib/propiedadesLocales';
-import { ESTADO_OVERRIDE_EVENT } from '@/lib/estadoOverrides';
 
 // ── Config ──────────────────────────────────────────────────────────────
 
@@ -197,24 +195,9 @@ interface Props { allProperties: Property[] }
 export function MapaClient({ allProperties }: Props) {
   const { filters, updateFilters, clearFilters, activeCount } = useFilters();
 
-  // Mismo merge que /propiedades (ver PropertiesClient.tsx) — arranca con el
-  // catálogo del servidor y se completa con lo publicado/editado/pausado/
-  // eliminado en este navegador justo después de montar.
-  // ⚠️ BACKEND: deja de hacer falta con `GET /api/propiedades` real — ver
-  // el comentario de aplicarOverridesPublicos en propiedadesLocales.ts.
-  const [properties, setProperties] = useState(allProperties);
-  useEffect(() => {
-    function aplicarOverrides() {
-      setProperties(aplicarOverridesPublicos(allProperties));
-    }
-    aplicarOverrides();
-    window.addEventListener(PROPIEDADES_LOCALES_EVENT, aplicarOverrides);
-    window.addEventListener(ESTADO_OVERRIDE_EVENT, aplicarOverrides);
-    return () => {
-      window.removeEventListener(PROPIEDADES_LOCALES_EVENT, aplicarOverrides);
-      window.removeEventListener(ESTADO_OVERRIDE_EVENT, aplicarOverrides);
-    };
-  }, [allProperties]);
+  // `allProperties` ya viene fresco del backend (ver mapa/page.tsx) — ya no
+  // hace falta fusionarlo con ninguna simulación local.
+  const properties = allProperties;
 
   const [panelOpen,     setPanelOpen]     = useState(false);
   const [riesgoActive,  setRiesgoActive]  = useState<Set<RiesgoLevel>>(new Set(['bajo', 'medio', 'alto']));

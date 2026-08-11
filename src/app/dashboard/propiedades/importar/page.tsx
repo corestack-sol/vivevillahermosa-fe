@@ -8,10 +8,7 @@ import { ArrowLeft, Upload, Download, CheckCircle2, AlertCircle, FileSpreadsheet
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
 import { publishSchema, MUNICIPIO_CENTERS, construirAgenteContacto } from '@/lib/publishSchema';
-import { crearPropiedades } from '@/lib/propiedadesLocales';
-import { getPuntoPublico } from '@/lib/colonias';
-import { generarIdLocal, generarSlugLocal } from '@/lib/idsLocales';
-import type { Property } from '@/types/property';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
 // Mismos nombres que los campos del schema compartido con Publicar/Editar —
 // así el mapeo de cada columna a cada regla de validación es directo, sin
@@ -22,17 +19,43 @@ const COLUMNAS = [
   'nombreContacto', 'metodoContacto', 'telefonoContacto', 'emailContacto',
 ] as const;
 
+/** Forma que espera POST /propiedades (CreatePropertyDto) — id/slug/latPublico/lngPublico los genera el servidor. */
+interface PropiedadPayload {
+  titulo: string;
+  descripcion: string;
+  tipo: string;
+  operacion: string;
+  precio: number;
+  m2Construidos?: number;
+  m2Terreno?: number;
+  recamaras?: number;
+  banos?: number;
+  amenidades: string[];
+  fotos: string[];
+  municipio: string;
+  colonia: string;
+  direccion: string;
+  lat: number;
+  lng: number;
+  riesgoInundacion: string;
+  cercaDosoBocas: boolean;
+  agenteNombre: string;
+  agenteTel?: string;
+  agenteEmail?: string;
+  agenteWhatsapp?: string;
+}
+
 interface FilaParseada {
   fila: number;
   datos: Record<string, string>;
   resultado:
-    | { ok: true; property: Property }
+    | { ok: true; payload: PropiedadPayload; titulo: string }
     | { ok: false; errores: string[] };
 }
 
 const NUMERICOS = new Set(['precio', 'm2Construidos', 'm2Terreno', 'recamaras', 'banos']);
 
-function construirProperty(datos: Record<string, string>) {
+function construirPayload(datos: Record<string, string>): FilaParseada['resultado'] {
   const candidato: Record<string, unknown> = { aceptaTerminos: true };
   for (const col of COLUMNAS) {
     const valor = (datos[col] ?? '').trim();
@@ -50,51 +73,42 @@ function construirProperty(datos: Record<string, string>) {
 
   const parsed = publishSchema.safeParse(candidato);
   if (!parsed.success) {
-    return { ok: false as const, errores: parsed.error.issues.map((i) => i.message) };
+    return { ok: false, errores: parsed.error.issues.map((i) => i.message) };
   }
 
   const data = parsed.data;
-  const id = generarIdLocal();
   const centro = MUNICIPIO_CENTERS[data.municipio] ?? MUNICIPIO_CENTERS['Centro'];
-  const puntoPublico = getPuntoPublico(id, centro[0], centro[1], data.colonia);
-  const property: Property = {
-    id,
-    slug: generarSlugLocal(data.titulo),
+  const agente = construirAgenteContacto(data.nombreContacto, data.metodoContacto, data.telefonoContacto, data.emailContacto);
+  return {
+    ok: true,
     titulo: data.titulo,
-    descripcion: data.descripcion,
-    tipo: data.tipo as Property['tipo'],
-    operacion: data.operacion as Property['operacion'],
-    precio: data.precio,
-    moneda: 'MXN',
-    m2Construidos: data.m2Construidos ?? 0,
-    m2Terreno: data.m2Terreno ?? 0,
-    recamaras: data.recamaras ?? 0,
-    banos: data.banos ?? 0,
-    mediosBanos: 0,
-    estacionamientos: 0,
-    antiguedad: 0,
-    amenidades: [],
-    fotos: [],
-    municipio: data.municipio,
-    colonia: data.colonia,
-    direccion: '',
-    lat: centro[0],
-    lng: centro[1],
-    latPublico: puntoPublico.lat,
-    lngPublico: puntoPublico.lng,
-    riesgoInundacion: data.riesgoInundacion,
-    zonaEcologica: false,
-    cercaDosoBocas: data.municipio === 'Paraíso',
-    featured: false,
-    agente: {
-      ...construirAgenteContacto(data.nombreContacto, data.metodoContacto, data.telefonoContacto, data.emailContacto),
-      foto: '',
-      verificado: false,
+    payload: {
+      titulo: data.titulo,
+      descripcion: data.descripcion,
+      tipo: data.tipo,
+      operacion: data.operacion,
+      precio: data.precio,
+      m2Construidos: data.m2Construidos || undefined,
+      m2Terreno: data.m2Terreno || undefined,
+      recamaras: data.recamaras || undefined,
+      banos: data.banos || undefined,
+      amenidades: [],
+      fotos: [],
+      municipio: data.municipio,
+      colonia: data.colonia,
+      // Dirección exacta no se recolecta en el CSV — mismo criterio que
+      // PublishForm.tsx, nunca se muestra públicamente de todos modos.
+      direccion: `${data.colonia}, ${data.municipio}`,
+      lat: centro[0],
+      lng: centro[1],
+      riesgoInundacion: data.riesgoInundacion,
+      cercaDosoBocas: data.municipio === 'Paraíso',
+      agenteNombre: agente.nombre,
+      agenteTel: agente.tel,
+      agenteEmail: agente.email,
+      agenteWhatsapp: agente.whatsapp,
     },
-    fechaPublicacion: new Date().toISOString(),
-    activa: true,
   };
-  return { ok: true as const, property };
 }
 
 function descargarPlantilla() {
@@ -129,7 +143,7 @@ export default function ImportarPropiedadesPage() {
         const parseadas: FilaParseada[] = res.data.map((datos, i) => ({
           fila: i + 2, // +1 por encabezado, +1 porque la fila 1 visible es la primera de datos
           datos,
-          resultado: construirProperty(datos),
+          resultado: construirPayload(datos),
         }));
         setFilas(parseadas);
       },
@@ -142,13 +156,37 @@ export default function ImportarPropiedadesPage() {
   const validas = filas?.filter((f) => f.resultado.ok) ?? [];
   const invalidas = filas?.filter((f) => !f.resultado.ok) ?? [];
 
-  function confirmarImportacion() {
+  // Sin endpoint de creación masiva en el backend — cada fila es su propio
+  // POST /propiedades, uno a la vez (no en paralelo) para no disparar de
+  // golpe el rate limit de creación (10/día por usuario, BACKEND.md §3).
+  // Una fila que falla (ej. tope alcanzado a la mitad del CSV) no aborta
+  // las que ya se importaron, solo se reporta al final.
+  async function confirmarImportacion() {
     if (validas.length === 0) return;
     setImportando(true);
-    const properties = validas.map((f) => (f.resultado as { ok: true; property: Property }).property);
-    crearPropiedades(properties);
-    toast.success(`${properties.length} propiedad${properties.length !== 1 ? 'es' : ''} importada${properties.length !== 1 ? 's' : ''}.`);
-    router.push('/dashboard/propiedades');
+    let ok = 0;
+    const fallidas: string[] = [];
+    for (const f of validas) {
+      if (!f.resultado.ok) continue;
+      try {
+        await backendFetch('/propiedades', {
+          method: 'POST',
+          body: JSON.stringify(f.resultado.payload),
+        });
+        ok += 1;
+      } catch (err) {
+        fallidas.push(`${f.resultado.titulo}: ${err instanceof BackendApiError ? err.message : 'error desconocido'}`);
+      }
+    }
+    setImportando(false);
+
+    if (ok > 0) {
+      toast.success(`${ok} propiedad${ok !== 1 ? 'es' : ''} importada${ok !== 1 ? 's' : ''}.`);
+    }
+    if (fallidas.length > 0) {
+      toast.error(`${fallidas.length} propiedad${fallidas.length !== 1 ? 'es' : ''} no se pudo importar: ${fallidas[0]}${fallidas.length > 1 ? ` (+${fallidas.length - 1} más)` : ''}`);
+    }
+    if (ok > 0) router.push('/dashboard/propiedades');
   }
 
   return (
@@ -166,9 +204,9 @@ export default function ImportarPropiedadesPage() {
       <div className="flex items-start gap-2.5 bg-brand-pale border border-brand/20 rounded-xl px-4 py-3 mb-6">
         <AlertCircle size={15} className="text-brand flex-shrink-0 mt-0.5" />
         <p className="text-xs text-brand-dark leading-relaxed">
-          <strong>Vista previa.</strong> Las propiedades importadas se guardan en este navegador, igual que
-          Publicar — cuando exista el backend real, esta misma pantalla enviará los datos al servidor sin
-          cambiar el formato del CSV.
+          Cada fila se publica igual que el formulario de Publicar, una por una — si tienes muchas,
+          puede que topes el límite de publicaciones por día de tu cuenta a la mitad del archivo; las que
+          ya se importaron quedan bien, solo repite el CSV restante otro día.
         </p>
       </div>
 

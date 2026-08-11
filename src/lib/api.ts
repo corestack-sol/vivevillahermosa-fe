@@ -52,6 +52,7 @@ export interface BackendPublicProperty {
   zonaEcologica: boolean;
   cercaDosoBocas: boolean;
   featured: boolean;
+  estado: string;
   activa: boolean;
   agente: { nombre: string; foto: string | null; verificado: boolean };
   createdAt: string;

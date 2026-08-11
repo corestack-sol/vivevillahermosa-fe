@@ -57,11 +57,15 @@ export async function backendFetch<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
+  // FormData (ej. POST /propiedades/fotos) necesita que el navegador ponga
+  // su propio Content-Type con el boundary del multipart — forzar
+  // 'application/json' encima rompe el request.
+  const isFormData = init?.body instanceof FormData;
   const response = await fetch(`${BACKEND_URL}${path}`, {
     ...init,
     credentials: 'include',
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...init?.headers,
     },
   });

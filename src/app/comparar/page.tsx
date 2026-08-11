@@ -9,8 +9,6 @@ import {
 import { useCompare } from '@/context/CompareContext';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { getAllProperties, getPriceContext, type PriceContext } from '@/lib/api';
-import { aplicarOverridesPublicos, PROPIEDADES_LOCALES_EVENT } from '@/lib/propiedadesLocales';
-import { ESTADO_OVERRIDE_EVENT } from '@/lib/estadoOverrides';
 import { getPropertyTypeConfig } from '@/lib/propertyTypeConfig';
 import { FLOOD_COLOR, FLOOD_LABEL } from '@/lib/floodColors';
 import { formatRelativeDate } from '@/lib/format';
@@ -64,22 +62,10 @@ export default function CompararPage() {
   const { ids, toggle, clear } = useCompare();
   const [properties, setProperties] = useState<Property[] | null>(null);
 
-  // ⚠️ BACKEND: deja de hacer falta con `GET /api/propiedades` real — ver
-  // el comentario de aplicarOverridesPublicos en propiedadesLocales.ts.
   useEffect(() => {
-    function cargarPropiedades() {
-      getAllProperties().then((all) => {
-        const overridden = aplicarOverridesPublicos(all);
-        setProperties(ids.map((id) => overridden.find((p) => p.id === id)).filter((p): p is Property => Boolean(p)));
-      });
-    }
-    cargarPropiedades();
-    window.addEventListener(PROPIEDADES_LOCALES_EVENT, cargarPropiedades);
-    window.addEventListener(ESTADO_OVERRIDE_EVENT, cargarPropiedades);
-    return () => {
-      window.removeEventListener(PROPIEDADES_LOCALES_EVENT, cargarPropiedades);
-      window.removeEventListener(ESTADO_OVERRIDE_EVENT, cargarPropiedades);
-    };
+    getAllProperties().then((all) => {
+      setProperties(ids.map((id) => all.find((p) => p.id === id)).filter((p): p is Property => Boolean(p)));
+    });
   }, [ids]);
 
   if (properties === null) return null; // evita parpadeo antes de leer localStorage

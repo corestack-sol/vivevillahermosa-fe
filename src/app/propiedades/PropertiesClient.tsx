@@ -19,8 +19,6 @@ import { matchColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
 import { interpretarBusqueda, esOracionLarga } from '@/lib/interpretarBusqueda';
 import { getResultadosSimilares } from '@/lib/filters';
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches';
-import { aplicarOverridesPublicos, PROPIEDADES_LOCALES_EVENT } from '@/lib/propiedadesLocales';
-import { ESTADO_OVERRIDE_EVENT } from '@/lib/estadoOverrides';
 import { ExploreZonasCta } from '@/components/search/ExploreZonasCta';
 import { BUSQUEDA_SIN_INTERPRETAR_KEY } from '@/components/search/SearchBar';
 import { useToast } from '@/context/ToastContext';
@@ -122,15 +120,9 @@ export function PropertiesClient({ allProperties }: Props) {
   // cual, sin reconstruir el query string a mano: /mapa usa el mismo
   // useFilters(), así que lee estos mismos parámetros de la URL solo.
   const searchParams = useSearchParams();
-  // Arranca con el catálogo estático que ya vino del servidor (para que el
-  // primer render coincida con el de SSR) y se completa con lo publicado/
-  // editado/pausado/eliminado en este navegador justo después de montar —
-  // localStorage no existe en el servidor, así que no se puede resolver
-  // antes. Sin este merge, publicar una propiedad nunca la hacía aparecer
-  // aquí, ni para otros usuarios ni para quien la acababa de publicar.
-  // ⚠️ BACKEND: deja de hacer falta con `GET /api/propiedades` real — ver
-  // el comentario de aplicarOverridesPublicos en propiedadesLocales.ts.
-  const [properties, setProperties] = useState(allProperties);
+  // `allProperties` ya viene fresco del backend (ver propiedades/page.tsx)
+  // — ya no hace falta fusionarlo con ninguna simulación local.
+  const properties = allProperties;
   const { results, allResults, total, hasMore, loadMore, isLoading } = useSearch(properties, filters);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
@@ -216,19 +208,6 @@ export function PropertiesClient({ allProperties }: Props) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    function aplicarOverrides() {
-      setProperties(aplicarOverridesPublicos(allProperties));
-    }
-    aplicarOverrides();
-    window.addEventListener(PROPIEDADES_LOCALES_EVENT, aplicarOverrides);
-    window.addEventListener(ESTADO_OVERRIDE_EVENT, aplicarOverrides);
-    return () => {
-      window.removeEventListener(PROPIEDADES_LOCALES_EVENT, aplicarOverrides);
-      window.removeEventListener(ESTADO_OVERRIDE_EVENT, aplicarOverrides);
-    };
-  }, [allProperties]);
 
   // Interpreta el texto del buscador inline con IA (OpenRouter, vía
   // src/lib/interpretarBusqueda.ts) y lo fusiona sobre los filtros que ya

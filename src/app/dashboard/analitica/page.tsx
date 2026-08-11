@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Info, Eye, MessageCircle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { getMisPropiedadesDemo, type MiPropiedad } from '@/lib/misPropiedadesDemo';
-import { getMisPropiedadesConOverrides } from '@/lib/propiedadesLocales';
+import type { MiPropiedad } from '@/lib/misPropiedadesDemo';
+import { backendFetch } from '@/lib/backendApi';
+import { mapBackendProperty, type BackendPublicProperty } from '@/lib/api';
 import { getSerieDemo, sumar, cambioPorcentual } from '@/lib/analiticaDemo';
+import { useAuth } from '@/context/AuthContext';
 import { Sparkline } from '@/components/dashboard/Sparkline';
 
 function TendenciaBadge({ pct }: { pct: number | null }) {
@@ -25,14 +27,22 @@ function TendenciaBadge({ pct }: { pct: number | null }) {
 }
 
 export default function AnaliticaPage() {
-  const [items, setItems] = useState<MiPropiedad[]>(getMisPropiedadesDemo());
+  const { user } = useAuth();
+  const [items, setItems] = useState<MiPropiedad[]>([]);
 
   useEffect(() => {
-    function aplicar() {
-      setItems(getMisPropiedadesConOverrides(getMisPropiedadesDemo()));
-    }
-    aplicar();
-  }, []);
+    if (!user) return;
+    backendFetch<{ propiedades: BackendPublicProperty[] }>('/propiedades/mias')
+      .then(({ propiedades }) => setItems(propiedades.map((bp) => ({
+        property: mapBackendProperty(bp),
+        estado: bp.estado as MiPropiedad['estado'],
+        vistas: 0,
+        contactos: 0,
+        favoritos: 0,
+        publicadaHace: '',
+      }))))
+      .catch(() => {});
+  }, [user]);
 
   const porPropiedad = items.map((it) => {
     const serie = getSerieDemo(it.property.id, 60);
@@ -70,10 +80,10 @@ export default function AnaliticaPage() {
       <div className="flex items-start gap-2.5 bg-brand-pale border border-brand/20 rounded-xl px-4 py-3 mb-6">
         <Info size={15} className="text-brand flex-shrink-0 mt-0.5" />
         <p className="text-xs text-brand-dark leading-relaxed">
-          <strong>Vista previa con datos de muestra.</strong> Estas series se generan de forma consistente
-          para que puedas explorar cómo se verá la analítica real — cuando exista una tabla de eventos con
-          fecha (vistas/contactos por propiedad), esta pantalla mostrará tu desempeño real, incluida la
-          comparación contra el periodo anterior.
+          <strong>Vista previa con datos de muestra.</strong> Tus propiedades ya son reales, pero estas series
+          de vistas/contactos se generan de forma consistente para que puedas explorar cómo se verá la
+          analítica real — cuando exista una tabla de eventos con fecha, esta pantalla mostrará tu desempeño
+          real, incluida la comparación contra el periodo anterior.
         </p>
       </div>
 

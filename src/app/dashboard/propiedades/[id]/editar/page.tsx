@@ -10,14 +10,13 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button, buttonClasses } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
-import { getMisPropiedadesDemo } from '@/lib/misPropiedadesDemo';
-import { getMisPropiedadesConOverrides, editarPropiedad } from '@/lib/propiedadesLocales';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
+import { mapBackendProperty, type BackendPublicProperty } from '@/lib/api';
 import {
   publishSchema, type PublishFormData, type MetodoContacto,
   TIPO_OPTIONS, MUNICIPIO_OPTIONS, METODO_CONTACTO_OPTIONS,
 } from '@/lib/publishSchema';
 import type { Property } from '@/types/property';
-import { getPuntoPublico } from '@/lib/colonias';
 
 const OPERACION_OPTIONS = [
   { value: 'venta', label: 'Venta' },
@@ -50,13 +49,15 @@ export default function EditarPropiedadPage() {
   } = useForm<PublishFormData>({ resolver: zodResolver(publishSchema) });
   const tipoActual = watch('tipo');
 
-  // Resolver en un efecto (no en el useState inicial) evita depender de
-  // localStorage antes de la hidratación — mismo patrón que el resto del
-  // panel profesional.
+  // GET /propiedades/:id con sesión (backendFetch manda la cookie sola)
+  // devuelve la vista de dueño si el id es tuyo — 403/404 si no.
   useEffect(() => {
-    const conLocales = getMisPropiedadesConOverrides(getMisPropiedadesDemo());
-    const encontrada = conLocales.find((m) => m.property.id === id);
-    setProperty(encontrada?.property ?? null);
+    if (!id) return;
+    let cancelado = false;
+    backendFetch<BackendPublicProperty>(`/propiedades/${id}`)
+      .then((bp) => { if (!cancelado) setProperty(mapBackendProperty(bp)); })
+      .catch(() => { if (!cancelado) setProperty(null); });
+    return () => { cancelado = true; };
   }, [id]);
 
   useEffect(() => {
@@ -85,49 +86,44 @@ export default function EditarPropiedadPage() {
     });
   }, [property, reset]);
 
-  // ⚠️ BACKEND: reemplazar por `PATCH /api/propiedades/:id` (body = los
-  // mismos campos de PublishFormData) validado contra `session.userId` —
-  // ver el modelo Property sugerido al final de prisma/schema.prisma y el
-  // comentario grande de validaciones server-side en PublishForm.tsx (las
-  // mismas re-validaciones de fraude/imagen/moderación aplican aquí si el
-  // precio/fotos/descripción cambian, no solo al publicar por primera vez).
-  function onSubmit(data: PublishFormData) {
+  async function onSubmit(data: PublishFormData) {
     if (!property) return;
-    // La colonia pudo cambiar aquí y no hay pin que reubicar en este
-    // formulario (no tiene MapPicker) — se recalcula el punto público sobre
-    // la coordenada real ya guardada, para que no se quede apuntando al
-    // centroide de la colonia vieja (ver getPuntoPublico en colonias.ts).
-    const puntoPublico = getPuntoPublico(property.id, property.lat, property.lng, data.colonia);
-    editarPropiedad(property.id, {
-      titulo: data.titulo,
-      descripcion: data.descripcion,
-      tipo: data.tipo as Property['tipo'],
-      operacion: data.operacion as Property['operacion'],
-      precio: data.precio,
-      m2Construidos: data.m2Construidos ?? 0,
-      m2Terreno: data.m2Terreno ?? 0,
-      recamaras: data.recamaras ?? 0,
-      banos: data.banos ?? 0,
-      municipio: data.municipio,
-      colonia: data.colonia,
-      latPublico: puntoPublico.lat,
-      lngPublico: puntoPublico.lng,
-      riesgoInundacion: data.riesgoInundacion,
-      // No se usa `construirAgenteContacto` + spread de `property.agente` —
-      // ese helper solo OMITE la clave que no aplica, no borra un valor
-      // previo si cambiaste de "Ambos" a "Solo correo". Aquí sí hace falta
-      // limpiar explícitamente el campo que ya no eligió.
-      agente: {
-        nombre: data.nombreContacto,
-        foto: property.agente.foto,
-        verificado: property.agente.verificado,
-        tel: data.metodoContacto !== 'correo' ? data.telefonoContacto : undefined,
-        email: data.metodoContacto !== 'telefono' ? data.emailContacto : undefined,
-        whatsapp: data.metodoContacto !== 'correo' ? data.telefonoContacto : undefined,
-      },
-    });
-    toast.success('Propiedad actualizada.');
-    router.push('/dashboard/propiedades');
+    // No se manda lat/lng — este formulario no tiene MapPicker, así que no
+    // hay coordenada nueva que ofrecer. El backend recalcula
+    // latPublico/lngPublico igual (cambiaUbicacion se dispara porque
+    // `colonia` siempre viaja en el body), cayendo a la lat/lng real ya
+    // guardada cuando no se manda una nueva (BACKEND.md §3, PATCH).
+    try {
+      await backendFetch(`/propiedades/${property.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          titulo: data.titulo,
+          descripcion: data.descripcion,
+          tipo: data.tipo,
+          operacion: data.operacion,
+          precio: data.precio,
+          m2Construidos: data.m2Construidos || undefined,
+          m2Terreno: data.m2Terreno || undefined,
+          recamaras: data.recamaras || undefined,
+          banos: data.banos || undefined,
+          municipio: data.municipio,
+          colonia: data.colonia,
+          riesgoInundacion: data.riesgoInundacion,
+          agenteNombre: data.nombreContacto,
+          // A diferencia de PublishForm.tsx (construirAgenteContacto), aquí
+          // sí hace falta mandar explícitamente `null` para el campo que ya
+          // no aplica — si cambiaste de "Ambos" a "Solo correo", omitir la
+          // clave (undefined) no la borraría del lado del servidor.
+          agenteTel: data.metodoContacto !== 'correo' ? data.telefonoContacto : null,
+          agenteEmail: data.metodoContacto !== 'telefono' ? data.emailContacto : null,
+          agenteWhatsapp: data.metodoContacto !== 'correo' ? data.telefonoContacto : null,
+        }),
+      });
+      toast.success('Propiedad actualizada.');
+      router.push('/dashboard/propiedades');
+    } catch (err) {
+      toast.error(err instanceof BackendApiError ? err.message : 'No se pudo actualizar la propiedad.');
+    }
   }
 
   if (property === undefined) {
