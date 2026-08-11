@@ -1,11 +1,6 @@
 import type { MiPropiedad } from './misPropiedadesDemo';
+import { backendFetch } from './backendApi';
 
-/**
- * Llama a /api/ia/resumen-reporte desde el navegador — separado de
- * src/lib/ai.ts (que instancia el cliente de Gemini con la API key) porque
- * este archivo sí se importa desde componentes de cliente y nunca debe
- * arrastrar el SDK ni la key al bundle del navegador.
- */
 export async function obtenerResumenReporte(propiedades: MiPropiedad[]): Promise<string | null> {
   if (propiedades.length === 0) return null;
 
@@ -13,9 +8,8 @@ export async function obtenerResumenReporte(propiedades: MiPropiedad[]): Promise
   for (const p of propiedades) porEstado[p.estado] = (porEstado[p.estado] ?? 0) + 1;
 
   try {
-    const res = await fetch('/api/ia/resumen-reporte', {
+    const data = await backendFetch<{ resumen: string | null }>('/ia/resumen-reporte', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         totalPropiedades: propiedades.length,
         totalVistas: propiedades.reduce((a, p) => a + p.vistas, 0),
@@ -27,8 +21,6 @@ export async function obtenerResumenReporte(propiedades: MiPropiedad[]): Promise
         })),
       }),
     });
-    if (!res.ok) return null;
-    const data = await res.json();
     return typeof data.resumen === 'string' ? data.resumen : null;
   } catch {
     return null;
