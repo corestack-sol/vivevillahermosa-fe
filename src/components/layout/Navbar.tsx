@@ -157,7 +157,7 @@ export function Navbar() {
               </span>
             </Link>
 
-            <div className="hidden md:flex items-center gap-1">
+            <div className="hidden lg:flex items-center gap-1">
               {navLinks.map((link) => {
                 const active = isActive(link);
                 return (
@@ -180,7 +180,7 @@ export function Navbar() {
 
           {/* Acciones — empujadas del todo a la derecha */}
           <div className="flex items-center ml-auto">
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-3">
             {esProfesional && (
               <Link href="/dashboard/propiedades"
                 className="flex items-center gap-1.5 text-sm font-medium text-white border border-white/20 hover:border-white/40 rounded-xl px-3.5 py-2 transition-colors">
@@ -246,8 +246,16 @@ export function Navbar() {
             )}
           </div>
 
-          {/* Mobile: notificaciones + hamburger */}
-          <div className="md:hidden flex items-center gap-1">
+          {/* Mobile/tablet: notificaciones + hamburger — breakpoint en lg
+              (1024px), no md (768px): a 768-1023px (tablet portrait) el nav
+              de escritorio completo (5 links + acciones + menú de usuario)
+              no cabía en una sola fila y el botón "Publicar gratis" quedaba
+              partido en 3 líneas encimado con "Blog" (bug real confirmado
+              en auditoría de responsividad, 2026-08-10). lg ya es el mismo
+              breakpoint que usa el panel de filtros de /propiedades
+              (FilterPanel/PropertiesClient) para su propio cambio
+              sidebar-vs-botón — antes estaban desalineados entre sí. */}
+          <div className="lg:hidden flex items-center gap-1">
             {!loading && user && <NotificationBell />}
             <button
               className="p-2 rounded-xl transition-colors text-white hover:bg-white/10"
@@ -262,7 +270,7 @@ export function Navbar() {
 
         {/* Mobile menu */}
         {isOpen && (
-          <div className="md:hidden border-t py-3 pb-4 space-y-0.5 border-white/10">
+          <div className="lg:hidden border-t py-3 pb-4 space-y-0.5 border-white/10">
             {navLinks.map((link) => (
               <Link key={link.href} href={link.href} onClick={() => setIsOpen(false)}
                 className={`flex items-center px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${

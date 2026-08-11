@@ -41,7 +41,14 @@ export function PropertyCard({ property, landmarkQuery }: PropertyCardProps) {
 
   return (
     // aspect-[20/21] = 20% más de alto que el aspect-[8/7] anterior, misma proporción de ancho
-    <div className="group relative rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 ease-out aspect-[20/21]">
+    // @container: el ancho real de ESTA tarjeta (no el viewport) es lo que
+    // decide su propio tamaño de texto/padding más abajo — necesario porque
+    // el grid de /propiedades usa auto-fit (PropertiesClient.tsx) con un
+    // mínimo explícito de 2 columnas incluso en móvil (pedido 2026-08-09),
+    // así que la misma tarjeta puede terminar con 140px de ancho en un
+    // teléfono angosto o 300px+ en escritorio — un solo breakpoint de
+    // viewport no puede cubrir ambos casos, pero un container query sí.
+    <div className="group relative rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 ease-out aspect-[20/21] @container">
       <Link
         href={`/propiedades/${property.slug}${landmarkQuery ?? ''}`}
         className="absolute inset-0 select-none"
@@ -71,15 +78,25 @@ export function PropertyCard({ property, landmarkQuery }: PropertyCardProps) {
           </span>
         </div>
 
-        {/* Contenido inferior */}
-        <div className="absolute inset-x-0 bottom-0 p-5">
-          <p className="text-2xl font-black text-white leading-none mb-2 drop-shadow-sm">
+        {/* Contenido inferior — padding/tipografía en dos tamaños según el
+            ANCHO REAL de la tarjeta (@container, ver arriba): compacto por
+            defecto (a partir de ~140px, el mínimo real del grid en móvil) y
+            el tamaño original de siempre desde 220px de tarjeta — el mismo
+            umbral en el que ya se verificó que no hay colisión (grid
+            sm:/lg:/xl: de PropertiesClient.tsx usa 220px+ desde ahí).
+            Sin esto, precio+título+ubicación+specs (con el padding p-5
+            original) pedían más alto del que la tarjeta tiene a 20/21 de
+            aspect-ratio en 2 columnas angostas, y el bloque de abajo
+            terminaba tapando la insignia de Venta/Renta de arriba (bug
+            real confirmado en auditoría de responsividad, 2026-08-10). */}
+        <div className="absolute inset-x-0 bottom-0 p-3 @[220px]:p-5">
+          <p className="text-base @[220px]:text-2xl font-black text-white leading-none mb-0.5 @[220px]:mb-2 drop-shadow-sm">
             {formatPrice(property.precio, property.operacion)}
           </p>
-          <h3 className="text-white font-bold text-[15px] leading-snug line-clamp-2 mb-2">
+          <h3 className="text-xs @[220px]:text-[15px] text-white font-bold leading-snug line-clamp-2 mb-1 @[220px]:mb-2">
             {property.titulo}
           </h3>
-          <p className="flex items-center gap-1 text-white/80 text-xs mb-3.5">
+          <p className="flex items-center gap-1 text-white/80 text-[10px] @[220px]:text-xs mb-1.5 @[220px]:mb-3.5">
             <MapPin size={11} className="flex-shrink-0" />
             <span className="truncate">{property.colonia}, {property.municipio}</span>
             <span
@@ -89,7 +106,7 @@ export function PropertyCard({ property, landmarkQuery }: PropertyCardProps) {
             />
           </p>
 
-          <div className="flex items-end justify-between gap-2">
+          <div className="flex items-end justify-end @[220px]:justify-between gap-2">
             {/* min-w-0 + overflow-hidden — sin esto, un flex item nunca se
                 encoge por debajo del ancho de su contenido (min-width:auto
                 por defecto), así que con specs largas (m² + recámaras +
@@ -97,8 +114,13 @@ export function PropertyCard({ property, landmarkQuery }: PropertyCardProps) {
                 xl:), esta fila se desbordaba y empujaba el botón circular
                 de flecha fuera de su lugar en vez de recortarse ella
                 misma. Ahora lo que no cabe se recorta aquí, y el botón
-                (flex-shrink-0) siempre queda fijo a la derecha. */}
-            <div className="flex items-center gap-2.5 text-white/90 text-[11px] font-semibold min-w-0 overflow-hidden">
+                (flex-shrink-0) siempre queda fijo a la derecha.
+                Oculta por completo bajo 220px de tarjeta — no hay espacio
+                para specs legibles ahí sin volver a colisionar con la
+                insignia de arriba; el título/precio/ubicación ya bastan
+                para decidir si vale la pena entrar a ver el detalle
+                completo (que sí trae todas las specs). */}
+            <div className="hidden @[220px]:flex items-center gap-2.5 text-white/90 text-[11px] font-semibold min-w-0 overflow-hidden">
               {property.m2Construidos > 0 && (
                 <span className="flex items-center gap-1"><Maximize size={11} />{property.m2Construidos}m²</span>
               )}

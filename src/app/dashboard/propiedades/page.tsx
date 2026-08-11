@@ -163,7 +163,15 @@ export default function MisPropiedadesPage() {
             <p className="text-sm text-gray-500">Gestiona tus publicaciones y revisa su desempeño</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        {/* flex-wrap — sin esto, los 4 botones (Analítica/Descargar
+            reporte/Importar CSV/Publicar nueva) forzaban una sola fila más
+            ancha que la pantalla, y como el padre no tiene overflow-x-auto
+            propio, arrastraba TODA la página a scroll horizontal en móvil
+            (bug real confirmado en auditoría de responsividad, 2026-08-10
+            — la fila de pestañas de estado de abajo, el header, todo se
+            veía "cortado" porque en realidad la página entera era más
+            ancha que el viewport). */}
+        <div className="flex items-center gap-2 flex-wrap">
           <Link href="/dashboard/analitica"
             className="flex items-center gap-2 bg-white border-2 border-gray-200 hover:border-brand/40 text-gray-700 hover:text-brand text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
             <TrendingUp size={15} /> Analítica
@@ -245,48 +253,58 @@ export default function MisPropiedadesPage() {
             const esLocal = esPropiedadLocal(p.id);
             const destacadoHasta = getDestacadoHasta(p.id);
             return (
-              <div key={p.id} className="flex items-center gap-4 bg-white border border-gray-100 rounded-2xl p-3.5 hover:border-brand/30 hover:shadow-sm transition-all">
-                {esLocal ? (
-                  <div
-                    className="flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center"
-                    style={{ background: `linear-gradient(160deg, ${cfg.from} 0%, ${cfg.to} 100%)` }}>
-                    <cfg.Icon size={22} style={{ color: cfg.accent }} strokeWidth={1.75} />
-                  </div>
-                ) : (
-                  <Link href={`/propiedades/${p.slug}`}
-                    className="flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center"
-                    style={{ background: `linear-gradient(160deg, ${cfg.from} 0%, ${cfg.to} 100%)` }}>
-                    <cfg.Icon size={22} style={{ color: cfg.accent }} strokeWidth={1.75} />
-                  </Link>
-                )}
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${estadoCfg.cls}`}>
-                      {estadoCfg.label}
-                    </span>
-                    <span className="text-xs text-gray-400">Publicada {publicadaHace}</span>
-                    {destacadoHasta && (
-                      <Tooltip label={`Destacada — vence en ${diasRestantesDestacado(destacadoHasta)} día${diasRestantesDestacado(destacadoHasta) !== 1 ? 's' : ''}`}>
-                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
-                          <Star size={9} className="fill-current" /> Destacada
-                        </span>
-                      </Tooltip>
-                    )}
-                    {esLocal && (
-                      <Tooltip label="Publicada en esta vista previa — no tiene ficha pública todavía. Cuando exista el backend real, tu propiedad tendrá su propia página al publicarla.">
-                        <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full cursor-help">Vista previa</span>
-                      </Tooltip>
-                    )}
-                  </div>
+              // flex-col en móvil, flex-row desde sm: — con los 5 íconos de
+              // acción siempre visibles (w-8 cada uno) más la miniatura, no
+              // quedaba ancho real para el título/ubicación en una sola fila
+              // angosta y se truncaban a "Casa e...", "Tabasco ..." (bug
+              // real confirmado en auditoría de responsividad, 2026-08-10).
+              // Ahora en móvil la info ocupa su propia fila completa y las
+              // acciones bajan a una segunda fila alineada a la derecha;
+              // desde sm: vuelve al layout original de una sola fila.
+              <div key={p.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-white border border-gray-100 rounded-2xl p-3.5 hover:border-brand/30 hover:shadow-sm transition-all">
+                <div className="flex items-center gap-4 min-w-0">
                   {esLocal ? (
-                    <p className="font-semibold text-gray-900 text-sm truncate">{p.titulo}</p>
+                    <div
+                      className="flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center"
+                      style={{ background: `linear-gradient(160deg, ${cfg.from} 0%, ${cfg.to} 100%)` }}>
+                      <cfg.Icon size={22} style={{ color: cfg.accent }} strokeWidth={1.75} />
+                    </div>
                   ) : (
-                    <Link href={`/propiedades/${p.slug}`} className="font-semibold text-gray-900 text-sm truncate block hover:text-brand transition-colors">
-                      {p.titulo}
+                    <Link href={`/propiedades/${p.slug}`}
+                      className="flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center"
+                      style={{ background: `linear-gradient(160deg, ${cfg.from} 0%, ${cfg.to} 100%)` }}>
+                      <cfg.Icon size={22} style={{ color: cfg.accent }} strokeWidth={1.75} />
                     </Link>
                   )}
-                  <p className="text-xs text-gray-400 truncate">{p.colonia}, {p.municipio === 'Centro' ? 'Villahermosa' : p.municipio}</p>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${estadoCfg.cls}`}>
+                        {estadoCfg.label}
+                      </span>
+                      <span className="text-xs text-gray-400">Publicada {publicadaHace}</span>
+                      {destacadoHasta && (
+                        <Tooltip label={`Destacada — vence en ${diasRestantesDestacado(destacadoHasta)} día${diasRestantesDestacado(destacadoHasta) !== 1 ? 's' : ''}`}>
+                          <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
+                            <Star size={9} className="fill-current" /> Destacada
+                          </span>
+                        </Tooltip>
+                      )}
+                      {esLocal && (
+                        <Tooltip label="Publicada en esta vista previa — no tiene ficha pública todavía. Cuando exista el backend real, tu propiedad tendrá su propia página al publicarla.">
+                          <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full cursor-help">Vista previa</span>
+                        </Tooltip>
+                      )}
+                    </div>
+                    {esLocal ? (
+                      <p className="font-semibold text-gray-900 text-sm truncate">{p.titulo}</p>
+                    ) : (
+                      <Link href={`/propiedades/${p.slug}`} className="font-semibold text-gray-900 text-sm truncate block hover:text-brand transition-colors">
+                        {p.titulo}
+                      </Link>
+                    )}
+                    <p className="text-xs text-gray-400 truncate">{p.colonia}, {p.municipio === 'Centro' ? 'Villahermosa' : p.municipio}</p>
+                  </div>
                 </div>
 
                 <p className="hidden sm:block flex-shrink-0 font-bold text-gray-900 text-sm w-28 text-right">
@@ -305,7 +323,7 @@ export default function MisPropiedadesPage() {
                   </Tooltip>
                 </div>
 
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-1 flex-shrink-0 self-end sm:self-auto">
                   <Tooltip label={
                     estado === 'activa' ? 'Pausar publicación'
                       : estado === 'pausada' ? 'Reactivar publicación'

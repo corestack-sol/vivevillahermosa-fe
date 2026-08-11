@@ -173,7 +173,12 @@ export default function CitasPage() {
             <p className="text-sm text-gray-500">Agenda y da seguimiento a tus citas con clientes</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        {/* flex-wrap defensivo — mismo patrón que dashboard/propiedades
+            (bug real ahí, ver comentario en ese archivo); aquí con solo 2
+            botones no llegaba a desbordar en los anchos probados, pero se
+            protege igual para no repetir el mismo problema si el texto de
+            un botón crece o el viewport es más angosto. */}
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => setShowConfig(true)}

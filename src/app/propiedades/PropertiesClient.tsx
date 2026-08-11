@@ -369,10 +369,18 @@ export function PropertiesClient({ allProperties }: Props) {
       <div className="bg-white border-b border-gray-100 shadow-sm animate-fade-up">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
 
-          {/* Row 1: title + controls */}
-          <div className="flex items-start sm:items-center justify-between gap-3 mb-3">
+          {/* Row 1: title + controls — flex-col en móvil: el título ya no
+              se trunca (quitado el `truncate`, ver más abajo) pero al
+              quedar codo a codo con los botones "Ver en mapa"/"Filtros" en
+              una sola fila, un título de 2-3 palabras como "Propiedades en
+              Tabasco" se envolvía en 3 líneas angostas y erráticas (bug
+              real confirmado en auditoría de responsividad, 2026-08-10).
+              En móvil el título ahora ocupa su propia fila a todo lo
+              ancho y los controles bajan a una segunda fila; desde sm:
+              vuelve al layout de una sola fila de siempre. */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-display font-black text-gray-900 leading-tight truncate" style={{ letterSpacing: '-0.02em' }}>
+              <h1 className="text-xl sm:text-2xl font-display font-black text-gray-900 leading-tight" style={{ letterSpacing: '-0.02em' }}>
                 {buildTitle(filters)}
                 {!isLoading && (
                   <span className="ml-2 text-sm font-semibold text-gray-400 align-middle">

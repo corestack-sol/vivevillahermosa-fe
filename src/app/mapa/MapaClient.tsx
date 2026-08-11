@@ -496,9 +496,22 @@ export function MapaClient({ allProperties }: Props) {
         {/* ── Top overlay ── */}
         <div className="absolute top-3 left-3 right-3 lg:right-64 z-[1001] flex flex-col gap-2 pointer-events-none">
 
-          {/* Chips row */}
+          {/* Chips row — en móvil los chips de tipo (Todos/Casa/Depto/
+              Terreno/Local...) no caben todos y el overflow-x-auto los
+              corta en seco justo en el borde de la pantalla sin ninguna
+              pista de que se puede seguir deslizando (bug real confirmado
+              en auditoría de responsividad, 2026-08-10: "Local" quedaba
+              cortado a la mitad, ilegible). Mismo degradado de máscara que
+              ya usa el marquee de la Home (src/app/page.tsx) para el mismo
+              problema, con un ancho menor (24px) porque aquí el contenedor
+              es angosto (ancho de pantalla) — 90px se comía casi todos los
+              chips visibles a la vez. */}
           <div className="flex items-center gap-1.5 overflow-x-auto pointer-events-auto"
-               style={{ scrollbarWidth: 'none' }}>
+               style={{
+                 scrollbarWidth: 'none',
+                 maskImage: 'linear-gradient(to right, transparent 0, black 24px, black calc(100% - 24px), transparent 100%)',
+                 WebkitMaskImage: 'linear-gradient(to right, transparent 0, black 24px, black calc(100% - 24px), transparent 100%)',
+               }}>
 
             {/* Mobile: filter button */}
             <button
