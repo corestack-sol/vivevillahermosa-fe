@@ -30,7 +30,12 @@ import {
   publishSchema, type PublishFormData,
   TIPO_OPTIONS, MUNICIPIO_OPTIONS, MUNICIPIO_CENTERS, METODO_CONTACTO_OPTIONS, construirAgenteContacto,
 } from '@/lib/publishSchema';
-import type { ResultadoImagenIA } from '@/lib/aiVision';
+interface ResultadoImagenIA {
+  apta: boolean;
+  relacionada: boolean;
+  señalesFraude: string[];
+  notas: string;
+}
 
 type AnalisisFoto = 'pendiente' | ResultadoImagenIA;
 
@@ -40,13 +45,10 @@ async function analizarFoto(file: File): Promise<ResultadoImagenIA> {
     // 512px basta para que el modelo juzgue contenido/relevancia — no hace
     // falta mandar la foto a resolución completa solo para esto.
     const dataUrl = await resizeImageToDataUrl(file, 512);
-    const res = await fetch('/api/ia/analizar-imagen', {
+    return await backendFetch<ResultadoImagenIA>('/ia/analizar-imagen', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imagen: dataUrl }),
     });
-    if (!res.ok) return NEUTRAL;
-    return await res.json();
   } catch {
     // Fail open — un error de red no debe bloquear publicar, igual que el
     // resto de las funciones de IA de la plataforma.
@@ -276,9 +278,8 @@ export function PublishForm() {
       const titulo = values.titulo || '';
       const descripcion = values.descripcion || '';
       if (!titulo.trim() && !descripcion.trim()) return;
-      fetch('/api/ia/analizar-fraude', {
+      backendFetch<{ riesgo: string; señales: string[]; bloqueado?: boolean; motivoBloqueo?: string }>('/ia/analizar-fraude', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           titulo,
           descripcion,
@@ -288,7 +289,6 @@ export function PublishForm() {
           operacion: values.operacion || '',
         }),
       })
-        .then((r) => r.json())
         .then((data) => { if (data.riesgo) setFraudCheck(data); })
         .catch(() => {});
     }
@@ -306,9 +306,8 @@ export function PublishForm() {
   async function generarConIA() {
     setAiLoading(true);
     try {
-      const res = await fetch('/api/ia/generar-anuncio', {
+      const data = await backendFetch<{ descripcion?: string }>('/ia/generar-anuncio', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tipo: watch('tipo'),
           operacion: watch('operacion'),
@@ -320,8 +319,6 @@ export function PublishForm() {
           banos: watch('banos') || 0,
         }),
       });
-      if (!res.ok) throw new Error('request failed');
-      const data = await res.json();
       if (data.descripcion) {
         setValue('descripcion', data.descripcion);
         setAiGenerated(true);
