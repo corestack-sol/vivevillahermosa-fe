@@ -20,6 +20,7 @@ export interface BackendUser {
   nombre: string;
   rol: string;
   emailVerificado: boolean;
+  esAdmin: boolean;
 }
 
 export class BackendApiError extends Error {
