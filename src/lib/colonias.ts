@@ -338,7 +338,10 @@ export function precargarColoniasDescubiertas(): void {
  * esto.
  *
  * A propósito NO se agrega a `COLONIAS_COORDS` (arriba) ni al catálogo que
- * `src/lib/ai.ts` le manda al modelo para resolver typos/apodos —
+ * se le manda al modelo para resolver typos/apodos (2026-08-11:
+ * `busqueda-inteligente` ya vive en el backend nuevo, ver
+ * `heuristica-busqueda.util.ts`/`busqueda-inteligente.service.ts`, catálogo
+ * cargado desde `ColoniaDescubierta` en Prisma, no desde aquí) —
  * `COLONIAS_COORDS` son ~85 nombres, esto son 753 más, casi todos
  * rancherías/ejidos rurales de baja relevancia para una búsqueda
  * inmobiliaria; meterlos ahí infla cada llamada a la IA sin necesidad. Solo
@@ -381,8 +384,9 @@ function escaparRegex(s: string): string {
  * para cuando la IA extrae mal o simplemente omite el campo "colonia" en
  * una búsqueda con varios datos a la vez (falla real, confirmada: 3 de 5
  * intentos idénticos con "cerca de la col magisterial" no devolvieron
- * colonia) — mismo patrón que ya usa el loop de LANDMARKS en
- * `busquedaInteligenteHeuristica` (src/lib/ai.ts), que las colonias no
+ * colonia) — mismo patrón que ya usa el loop de LANDMARKS en la heurística
+ * de `busqueda-inteligente` del backend nuevo (2026-08-11:
+ * `detectarLandmark` en `heuristica-busqueda.util.ts`), que las colonias no
  * tenían para las 56 agregadas en la ronda de geocodificación completa.
  * Nunca puede inventar una coordenada nueva: solo encuentra lo que ya está
  * verificado en COLONIAS_COORDS.

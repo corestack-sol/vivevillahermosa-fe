@@ -1,5 +1,7 @@
 'use client';
 
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
+
 export interface FiltrosIA {
   municipio?: string;
   colonia?: string;
@@ -22,57 +24,56 @@ export interface FiltrosIA {
   limite?: number;
 }
 
-// El servidor ya tiene su propio timeout sobre la llamada a OpenRouter
-// (TIMEOUT_BUSQUEDA_MS en src/lib/ai.ts, 9s desde 2026-08-08) y siempre
+// El backend (BACKEND.md §8, OPENROUTER_TIMEOUT_MS en ia.constants.ts) ya
+// tiene su propio timeout de 9s sobre la llamada a OpenRouter y siempre
 // responde 200 con filtros vacíos/heurísticos si falla — este timeout del
 // lado del cliente es una segunda capa de seguridad por si la red misma (no
-// OpenRouter) es la que se cuelga. Debe quedar arriba del PEOR caso del
-// servidor, no solo del típico: cuando ni colonia ni landmark coinciden con
-// el catálogo, el servidor puede encadenar hasta 3 llamadas de resolución
-// más (TIMEOUT_RESOLUCION_MS, 4.5s cada una) antes de rendirse — un caso
-// raro (la mayoría de las búsquedas responden en 1-3s totales), pero si
-// pasa, este timeout no debe cortar al servidor a medio intentar resolver
-// bien. Peor caso teórico: 9s + 3×4.5s = 22.5s — subido junto con
-// TIMEOUT_BUSQUEDA_MS para mantener el mismo margen real sobre red, no solo
-// "un poco más" que el nuevo peor caso del servidor.
-const TIMEOUT_CLIENTE_MS = 25_000;
+// OpenRouter) es la que se cuelga. A diferencia de la implementación previa
+// en Next.js (que podía encadenar hasta 3 llamadas más de resolución de
+// colonia/landmark antes de responder), el backend resuelve colonias nuevas
+// de forma asíncrona en segundo plano (no bloquea la respuesta) — el peor
+// caso real es solo la llamada a OpenRouter, así que basta con un margen
+// cómodo sobre esos 9s, no el margen de 22.5s que necesitaba el peor caso
+// anterior.
+const TIMEOUT_CLIENTE_MS = 12_000;
 
 async function llamarBusquedaIA(query: string): Promise<{ ok: true; filtros: FiltrosIA } | { ok: false; status?: number }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_CLIENTE_MS);
   try {
-    const res = await fetch('/api/ia/busqueda-inteligente', {
+    const filtros = await backendFetch<FiltrosIA>('/ia/busqueda-inteligente', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query }),
       signal: controller.signal,
     });
-    if (!res.ok) return { ok: false, status: res.status };
-    return { ok: true, filtros: await res.json() };
-  } catch {
-    return { ok: false };
+    return { ok: true, filtros };
+  } catch (err) {
+    return { ok: false, status: err instanceof BackendApiError ? err.status : undefined };
   } finally {
     clearTimeout(timer);
   }
 }
 
 /**
- * Interpreta una búsqueda en lenguaje natural con OpenRouter (src/lib/ai.ts) y
- * devuelve filtros estructurados — así "algo tranquilo que no se inunde en
- * Comalcalco" no depende de que el título de alguna propiedad contenga esas
- * palabras. Si la IA no está disponible, falla, o tarda demasiado, devuelve
- * un objeto vacío — quien llama cae exactamente al comportamiento sin IA
- * (coincidencia de texto literal vía `q`, que para una oración completa casi
- * siempre da cero resultados — confirmado en vivo: una falla pasajera de red
- * u OpenRouter en el momento exacto de la búsqueda deja a la persona viendo
- * "sin resultados" sin ninguna pista de que en realidad fue la IA la que no
- * respondió, no que su búsqueda esté mal).
+ * Interpreta una búsqueda en lenguaje natural llamando al backend
+ * (`POST /ia/busqueda-inteligente`, BACKEND.md §8) y devuelve filtros
+ * estructurados — así "algo tranquilo que no se inunde en Comalcalco" no
+ * depende de que el título de alguna propiedad contenga esas palabras. Si la
+ * IA no está disponible, falla, o tarda demasiado, devuelve un objeto vacío
+ * — quien llama cae exactamente al comportamiento sin IA (coincidencia de
+ * texto literal vía `q`, que para una oración completa casi siempre da cero
+ * resultados — confirmado en vivo: una falla pasajera de red u OpenRouter en
+ * el momento exacto de la búsqueda deja a la persona viendo "sin resultados"
+ * sin ninguna pista de que en realidad fue la IA la que no respondió, no que
+ * su búsqueda esté mal).
  *
  * **Un reintento automático** (2026-08-07) antes de rendirse — una sola
  * llamada fallida tirando toda la búsqueda a texto literal es un costo
- * demasiado alto para algo tan transitorio como un timeout de red. No
- * reintenta si el servidor respondió `429` (límite de tasa) — eso no es
- * transitorio, reintentar de inmediato solo empeora el mismo límite.
+ * demasiado alto para algo tan transitorio como un timeout de red. El
+ * backend nunca responde `429` para esta ruta en particular (el límite de
+ * tasa cae a la heurística en vez de rechazar, ver resiliencia en §8) — el
+ * chequeo de `429` queda como defensa adicional por si eso cambia, pero en
+ * la práctica cualquier falla real aquí es transitoria (red, timeout).
  *
  * Compartido entre SearchBar.tsx (búsqueda desde Home, navega a resultados
  * nuevos) y PropertiesClient.tsx (búsqueda dentro de /propiedades, aplica
