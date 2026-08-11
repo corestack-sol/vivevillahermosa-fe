@@ -4,7 +4,6 @@ import { Users, FileWarning, FlagTriangleRight, Heart, Bell, CalendarDays, Wrenc
 import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { backendFetchServer } from '@/lib/backendApiServer';
-import { getBusquedaStats } from '@/lib/busquedaStats';
 
 interface MetricasBackend {
   usuarios: { total: number; bloqueados: number };
@@ -20,10 +19,21 @@ interface MetricasBackend {
 
 // GET /admin/metricas (BACKEND.md §16) ya viene del backend real — el único
 // dato que sigue local es "Servicios activos" (el módulo Servicios sigue en
-// pausa, §11) y el contador de IA de búsqueda (en memoria de este proceso,
-// /ia/* tampoco migró todavía, §8). Sin tile de "Admins activos" — el
-// backend no expone ese conteo en /admin/metricas y no vale la pena un
-// fetch aparte solo por esa cifra.
+// pausa, §11). Sin tile de "Admins activos" — el backend no expone ese
+// conteo en /admin/metricas y no vale la pena un fetch aparte solo por esa
+// cifra.
+//
+// 2026-08-11: la tarjeta "Buscador con IA" (cache hits, llamadas reales a
+// OpenRouter, horas pico) se quitó de aquí al migrar /ia/busqueda-inteligente
+// al backend nuevo — ese contador vivía en memoria de este mismo proceso
+// (src/lib/busquedaStats.ts, ya borrado) y solo se alimentaba de las
+// llamadas que pasaban por la ruta local de Next.js. Dejarla tal cual habría
+// mostrado cifras congeladas para siempre como si fueran reales — mismo
+// criterio que ya aplica en toda la plataforma (nunca un dato fabricado o
+// stale presentado como medido). BACKEND.md §8 documenta que esta
+// observabilidad (cache hits/heurística/porHora) queda pendiente de
+// reconstruir del lado del backend nuevo, como una decisión ya confirmada
+// con el usuario, no un olvido.
 async function getMetricas() {
   const [metricas, totalServicios] = await Promise.all([
     backendFetchServer<MetricasBackend>('/admin/metricas'),
@@ -55,8 +65,6 @@ export default async function AdminPage() {
     { icon: Cpu, label: 'OpenRouter (IA texto)', ok: m.integraciones.openRouter },
     { icon: Cpu, label: 'Gemini (IA foto)', ok: m.integraciones.gemini },
   ];
-
-  const busqueda = getBusquedaStats();
 
   return (
     <div>
@@ -98,69 +106,6 @@ export default async function AdminPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-5">
-        <p className="text-sm font-semibold text-gray-800 mb-1">Buscador con IA — desde que arrancó el servidor</p>
-        <p className="text-xs text-gray-400 mb-3">
-          Contador en memoria, se reinicia con cada despliegue — sirve para calibrar el límite de tasa global de{' '}
-          <code className="bg-gray-100 px-1 py-0.5 rounded">/ia/busqueda-inteligente</code> con tráfico real en vez de una suposición (ver docs/BACKEND.md §8).
-        </p>
-        {busqueda.total === 0 ? (
-          <p className="text-sm text-gray-400">Sin búsquedas todavía.</p>
-        ) : (
-          <div className="flex flex-wrap gap-6">
-            <div>
-              <p className="text-2xl font-display font-black text-gray-900">{busqueda.total}</p>
-              <p className="text-xs text-gray-500 mt-0.5">Búsquedas totales</p>
-            </div>
-            <div>
-              <p className="text-2xl font-display font-black text-emerald-600">{busqueda.tasaCacheHit}%</p>
-              <p className="text-xs text-gray-500 mt-0.5">Resueltas por caché ({busqueda.cacheHits})</p>
-            </div>
-            <div>
-              <p className="text-2xl font-display font-black text-brand">{busqueda.iaExitosa}</p>
-              <p className="text-xs text-gray-500 mt-0.5">Llamadas reales a OpenRouter</p>
-            </div>
-            <div>
-              <p className={`text-2xl font-display font-black ${busqueda.tasaDegradacion > 10 ? 'text-red-500' : 'text-amber-500'}`}>{busqueda.tasaDegradacion}%</p>
-              <p className="text-xs text-gray-500 mt-0.5">Degradadas a heurística ({busqueda.heuristicaRespaldo})</p>
-            </div>
-          </div>
-        )}
-
-        {busqueda.total > 0 && (
-          <div className="mt-6 pt-5 border-t border-gray-100">
-            <p className="text-sm font-semibold text-gray-800 mb-1">
-              Búsquedas por hora del día{busqueda.horaPico !== null && (
-                <span className="font-normal text-gray-500"> — hora pico: <strong className="text-brand">{String(busqueda.horaPico).padStart(2, '0')}:00</strong> (hora de Tabasco)</span>
-              )}
-            </p>
-            <p className="text-xs text-gray-400 mb-4">
-              El buscador de IA todavía es el único que corre contra este backend en Next.js (docs/BACKEND.md §8) — el resto de la plataforma, incluidas las propiedades de arriba, ya viene del backend separado.
-            </p>
-            <div className="flex items-end gap-1 h-32">
-              {busqueda.porHora.map((valor, hora) => {
-                const maxValor = Math.max(...busqueda.porHora, 1);
-                const esPico = valor > 0 && valor === maxValor;
-                return (
-                  <div key={hora} className="flex-1 flex flex-col items-center justify-end h-full" title={`${String(hora).padStart(2, '0')}:00 — ${valor} búsqueda${valor === 1 ? '' : 's'}`}>
-                    <div
-                      className={`w-full rounded-t ${esPico ? 'bg-brand' : valor > 0 ? 'bg-brand-pale' : 'bg-gray-100'}`}
-                      style={{ height: valor > 0 ? `${Math.max((valor / maxValor) * 100, 6)}%` : '2px' }}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex gap-1 mt-1.5">
-              {busqueda.porHora.map((_, hora) => (
-                <div key={hora} className="flex-1 text-center text-[9px] text-gray-400">
-                  {hora % 3 === 0 ? hora : ''}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

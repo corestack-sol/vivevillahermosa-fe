@@ -28,6 +28,19 @@
 
 ---
 
+## 📋 Registro de cambios de hoy (2026-08-11, continuación) — IA queda 100% migrada, busqueda-inteligente cerrada
+
+**Cierra el punto que el registro de más abajo (2026-08-11, primera parte) dejaba abierto: de las 5 rutas de `/ia/*`, `busqueda-inteligente` era la única que seguía 100% en Next.js** porque le faltaban 6 campos (`recamarasMax`, `amenidad`, `cercaDosoBocas`, `riesgoInundacion`, `sort`, `limite`) tanto en la heurística de respaldo como en el prompt real de OpenRouter del backend nuevo. Ya no es así.
+
+- **Backend** (`heuristica-busqueda.util.ts`, `busqueda-inteligente.service.ts`, `ia-results.interface.ts`): agregados los 6 campos, con las mismas reglas de desambiguación que ya usaba `src/lib/ai.ts` del frontend (recamarasMax es techo no mínimo, la heurística nunca infiere `riesgoInundacion` "alto"/"medio" solo "bajo" explícito, sort es orden no filtro, limite es tope explícito de resultados con cap de 50).
+  - **Bug real encontrado y corregido:** los triggers de precio `"maximo"`/`"minimo"` (de un fix anterior a este mismo módulo) colisionaban con el nuevo trigger de `recamarasMax` — `"departamento de maximo 2 recamaras"` devolvía `precioMax:2` fantasma además de `recamarasMax:2`. El frontend nunca tuvo este bug porque su heurística no usa "máximo"/"mínimo" como trigger de precio. Corregido excluyendo explícitamente cuando el número detectado es seguido de "recamaras"/"banos".
+- **Frontend:** `src/lib/interpretarBusqueda.ts` ahora llama a `backendFetch('/ia/busqueda-inteligente')` en vez de a la ruta local de Next.js. Borrados por completo: `src/app/api/ia/busqueda-inteligente/route.ts` (y con él, `src/app/api/ia/` queda vacío), `src/lib/ai.ts` (1538 líneas originales — sin más consumidores tras esto, confirmado por grep), `src/lib/busquedaCache.ts` y `src/lib/busquedaStats.ts`.
+- **Regresión honesta, no un descuido — tarjeta "Buscador con IA" quitada de `/admin`:** ese panel leía `busquedaStats.ts` (contador en memoria del propio proceso de Next.js), alimentado únicamente por las llamadas que pasaban por la ruta local ahora borrada. Dejarla tal cual habría mostrado cifras congeladas para siempre como si fueran datos reales — el mismo criterio que ya aplica en toda la plataforma (nunca un dato fabricado/stale presentado como medido, ver "Admins activos" en el registro de 2026-08-07). Esa observabilidad (cache hits, llamadas reales a OpenRouter, horas pico) queda pendiente de reconstruirse del lado del backend nuevo — ya era una decisión confirmada con el usuario antes de la fase del panel de administración (ver comentario en `admin-metricas.service.ts`), no algo que este cambio decida de nuevo.
+- **Con esto, todo lo que sigue 100% dentro de Next.js se reduce a: colonias descubiertas (§9.1/9.2/9.3, ranking por demanda/descripciones generadas/catálogo con ficha — ninguno construido todavía, con decisiones de producto abiertas) y servicios/** (§11, en pausa).** Todo lo demás — auth, propiedades (lectura+escritura), favoritos, alertas, citas, perfil de inmobiliaria, contacto/reportes, admin, y ahora las 5 rutas de IA completas — ya habla con el backend nuevo.
+- **No probado con un navegador real** (sin acceso a uno en este entorno) — verificado con `tsc`/`eslint` limpios en ambos repos y ~20 variantes de consulta contra el backend en vivo (curl, camino heurístico sin `OPENROUTER_API_KEY`). Recomendable un pase manual en `/` y `/propiedades` (SearchBar.tsx, PropertiesClient.tsx) antes de dar esto por cerrado en producción.
+
+---
+
 ## 📋 Registro de cambios de hoy (2026-08-07) — léelo si ya conocías este documento
 
 Todo lo de abajo ya está integrado en las secciones correspondientes (§2, §3, §4, §8, §11, §16) — esto es solo un resumen con links, para no tener que releer el documento entero buscando qué cambió desde la última vez. Si es tu primera vez leyendo este documento, ignora esta sección y ve directo al Índice.
