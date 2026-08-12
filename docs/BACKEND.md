@@ -28,6 +28,21 @@
 
 ---
 
+## 📋 Registro de cambios de hoy (2026-08-12) — §9.2 construido: descripciones de zona generadas contra datos verificados
+
+**Primera pieza de Colonias descubiertas (§9) que deja de ser "NUEVO, no existe hoy".** El texto de "Sobre la colonia/el municipio" en `/zonas/[slug]` (antes `zone.descripcion`/`municipality.descripcion`, estático en `zones.json`/`municipalities.json`) ahora se genera contra hechos verificados en cada carga, en vez de quedar escrito a mano y expuesto a desactualizarse o colar una afirmación sin respaldo (ver auditoría del 2026-08-06 referenciada en §9.2).
+
+- **Backend** (`POST /ia/descripcion-zona`, nuevo): recibe **solo hechos ya verificados** — nunca busca ni infiere nada por su cuenta. `IaService.descripcionZona()` sigue el mismo patrón que `generarAnuncio` (plantilla determinística sin IA cuando no hay `OPENROUTER_API_KEY` o la llamada falla, nunca inventa un dato que no vino en el input). Prompt real con prohibición explícita de superlativos, afirmaciones de demanda/plusvalía, y comparaciones entre zonas — mismas reglas que ya exige §9.2. `riesgoInundacion` se redacta siempre como hecho histórico documentado ("con historial de inundaciones"), nunca como predicción — misma redacción que `FLOOD_LABEL` (`src/lib/floodColors.ts` del frontend).
+- **Frontend** (`zonas/[slug]/page.tsx`): resuelve los hechos verificados del lado del servidor antes de llamar al backend —
+  - `landmarksCercanos`: hasta 3 landmarks reales más cercanos al centro de la zona (`src/lib/landmarks.ts`, `distanciaKm`, radio de 3km — nunca inventados).
+  - `totalPropiedades`/`precioPromedio*`: los mismos stats en vivo que ya calculaba `getZonesWithLiveStats`/`getMunicipalitiesWithLiveStats` (§3), no un dato nuevo.
+  - `riesgoInundacion`: **hallazgo importante al construir esto** — la plataforma sí tiene un dataset real y citado del Atlas de Riesgos (`src/lib/zonas-inundacion.ts`, "Atlas de Riesgos del Municipio de Centro, 2023", ~130 colonias con patrón de nombre → nivel), ya usado hoy para prellenar el campo del formulario de publicar. Es una fuente REAL distinta de `Property.riesgoInundacion` (autorreportado por quien publica, nunca verificado contra el Atlas por el backend). Solo se manda cuando `detectarRiesgoInundacion()` devuelve confianza `'confirmada'` (coincidencia exacta) — nunca `'probable'`, para no presentarle a un visitante una inferencia como si fuera un hecho documentado.
+  - Si la llamada al backend falla por cualquier razón, cae al texto estático editorial de `zones.json`/`municipalities.json` — mismo criterio de resiliencia que ya rige todo el módulo de IA.
+- **`generateMetadata` (meta `<description>` para SEO) sigue leyendo el campo estático** a propósito, no el generado — evita duplicar la llamada al backend en cada carga solo para el `<head>`, y el texto estático ya es honesto desde la corrección del 2026-08-06.
+- **Pendiente, no en el alcance de hoy:** §9.1 (ranking por demanda, requiere decidir antes la ventana de tiempo) y §9.3 (catálogo de municipios/colonias como tabla real en BD, hoy siguen siendo los JSON estáticos del frontend — este cambio no los reemplaza, solo genera el texto de descripción a partir de ellos).
+
+---
+
 ## 📋 Registro de cambios de hoy (2026-08-11, continuación) — IA queda 100% migrada, busqueda-inteligente cerrada
 
 **Cierra el punto que el registro de más abajo (2026-08-11, primera parte) dejaba abierto: de las 5 rutas de `/ia/*`, `busqueda-inteligente` era la única que seguía 100% en Next.js** porque le faltaban 6 campos (`recamarasMax`, `amenidad`, `cercaDosoBocas`, `riesgoInundacion`, `sort`, `limite`) tanto en la heurística de respaldo como en el prompt real de OpenRouter del backend nuevo. Ya no es así.
