@@ -28,6 +28,29 @@
 
 ---
 
+## 📋 Registro de cambios de hoy (2026-08-12, continuación) — §9.1 construido: ranking de colonias por demanda real
+
+Segunda pieza de Colonias descubiertas (§9). `/zonas` y el Home ya no ordenan sus tarjetas de "colonias" por OFERTA (cuántas propiedades tiene) sino por DEMANDA real — la llama y el orden de tarjetas reflejan búsquedas + vistas + contactos reales, no solo inventario.
+
+**Decisiones de producto confirmadas con el usuario antes de construir esto:**
+- Ventana de tiempo: **7 días corridos** (no 24h) — a esta escala de tráfico, una ventana de un día es demasiado ruidosa (una sola persona navegando varias páginas puede dominar el ranking de todo un día).
+- §9.3 (catálogo con ficha en BD) queda explícitamente FUERA de este cambio — se mantiene la distinción actual entre colonias curadas (con ficha) y descubiertas (sin ficha), no se promueve ninguna automáticamente. Ver nota al final.
+
+**Backend:**
+- `SolicitudColonia` (modelo nuevo, `prisma/schema.prisma`) + enum `TipoSolicitudColonia` (`busqueda`/`vista_propiedad`/`contacto`) — un evento por cada vez que se resuelve una colonia real. Se instrumentaron los 3 puntos exactos que pedía §9.1:
+  1. `IaController.busquedaInteligente` — después de `interpretar()`, si el resultado trae `colonia` (un solo punto, sin importar si vino de heurística/caché/IA real).
+  2. `PropertiesService.findOne` (`GET /propiedades/:id`) — excluyendo al propio dueño viendo su anuncio.
+  3. `PropertiesService.obtenerContacto` (`GET /propiedades/:id/contacto`) — misma exclusión de dueño; verificado en vivo que un intento sin sesión (401) no registra nada.
+  - **Por qué se excluye al dueño:** un dueño revisando/refrescando su propio anuncio no es demanda real — dejarlo contar habría permitido inflar el ranking de la propia colonia a voluntad.
+- `GET /colonias/tendencia` (nuevo, `ColoniasTendenciaService`) — ranking completo (no solo top 9, el frontend decide cuántas tarjetas mostrar) agrupado por `coloniaKey` normalizado (sin acentos/mayúsculas), con la etiqueta de display más reciente por grupo. `Cache-Control: max-age=120` (más corto que "descubiertas": este dato cambia seguido).
+- **Bug real evitado en el camino:** los triggers de precio "hasta/desde/máximo/mínimo" de `busqueda-inteligente` NO interfieren aquí — el tracking lee `filtros.colonia` del resultado ya sanitizado, no reinterpreta el texto.
+
+**Frontend (`src/lib/api.ts`):** `getColoniasOrdenadasPorDemanda()` — mismos datos de tarjeta que `getColoniasRankedByPropiedades` (oferta), reordenados por demanda cuando existe al menos un evento real; `sort` estable garantiza que sin datos de demanda el orden es EXACTAMENTE el de oferta, sin rama especial. Expone `porDemanda: boolean` para que `/zonas` y el Home nunca digan "más solicitadas" cuando en realidad están mostrando el respaldo por oferta (mismo criterio de honestidad de siempre) — el heading y el tooltip de la llama cambian de texto según ese flag. **Los dos requisitos exactos de §9.1 verificados en vivo:** la llama solo aparece en la colonia que empata en el TOP del ranking de demanda (nunca las 9 de la tarjeta — probado: exactamente 1 coincidencia), y tanto `/zonas` como el Home apuntan a la misma fuente (`getColoniasOrdenadasPorDemanda`), sin un segundo catálogo que sincronizar a mano.
+
+**Nota sobre §9.3 (no construido hoy, a propósito):** con §9.1 ya real, sí sería técnicamente posible usar el ranking de demanda como disparador para que un admin promueva una colonia descubierta a ficha completa — pero eso es §9.3, que el usuario decidió dejar con la distinción actual (curadas vs. descubiertas) por dos bloqueadores reales: no hay foto real para una colonia descubierta (se crean solas vía geocodificación, nadie cura una imagen), y auto-generar fichas sin control de calidad arriesga páginas delgadas de bajo valor. Si se retoma, sería una fase aparte con su propio flujo de admin, no un efecto automático de este cambio.
+
+---
+
 ## 📋 Registro de cambios de hoy (2026-08-12) — §9.2 construido: descripciones de zona generadas contra datos verificados
 
 **Primera pieza de Colonias descubiertas (§9) que deja de ser "NUEVO, no existe hoy".** El texto de "Sobre la colonia/el municipio" en `/zonas/[slug]` (antes `zone.descripcion`/`municipality.descripcion`, estático en `zones.json`/`municipalities.json`) ahora se genera contra hechos verificados en cada carga, en vez de quedar escrito a mano y expuesto a desactualizarse o colar una afirmación sin respaldo (ver auditoría del 2026-08-06 referenciada en §9.2).

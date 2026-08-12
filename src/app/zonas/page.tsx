@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { MapPin, ChevronRight, Zap, Building2, Map as MapIcon, Flame } from 'lucide-react';
-import { getMunicipalitiesWithLiveStats, getColoniasRankedByPropiedades } from '@/lib/api';
+import { getMunicipalitiesWithLiveStats, getColoniasOrdenadasPorDemanda } from '@/lib/api';
 import { formatPrice } from '@/lib/format';
 import { ExploreZonasCta } from '@/components/search/ExploreZonasCta';
 
@@ -15,27 +15,21 @@ export const metadata: Metadata = {
 
 export default async function ZonasPage() {
   const municipalities = await getMunicipalitiesWithLiveStats();
-  // Ordenadas por cantidad real de propiedades, tengan o no ficha editorial
-  // — las primeras MAX_CARDS se ven como tarjeta grande, el resto como chip.
-  // El orden se recalcula solo según crece el catálogo (ver lib/api.ts).
-  const coloniasRanked = await getColoniasRankedByPropiedades();
+  // BACKEND.md §9.1 — ordenadas por DEMANDA real (búsquedas + vistas +
+  // contactos de los últimos 7 días) cuando ya hay algún evento registrado;
+  // si todavía no hay ninguno (plataforma recién desplegada, o falló la
+  // llamada al backend), `getColoniasOrdenadasPorDemanda` cae honestamente
+  // al mismo orden por OFERTA de siempre — `porDemanda` dice cuál de los dos
+  // casos es, así el texto de abajo nunca afirma una demanda que en
+  // realidad no está midiendo. Las primeras MAX_CARDS se ven como tarjeta
+  // grande, el resto como chip.
+  const { colonias: coloniasRanked, porDemanda, esLaMasSolicitada } = await getColoniasOrdenadasPorDemanda();
   const coloniasCards = coloniasRanked.slice(0, MAX_CARDS);
   const coloniasChips = coloniasRanked.slice(MAX_CARDS);
-  // Solo se marca "con más propiedades" cuando de verdad se despega del
-  // resto (no cuando todas empatan en 1 propiedad) — evita que la llama
-  // pierda significado si el catálogo apenas empieza.
-  //
-  // ⚠️ BACKEND (docs/BACKEND.md §9): esto mide OFERTA (cuántas propiedades
-  // activas tiene la colonia), no DEMANDA — no hay ningún rastreo real de
-  // búsquedas/vistas/contactos por colonia en la plataforma hoy (verificado:
-  // cero modelos de eventos en prisma/schema.prisma, cero analytics en
-  // layout.tsx). Es dinámico y honesto para lo que mide, pero NO es lo mismo
-  // que "colonia más solicitada ahora mismo" — a propósito no se fabricó esa
-  // señal aquí: mostrarle a un visitante real un ícono de "tendencia" con un
-  // número inventado sería el mismo problema que ya evitó el ranking público
-  // de inmobiliarias (ver docs/plan-inmobiliarias.md). Cuando exista el
-  // endpoint real de tendencia (§9), reemplazar `coloniasRanked` por ese
-  // dato y el título del tooltip de abajo vuelve a decir "más solicitada".
+  // Respaldo por oferta (cuando porDemanda es false): solo se marca "con más
+  // propiedades" cuando de verdad se despega del resto (no cuando todas
+  // empatan en 1 propiedad) — evita que la llama pierda significado si el
+  // catálogo apenas empieza.
   const maxPropiedades = coloniasCards[0]?.propiedades ?? 0;
 
   return (
@@ -56,12 +50,14 @@ export default async function ZonasPage() {
           MAX_CARDS se ven en grande, el resto como chip. ── */}
       <section className="mb-10">
         <h2 className="text-xl font-heading font-bold text-gray-900 mb-5">
-          Colonias con más propiedades
+          {porDemanda ? 'Colonias más solicitadas' : 'Colonias con más propiedades'}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {coloniasCards.map((colonia) => {
             const href = colonia.slug ? `/zonas/${colonia.slug}` : `/propiedades?q=${encodeURIComponent(colonia.nombre)}`;
-            const conMasPropiedades = maxPropiedades > 1 && colonia.propiedades === maxPropiedades;
+            const conMasPropiedades = porDemanda
+              ? esLaMasSolicitada(colonia.nombre)
+              : maxPropiedades > 1 && colonia.propiedades === maxPropiedades;
             return (
               <Link
                 key={colonia.nombre}
@@ -80,7 +76,7 @@ export default async function ZonasPage() {
                       <MapPin size={10} /> {colonia.municipio === 'Centro' ? 'Villahermosa' : colonia.municipio}
                     </span>
                     {conMasPropiedades && (
-                      <span title="La colonia con más propiedades publicadas ahora mismo" className="flex-shrink-0">
+                      <span title={porDemanda ? 'La colonia más solicitada ahora mismo' : 'La colonia con más propiedades publicadas ahora mismo'} className="flex-shrink-0">
                         <Flame size={18} className="text-amber-400" strokeWidth={2} />
                       </span>
                     )}
