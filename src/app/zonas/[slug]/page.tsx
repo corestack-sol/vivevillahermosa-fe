@@ -7,6 +7,72 @@ import { buildZoneMetadata } from '@/lib/seo';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { MapViewDynamic } from '@/components/map/MapViewDynamic';
 import { formatPrice } from '@/lib/format';
+import { LANDMARKS, distanciaKm } from '@/lib/landmarks';
+import { detectarRiesgoInundacion } from '@/lib/zonas-inundacion';
+import { backendFetchServer } from '@/lib/backendApiServer';
+import type { Zone, Municipality } from '@/types/zone';
+
+// Radio generoso para "cerca de la zona" (el centro de una colonia/municipio
+// está más lejos de un landmark que una propiedad puntual dentro de ella) —
+// no confundir con `radioKm` de cada Landmark, que es para "cerca de la
+// propiedad" (BACKEND.md §9.2 solo pide landmarks REALES cercanos, nunca
+// inventados; este radio decide cuáles cuentan como "cercanos" a nivel zona).
+const RADIO_LANDMARKS_ZONA_KM = 3;
+
+/** Hasta 3 landmarks reales más cercanos al centro de la zona, ordenados por distancia — nunca inventados. */
+function landmarksCercaDeZona(lat: number, lng: number): string[] {
+  return LANDMARKS
+    .map((l) => ({ label: l.label, distancia: distanciaKm(lat, lng, l.lat, l.lng) }))
+    .filter((l) => l.distancia <= RADIO_LANDMARKS_ZONA_KM)
+    .sort((a, b) => a.distancia - b.distancia)
+    .slice(0, 3)
+    .map((l) => l.label);
+}
+
+/**
+ * BACKEND.md §9.2 — genera la descripción contra datos verificados
+ * (landmarks reales, stats en vivo, Atlas de Riesgos vía
+ * `detectarRiesgoInundacion`); si la llamada falla por cualquier razón, cae
+ * al texto estático editorial (zones.json/municipalities.json) en vez de
+ * dejar la sección vacía — mismo criterio de resiliencia que ya aplica en
+ * todo el módulo de IA.
+ */
+async function resolverDescripcion(zone: Zone | undefined, municipality: Municipality | undefined): Promise<string> {
+  const estatica = (zone?.descripcion ?? municipality?.descripcion) ?? '';
+  try {
+    const riesgo = zone
+      ? detectarRiesgoInundacion(zone.nombre, zone.municipio)
+      : null;
+    const body = zone
+      ? {
+          nombre: zone.nombre,
+          tipo: 'colonia' as const,
+          municipio: zone.municipio,
+          landmarksCercanos: landmarksCercaDeZona(zone.lat, zone.lng),
+          totalPropiedades: zone.propiedades,
+          precioPromedioVenta: zone.precioPromedioVenta > 0 ? zone.precioPromedioVenta : undefined,
+          precioPromedioRenta: zone.precioPromedioRenta > 0 ? zone.precioPromedioRenta : undefined,
+          riesgoInundacion: riesgo?.confianza === 'confirmada' ? riesgo.riesgo : undefined,
+        }
+      : {
+          // "Centro (Villahermosa)" en prosa suena a un paréntesis suelto —
+          // mismo criterio que ya usa el resto de esta página (ver los
+          // `href` de abajo) para el caso especial de este único municipio.
+          nombre: municipality!.nombre.replace(' (Villahermosa)', ''),
+          tipo: 'municipio' as const,
+          landmarksCercanos: landmarksCercaDeZona(municipality!.lat, municipality!.lng),
+          totalPropiedades: municipality!.propiedades,
+          cercaDosoBocas: municipality!.cercaDosoBocas,
+        };
+    const { descripcion } = await backendFetchServer<{ descripcion: string }>('/ia/descripcion-zona', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    return descripcion || estatica;
+  } catch {
+    return estatica;
+  }
+}
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -71,7 +137,7 @@ export default async function ZonaDetailPage({ params }: Props) {
   }));
 
   const name = zone?.nombre ?? municipality!.nombre;
-  const description = zone?.descripcion ?? municipality!.descripcion;
+  const description = await resolverDescripcion(zone, municipality);
   const lat = zone?.lat ?? municipality!.lat;
   const lng = zone?.lng ?? municipality!.lng;
   const isMunicipality = !!municipality;
