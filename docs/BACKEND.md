@@ -28,6 +28,20 @@
 
 ---
 
+## 📋 Registro de cambios de hoy (2026-08-12, QA con navegador real) — bug real de CSP encontrado y corregido
+
+**El pase manual con navegador que quedó pendiente el 2026-08-11 ("no probado con un navegador real") se hizo hoy — y encontró un bug real que ningún test anterior podía haber detectado.**
+
+`next.config.ts` trae una `Content-Security-Policy` (`connect-src 'self' https://accounts.google.com https://graph.facebook.com`) agregada en la auditoría de seguridad del 2026-08-06/07, **antes** de que existiera el backend nuevo — nunca se actualizó cuando empezó el corte. Resultado: **todo fetch hecho desde el navegador** (no desde un Server Component) hacia `NEXT_PUBLIC_API_URL` quedaba bloqueado en silencio por el propio navegador — `AuthContext` (`/auth/me`), el buscador con IA (`/ia/busqueda-inteligente`, `SearchBar.tsx`), y el listado de propiedades del lado del cliente (`PropertiesClient.tsx`, `?all=true`). Verificado en vivo: antes del fix, escribir una búsqueda y presionar Enter no aplicaba ningún filtro (el fetch nunca salía); después del fix, la misma búsqueda navega correctamente con los filtros reales interpretados por la IA (`/propiedades?tipo=casa&operacion=renta&amenidad=alberca&zona=tabasco-2000`, etc.).
+
+**Por qué nadie lo había visto antes:** cada verificación previa de este corte (§2 auth, §3 propiedades, §8 IA, §9.1 colonias) se hizo con `curl` contra el backend directo, o leyendo el resultado de Server Components (`backendFetchServer`) — ninguno de los dos pasa por el CSP del navegador, que solo se aplica a `fetch`/`XHR` disparado por JavaScript del lado del cliente. Es exactamente el tipo de gap que un pase con navegador real detecta y los demás métodos no.
+
+**Fix:** `backendOrigin` (derivado de `NEXT_PUBLIC_API_URL` con `new URL(...).origin`) agregado a `connect-src` en `next.config.ts` — dinámico, no hardcodeado, así sigue funcionando cuando el backend tenga un dominio real de producción.
+
+**Otros hallazgos del pase, no corregidos hoy (no bloquean, no son regresión de este corte):** un warning de hydration mismatch en el link "Iniciar sesión" de `Navbar.tsx` (el server renderiza el link sin `onClick`/`ref`, el cliente lo re-renderiza con esos handlers una vez `AuthContext` resuelve la sesión) — es el patrón típico de auth resuelto client-side, no algo nuevo de esta sesión; queda para revisar aparte si se decide.
+
+---
+
 ## 📋 Registro de cambios de hoy (2026-08-12, continuación) — §9.1 construido: ranking de colonias por demanda real
 
 Segunda pieza de Colonias descubiertas (§9). `/zonas` y el Home ya no ordenan sus tarjetas de "colonias" por OFERTA (cuántas propiedades tiene) sino por DEMANDA real — la llama y el orden de tarjetas reflejan búsquedas + vistas + contactos reales, no solo inventario.
