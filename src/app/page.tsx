@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { SearchBar } from '@/components/search/SearchBar';
 import { ClickableMap } from '@/components/map/ClickableMap';
-import { getFeaturedProperties, getAllProperties, getColoniasRankedByPropiedades, getStats } from '@/lib/api';
+import { getFeaturedProperties, getAllProperties, getColoniasOrdenadasPorDemanda, getStats } from '@/lib/api';
 import { buttonClasses } from '@/components/ui/Button';
 import { RecentlyViewedSection } from '@/components/property/RecentlyViewedSection';
 import { PropertyCard } from '@/components/property/PropertyCard';
@@ -72,16 +72,17 @@ const FEATURES = [
 
 export default async function HomePage() {
   const featured = await getFeaturedProperties();
-  // getColoniasRankedByPropiedades (no getFeaturedZones/`destacada`) — misma
-  // fuente que ya usa /zonas para sus tarjetas grandes: ranking real por
-  // cantidad de propiedades activas, no una curación manual. Antes esta
-  // sección mostraba las colonias marcadas `destacada:true` a mano en
-  // zones.json, sin ninguna señal real detrás de esa selección — mismo
-  // problema que ya se había corregido en /zonas (ver el comentario de esa
-  // función en api.ts). Pedido explícito (2026-08-09): nada en la
-  // plataforma debe quedarse en datos sueltos/editoriales si ya existe una
-  // fuente real que se pueda usar en su lugar.
-  const zones = (await getColoniasRankedByPropiedades()).slice(0, 4);
+  // getColoniasOrdenadasPorDemanda (no getFeaturedZones/`destacada`) — misma
+  // fuente que ya usa /zonas para sus tarjetas grandes: por DEMANDA real
+  // (BACKEND.md §9.1) cuando ya hay algún evento registrado, con respaldo
+  // honesto a oferta si no. Antes esta sección mostraba las colonias
+  // marcadas `destacada:true` a mano en zones.json, sin ninguna señal real
+  // detrás de esa selección — mismo problema que ya se había corregido en
+  // /zonas. Pedido explícito (2026-08-09): nada en la plataforma debe
+  // quedarse en datos sueltos/editoriales si ya existe una fuente real que
+  // se pueda usar en su lugar.
+  const { colonias: coloniasPorDemanda, porDemanda } = await getColoniasOrdenadasPorDemanda();
+  const zones = coloniasPorDemanda.slice(0, 4);
   const stats = await getStats();
 
   // getAllProperties (no `featured`) — pedido explícito (2026-08-09): el
@@ -334,19 +335,19 @@ export default async function HomePage() {
         <div className="flex items-end justify-between mb-7">
           <div>
             {/* "Las más buscadas"/"Zonas populares" afirmaban una demanda
-                que nadie mide, y luego "Selección del equipo" (aquí)
+                que nadie medía, y luego "Selección del equipo" (aquí)
                 afirmaba una curación editorial que tampoco era real: en
                 ambos casos, no había ningún dato detrás de la elección.
-                Corregido igual que /zonas (ver getColoniasRankedByPropiedades
-                en api.ts): ranking real por propiedades activas, la misma
-                fuente que usa /zonas para sus tarjetas grandes — ya no hay
-                una selección aparte que mantener sincronizada a mano. Sigue
-                siendo por OFERTA, no por demanda (búsquedas/vistas/
-                contactos) — ver docs/BACKEND.md §9.1 para el endpoint real
-                de demanda; en cuanto exista, tanto esta sección como /zonas
-                lo consumen igual, sin volver a fabricar el dato. */}
+                Corregido igual que /zonas (ver getColoniasOrdenadasPorDemanda
+                en api.ts): por DEMANDA real (BACKEND.md §9.1) cuando ya hay
+                algún evento registrado, con el mismo respaldo honesto a
+                oferta que usa /zonas si todavía no hay ninguno — misma
+                fuente que /zonas para sus tarjetas grandes, no hay una
+                selección aparte que mantener sincronizada a mano. */}
             <p className="text-xs font-bold text-brand uppercase tracking-[0.15em] mb-1.5">Datos en tiempo real</p>
-            <h2 className="text-3xl font-display font-black text-gray-900 leading-tight">Colonias con más propiedades</h2>
+            <h2 className="text-3xl font-display font-black text-gray-900 leading-tight">
+              {porDemanda ? 'Colonias más solicitadas' : 'Colonias con más propiedades'}
+            </h2>
           </div>
           <Link href="/zonas" className="flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-dark group">
             Ver todas <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />

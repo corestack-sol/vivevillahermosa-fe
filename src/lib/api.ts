@@ -251,8 +251,9 @@ export interface ColoniaCard {
 /**
  * Todas las colonias con propiedades reales — tengan o no ficha editorial
  * en zones.json —, ordenadas de mayor a menor por cantidad de propiedades.
- * Ranking por OFERTA (cuántas propiedades activas tiene la colonia), no por
- * DEMANDA — ver docs/BACKEND.md §9.1.
+ * Ranking por OFERTA (cuántas propiedades activas tiene la colonia) — para
+ * DEMANDA (búsquedas/vistas/contactos reales), ver
+ * `getColoniasOrdenadasPorDemanda` más abajo (BACKEND.md §9.1).
  */
 export async function getColoniasRankedByPropiedades(): Promise<ColoniaCard[]> {
   const all = await getAllProperties();
@@ -283,6 +284,83 @@ export async function getColoniasRankedByPropiedades(): Promise<ColoniaCard[]> {
   });
 
   return cards.sort((a, b) => b.propiedades - a.propiedades || a.nombre.localeCompare(b.nombre, 'es'));
+}
+
+interface ColoniaTendencia {
+  colonia: string;
+  municipio: string | null;
+  total: number;
+}
+
+function normalizarNombreParaTendencia(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+/** GET /colonias/tendencia (BACKEND.md §9.1) — si falla, un arreglo vacío hace que getColoniasOrdenadasPorDemanda caiga honestamente a oferta. */
+async function obtenerTendenciaColonias(): Promise<ColoniaTendencia[]> {
+  try {
+    return await backendFetch<ColoniaTendencia[]>('/colonias/tendencia');
+  } catch {
+    return [];
+  }
+}
+
+export interface ColoniasOrdenadasPorDemanda {
+  colonias: ColoniaCard[];
+  /**
+   * false cuando todavía no hay ningún evento real de demanda (plataforma
+   * recién desplegada, o falló la llamada al backend) — en ese caso
+   * `colonias` cae a la misma lista/orden de `getColoniasRankedByPropiedades`
+   * (por oferta) y `esLaMasSolicitada` siempre da false. Quien consuma esto
+   * debe usar este flag para decidir qué texto mostrar ("más solicitadas"
+   * vs. "con más propiedades") — nunca afirmar demanda real cuando en
+   * realidad se está mostrando el respaldo por oferta.
+   */
+  porDemanda: boolean;
+  /** true solo para la(s) colonia(s) que empatan en el TOP del ranking de demanda (BACKEND.md §9.1) — nunca las 9 de la tarjeta. */
+  esLaMasSolicitada(nombre: string): boolean;
+}
+
+/**
+ * BACKEND.md §9.1 — mismo catálogo/datos de tarjeta que
+ * `getColoniasRankedByPropiedades` (descripción, precio promedio, conteo),
+ * pero reordenado por DEMANDA real (búsquedas con IA + vistas + contactos de
+ * los últimos 7 días, ver /ia/busqueda-inteligente y
+ * /propiedades/:id(/contacto) del backend) en vez de por oferta. `sort` es
+ * estable (garantizado desde ES2019): cuando `porDemanda` es false, el orden
+ * resultante es exactamente el de `getColoniasRankedByPropiedades`, sin
+ * ninguna rama especial.
+ */
+export async function getColoniasOrdenadasPorDemanda(): Promise<ColoniasOrdenadasPorDemanda> {
+  const [coloniasRanked, tendencia] = await Promise.all([
+    getColoniasRankedByPropiedades(),
+    obtenerTendenciaColonias(),
+  ]);
+
+  const maxTendencia = tendencia.reduce((max, t) => Math.max(max, t.total), 0);
+  if (maxTendencia === 0) {
+    return {
+      colonias: coloniasRanked,
+      porDemanda: false,
+      esLaMasSolicitada: () => false,
+    };
+  }
+
+  const totalPorColonia = new Map(
+    tendencia.map((t) => [normalizarNombreParaTendencia(t.colonia), t.total]),
+  );
+  const colonias = [...coloniasRanked].sort(
+    (a, b) =>
+      (totalPorColonia.get(normalizarNombreParaTendencia(b.nombre)) ?? 0) -
+      (totalPorColonia.get(normalizarNombreParaTendencia(a.nombre)) ?? 0),
+  );
+
+  return {
+    colonias,
+    porDemanda: true,
+    esLaMasSolicitada: (nombre: string) =>
+      (totalPorColonia.get(normalizarNombreParaTendencia(nombre)) ?? 0) === maxTendencia,
+  };
 }
 
 export function getAllAgents(): Agent[] {
