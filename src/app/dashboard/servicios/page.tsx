@@ -6,6 +6,7 @@ import { ArrowLeft, Plus, Eye, Trash2, Play, Pause, Loader2, Wrench, Link2, Chec
 import { categoriaServicioLabel } from '@/lib/publishServicioSchema';
 import { buttonClasses } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
+import { backendFetch } from '@/lib/backendApi';
 
 interface MiServicio {
   id: string;
@@ -24,7 +25,7 @@ interface MiServicio {
 // que usePerfilInmobiliaria.ts, no una función async llamada directo
 // dentro del cuerpo del efecto.
 function fetchMisServicios(): Promise<MiServicio[]> {
-  return fetch('/api/servicios/mios').then((r) => (r.ok ? r.json() : []));
+  return backendFetch<MiServicio[]>('/servicios/mios').catch(() => []);
 }
 
 /**
@@ -56,11 +57,10 @@ export default function MisServiciosPage() {
 
   async function togglePausa(id: string, activo: boolean) {
     setOcupado(id);
-    await fetch(`/api/servicios/${id}`, {
+    await backendFetch(`/servicios/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ activo: !activo }),
-    });
+    }).catch(() => {});
     setItems(await fetchMisServicios());
     setOcupado(null);
   }
@@ -68,7 +68,7 @@ export default function MisServiciosPage() {
   async function eliminar(id: string) {
     if (!confirm('¿Eliminar este servicio? No se puede deshacer.')) return;
     setOcupado(id);
-    await fetch(`/api/servicios/${id}`, { method: 'DELETE' });
+    await backendFetch(`/servicios/${id}`, { method: 'DELETE' }).catch(() => {});
     setItems(await fetchMisServicios());
     setOcupado(null);
   }

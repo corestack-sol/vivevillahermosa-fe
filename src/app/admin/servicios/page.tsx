@@ -5,6 +5,7 @@ import { Loader2, CheckCircle2, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { formatRelativeDate } from '@/lib/format';
+import { backendFetch } from '@/lib/backendApi';
 
 interface Servicio {
   id: string;
@@ -25,9 +26,8 @@ export default function AdminServiciosPage() {
 
   const cargar = useCallback(async () => {
     setLoading(true);
-    const res = await fetch('/api/admin/servicios', { cache: 'no-store' });
-    const data = await res.json();
-    setServicios(data.servicios ?? []);
+    const servicios = await backendFetch<Servicio[]>('/admin/servicios');
+    setServicios(servicios ?? []);
     setLoading(false);
   }, []);
 
@@ -36,11 +36,10 @@ export default function AdminServiciosPage() {
   async function toggle() {
     if (!confirmar) return;
     setEnviando(true);
-    await fetch(`/api/admin/servicios/${confirmar.id}`, {
+    await backendFetch(`/admin/servicios/${confirmar.id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ activo: !confirmar.activo }),
-    });
+    }).catch(() => {});
     setEnviando(false);
     setConfirmar(null);
     cargar();

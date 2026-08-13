@@ -3,16 +3,9 @@
 import Link from 'next/link';
 import { MapPin, Wrench, Paintbrush, Truck, Hammer, Zap, Sprout, Sparkles, Ruler, KeyRound, Bug, Wind } from 'lucide-react';
 import { categoriaServicioLabel } from '@/lib/publishServicioSchema';
+import type { ServicioPublico } from '@/lib/api';
 
-export interface ServicioPublico {
-  id: string;
-  categoria: string;
-  nombre: string;
-  descripcion: string;
-  municipio: string;
-  colonia: string | null;
-  fotoDataUrl: string | null;
-}
+export type { ServicioPublico };
 
 const ICONO_CATEGORIA: Record<string, typeof Wrench> = {
   plomeria: Wrench,

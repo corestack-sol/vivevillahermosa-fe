@@ -27,7 +27,15 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
-      `connect-src 'self' ${backendOrigin} https://accounts.google.com https://graph.facebook.com`.trim(),
+      // `data:` en connect-src — PublishForm.tsx (propiedades) y el
+      // portafolio de servicios convierten su preview (data URI) a Blob
+      // vía `fetch(dataUrl).then(r => r.blob())` antes de subirlo; Chromium
+      // trata ese fetch como una conexión de red sujeta a connect-src igual
+      // que cualquier otro origen, aunque el contenido nunca sale del
+      // navegador. Sin esto, ninguna subida de foto llega a completarse
+      // (bloqueada en silencio). Detectado en QA manual con navegador real,
+      // 2026-08-12/13.
+      `connect-src 'self' data: ${backendOrigin} https://accounts.google.com https://graph.facebook.com`.trim(),
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

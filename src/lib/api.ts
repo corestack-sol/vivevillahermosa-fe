@@ -418,3 +418,44 @@ export async function getPriceContext(property: Property): Promise<PriceContext>
     m2Ref,
   };
 }
+
+// BACKEND.md §11 — directorio de servicios, migrado al backend nuevo
+// (GET /servicios público, sin datos de contacto — ver ServiceContactCard.tsx
+// para el revelado con sesión).
+export interface ServicioPublico {
+  id: string;
+  categoria: string;
+  nombre: string;
+  descripcion: string;
+  municipio: string;
+  colonia: string | null;
+  foto: string | null;
+  createdAt: string;
+}
+
+export interface TrabajoServicio {
+  id: string;
+  imagen: string;
+  descripcion: string | null;
+  createdAt: string;
+}
+
+export async function getAllServicios(): Promise<ServicioPublico[]> {
+  return backendFetch<ServicioPublico[]>('/servicios');
+}
+
+export async function getServicioById(id: string): Promise<ServicioPublico | undefined> {
+  try {
+    return await backendFetch<ServicioPublico>(`/servicios/${encodeURIComponent(id)}`);
+  } catch {
+    return undefined;
+  }
+}
+
+export async function getTrabajosServicio(id: string): Promise<TrabajoServicio[]> {
+  try {
+    return await backendFetch<TrabajoServicio[]>(`/servicios/${encodeURIComponent(id)}/trabajos`);
+  } catch {
+    return [];
+  }
+}
