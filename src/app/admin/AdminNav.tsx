@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShieldCheck, LayoutDashboard, Users, FileWarning, FlagTriangleRight, ShieldAlert, Wrench, ScrollText } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, Users, FileWarning, FlagTriangleRight, ShieldAlert, Wrench, ScrollText, MapPin } from 'lucide-react';
 
 const LINKS = [
   { href: '/admin', icon: LayoutDashboard, label: 'Métricas', exact: true },
@@ -11,6 +11,7 @@ const LINKS = [
   { href: '/admin/reportes', icon: FlagTriangleRight, label: 'Reportes' },
   { href: '/admin/intentos-sospechosos', icon: ShieldAlert, label: 'Intentos sospechosos' },
   { href: '/admin/servicios', icon: Wrench, label: 'Servicios' },
+  { href: '/admin/zonas', icon: MapPin, label: 'Colonias con ficha' },
   { href: '/admin/auditoria', icon: ScrollText, label: 'Auditoría' },
 ];
 
