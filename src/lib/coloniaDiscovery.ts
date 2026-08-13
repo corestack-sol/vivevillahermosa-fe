@@ -6,7 +6,7 @@ import { MUNICIPIO_OPTIONS } from './publishSchema';
 /**
  * Descubrimiento automático de colonias — SOLO server-side (usa Prisma).
  * Nunca importar esto desde un componente cliente; para eso está
- * `src/app/api/colonias/descubiertas/route.ts` + el caché del lado del
+ * `GET /colonias/descubiertas` del backend + el caché del lado del
  * cliente en `colonias.ts`.
  *
  * Deliberadamente NO le pregunta al modelo de lenguaje dónde está una
