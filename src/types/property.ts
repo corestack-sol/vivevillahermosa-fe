@@ -41,6 +41,10 @@ export interface PropertyAgent {
   foto: string;
   whatsapp?: string;
   verificado?: boolean;
+  // true si la cuenta dueña de esta propiedad está bloqueada por uso
+  // indebido repetido del buscador con IA (docs/BACKEND.md §8) — viene
+  // directo del backend, calculado sobre la relación real Property.userId.
+  enRevision?: boolean;
 }
 
 export interface Property {
@@ -83,22 +87,6 @@ export interface Property {
   featured: boolean;
   alertaFraude?: AlertaFraude;
   agente: PropertyAgent;
-  /**
-   * Correo de la cuenta que publicó — NUNCA se muestra públicamente (no
-   * confundir con `agente.email`, que sí es público y respeta la elección
-   * de `metodoContacto` del publicador, incluso pudiendo estar vacío si
-   * eligió solo teléfono). Este es un canal interno de la plataforma para
-   * avisarle "alguien quiere contactarte" (ver
-   * `POST /api/propiedades/[id]/contactar`) sin depender de qué eligió
-   * mostrar públicamente ni de tener panel/rol de inmobiliaria — funciona
-   * igual para un particular que para una agencia, porque toda cuenta
-   * registrada tiene un correo por definición.
-   *
-   * ⚠️ BACKEND: hoy `PublishForm.tsx` lo llena con `user.email` de la sesión
-   * activa. Las propiedades de muestra (`src/data/properties.json`) no lo
-   * tienen — el endpoint de contacto cae a `agente.email` si este falta.
-   */
-  emailCuenta?: string;
   /**
    * Por defecto (false/undefined) el contacto es INSTANTÁNEO para
    * cualquier usuario con sesión iniciada — tel/whatsapp/correo se

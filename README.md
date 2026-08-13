@@ -4,13 +4,11 @@ Portal inmobiliario para Tabasco, México (Villahermosa y los 17 municipios del 
 
 ## Stack
 
-- **Next.js 16** (App Router) + **TypeScript** + **Tailwind CSS v4**
-- **Prisma** + SQLite (dev) — Postgres planeado para producción
-- Auth: JWT (`jose`) + `bcryptjs`, OAuth Google/Facebook
+- **Next.js 16** (App Router) + **TypeScript** + **Tailwind CSS v4** — 100% frontend, sin base de datos propia
+- Backend real en repo aparte ([`vivevillahermosa-be`](../vivevillahermosa-be), NestJS + Prisma + Postgres) — ver `docs/BACKEND.md`
+- Auth: cookie httpOnly con JWT (`jose`) firmado por el backend, OAuth Google/Facebook
 - Mapas: Leaflet + `leaflet.markercluster`
 - Forms: `react-hook-form` + `zod`
-- IA: OpenRouter (texto — búsqueda, fraude, moderación) + Gemini (visión — fotos de propiedades)
-- Email: Resend
 
 **Importante para cualquier agente/IA trabajando en este repo:** lee `AGENTS.md` antes de escribir código — esta versión de Next.js tiene cambios respecto a lo que un modelo entrenado antes de su lanzamiento puede asumir.
 
@@ -19,13 +17,14 @@ Portal inmobiliario para Tabasco, México (Villahermosa y los 17 municipios del 
 ```bash
 npm install
 cp .env.example .env.local   # completar las variables (ver abajo)
-npx prisma db push           # crea/actualiza la base de datos SQLite local
 npm run dev
 ```
 
+Requiere el backend real corriendo aparte (`vivevillahermosa-be`, `npm run start:dev`, puerto 3001 por default) — este repo no tiene base de datos propia, todo lo que antes vivía en Prisma local (auth, moderación del buscador, colonias descubiertas) se le pregunta al backend.
+
 Abrir [http://localhost:3000](http://localhost:3000).
 
-Variables de entorno mínimas para desarrollo — ver `.env.example` para la lista completa y comentarios: `DATABASE_URL`, `JWT_SECRET`, `OPENROUTER_API_KEY` (búsqueda/fraude/moderación con IA), `GEMINI_API_KEY` (análisis de fotos). El resto (Resend, OAuth, Nominatim) es opcional en desarrollo — las funciones que dependen de ellas se degradan sin romper el resto de la app (ver comentarios en `src/lib/`).
+Variables de entorno mínimas para desarrollo — ver `.env.example` para la lista completa y comentarios: `NEXT_PUBLIC_API_URL` (URL del backend local), `JWT_SECRET` (debe ser idéntico al del backend). El resto (OAuth, `CRON_SECRET`) es opcional en desarrollo.
 
 ## Estado del proyecto — dónde está cada cosa
 
@@ -50,5 +49,4 @@ Otros documentos, distintos en propósito (no se fusionaron con el de arriba):
 npm run dev          # servidor de desarrollo (Turbopack)
 npx tsc --noEmit      # type-check
 npx eslint src/       # lint
-npx prisma studio     # explorar la base de datos local
 ```

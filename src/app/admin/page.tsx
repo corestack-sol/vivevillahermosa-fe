@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Users, FileWarning, FlagTriangleRight, Heart, Bell, CalendarDays, Wrench, Ban, Mail, Cpu, Eye, Home } from 'lucide-react';
-import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import { backendFetchServer } from '@/lib/backendApiServer';
 
@@ -14,12 +13,13 @@ interface MetricasBackend {
   favoritos: number;
   alertas: number;
   citas: number;
+  servicios: number;
   integraciones: { resend: boolean; openRouter: boolean; gemini: boolean };
 }
 
-// GET /admin/metricas (BACKEND.md §16) ya viene del backend real — el único
-// dato que sigue local es "Servicios activos" (el módulo Servicios sigue en
-// pausa, §11). Sin tile de "Admins activos" — el backend no expone ese
+// GET /admin/metricas (BACKEND.md §16) ya viene completo del backend real —
+// `servicios` se agregó ahí el 2026-08-13 (antes se consultaba con Prisma
+// local, huérfana). Sin tile de "Admins activos" — el backend no expone ese
 // conteo en /admin/metricas y no vale la pena un fetch aparte solo por esa
 // cifra.
 //
@@ -35,11 +35,7 @@ interface MetricasBackend {
 // reconstruir del lado del backend nuevo, como una decisión ya confirmada
 // con el usuario, no un olvido.
 async function getMetricas() {
-  const [metricas, totalServicios] = await Promise.all([
-    backendFetchServer<MetricasBackend>('/admin/metricas'),
-    prisma.servicioProveedor.count({ where: { activo: true } }),
-  ]);
-  return { ...metricas, totalServicios };
+  return backendFetchServer<MetricasBackend>('/admin/metricas');
 }
 
 export default async function AdminPage() {
@@ -57,7 +53,7 @@ export default async function AdminPage() {
     { icon: Heart, label: 'Favoritos guardados', value: m.favoritos, color: 'text-pink-500', bg: 'bg-pink-50' },
     { icon: Bell, label: 'Alertas activas', value: m.alertas, color: 'text-orange-500', bg: 'bg-orange-50' },
     { icon: CalendarDays, label: 'Citas agendadas', value: m.citas, color: 'text-sky-500', bg: 'bg-sky-50' },
-    { icon: Wrench, label: 'Servicios activos', value: m.totalServicios, color: 'text-teal-500', bg: 'bg-teal-50', href: '/admin/servicios' },
+    { icon: Wrench, label: 'Servicios activos', value: m.servicios, color: 'text-teal-500', bg: 'bg-teal-50', href: '/admin/servicios' },
   ];
 
   const config = [

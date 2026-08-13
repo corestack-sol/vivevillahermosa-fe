@@ -46,7 +46,7 @@ export interface BackendPublicProperty {
   featured: boolean;
   estado: string;
   activa: boolean;
-  agente: { nombre: string; foto: string | null; verificado: boolean };
+  agente: { nombre: string; foto: string | null; verificado: boolean; enRevision: boolean };
   createdAt: string;
   updatedAt: string;
   // Presentes SOLO cuando GET /propiedades/:id lo devuelve a su propio
@@ -100,6 +100,7 @@ export function mapBackendProperty(bp: BackendPublicProperty): Property {
       nombre: bp.agente.nombre,
       foto: bp.agente.foto ?? '',
       verificado: bp.agente.verificado,
+      enRevision: bp.agente.enRevision,
       tel: bp.agenteTel ?? undefined,
       email: bp.agenteEmail ?? undefined,
       whatsapp: bp.agenteWhatsapp ?? undefined,
