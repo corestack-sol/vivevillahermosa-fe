@@ -26,10 +26,10 @@ interface GenerarReporteParams {
   propiedades: MiPropiedad[];
   nombreEmpresa?: string | null;
   logoDataUrl?: string | null;
-  // Resumen generado con Gemini (ver src/lib/ai.ts, generarResumenReporte)
-  // — opcional porque quien llama a esta función puede no haberlo pedido
-  // (sin GEMINI_API_KEY, o falló la llamada). Sin él, se usa el cálculo
-  // mecánico de siempre.
+  // Resumen generado por el backend (POST /ia/resumen-reporte, ver
+  // src/lib/aiClient.ts, obtenerResumenReporte) — opcional porque quien
+  // llama a esta función puede no haberlo pedido, o la llamada pudo fallar.
+  // Sin él, se usa el cálculo mecánico de siempre.
   resumenIA?: string | null;
 }
 
