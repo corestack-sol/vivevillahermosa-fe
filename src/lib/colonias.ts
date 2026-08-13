@@ -1,5 +1,6 @@
 import { distanciaKm } from './landmarks';
 import coloniasMunicipiosData from '@/data/colonias-municipios.json';
+import { backendFetch } from './backendApi';
 
 export interface ColoniaCoord {
   key: string;
@@ -285,17 +286,28 @@ export function normalizarNombreColonia(s: string): string {
     .trim();
 }
 
-// Colonias descubiertas automáticamente (src/lib/coloniaDiscovery.ts,
-// geocodificadas contra Nominatim con el mismo filtro de dos niveles que
-// las 70 de arriba, guardadas en Prisma) — este módulo corre también en el
-// navegador (filters.ts, PropertiesClient.tsx), donde no se puede
-// consultar la base de datos directamente, así que se cachean aquí tras
-// pedirlas una vez a `GET /api/colonias/descubiertas`. Arranca vacío: las
-// funciones de abajo simplemente se comportan como si solo existiera el
-// catálogo estático hasta que la carga (best-effort, nunca bloqueante)
-// termine — ninguna búsqueda se rompe ni espera por esto.
+// Colonias descubiertas automáticamente (geocodificadas contra Nominatim
+// con el mismo filtro de dos niveles que las 70 de arriba, ver
+// ColoniasService.geocodificarYRegistrar en el backend) — este módulo corre
+// también en el navegador (filters.ts, PropertiesClient.tsx), donde no se
+// puede consultar el backend en cada llamada, así que se cachean aquí tras
+// pedirlas una vez a `GET /colonias/descubiertas` del backend nuevo. Arranca
+// vacío: las funciones de abajo simplemente se comportan como si solo
+// existiera el catálogo estático hasta que la carga (best-effort, nunca
+// bloqueante) termine — ninguna búsqueda se rompe ni espera por esto.
 let coloniasDescubiertasCache: ColoniaCoord[] = [];
 let cargaIniciada = false;
+
+/** Forma cruda de ColoniaDescubierta tal como la devuelve Prisma/el backend — `aliasesJson` en vez de `aliases`. */
+interface ColoniaDescubiertaBackend {
+  key: string;
+  label: string;
+  municipio: string;
+  lat: number;
+  lng: number;
+  radioKm: number;
+  aliasesJson: string[] | null;
+}
 
 /**
  * Dispara la carga del caché una sola vez por sesión de navegador —
@@ -308,9 +320,18 @@ let cargaIniciada = false;
 export function precargarColoniasDescubiertas(): void {
   if (cargaIniciada || typeof window === 'undefined') return;
   cargaIniciada = true;
-  fetch('/api/colonias/descubiertas')
-    .then((res) => (res.ok ? res.json() : []))
-    .then((data: ColoniaCoord[]) => { coloniasDescubiertasCache = data; })
+  backendFetch<ColoniaDescubiertaBackend[]>('/colonias/descubiertas')
+    .then((data) => {
+      coloniasDescubiertasCache = data.map((c) => ({
+        key: c.key,
+        label: c.label,
+        municipio: c.municipio,
+        lat: c.lat,
+        lng: c.lng,
+        radioKm: c.radioKm,
+        aliases: c.aliasesJson ?? undefined,
+      }));
+    })
     .catch(() => { /* silencioso — se sigue usando solo el catálogo estático */ });
 }
 

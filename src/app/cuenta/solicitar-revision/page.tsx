@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { ShieldCheck, MailCheck, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
 const schema = z.object({
   email: z.string().email('Correo inválido'),
@@ -16,8 +17,8 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
-// Única puerta de entrada real a POST /api/cuenta/solicitar-revision — antes
-// ese endpoint existía sin ninguna página que lo llamara, así que una
+// Única puerta de entrada real a POST /cuenta/solicitar-revision (backend) —
+// antes ese endpoint existía sin ninguna página que lo llamara, así que una
 // cuenta bloqueada por error no tenía ninguna forma real de reclamar
 // (el mensaje de login solo decía "contáctanos", sin link a ningún lado).
 function SolicitarRevisionContent() {
@@ -33,19 +34,20 @@ function SolicitarRevisionContent() {
   async function onSubmit(data: FormData) {
     setError('');
     try {
-      const res = await fetch('/api/cuenta/solicitar-revision', {
+      await backendFetch('/cuenta/solicitar-revision', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      const json = await res.json();
-      if (!res.ok) { setError(json.error ?? 'No se pudo enviar la solicitud. Intenta de nuevo.'); return; }
       // El backend responde el mismo mensaje de éxito exista o no la cuenta,
       // y esté o no bloqueada — esta pantalla lo respeta tal cual, nunca
       // confirma ni desmiente nada sobre la cuenta.
       setEnviado(true);
-    } catch {
-      setError('No se pudo enviar la solicitud. Revisa tu conexión e intenta de nuevo.');
+    } catch (err) {
+      setError(
+        err instanceof BackendApiError
+          ? err.message
+          : 'No se pudo enviar la solicitud. Revisa tu conexión e intenta de nuevo.',
+      );
     }
   }
 
