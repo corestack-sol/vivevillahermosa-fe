@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { MUNICIPIO_OPTIONS } from '@/lib/publishSchema';
 import { CATEGORIA_SERVICIO_OPTIONS, publishServicioSchema, type PublishServicioFormData } from '@/lib/publishServicioSchema';
+import { backendFetch } from '@/lib/backendApi';
 
 interface PublishServicioFormProps {
   /** Si viene, el submit hace PATCH a este id en vez de POST (editar en vez de crear). */
@@ -41,13 +42,13 @@ export function PublishServicioForm({ servicioId, valoresIniciales }: PublishSer
   const onSubmit = async (data: PublishServicioFormData) => {
     setSendError(null);
     try {
-      const res = await fetch(editando ? `/api/servicios/${servicioId}` : '/api/servicios', {
-        method: editando ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'No se pudo guardar el servicio');
+      const json = await backendFetch<{ id: string }>(
+        editando ? `/servicios/${servicioId}` : '/servicios',
+        {
+          method: editando ? 'PATCH' : 'POST',
+          body: JSON.stringify(data),
+        },
+      );
       router.push(editando ? '/dashboard/servicios' : `/dashboard/servicios/${json.id}/portafolio`);
     } catch (err) {
       setSendError(err instanceof Error ? err.message : 'No se pudo guardar el servicio, intenta de nuevo.');

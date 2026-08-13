@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { MapPin, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import { prisma } from '@/lib/db';
+import { getServicioById, getTrabajosServicio } from '@/lib/api';
 import { categoriaServicioLabel } from '@/lib/publishServicioSchema';
 import { ServiceContactCard } from '@/components/servicios/ServiceContactCard';
 import { ServiceShareCard } from '@/components/servicios/ServiceShareCard';
@@ -12,17 +12,10 @@ interface Props {
 }
 
 async function getServicio(id: string) {
-  return prisma.servicioProveedor.findFirst({
-    where: { id, activo: true },
-    select: {
-      id: true, categoria: true, nombre: true, descripcion: true,
-      municipio: true, colonia: true, fotoDataUrl: true,
-      trabajos: {
-        select: { id: true, imagenDataUrl: true, descripcion: true, createdAt: true },
-        orderBy: { createdAt: 'desc' },
-      },
-    },
-  });
+  const servicio = await getServicioById(id);
+  if (!servicio) return null;
+  const trabajos = await getTrabajosServicio(id);
+  return { ...servicio, trabajos };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -73,8 +66,8 @@ export default async function ServicioDetailPage({ params }: Props) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {servicio.trabajos.map((t) => (
               <div key={t.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element -- data URI local, no aplica next/image */}
-                <img src={t.imagenDataUrl} alt={t.descripcion ?? `Trabajo de ${servicio.nombre}`} loading="lazy" className="w-full h-56 object-cover" />
+                {/* eslint-disable-next-line @next/next/no-img-element -- URL de Cloudinary, mismo patrón que PropertyGallery.tsx */}
+                <img src={t.imagen} alt={t.descripcion ?? `Trabajo de ${servicio.nombre}`} loading="lazy" className="w-full h-56 object-cover" />
                 {t.descripcion && (
                   <p className="p-4 text-sm text-gray-700 leading-relaxed whitespace-pre-line">{t.descripcion}</p>
                 )}

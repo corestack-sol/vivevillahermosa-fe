@@ -28,6 +28,28 @@
 
 ---
 
+## 📋 Registro de cambios de hoy (2026-08-12/13) — §11 construido: directorio de servicios ya no está en pausa
+
+**Se retoma §11 (en pausa desde el 2026-08-06) — el bloqueador original ("compite por tiempo con cerrar Property") ya no aplica, Property lleva semanas 100% migrado.** Corte completo: backend nuevo (`ServiciosModule`, `AdminServiciosService`) + frontend (las 6 páginas que ya existían en Next.js — lista, ficha, publicar, "Mis servicios", portafolio, admin) apuntando al backend nuevo. `src/app/api/servicios/**` y `src/app/api/admin/servicios/**` se borraron por completo.
+
+**Backend** — replica el contrato completo de §11 sobre el modelo ya documentado (`ServicioProveedor`/`TrabajoServicio`, antes solo en el prototipo Next.js):
+- Los 11 endpoints de la tabla de §11, incluido el tope atómico de 24 fotos por portafolio (`$transaction` con conteo+creación en el mismo paso — mismo patrón ya probado en `admin-usuarios.service.ts` para "último admin").
+- `GET /servicios/:id/contacto` usa el mismo rate limit doble (IP **y** userId, 30/10min) que ya exige §10 para propiedades — el prototipo en Next.js solo tenía el de IP; se corrige aquí porque §11 dice explícitamente "mismo patrón que propiedades".
+- **Desviación deliberada del prototipo, documentada:** `foto`/`imagen` ahora son URLs reales de Cloudinary (`POST /servicios/fotos`, mismo `StorageService` que ya usa Property) en vez de `fotoDataUrl`/`imagenDataUrl` (base64 inline en la fila) — evita meter un segundo patrón de blob-en-BD nuevo cuando Property ya resolvió esto. `foto` del proveedor nunca tuvo UI para llenarse en el prototipo (campo muerto, siempre `null`) — se mantiene el campo pero no se agregó UI nueva para no expandir el alcance de una migración.
+- **Bug real encontrado y corregido, no heredado del prototipo:** `CreateServicioDto.email` con `@IsOptional() @IsEmail()` rechazaba `''` (string vacío) con 400 — `@IsOptional()` de class-validator solo perdona `undefined`/`null`, no `''`, y el formulario manda `''` para un campo opcional vacío. El prototipo en Next.js no tenía este bug (`zod`, `.optional().or(z.literal(''))`). Corregido con un `@Transform` que convierte `''` a `undefined` antes de validar — mismo criterio aplicado a `foto`.
+- `/admin/servicios` (`GET` listar con dueño, `PATCH :id` toggle activo con auditoría) — el panel admin de servicios ya existía en Next.js (`/api/admin/servicios`, 2026-08-07) pero nunca se había migrado; no existía nada de esto en el backend nuevo hasta hoy.
+- Verificado en vivo con `curl`: CRUD completo, permisos de dueño (403 con otra cuenta), validaciones (400 por categoría/teléfono/municipio inválidos), visibilidad de portafolio pausado (dueño sí, público no), cascada al eliminar, y el panel admin (401 sin sesión, 403 sin `esAdmin`, auditoría registrada en `AccionAdmin`).
+
+**Frontend:** las 6 páginas/componentes que ya consumían `/api/servicios/**` (`servicios/page.tsx`, `servicios/[id]/page.tsx`, `PublishServicioForm.tsx`, `dashboard/servicios/page.tsx`, `dashboard/servicios/[id]/portafolio/page.tsx`, `ServiceContactCard.tsx`) y `admin/servicios/page.tsx` pasan a `backendFetch`/`getAllServicios`/`getServicioById` (`src/lib/api.ts`). El upload de fotos del portafolio se migró al mismo patrón de dos pasos que `PublishForm.tsx` (propiedades): `POST /servicios/fotos` (multipart) primero, luego la URL resultante al crear el trabajo — ya no manda `imagenDataUrl` en el body.
+
+**Dos bugs reales de CSP encontrados en el QA con navegador (no se habrían visto con `curl` ni Server Components):**
+1. `connect-src` no incluía `data:` — `PublishForm.tsx` (propiedades) y el portafolio de servicios convierten su preview a `Blob` vía `fetch(dataUrl).then(r => r.blob())` antes de subirlo; Chromium trata ese `fetch()` sobre una `data:` URI como una conexión de red sujeta a `connect-src`, aunque el contenido nunca sale del navegador. Sin esto, **ninguna subida de foto en toda la plataforma llegaba a completarse** (bloqueada en silencio) — bug preexistente que afectaba a Property también, no solo a este cambio. Corregido en `next.config.ts` (mismo archivo del fix de `connect-src`/backend del 2026-08-12 anterior).
+2. Verificado que la subida de fotos SÍ llega correctamente al backend tras el fix anterior — falla después con `Invalid api_key dev` porque este entorno de desarrollo local no tiene credenciales reales de Cloudinary (`CLOUDINARY_API_KEY=dev`, placeholder). Confirmado que **no es un bug**: `/propiedades/fotos` falla exactamente igual en este mismo entorno. Queda pendiente de verificar con credenciales reales (staging/producción), no bloquea este cambio.
+
+**Con esto, `servicios/**` deja la lista de "todo lo que sigue 100% dentro de Next.js" (§13 punto 1) — de todo el documento, solo quedan pendientes/en pausa: §9.3 (catálogo de colonias en BD, decisión de producto abierta) y las "Decisiones abiertas" de infraestructura (storage de fotos ya resuelto vía Cloudinary; dominio/cookie y migración de BD siguen sin decisión, no bloquean desarrollo).**
+
+---
+
 ## 📋 Registro de cambios de hoy (2026-08-12, QA con navegador real) — bug real de CSP encontrado y corregido
 
 **El pase manual con navegador que quedó pendiente el 2026-08-11 ("no probado con un navegador real") se hizo hoy — y encontró un bug real que ningún test anterior podía haber detectado.**
@@ -175,7 +197,7 @@ Todo lo de abajo ya está integrado en las secciones correspondientes (§2, §3,
 8. [IA (proxy a OpenRouter/Gemini)](#8-ia-proxy-a-openroutergemini)
 9. [Colonias descubiertas](#9-colonias-descubiertas) · [9.1 Colonias más solicitadas — NUEVO](#91-colonias-más-solicitadas--nuevo-no-existe-hoy) · [9.2 Descripciones generadas con IA — NUEVO](#92-descripciones-de-zonacoloniamunicipio--nuevo-no-existe-hoy) · [9.3 Catálogo de municipios/colonias — NUEVO](#93-catálogo-de-municipioscolonias-con-ficha--nuevo-no-existe-hoy)
 10. [Contacto y reportes sobre una propiedad](#10-contacto-y-reportes-sobre-una-propiedad)
-11. [Directorio de servicios — ⏸️ EN PAUSA](#11-directorio-de-servicios--en-pausa)
+11. [Directorio de servicios](#11-directorio-de-servicios)
 12. [Stats del dashboard](#12-stats-del-dashboard)
 13. [Cambios necesarios en el frontend Next.js](#13-cambios-necesarios-en-el-frontend-nextjs)
 14. [Seguridad e infraestructura](#14-seguridad-e-infraestructura)
@@ -487,9 +509,9 @@ No hay un endpoint `POST` propio — nuevas filas se crean como efecto secundari
 
 ---
 
-## 11. Directorio de servicios — ⏸️ EN PAUSA
+## 11. Directorio de servicios
 
-**No priorizar — decisión explícita del usuario (2026-08-06): construir esto compite por tiempo con cerrar `Property`, que es lo que hoy bloquea el resto.** Se documenta el contrato completo igual, para cuando se retome — no hace falta implementarlo ahora.
+**✅ Construido y migrado al backend nuevo (2026-08-12/13)** — estuvo en pausa desde el 2026-08-06 ("compite por tiempo con cerrar `Property`"), retomado una vez Property quedó 100% migrado. Ver el registro de cambios de hoy, arriba, para el detalle completo (endpoints, desviaciones del prototipo, bugs encontrados).
 
 | Endpoint | Método | Auth | Notas |
 |---|---|---|---|
@@ -520,7 +542,7 @@ Categorías válidas: `plomeria, pintura, mudanza, remodelacion, albanileria, el
 
 Con el backend en un proyecto separado, esto deja de ser "frontend + backend en un repo" y pasa a ser dos servicios. **El corte empezó 2026-08-10 y es parcial** (ver el registro de cambios de esa fecha, arriba) — cada punto de abajo ya trae su estado real, verificado leyendo el código fusionado, no supuesto:
 
-1. **✅ Parcial — Borrar `src/app/api/**` módulo por módulo, según ese módulo se cubra en el backend nuevo.** Ya borrados: todo `auth/**`, `favoritos`, `alertas` (la principal), `notificaciones`, `citas/**`, `configuracion-agenda`, `perfil-inmobiliaria`. **Siguen existiendo a propósito** (el backend nuevo todavía no los cubre): `admin/**`, `ia/**`, `colonias/descubiertas`, `cuenta/solicitar-revision`, `propiedades/:id/contacto`+`/contactar`, `propiedades/reportar`, `servicios/**`, `alertas/notificar`, `me/stats`. No asumas que por haber borrado varios ya no queda ninguno.
+1. **✅ Parcial — Borrar `src/app/api/**` módulo por módulo, según ese módulo se cubra en el backend nuevo.** Ya borrados: todo `auth/**`, `favoritos`, `alertas` (la principal), `notificaciones`, `citas/**`, `configuracion-agenda`, `perfil-inmobiliaria`, y (2026-08-13) `servicios/**` + `admin/servicios/**`. **Nota: esta lista de "lo que sigue en Next.js" no se ha revisado completa desde entonces** — varios de los puntos de abajo (`propiedades/:id/contacto`+`/contactar`, parte de `admin/**`) ya migraron en fases posteriores documentadas más arriba en este archivo sin que se actualizara este párrafo; no asumas que sigue vigente sin verificar contra el registro de cambios de la fecha correspondiente.
 2. **✅ Hecho** — `NEXT_PUBLIC_API_URL` existe (`src/lib/backendApi.ts`, `.env.example`), la app no arranca sin ella (falla rápido a propósito, mismo criterio que `JWT_SECRET` en `auth.ts`).
 3. **✅ Parcial** — los módulos ya migrados (punto 1) usan `backendFetch`/`backendFetchServer` apuntando a `${NEXT_PUBLIC_API_URL}/...`. Los que siguen en Next.js todavía usan `fetch('/api/...')` relativo — es lo correcto mientras esas rutas sigan siendo Next.js real, no queda ningún `fetch('/api/...')` huérfano apuntando a una ruta ya borrada (verificado, la app compila y corre).
 4. **⏳ No se rediseñó — se tomó la tercera opción que este mismo punto ya planteaba.** `src/proxy.ts` sigue verificando el JWT localmente con `jwtVerify`/`JWT_SECRET` compartido, sin llamar al backend nuevo. Válido mientras el secreto siga siendo compartido (ver Decisiones Abiertas #1) — si esa decisión cambia para producción, este punto vuelve a estar abierto.

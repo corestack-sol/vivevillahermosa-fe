@@ -7,25 +7,20 @@ import { ArrowLeft, ImagePlus, Trash2, Loader2, Camera, ShieldAlert } from 'luci
 import { Button, buttonClasses } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
 import { resizeImageToDataUrl } from '@/lib/imageResize';
-
-interface Trabajo {
-  id: string;
-  imagenDataUrl: string;
-  descripcion: string | null;
-  createdAt: string;
-}
+import { backendFetch } from '@/lib/backendApi';
+import type { TrabajoServicio as Trabajo } from '@/lib/api';
 
 function fetchTrabajos(servicioId: string): Promise<Trabajo[]> {
-  return fetch(`/api/servicios/${servicioId}/trabajos`).then((r) => (r.ok ? r.json() : []));
+  return backendFetch<Trabajo[]>(`/servicios/${servicioId}/trabajos`).catch(() => []);
 }
 
 // undefined = todavía resolviendo, null = no es tuyo (o no existe) — mismo
 // patrón que dashboard/propiedades/[id]/editar/page.tsx, para no mostrar el
 // formulario de edición a alguien que solo tiene el id en la URL.
 function fetchNombreServicio(servicioId: string): Promise<string | null> {
-  return fetch('/api/servicios/mios')
-    .then((r) => (r.ok ? r.json() : []))
-    .then((mios: { id: string; nombre: string }[]) => mios.find((s) => s.id === servicioId)?.nombre ?? null);
+  return backendFetch<{ id: string; nombre: string }[]>('/servicios/mios')
+    .catch(() => [])
+    .then((mios) => mios.find((s) => s.id === servicioId)?.nombre ?? null);
 }
 
 /**
@@ -76,13 +71,22 @@ export default function PortafolioPage() {
     if (!previewDataUrl) return;
     setSubiendo(true);
     try {
-      const res = await fetch(`/api/servicios/${servicioId}/trabajos`, {
+      // Misma subida en dos pasos que PublishForm.tsx (propiedades): la
+      // imagen va primero a POST /servicios/fotos (multipart, Cloudinary
+      // real), y solo la URL resultante se manda al crear la entrada del
+      // portafolio — TrabajoServicio.imagen ya no guarda base64 inline.
+      const blob = await (await fetch(previewDataUrl)).blob();
+      const body = new FormData();
+      body.append('file', blob, 'trabajo.jpg');
+      const { url } = await backendFetch<{ url: string }>('/servicios/fotos', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imagenDataUrl: previewDataUrl, descripcion }),
+        body,
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'No se pudo guardar');
+
+      await backendFetch(`/servicios/${servicioId}/trabajos`, {
+        method: 'POST',
+        body: JSON.stringify({ imagen: url, descripcion }),
+      });
       setPreviewDataUrl(null);
       setDescripcion('');
       setTrabajos(await fetchTrabajos(servicioId));
@@ -98,11 +102,7 @@ export default function PortafolioPage() {
     if (!confirm('¿Quitar esta entrada de tu portafolio?')) return;
     setEliminandoId(id);
     try {
-      const res = await fetch(`/api/servicios/${servicioId}/trabajos/${id}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || 'No se pudo eliminar');
-      }
+      await backendFetch(`/servicios/${servicioId}/trabajos/${id}`, { method: 'DELETE' });
       setTrabajos(await fetchTrabajos(servicioId));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'No se pudo eliminar, intenta de nuevo.');
@@ -188,8 +188,8 @@ export default function PortafolioPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {trabajos.map((t) => (
             <div key={t.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element -- data URI local, no aplica next/image */}
-              <img src={t.imagenDataUrl} alt={t.descripcion ?? 'Trabajo realizado'} loading="lazy" className="w-full h-44 object-cover" />
+              {/* eslint-disable-next-line @next/next/no-img-element -- URL de Cloudinary, mismo patrón que PropertyGallery.tsx */}
+              <img src={t.imagen} alt={t.descripcion ?? 'Trabajo realizado'} loading="lazy" className="w-full h-44 object-cover" />
               <div className="p-3">
                 {t.descripcion && <p className="text-sm text-gray-700 whitespace-pre-line mb-2">{t.descripcion}</p>}
                 <div className="flex items-center justify-between">

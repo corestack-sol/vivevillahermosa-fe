@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Phone, Mail, MessageCircle, Eye, Loader2, LogIn } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { loginRedirectUrl } from '@/lib/authRedirect';
+import { backendFetch } from '@/lib/backendApi';
 
 interface Contacto {
   telefono: string;
@@ -29,9 +30,7 @@ export function ServiceContactCard({ servicioId, nombre }: { servicioId: string;
     setLoading(true);
     setError(false);
     try {
-      const res = await fetch(`/api/servicios/${servicioId}/contacto`);
-      if (!res.ok) throw new Error('request failed');
-      setContacto(await res.json());
+      setContacto(await backendFetch<Contacto>(`/servicios/${servicioId}/contacto`));
     } catch {
       setError(true);
     } finally {
