@@ -22,10 +22,9 @@ import { jwtVerify } from 'jose';
 // `middleware.ts`) — ver node_modules/next/dist/docs/01-app/01-getting-started/16-proxy.md.
 // /admin: esto solo exige que exista una sesión válida (defensa en
 // profundidad) — la verificación real de que además sea un admin
-// (esAdmin, leído fresco de la base de datos) pasa server-side en
-// src/app/admin/layout.tsx y en cada ruta /api/admin/** vía
-// requireAdmin() (src/lib/adminAuth.ts), nunca aquí: el edge runtime de
-// este archivo solo puede validar la firma del JWT, no consultar Prisma.
+// (esAdmin, leído fresco del backend en cada request vía getSession())
+// pasa server-side en src/app/admin/layout.tsx, nunca aquí: el edge
+// runtime de este archivo solo puede validar la firma del JWT.
 const PROTECTED_PATHS = ['/dashboard', '/favoritos', '/alertas', '/publicar', '/servicios/publicar', '/admin'];
 const COOKIE = 'vivevillahermosa_session';
 

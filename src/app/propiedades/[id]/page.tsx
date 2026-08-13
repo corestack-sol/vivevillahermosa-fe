@@ -5,9 +5,7 @@ import { backendFetchServer } from '@/lib/backendApiServer';
 import { BackendApiError } from '@/lib/backendApi';
 import { buildPropertyMetadata } from '@/lib/seo';
 import { getLandmark, distanciaKm, distanciaMinimaACategoria, CATEGORIAS_GENERICAS } from '@/lib/landmarks';
-import { getColoniaByKey } from '@/lib/colonias';
-import { obtenerColoniaDescubiertaPorKey } from '@/lib/coloniaDiscovery';
-import { estaEnRevision } from '@/lib/moderacionBusqueda';
+import { getColoniaByKey, obtenerColoniaDescubiertaBackend } from '@/lib/colonias';
 import { PropertyDetailView } from '@/components/property/PropertyDetailView';
 
 /**
@@ -86,21 +84,19 @@ export default async function PropertyDetailPage({ params, searchParams }: Props
     : undefined;
   // getColoniaByKey solo conoce el catálogo estático + lo que un
   // navegador haya precargado — un Server Component nunca precarga nada
-  // (no corre en un navegador), así que si no la encuentra ahí, se
-  // consulta la base de datos directo antes de rendirse.
+  // (no corre en un navegador), así que si no la encuentra ahí, se le
+  // pregunta al backend directo antes de rendirse.
   const coloniaCercana = !landmarkCercano && !categoriaCercana && cercaColonia
-    ? getColoniaByKey(cercaColonia) ?? (await obtenerColoniaDescubiertaPorKey(cercaColonia)) ?? undefined
+    ? getColoniaByKey(cercaColonia) ?? (await obtenerColoniaDescubiertaBackend(cercaColonia)) ?? undefined
     : undefined;
   const distanciaColonia = coloniaCercana
     ? distanciaKm(property.lat, property.lng, coloniaCercana.lat, coloniaCercana.lng)
     : undefined;
 
-  // Badge "En revisión" en AgentCard — se consulta por `emailCuenta` (no
-  // `Property.userId`, que no existe todavía) por la misma razón que el
-  // flujo de contacto: es la única forma de llegar a la cuenta real del
-  // publicador sin esa relación pendiente. Sin emailCuenta (propiedades de
-  // muestra), nunca se muestra el badge.
-  const enRevision = property.emailCuenta ? await estaEnRevision(property.emailCuenta) : false;
+  // Badge "En revisión" en AgentCard — viene directo del backend
+  // (agente.enRevision, BACKEND.md §3), calculado sobre la relación real
+  // Property.userId → User.bloqueado.
+  const enRevision = property.agente.enRevision ?? false;
 
   return (
     <PropertyDetailView

@@ -336,6 +336,37 @@ export function precargarColoniasDescubiertas(): void {
 }
 
 /**
+ * Equivalente a buscar en `coloniasDescubiertasCache`, pero para Server
+ * Components — ahí `precargarColoniasDescubiertas()` nunca llega a
+ * ejecutarse (guardada tras `typeof window === 'undefined'`), así que se le
+ * pregunta al backend directo en cada llamada. `GET /colonias/descubiertas`
+ * ya trae `Cache-Control: public, max-age=300` (BACKEND.md §9), así que esto
+ * no golpea la base de datos del backend en cada request de una ficha de
+ * propiedad. Reemplaza el `obtenerColoniaDescubiertaPorKey` que antes
+ * consultaba la Prisma local del propio frontend — huérfana, esa tabla dejó
+ * de recibir descubrimientos nuevos desde que la geocodificación vive en el
+ * backend (`ColoniasService.geocodificarYRegistrar`).
+ */
+export async function obtenerColoniaDescubiertaBackend(key: string): Promise<ColoniaCoord | undefined> {
+  try {
+    const data = await backendFetch<ColoniaDescubiertaBackend[]>('/colonias/descubiertas');
+    const fila = data.find((c) => c.key === key);
+    if (!fila) return undefined;
+    return {
+      key: fila.key,
+      label: fila.label,
+      municipio: fila.municipio,
+      lat: fila.lat,
+      lng: fila.lng,
+      radioKm: fila.radioKm,
+      aliases: fila.aliasesJson ?? undefined,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Colonias/asentamientos de los otros 16 municipios de Tabasco (todo menos
  * Centro), fuente: INEGI, "Delimitación de colonias y otros asentamientos
  * humanos" 2024 (https://www.inegi.org.mx/app/biblioteca/ficha.html?upc=794551132180),

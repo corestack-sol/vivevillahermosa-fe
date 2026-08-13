@@ -28,6 +28,24 @@
 
 ---
 
+## 📋 Registro de cambios de hoy (2026-08-13, tercera continuación) — se borra la Prisma local: el repo queda 100% sin base de datos propia
+
+**Contexto:** seguían vivas 2 piezas de lógica real corriendo contra la Prisma local de este repo (`prisma/`, SQLite) — huérfanas desde que auth/moderación/descubrimiento de colonias migraron al backend, mismo patrón que el poller de citas de la entrada de abajo: "funcionaban" sin ningún efecto real.
+
+1. **Badge "En revisión" del agente** (`AgentCard`, ficha de propiedad) — consultaba `prisma.user.findUnique({ where: { email: property.emailCuenta } })`, pero `property.emailCuenta` nunca se llenaba desde que las propiedades vienen del backend (`mapBackendProperty` no lo mapea) — el badge estaba siempre en `false`, decorativo. **Corregido:** el backend expone `agente.enRevision` directo (nuevo, ver `vivevillahermosa-be` PR #23, lee `User.bloqueado` real vía `Property.userId`) — `propiedades/[id]/page.tsx` lo usa tal cual, se borró `src/lib/moderacionBusqueda.ts` completo.
+2. **Descubrimiento de colonias por proximidad**, misma página — `obtenerColoniaDescubiertaPorKey` contra la tabla local `ColoniaDescubierta`, que ya no escribe nadie (la geocodificación real vive en el backend desde hace días, `ColoniasService.geocodificarYRegistrar`). **Corregido:** nueva función `obtenerColoniaDescubiertaBackend` en `src/lib/colonias.ts`, le pregunta a `GET /colonias/descubiertas` del backend real (mismo endpoint que ya usa el caché client-side de ese archivo, solo que sin el guard de `typeof window`). Se borró `src/lib/coloniaDiscovery.ts` completo.
+
+**Borrado — código muerto sin ningún llamador real, confirmado con grep antes de borrar:**
+- `src/lib/adminAuth.ts` (`requireAdmin`/`registrarAccionAdmin`) — apuntaba a `src/app/api/admin/**`, que ya no existe; la verificación real de admin es `getSession().esAdmin` (backend) en `src/app/admin/layout.tsx`.
+- `scripts/hacer-admin.ts` — promovía `esAdmin` en el `User` local, sin ningún efecto en la sesión real (que lee del backend). El backend ya tiene su propio script real y funcional (`vivevillahermosa-be/scripts/hacer-admin.ts`, `npm run admin:promote`).
+- `src/lib/db.ts`, `prisma/` completo (`schema.prisma`, `migrations/`, `vivevillahermosa.db`).
+- Dependencias sin uso real: `@prisma/client`, `prisma`, `bcryptjs` (auth ya no hashea nada localmente), `resend` (su único consumidor, `email.ts`, se borró en la entrada de abajo).
+- `admin/page.tsx` — el conteo de "Servicios activos" pasó de `prisma.servicioProveedor.count()` local a `m.servicios` del backend (nuevo campo en `/admin/metricas`, ver PR #23 del backend).
+
+`README.md` y `proxy.ts` actualizados en consecuencia (ya no mencionan Prisma/`adminAuth.ts`). **Este repo ya no tiene base de datos propia ni depende de ninguna en ningún punto del código** — todo dato pasa por el backend real.
+
+---
+
 ## 📋 Registro de cambios de hoy (2026-08-13, segunda continuación) — cron real de citas + auditoría de §3/§13, este documento tenía afirmaciones desactualizadas
 
 **Se resuelve el gap real encontrado al auditar contra el código, no contra este documento: el recordatorio de citas no se estaba disparando en ningún entorno.** El backend tenía `POST /citas/recordatorios/procesar` (§6) completo y funcional, pero nada lo llamaba — no había ningún cron real en ningún repo. El poller que parecía cubrir esto (`src/instrumentation.ts` → `src/lib/citasRecordatorios.ts`) procesaba la tabla `Cita` **local** de este mismo repo, huérfana desde que Citas se migró al backend nuevo (nada la vuelve a escribir) — daba una falsa sensación de cobertura. Corregido: `instrumentation.ts` ahora llama directo al backend real (mismo poller, solo dev — ver comentario actualizado del archivo); `.github/workflows/citas-recordatorios.yml` en el repo del backend es el mecanismo real de producción (cron cada 5 min, inerte hasta configurar los secrets `BACKEND_URL`/`CRON_SECRET` porque nada está desplegado todavía).
