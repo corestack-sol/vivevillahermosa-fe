@@ -28,6 +28,18 @@
 
 ---
 
+## 📋 Registro de cambios de hoy (2026-08-13, continuación) — §9.3 construido: colonias con ficha, curadas desde /admin
+
+**Se resuelve la decisión de producto que §9.3 dejaba abierta (ver la entrada de más abajo, "Único pendiente genuino... sigue esperando la decisión de producto") — ya no queda ningún pendiente genuino del contrato documentado.** La pregunta era: cuando una colonia *descubierta* (§9, sin página propia) se gana un lugar en el ranking de demanda real (§9.1), ¿el sistema le crea una ficha (`/zonas/[slug]`) sola, o la curación sigue siendo humana? **Decisión confirmada con el usuario: Opción B — la curación sigue siendo humana** (foto real, texto de §9.2 revisado — evita publicar páginas a medias con contenido genérico, mismo criterio que ya aplicó esta plataforma para no fabricar el badge de "tendencia" antes de tener datos reales), pero el mecanismo deja de ser "editar `zones.json` a mano + deploy" y pasa a un CRUD real en `/admin/zonas`.
+
+**Backend** (`ColoniaFicha`, nuevo módulo `ZonasModule` + `AdminColoniasService`): `GET /zonas/colonias`/`:slug` (públicos, mismo cache que `/colonias/descubiertas`), y bajo `admin/zonas/colonias` el CRUD completo + `POST .../fotos` (Cloudinary, sin moderación IA — admin de confianza, mismo criterio que `/servicios/fotos`) + `GET .../pendientes` — cruza el ranking de `ColoniasTendenciaService` (§9.1) contra las fichas existentes y expone las colonias con demanda real que todavía no tienen ficha, sin crear nada sola: es la señal para que un admin decida con datos. Auditoría en `AccionAdmin` en cada escritura. Verificado en vivo con `curl`: crear/editar/borrar con foto real, 401/403 sin sesión/sin `esAdmin`, 409 en slug duplicado, y `pendientes` reflejando correctamente una colonia con `SolicitudColonia` real que aún no tiene ficha.
+
+**Frontend:** `getAllZones()`/`getZoneBySlug()` (`src/lib/api.ts`) dejaron de leer `src/data/zones.json` (borrado) y ahora llaman al backend real — mismas firmas de función, así que `zonas/page.tsx`, `sitemap.ts` y `ColoniaCard` no necesitaron cambios más allá de `await`. `zonas/[slug]/page.tsx` sigue con `generateStaticParams` + `revalidate = 60`, pero ahora contra datos reales: verificado en vivo que una colonia creada después del build se renderiza on-demand en su primera visita (`dynamicParams` en su default) sin necesitar rebuild. Página nueva `/admin/zonas` (tabla, formulario con subida de foto en dos pasos igual que el portafolio de servicios, sección de "pendientes" con atajo para precargar el formulario) — mismo patrón que el resto de `/admin`.
+
+**Fuera de alcance a propósito:** los 17 municipios (`municipalities.json`) siguen como catálogo estático — es una lista fija que no crece, sin la presión de mantenimiento que sí tenían las colonias. Ver §9.3 actualizada más abajo para el contrato completo.
+
+---
+
 ## 📋 Registro de cambios de hoy (2026-08-13) — `src/app/api/` queda vacío: las 2 últimas rutas huérfanas se cortan al backend
 
 Auditoría de estado real del backend (código, no solo este documento) encontró que, de los puntos que el propio doc marcaba como pendientes, prácticamente todo ya estaba construido — incluidos varios ítems de §14 (verificación de email, revocación de sesiones, PostgreSQL, CORS) que ninguna entrada de este changelog había registrado explícitamente. El único hallazgo real de "backend existe, frontend no cortó" fueron 2 rutas: `GET /colonias/descubiertas` y `POST /cuenta/solicitar-revision`, ambas ya completas del lado de `ColoniasController`/`CuentaController` desde hace varias fases. Se migraron a `backendFetch` — ver detalle en §13, punto 1. Con esto, `src/app/api/**` (el punto 1 de §13) queda en cero: no hay ninguna ruta de Next.js real restante.
@@ -203,7 +215,7 @@ Todo lo de abajo ya está integrado en las secciones correspondientes (§2, §3,
 6. [Citas y configuración de agenda](#6-citas-y-configuración-de-agenda)
 7. [Perfil de inmobiliaria](#7-perfil-de-inmobiliaria)
 8. [IA (proxy a OpenRouter/Gemini)](#8-ia-proxy-a-openroutergemini)
-9. [Colonias descubiertas](#9-colonias-descubiertas) · [9.1 Colonias más solicitadas — NUEVO](#91-colonias-más-solicitadas--nuevo-no-existe-hoy) · [9.2 Descripciones generadas con IA — NUEVO](#92-descripciones-de-zonacoloniamunicipio--nuevo-no-existe-hoy) · [9.3 Catálogo de municipios/colonias — NUEVO](#93-catálogo-de-municipioscolonias-con-ficha--nuevo-no-existe-hoy)
+9. [Colonias descubiertas](#9-colonias-descubiertas) · [9.1 Colonias más solicitadas — NUEVO](#91-colonias-más-solicitadas--nuevo-no-existe-hoy) · [9.2 Descripciones generadas con IA — NUEVO](#92-descripciones-de-zonacoloniamunicipio--nuevo-no-existe-hoy) · [9.3 Colonias con ficha — ✅ construido](#93-catálogo-de-municipioscolonias-con-ficha--construido-2026-08-13-solo-colonias)
 10. [Contacto y reportes sobre una propiedad](#10-contacto-y-reportes-sobre-una-propiedad)
 11. [Directorio de servicios](#11-directorio-de-servicios)
 12. [Stats del dashboard](#12-stats-del-dashboard)
@@ -485,25 +497,26 @@ No hay un endpoint `POST` propio — nuevas filas se crean como efecto secundari
 - El campo `riesgoInundacion` y sus etiquetas (`src/lib/floodColors.ts`) ya se corrigieron hoy para describir el registro histórico documentado (Atlas de Riesgos) en vez de sonar a una predicción de la plataforma ("Riesgo alto de inundación" → "Históricamente inundable") — cualquier descripción generada debe seguir ese mismo criterio: hecho documentado, no pronóstico.
 - Hasta que este endpoint exista, el texto estático corregido hoy es el comportamiento correcto a mantener — no revertir a las versiones con superlativos/predicciones si se edita `zones.json`/`municipalities.json`/`zonasDestacadas.ts` a mano mientras tanto.
 
-### 9.3 Catálogo de municipios/colonias con ficha — NUEVO, no existe hoy
+### 9.3 Catálogo de municipios/colonias con ficha — ✅ construido (2026-08-13, solo colonias)
 
-> **Agregado 2026-08-09 — pedido explícito del usuario mientras el backend nuevo se está construyendo, para que esta pieza no quede fuera del contrato.** §9.1 (ranking) y §9.2 (descripciones) ya especifican cómo esos dos datos se vuelven reales, pero ninguno de los dos cubre el catálogo base en sí — de dónde salen los municipios/colonias que existen como página (`/zonas/[slug]`) en primer lugar. Sin este punto, el backend podría construir 9.1 y 9.2 completos y aun así `/zonas` seguiría medio migrado: ranking real, descripciones reales, pero la LISTA de qué colonias tienen ficha seguiría fija en un archivo del bundle del frontend.
+> Agregado como pendiente 2026-08-09, resuelto 2026-08-13. La decisión abierta del punto 3 (¿toda colonia con demanda alta debería tener ficha automática, o la curación sigue siendo humana?) se confirmó con el usuario: **Opción B, curación humana** — ver el registro de cambios de hoy más arriba para el razonamiento completo.
 
-**Estado actual (verificado en el código, no supuesto):** dos catálogos estáticos en `src/data/`, tipados en `src/types/zone.ts`:
-- `municipalities.json` → `Municipality { id, nombre, slug, lat, lng, propiedades, descripcion, foto, cercaDosoBocas? }` — los 17 municipios de Tabasco (lista real y estable, ver `MUNICIPIO_OPTIONS` en `src/lib/publishSchema.ts`, única fuente de verdad ya consolidada esta sesión).
-- `zones.json` → `Zone { id, nombre, slug, municipio, lat, lng, propiedades, precioPromedioRenta, precioPromedioVenta, descripcion, foto, destacada }` — hoy son 11 colonias, **todas dentro de Centro/Villahermosa** (ninguna de Paraíso, Cárdenas, etc. tiene ficha propia todavía).
-- `propiedades`/`precioPromedio*` de ambos ya se recalculan en vivo sobre el catálogo real cuando hay datos (`getZonesWithLiveStats`/`getMunicipalitiesWithLiveStats`, `src/lib/api.ts`, ver §3) — eso no es lo que falta. Lo que falta es todo lo demás: `id`/`nombre`/`slug`/`municipio`/`lat`/`lng`/`foto` no salen de ningún dato real, están escritos a mano en el JSON.
-- `destacada` ya no decide qué se muestra en ninguna pantalla (2026-08-09, ver nota arriba en 9.1) — su único uso real hoy es prioridad de sitemap (`src/app/sitemap.ts`). No hace falta migrarlo a una tabla nueva por eso solo, pero tampoco hay que perder el dato si `zones.json` se reemplaza.
+**Alcance confirmado: solo colonias.** Los 17 municipios (`municipalities.json`) siguen siendo el catálogo estático de siempre — es una lista fija que no crece (a diferencia de las colonias), sin la presión de mantenimiento que justificaba este cambio. `GET /zonas/municipios` (mencionado en la versión anterior de esta sección) no se construyó — no hace falta mientras el catálogo de municipios no cambie.
 
-**Por qué importa hoy y no solo "algún día":** agregar una colonia nueva con ficha (ej. dar de alta "Coronel Traconis" en Paraíso) hoy requiere editar `zones.json` a mano y un deploy de código — no hay tabla, no hay panel de administración para esto (a diferencia de usuarios/reportes/solicitudes, que ya tienen `/admin`, ver §16). Si el backend se está construyendo ahora, es el momento correcto de decidir si esto se queda así a propósito o se resuelve junto con 9.1/9.2.
+**Colonias — modelo `ColoniaFicha` (backend, `prisma/schema.prisma`):** `id, slug (único), nombre, municipio, lat, lng, foto?, destacada, createdAt, updatedAt`. Solo campos estructurales — `descripcion` (§9.2, IA) y `propiedades`/`precioPromedio*` (stats en vivo sobre `Property`) siguen calculándose aparte, igual que antes.
 
-**Lo que el backend nuevo necesita construir (2026-08-09):**
-1. Una tabla real (ej. `ColoniaFicha` o el nombre que se decida) con los campos estructurales que NO cubren 9.1 (ranking) ni 9.2 (texto generado): `id, nombre, slug, municipio, lat, lng, foto`. `descripcion`/`precioPromedio*`/`propiedades` siguen viniendo de 9.2 y de las funciones de stats en vivo — no duplicar esos ahí.
-2. Endpoint(s) de lectura, ej. `GET /zonas/municipios` (los 17, prácticamente estático — seedear una vez, no necesita UI de alta) y `GET /zonas/colonias` (las que tienen ficha — este sí es el catálogo que puede crecer con el tiempo).
-3. **Decisión abierta, no la asumas:** ¿toda colonia que aparece en el ranking de 9.1 debería eventualmente tener su propia ficha/slug, o la plataforma mantiene a propósito la distinción actual entre "colonias con ficha editorial" (curadas, hoy 11, todas en Centro) y "colonias descubiertas" (§9, reales pero sin página propia — enlazan a `/propiedades?q=X` en vez de `/zonas/[slug]`, ver el patrón ya construido en `ColoniaCard.slug: string | null`)? Es una decisión de alcance de producto, coordinar con el equipo antes de decidir si esto se automatiza o se queda como alta manual (aunque sea vía `/admin` en vez de un JSON).
-4. **`foto` — decisión abierta, no la asumas:** hoy son rutas estáticas dentro del repo del frontend (`/images/zones/X.jpg`). Si el catálogo se muda al backend, decidir si el almacenamiento de estas fotos también se mueve (mismo patrón que fotos de propiedad) o se queda sirviéndose desde el frontend por CDN/estático — no asumir cuál sin confirmarlo.
+| Endpoint | Método | Auth | Notas |
+|---|---|---|---|
+| `/zonas/colonias` | GET | No | Lista completa (`?municipio=` opcional). `Cache-Control: public, max-age=300, stale-while-revalidate=3600`. |
+| `/zonas/colonias/:slug` | GET | No | Una ficha, 404 si no existe. |
+| `admin/zonas/colonias` | GET/POST | Admin | Listar (`take: 200`) / crear (slug autogenerado de `nombre` si no se manda, 409 si ya existe). |
+| `admin/zonas/colonias/:id` | PATCH/DELETE | Admin | Editar cualquier campo / hard delete (contenido editorial, no `Property`). |
+| `admin/zonas/colonias/fotos` | POST | Admin | Multipart → Cloudinary (`StorageService`, folder `zonas`), sin moderación IA — admin de confianza. |
+| `admin/zonas/colonias/pendientes` | GET | Admin | Colonias con demanda real (§9.1, `ColoniasTendenciaService`) que todavía no tienen ficha — la señal para decidir con datos, nunca crea nada sola. |
 
-**Cambio en el frontend cuando esto exista:** `getAllZones`/`getZoneBySlug`/`getAllMunicipalities`/`getMunicipalityBySlug` (`src/lib/api.ts`) pasan de leer los JSON importados a llamar al endpoint nuevo. El patrón de `slug: string | null` que ya usa `ColoniaCard` (colonia sin ficha → enlaza a `/propiedades?q=` en vez de romper) se queda igual sea cual sea la decisión del punto 3 — es el mecanismo que hace segura la transición, no algo que dependa de resolver esa decisión primero.
+**Frontend:** `getAllZones()`/`getZoneBySlug()` (`src/lib/api.ts`) dejaron de leer `zones.json` (borrado) y llaman al backend real — mismas firmas de función (ahora `async`), así que `zonas/page.tsx`/`sitemap.ts`/`ColoniaCard` no cambiaron más allá de `await`. El patrón `ColoniaCard.slug: string | null` (colonia sin ficha → enlaza a `/propiedades?q=` en vez de `/zonas/[slug]`) se mantiene igual — sigue siendo el mecanismo real para una colonia con demanda pero sin ficha curada todavía. Página nueva `/admin/zonas` (tabla, formulario con subida de foto en dos pasos, sección de "pendientes" con atajo para precargar el formulario a partir de una fila del ranking de demanda).
+
+**Verificado en vivo:** crear/editar/borrar ficha con foto real desde `/admin/zonas`, `/zonas/[slug]` de una colonia creada después del build renderiza on-demand sin rebuild (`generateStaticParams` + `revalidate = 60`, `dynamicParams` en su default), y una colonia con `SolicitudColonia` real sin ficha aparece correctamente en la sección de pendientes.
 
 ---
 

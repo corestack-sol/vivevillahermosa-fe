@@ -79,10 +79,13 @@ interface Props {
 }
 
 export async function generateStaticParams() {
-  // Zonas/municipios siguen siendo catálogo editorial estático (BACKEND.md
-  // §9.3, todavía no es una tabla real) — a diferencia de Property, esta
-  // lista de slugs válidos sí se conoce completa en build time.
-  const zones = getAllZones().map((z) => ({ slug: z.slug }));
+  // Municipios siguen siendo catálogo editorial estático (§9.3 no los tocó
+  // esta pasada). Colonias con ficha ya son reales en el backend (§9.3,
+  // /admin/zonas) — una colonia creada después del build no está en esta
+  // lista, pero `dynamicParams` en su default (true) la renderiza on-demand
+  // en su primera visita y queda cacheada por `revalidate` de abajo, sin
+  // necesitar rebuild.
+  const zones = (await getAllZones()).map((z) => ({ slug: z.slug }));
   const municipalities = getAllMunicipalities().map((m) => ({ slug: m.slug }));
   return [...zones, ...municipalities];
 }

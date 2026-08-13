@@ -6,7 +6,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://vivevillahermosa.m
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const properties = await getAllProperties();
   const municipalities = getAllMunicipalities();
-  const zones = getAllZones();
+  const zones = await getAllZones();
 
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: SITE_URL, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },

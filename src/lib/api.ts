@@ -3,7 +3,6 @@ import type { Municipality, Zone } from '@/types/zone';
 import type { Agent } from '@/types/agent';
 
 import municipalitiesData from '@/data/municipalities.json';
-import zonesData from '@/data/zones.json';
 import agentsData from '@/data/agents.json';
 import { backendFetch } from '@/lib/backendApi';
 
@@ -187,12 +186,58 @@ export function getMunicipalityBySlug(slug: string): Municipality | undefined {
   return getAllMunicipalities().find((m) => m.slug === slug);
 }
 
-export function getAllZones(): Zone[] {
-  return zonesData as Zone[];
+/** Forma real de GET /zonas/colonias — backend, ver AdminColoniasService/ZonasService. */
+interface BackendColoniaFicha {
+  id: string;
+  slug: string;
+  nombre: string;
+  municipio: string;
+  lat: number;
+  lng: number;
+  foto: string | null;
+  destacada: boolean;
 }
 
-export function getZoneBySlug(slug: string): Zone | undefined {
-  return getAllZones().find((z) => z.slug === slug);
+/**
+ * BACKEND.md §9.3 — catálogo de colonias con ficha editorial, curado a mano
+ * desde /admin/zonas (Opción B: nunca se genera solo desde el ranking de
+ * demanda, ver AdminColoniasService.pendientes). Antes zones.json estático;
+ * `descripcion`/`propiedades`/`precioPromedio*` siguen sin persistirse acá
+ * (se calculan en runtime, ver getZonesWithLiveStats/resolverDescripcion en
+ * zonas/[slug]/page.tsx) — placeholders honestos, nunca un valor editorial
+ * fijo que pueda quedar desactualizado.
+ */
+function mapColoniaFichaToZone(c: BackendColoniaFicha): Zone {
+  return {
+    id: c.id,
+    nombre: c.nombre,
+    slug: c.slug,
+    municipio: c.municipio,
+    lat: c.lat,
+    lng: c.lng,
+    propiedades: 0,
+    precioPromedioRenta: 0,
+    precioPromedioVenta: 0,
+    descripcion: `${c.nombre} es una colonia del municipio de ${c.municipio}, Tabasco.`,
+    foto: c.foto ?? '',
+    destacada: c.destacada,
+  };
+}
+
+export async function getAllZones(): Promise<Zone[]> {
+  const colonias = await backendFetch<BackendColoniaFicha[]>('/zonas/colonias');
+  return colonias.map(mapColoniaFichaToZone);
+}
+
+export async function getZoneBySlug(slug: string): Promise<Zone | undefined> {
+  try {
+    const colonia = await backendFetch<BackendColoniaFicha>(
+      `/zonas/colonias/${encodeURIComponent(slug)}`,
+    );
+    return mapColoniaFichaToZone(colonia);
+  } catch {
+    return undefined;
+  }
 }
 
 function propertiesInMunicipality(all: Property[], m: Municipality): Property[] {
@@ -208,11 +253,10 @@ function propertiesInZone(all: Property[], z: Zone): Property[] {
 }
 
 /**
- * `propiedades`/`precioPromedio*` en zones.json y municipalities.json son
- * valores editoriales fijos (catálogo de zonas/municipios con ficha —
- * BACKEND.md §9.3, todavía no es una tabla real). Esta función solo
- * recalcula el conteo en vivo contra Property, que sí es real desde esta
- * fase.
+ * `propiedades` en municipalities.json es un valor editorial fijo (§9.3
+ * todavía no migró los municipios, solo las colonias con ficha — ver
+ * getAllZones). Esta función solo recalcula el conteo en vivo contra
+ * Property, que sí es real desde esta fase.
  */
 export async function getMunicipalitiesWithLiveStats(): Promise<Municipality[]> {
   const all = await getAllProperties();
@@ -223,8 +267,8 @@ export async function getMunicipalitiesWithLiveStats(): Promise<Municipality[]> 
 }
 
 export async function getZonesWithLiveStats(): Promise<Zone[]> {
-  const all = await getAllProperties();
-  return getAllZones().map((z) => {
+  const [all, zones] = await Promise.all([getAllProperties(), getAllZones()]);
+  return zones.map((z) => {
     const props = propertiesInZone(all, z);
     if (props.length === 0) return { ...z, propiedades: 0, precioPromedioRenta: 0, precioPromedioVenta: 0 };
     const rentas = props.filter((p) => p.operacion === 'renta').map((p) => p.precio);
@@ -240,7 +284,7 @@ export async function getZonesWithLiveStats(): Promise<Zone[]> {
 
 export interface ColoniaCard {
   nombre: string;
-  /** null si la colonia no tiene ficha editorial en zones.json — enlaza a /propiedades?q= en vez de /zonas/[slug]. */
+  /** null si la colonia no tiene ficha editorial (§9.3, /admin/zonas) — enlaza a /propiedades?q= en vez de /zonas/[slug]. */
   slug: string | null;
   municipio: string;
   descripcion: string | null;
@@ -250,14 +294,14 @@ export interface ColoniaCard {
 
 /**
  * Todas las colonias con propiedades reales — tengan o no ficha editorial
- * en zones.json —, ordenadas de mayor a menor por cantidad de propiedades.
- * Ranking por OFERTA (cuántas propiedades activas tiene la colonia) — para
- * DEMANDA (búsquedas/vistas/contactos reales), ver
+ * curada en /admin/zonas —, ordenadas de mayor a menor por cantidad de
+ * propiedades. Ranking por OFERTA (cuántas propiedades activas tiene la
+ * colonia) — para DEMANDA (búsquedas/vistas/contactos reales), ver
  * `getColoniasOrdenadasPorDemanda` más abajo (BACKEND.md §9.1).
  */
 export async function getColoniasRankedByPropiedades(): Promise<ColoniaCard[]> {
-  const all = await getAllProperties();
-  const curatedByName = new Map(getAllZones().map((z) => [z.nombre.toLowerCase(), z]));
+  const [all, zones] = await Promise.all([getAllProperties(), getAllZones()]);
+  const curatedByName = new Map(zones.map((z) => [z.nombre.toLowerCase(), z]));
 
   const porColonia = new Map<string, { nombre: string; municipio: string; propiedades: number; rentas: number[] }>();
   for (const p of all) {
