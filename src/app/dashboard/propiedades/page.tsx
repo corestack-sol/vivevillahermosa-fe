@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Plus, Info, Pencil, Trash2, Play, Pause, Archive, Star, Building2, Download, Upload, TrendingUp, Loader2,
 } from 'lucide-react';
-import { ESTADOS_ARCHIVADOS, ESTADO_CFG, mapMiaBackend, type EstadoPublicacion, type MiPropiedad } from '@/lib/misPropiedadesDemo';
+import { ESTADOS_ARCHIVADOS, ESTADO_CFG, mapMiaBackend, type EstadoPublicacion, type MiPropiedad } from '@/lib/misPropiedades';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { type BackendPublicProperty } from '@/lib/api';
 import { getPropertyTypeConfig } from '@/lib/propertyTypeConfig';
@@ -22,7 +22,8 @@ import { DestacarPropiedadModal } from '@/components/property/DestacarPropiedadM
 // Debe coincidir con LIMITE_PROPIEDADES_ACTIVAS en el backend
 // (properties.service.ts) — solo para el mensaje, el servidor lo hace
 // cumplir de verdad (código LIMITE_PROPIEDADES_ALCANZADO).
-const LIMITE_PROPIEDADES = 4;
+// 2026-08-10: bajado de 4 a 3, ver docs/PLAN-AUDITORIA-FASE1-MVP.md punto 0.
+const LIMITE_PROPIEDADES = 3;
 
 type FiltroEstado = EstadoPublicacion | 'todas' | 'archivada';
 

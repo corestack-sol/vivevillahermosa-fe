@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { backendFetch } from '@/lib/backendApi';
-import type { EstadoPublicacion } from '@/lib/misPropiedadesDemo';
+import type { EstadoPublicacion } from '@/lib/misPropiedades';
 
 /**
  * Resuelve el estado actual de esta propiedad contra GET /propiedades/mias

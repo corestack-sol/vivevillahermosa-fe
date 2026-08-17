@@ -14,7 +14,7 @@ export default function PrivacidadPage() {
         <ShieldCheck size={22} className="text-brand" />
         <h1 className="text-3xl font-heading font-bold text-gray-900">Aviso de privacidad</h1>
       </div>
-      <p className="text-sm text-gray-400 mb-10">Última actualización: 30 de julio de 2026</p>
+      <p className="text-sm text-gray-400 mb-10">Última actualización: 17 de agosto de 2026</p>
 
       <div className="prose prose-sm max-w-none text-gray-700 space-y-8">
         <section>
@@ -32,6 +32,7 @@ export default function PrivacidadPage() {
             <li>Datos de contacto que escribes al enviar un mensaje sobre una propiedad: nombre, teléfono y correo.</li>
             <li>Preferencias de búsqueda que guardas como alertas (municipio, tipo de propiedad, precio máximo, etc.).</li>
             <li>Si publicas una propiedad: los datos de contacto que tú decides mostrar a interesados (nombre, teléfono, correo).</li>
+            <li>Analítica de uso (qué páginas se visitan, qué botones se usan) mediante PostHog — sin usar cookies de rastreo, y sin registrar lo que escribes en ningún formulario (nombre, teléfono, correo, mensajes). Solo mide comportamiento agregado, nunca el contenido de lo que escribes.</li>
           </ul>
           <p className="leading-relaxed mt-3">
             Algunas preferencias (propiedades favoritas antes de iniciar sesión, comparador, búsquedas recientes) se guardan únicamente en tu navegador (localStorage), no en nuestros servidores, y desaparecen si borras los datos de ese navegador.
@@ -55,7 +56,7 @@ export default function PrivacidadPage() {
         <section>
           <h2 className="text-lg font-heading font-bold text-gray-900 mb-2">4. Con quién compartimos tus datos</h2>
           <p className="leading-relaxed">
-            Hoy no compartimos tus datos personales con terceros para fines comerciales. Sí usamos proveedores de servicio que procesan datos en nuestro nombre para que la plataforma funcione: un proveedor de correo transaccional para enviar las notificaciones de alertas, y proveedores de autenticación (Google, Facebook) cuando eliges iniciar sesión con ellos.
+            Hoy no compartimos tus datos personales con terceros para fines comerciales. Sí usamos proveedores de servicio que procesan datos en nuestro nombre para que la plataforma funcione: un proveedor de correo transaccional para enviar las notificaciones de alertas, proveedores de autenticación (Google, Facebook) cuando eliges iniciar sesión con ellos, y PostHog para analítica de uso (nunca para publicidad).
           </p>
         </section>
 

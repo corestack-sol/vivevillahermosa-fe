@@ -144,6 +144,11 @@ function FooterFull() {
                 </Link>
               </li>
               <li>
+                <Link href="/terminos" className="text-sm text-white/70 hover:text-accent transition-colors">
+                  Términos y condiciones
+                </Link>
+              </li>
+              <li>
                 <Link href="/mapa" className="text-sm text-white/70 hover:text-accent transition-colors">
                   Mapa de propiedades
                 </Link>

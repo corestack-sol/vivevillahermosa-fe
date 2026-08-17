@@ -4,7 +4,7 @@ import { mapBackendProperty, type BackendPublicProperty } from '@/lib/api';
 import { backendFetchServer } from '@/lib/backendApiServer';
 import { BackendApiError } from '@/lib/backendApi';
 import { buildPropertyMetadata } from '@/lib/seo';
-import { getLandmark, distanciaKm, distanciaMinimaACategoria, CATEGORIAS_GENERICAS } from '@/lib/landmarks';
+import { getLandmark, distanciaKm, distanciaMinimaACategoria, CATEGORIAS_GENERICAS, obtenerLandmarksBackend } from '@/lib/landmarks';
 import { getColoniaByKey, obtenerColoniaDescubiertaBackend } from '@/lib/colonias';
 import { PropertyDetailView } from '@/components/property/PropertyDetailView';
 
@@ -75,6 +75,12 @@ export default async function PropertyDetailPage({ params, searchParams }: Props
   // esto, alguien que llega aquí no tenía ninguna forma de verificar por
   // qué esta propiedad apareció en esos resultados.
   const { cerca, cercaTipo, cercaColonia } = await searchParams;
+  // Un Server Component nunca precarga nada (no corre en un navegador) —
+  // solo se pide el catálogo si de verdad hace falta (mismo criterio que
+  // getColoniaByKey/obtenerColoniaDescubiertaBackend más abajo), para no
+  // pagar un fetch extra en la mayoría de las visitas, que no traen
+  // ?cerca=/?cercaTipo=.
+  if (cerca || cercaTipo) await obtenerLandmarksBackend();
   const landmarkCercano = cerca ? getLandmark(cerca) : undefined;
   const distanciaLandmark = landmarkCercano
     ? distanciaKm(property.lat, property.lng, landmarkCercano.lat, landmarkCercano.lng)
@@ -98,10 +104,51 @@ export default async function PropertyDetailPage({ params, searchParams }: Props
   // Property.userId → User.bloqueado.
   const enRevision = property.agente.enRevision ?? false;
 
+  // JSON-LD (Schema.org RealEstateListing) — sin esto, Google/buscadores de
+  // IA no tienen forma estructurada de leer precio/tipo/ubicación de la
+  // ficha, solo texto libre. Ver docs/PLAN-AUDITORIA-FASE1-MVP.md hallazgo
+  // #12. Usa latPublico/lngPublico (nunca la coordenada exacta) — mismo
+  // criterio de privacidad que ya rige el resto de esta página.
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'RealEstateListing',
+    name: property.titulo,
+    description: property.descripcion,
+    url: `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://vivevillahermosa.mx'}/propiedades/${property.slug}`,
+    image: property.fotos,
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: property.colonia,
+      addressRegion: property.municipio,
+      addressCountry: 'MX',
+    },
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: property.latPublico,
+      longitude: property.lngPublico,
+    },
+    floorSize: { '@type': 'QuantitativeValue', value: property.m2Construidos, unitCode: 'MTK' },
+    numberOfRooms: property.recamaras,
+    numberOfBathroomsTotal: property.banos,
+    offers: {
+      '@type': 'Offer',
+      price: property.precio,
+      priceCurrency: property.moneda,
+      availability: 'https://schema.org/InStock',
+      businessFunction: property.operacion === 'renta' ? 'https://schema.org/LeaseOut' : 'https://schema.org/Sell',
+    },
+  };
+
   return (
-    <PropertyDetailView
-      property={property}
-      extras={{ landmarkCercano, distanciaLandmark, categoriaCercana, coloniaCercana, distanciaColonia, enRevision }}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <PropertyDetailView
+        property={property}
+        extras={{ landmarkCercano, distanciaLandmark, categoriaCercana, coloniaCercana, distanciaColonia, enRevision }}
+      />
+    </>
   );
 }

@@ -23,6 +23,7 @@ import { FloodRiskBadge } from '@/components/property/FloodRiskBadge';
 import { TermsModal } from './TermsModal';
 import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
+import posthog from 'posthog-js';
 import { matchColonia, distanciaKm } from '@/lib/colonias';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { resizeImageToDataUrl } from '@/lib/imageResize';
@@ -82,12 +83,15 @@ const STEP_SUBTITLES = [
   'Las fotos generan más contactos',
   '¿Cómo te pueden contactar?',
 ];
-const MAX_FOTOS = 4;
+const MAX_FOTOS = 5;
 // Debe coincidir con LIMITE_PROPIEDADES_ACTIVAS en el backend
 // (properties.service.ts) — el servidor es quien de verdad lo hace cumplir
 // (código LIMITE_PROPIEDADES_ALCANZADO), esto solo evita hacer perder el
 // tiempo a quien ya topó antes de llenar los 6 pasos del formulario.
-const LIMITE_PROPIEDADES = 4;
+// 2026-08-10: bajado de 4 a 3 por decisión de producto confirmada — ver
+// docs/PLAN-AUDITORIA-FASE1-MVP.md punto 0. Coordinar con el backend, ver
+// docs/BACKEND-17082026.md.
+const LIMITE_PROPIEDADES = 3;
 
 // Nombres legibles para el resumen de "campos por corregir" — sin esto, la
 // lista mostraría las llaves crudas del schema (ej. "riesgoInundacion" en
@@ -111,10 +115,17 @@ const ETIQUETAS_CAMPO: Partial<Record<keyof FormData, string>> = {
 
 type FormData = PublishFormData;
 
-/** Botón "chip" — blanco/marca cuando está activo, gris neutro cuando no. */
+/**
+ * Botón "chip" — blanco/marca cuando está activo, gris neutro cuando no.
+ * El <input type="radio"> real queda `sr-only` (accesible, pero invisible) y
+ * este <div> visual reacciona a su estado — por eso necesita `peer-focus-visible`
+ * aquí: sin esto, alguien navegando solo con teclado no ve cuál opción tiene
+ * el foco antes de seleccionarla con espacio/flechas (WCAG 2.4.7).
+ */
+const FOCUS_RING = 'peer-focus-visible:ring-2 peer-focus-visible:ring-brand peer-focus-visible:ring-offset-2';
 const toggleCls = {
-  inactive: 'border-gray-200 bg-white text-gray-500 hover:border-brand/40 hover:text-brand hover:bg-brand-pale/30',
-  active:   'border-brand bg-brand text-white font-bold shadow-sm',
+  inactive: `border-gray-200 bg-white text-gray-500 hover:border-brand/40 hover:text-brand hover:bg-brand-pale/30 ${FOCUS_RING}`,
+  active:   `border-brand bg-brand text-white font-bold shadow-sm ${FOCUS_RING}`,
 } as const;
 
 export function PublishForm() {
@@ -403,9 +414,15 @@ export function PublishForm() {
     // Cloudinary, devolviendo la URL real; `Property.fotos` solo guarda esas
     // URLs, nunca base64. Si una foto falla se omite, igual que antes, en
     // vez de perder toda la publicación por una sola.
-    const fotosUrls: string[] = [];
-    for (const f of fotos.slice(0, MAX_FOTOS)) {
-      try {
+    //
+    // En paralelo, no secuencial (2026-08-17, docs/PLAN-AUDITORIA-FASE1-MVP.md,
+    // hallazgo de escalabilidad) — con MAX_FOTOS en 5, subir una por una
+    // significa esperar 5 ciclos completos de red+análisis+Cloudinary uno
+    // tras otro. `Promise.allSettled` mantiene el orden real de selección
+    // del usuario (importa: la primera es la foto "Principal", ver el badge
+    // en el paso de fotos) sin importar cuál termine primero.
+    const resultados = await Promise.allSettled(
+      fotos.slice(0, MAX_FOTOS).map(async (f) => {
         const dataUrl = await resizeImageToDataUrl(f.file, 1280, 'image/jpeg', 0.85);
         const blob = await (await fetch(dataUrl)).blob();
         const body = new FormData();
@@ -414,9 +431,12 @@ export function PublishForm() {
           method: 'POST',
           body,
         });
-        fotosUrls.push(url);
-      } catch { /* se omite esa foto */ }
-    }
+        return url;
+      }),
+    );
+    const fotosUrls = resultados
+      .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
+      .map((r) => r.value);
 
     const centro = MUNICIPIO_CENTERS[data.municipio] ?? MUNICIPIO_CENTERS['Centro'];
     const lat = coords?.lat ?? centro[0];
@@ -477,17 +497,30 @@ export function PublishForm() {
     // innecesaria de PII (hallazgo H3 de la auditoría).
     sessionStorage.setItem('lastPublishedProperty', JSON.stringify({ id: created.id }));
 
+    // Evento clave para saber si la hipótesis de Fase 1 se cumple — sin
+    // esto no hay forma de medir cuántas publicaciones de verdad se
+    // completan. Solo tipo/operación/municipio: nada de contacto/PII.
+    // docs/PLAN-AUDITORIA-FASE1-MVP.md hallazgo #8.
+    posthog.capture('propiedad_publicada', {
+      tipo: data.tipo,
+      operacion: data.operacion,
+      municipio: data.municipio,
+      con_fotos: fotosUrls.length > 0,
+    });
+
     // El matching contra alertas guardadas y la notificación (correo +
     // panel) ya los dispara el backend al crear la propiedad
     // (AlertaMatchingService, BACKEND.md §3 punto 10) — no hace falta
     // llamar nada aparte desde aquí como antes.
 
-    // Gestionar/editar/pausar/eliminar ya funciona igual para cualquier
-    // cuenta (ver OwnerActionsBar.tsx y Navbar.tsx) — antes solo las cuentas
-    // en modo Inmobiliaria iban directo al panel real; alguien publicando
-    // como particular caía en una página de "gracias" sin ningún enlace de
-    // vuelta a su propiedad recién publicada.
-    router.push('/dashboard/propiedades');
+    // Restaurado 2026-08-17 (docs/PLAN-AUDITORIA-FASE1-MVP.md hallazgo #2):
+    // /publicar/gracias ya tiene el link "Gestionar mi propiedad" que motivó
+    // saltársela antes (a /dashboard/propiedades, donde vive
+    // OwnerActionsBar.tsx) — ese link sigue ahí. Lo que faltaba antes (un
+    // enlace real a la ficha pública) ya se puede resolver: Property es
+    // real en el backend, así que `created.id` ya es una URL pública
+    // válida — /publicar/gracias la usa (ver ese archivo).
+    router.push('/publicar/gracias');
   };
 
   const StepIcon = STEP_ICONS[step];
@@ -599,7 +632,7 @@ export function PublishForm() {
               <div className="grid grid-cols-2 gap-3">
                 {['venta', 'renta'].map((op) => (
                   <label key={op} className="cursor-pointer">
-                    <input type="radio" value={op} {...register('operacion')} className="sr-only" />
+                    <input type="radio" value={op} {...register('operacion')} className="sr-only peer" />
                     <div className={`flex items-center justify-center gap-1.5 border-2 rounded-xl p-3 text-center text-sm transition-colors ${watch('operacion') === op ? toggleCls.active : toggleCls.inactive}`}>
                       {op === 'venta' ? <Tag size={14} /> : <Key size={14} />}
                       {op === 'venta' ? 'Venta' : 'Renta'}
@@ -775,8 +808,8 @@ export function PublishForm() {
                   { val: 'alto',  label: 'Alto',  dot: 'bg-red-500',    cls: 'border-red-500 bg-red-50 text-red-700' },
                 ].map(({ val, label, dot, cls }) => (
                   <label key={val} className="cursor-pointer">
-                    <input type="radio" value={val} {...register('riesgoInundacion')} className="sr-only" />
-                    <div className={`border-2 rounded-xl p-2.5 text-center text-xs font-semibold transition-all ${
+                    <input type="radio" value={val} {...register('riesgoInundacion')} className="sr-only peer" />
+                    <div className={`border-2 rounded-xl p-2.5 text-center text-xs font-semibold transition-all ${FOCUS_RING} ${
                       riesgoActual === val ? cls + ' shadow-sm' : toggleCls.inactive
                     }`}>
                       <span className="inline-flex items-center justify-center gap-1.5">
@@ -1003,7 +1036,7 @@ export function PublishForm() {
               <div className="grid grid-cols-3 gap-2">
                 {METODO_CONTACTO_OPTIONS.map((opt) => (
                   <label key={opt.value} className="cursor-pointer">
-                    <input type="radio" value={opt.value} {...register('metodoContacto')} className="sr-only" />
+                    <input type="radio" value={opt.value} {...register('metodoContacto')} className="sr-only peer" />
                     <div className={`flex items-center justify-center border-2 rounded-xl p-2.5 text-center text-sm transition-colors ${
                       watch('metodoContacto') === opt.value ? toggleCls.active : toggleCls.inactive
                     }`}>

@@ -7,7 +7,7 @@ import { Heart, Bell, Plus, Eye, TrendingUp, Home, LayoutDashboard, Lightbulb, M
 import { useAuth } from '@/context/AuthContext';
 import { backendFetch } from '@/lib/backendApi';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { mapMiaBackend, type MiPropiedad } from '@/lib/misPropiedadesDemo';
+import { mapMiaBackend, type MiPropiedad } from '@/lib/misPropiedades';
 import type { BackendPublicProperty } from '@/lib/api';
 import { generarReporteDesempeno } from '@/lib/reportePdf';
 import { obtenerResumenReporte } from '@/lib/aiClient';
@@ -164,7 +164,7 @@ export default function DashboardPage() {
       )}
 
       {/* Mismo criterio que /dashboard/analitica y /dashboard/propiedades
-          (ver misPropiedadesDemo.ts, BACKEND.md §12): las propiedades ya son
+          (ver misPropiedades.ts, BACKEND.md §12): las propiedades ya son
           reales, "Vistas"/"Contactos" todavía no cuentan actividad real. */}
       <div className="flex items-start gap-2.5 bg-brand-pale border border-brand/20 rounded-xl px-4 py-3 mb-6">
         <Info size={15} className="text-brand flex-shrink-0 mt-0.5" />

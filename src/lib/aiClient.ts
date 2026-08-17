@@ -1,4 +1,4 @@
-import type { MiPropiedad } from './misPropiedadesDemo';
+import type { MiPropiedad } from './misPropiedades';
 import { backendFetch } from './backendApi';
 
 export async function obtenerResumenReporte(propiedades: MiPropiedad[]): Promise<string | null> {

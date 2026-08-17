@@ -50,3 +50,7 @@ prisma/*.db-journal
 # solo se citan como fuente en la investigación) — el Atlas de Riesgos
 # pesa 234MB, muy por encima del límite de 100MB de GitHub.
 docs/*.pdf
+# Misma razón — copia del mismo Atlas de Riesgos, esta vez en
+# tabasco-proptech/ (2026-08-17: se coló en el commit d7b55bd porque la
+# regla de arriba solo cubre docs/*.pdf, no esta carpeta).
+tabasco-proptech/*.pdf

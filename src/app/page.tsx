@@ -301,9 +301,9 @@ export default async function HomePage() {
               </p>
               <div className="space-y-3 mb-7">
                 {[
-                  { color: '#10B981', bg: '#D1FAE5', label: 'Bajo historial de inundaciones', desc: 'Pocas o ninguna inundación registrada' },
-                  { color: '#F59E0B', bg: '#FEF3C7', label: 'Inundaciones menores ocasionales', desc: 'Anegamiento leve en temporada de lluvias' },
-                  { color: '#EF4444', bg: '#FEE2E2', label: 'Históricamente inundable',  desc: 'Inundaciones severas documentadas' },
+                  { color: 'var(--color-success)', bg: '#D1FAE5', label: 'Bajo historial de inundaciones', desc: 'Pocas o ninguna inundación registrada' },
+                  { color: 'var(--color-warning)', bg: '#FEF3C7', label: 'Inundaciones menores ocasionales', desc: 'Anegamiento leve en temporada de lluvias' },
+                  { color: 'var(--color-danger)', bg: '#FEE2E2', label: 'Históricamente inundable',  desc: 'Inundaciones severas documentadas' },
                 ].map((r) => (
                   <div key={r.label} className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: r.bg }}>

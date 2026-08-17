@@ -2,6 +2,13 @@ import type { Property } from '@/types/property';
 import { mapBackendProperty, type BackendPublicProperty } from '@/lib/api';
 import { formatRelativeDate } from '@/lib/format';
 
+// Renombrado 2026-08-17 (antes misPropiedadesDemo.ts) — el nombre ya no
+// describía el contenido: mapea datos reales de GET /propiedades/mias, no
+// una simulación. Solo vistas/contactos/favoritos siguen en 0 (ver
+// mapMiaBackend abajo) porque no hay tabla de eventos real todavía —
+// documentado ahí puntualmente, no hace falta que el archivo entero se
+// llame "Demo" por 3 campos.
+
 export type EstadoPublicacion = 'activa' | 'pausada' | 'vencida' | 'vendida' | 'rentada';
 
 // Estados que significan "ya no está en circulación porque se cerró con

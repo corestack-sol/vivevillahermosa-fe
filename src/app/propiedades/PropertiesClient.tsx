@@ -14,7 +14,7 @@ import { ActiveFilters } from '@/components/search/ActiveFilters';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { MapViewDynamic } from '@/components/map/MapViewDynamic';
-import { getLandmark, CATEGORIAS_GENERICAS } from '@/lib/landmarks';
+import { getLandmark, CATEGORIAS_GENERICAS, precargarLandmarks } from '@/lib/landmarks';
 import { matchColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
 import { interpretarBusqueda, esOracionLarga } from '@/lib/interpretarBusqueda';
 import { getResultadosSimilares } from '@/lib/filters';
@@ -196,6 +196,12 @@ export function PropertiesClient({ allProperties }: Props) {
   // el próximo refresh completo. No bloquea nada: si tarda o falla, la
   // búsqueda sigue funcionando igual con lo que ya había.
   useEffect(() => { precargarColoniasDescubiertas(); }, []);
+
+  // Mismo patrón que arriba, pero para el catálogo de landmarks — migrado al
+  // backend 2026-08-17 (docs/message.txt). Sin esto, getLandmark/
+  // landmarksPorCategoria (ActiveFilters.tsx, filters.ts) se quedan con el
+  // cache vacío hasta que esto cargue; no bloquea ninguna búsqueda.
+  useEffect(() => { precargarLandmarks(); }, []);
 
   // Aviso de un solo uso cuando se llega desde el buscador de Home
   // (SearchBar.tsx) con una búsqueda que la IA no pudo interpretar en nada

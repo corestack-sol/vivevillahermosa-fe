@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ImagePlus, Trash2, Loader2, Camera, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ImagePlus, Trash2, Loader2, Camera, ShieldAlert } from 'lucide-react';
 import { Button, buttonClasses } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
 import { resizeImageToDataUrl } from '@/lib/imageResize';
@@ -131,6 +131,13 @@ export default function PortafolioPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <nav className="flex items-center gap-1 text-xs text-gray-400 mb-3 flex-wrap">
+        <Link href="/dashboard" className="hover:text-brand transition-colors">Panel</Link>
+        <ChevronRight size={12} />
+        <Link href="/dashboard/servicios" className="hover:text-brand transition-colors">Mis servicios</Link>
+        <ChevronRight size={12} />
+        <span className="text-gray-600 font-medium truncate max-w-[200px]">Portafolio</span>
+      </nav>
       <Link href="/dashboard/servicios" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-brand mb-4">
         <ArrowLeft size={15} /> Volver a mis servicios
       </Link>

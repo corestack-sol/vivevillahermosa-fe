@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { MiPropiedad } from './misPropiedadesDemo';
-import { ESTADO_CFG } from './misPropiedadesDemo';
+import type { MiPropiedad } from './misPropiedades';
+import { ESTADO_CFG } from './misPropiedades';
 
 const BRAND_DARK: [number, number, number] = [10, 79, 72];
 const BRAND: [number, number, number] = [13, 112, 101];
@@ -42,7 +42,7 @@ interface GenerarReporteParams {
  * ⚠️ Sigue las mismas reglas de honestidad que el resto del panel
  * profesional: el resumen y la tabla usan los números que ya se ven en
  * `/dashboard/propiedades` (hoy datos de muestra, ver
- * misPropiedadesDemo.ts) — el PDF lo dice explícitamente en el pie de
+ * misPropiedades.ts) — el PDF lo dice explícitamente en el pie de
  * página. No incluye comparación contra el periodo anterior porque no
  * existe historial real todavía; agregarla sin datos reales sería inventar
  * una tendencia. El insight (con IA si `resumenIA` viene, o el cálculo

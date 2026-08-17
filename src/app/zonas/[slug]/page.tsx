@@ -7,7 +7,7 @@ import { buildZoneMetadata } from '@/lib/seo';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { MapViewDynamic } from '@/components/map/MapViewDynamic';
 import { formatPrice } from '@/lib/format';
-import { LANDMARKS, distanciaKm } from '@/lib/landmarks';
+import { obtenerLandmarksBackend, distanciaKm } from '@/lib/landmarks';
 import { detectarRiesgoInundacion } from '@/lib/zonas-inundacion';
 import { backendFetchServer } from '@/lib/backendApiServer';
 import type { Zone, Municipality } from '@/types/zone';
@@ -20,8 +20,9 @@ import type { Zone, Municipality } from '@/types/zone';
 const RADIO_LANDMARKS_ZONA_KM = 3;
 
 /** Hasta 3 landmarks reales más cercanos al centro de la zona, ordenados por distancia — nunca inventados. */
-function landmarksCercaDeZona(lat: number, lng: number): string[] {
-  return LANDMARKS
+async function landmarksCercaDeZona(lat: number, lng: number): Promise<string[]> {
+  const landmarks = await obtenerLandmarksBackend();
+  return landmarks
     .map((l) => ({ label: l.label, distancia: distanciaKm(lat, lng, l.lat, l.lng) }))
     .filter((l) => l.distancia <= RADIO_LANDMARKS_ZONA_KM)
     .sort((a, b) => a.distancia - b.distancia)
@@ -48,7 +49,7 @@ async function resolverDescripcion(zone: Zone | undefined, municipality: Municip
           nombre: zone.nombre,
           tipo: 'colonia' as const,
           municipio: zone.municipio,
-          landmarksCercanos: landmarksCercaDeZona(zone.lat, zone.lng),
+          landmarksCercanos: await landmarksCercaDeZona(zone.lat, zone.lng),
           totalPropiedades: zone.propiedades,
           precioPromedioVenta: zone.precioPromedioVenta > 0 ? zone.precioPromedioVenta : undefined,
           precioPromedioRenta: zone.precioPromedioRenta > 0 ? zone.precioPromedioRenta : undefined,
@@ -60,7 +61,7 @@ async function resolverDescripcion(zone: Zone | undefined, municipality: Municip
           // `href` de abajo) para el caso especial de este único municipio.
           nombre: municipality!.nombre.replace(' (Villahermosa)', ''),
           tipo: 'municipio' as const,
-          landmarksCercanos: landmarksCercaDeZona(municipality!.lat, municipality!.lng),
+          landmarksCercanos: await landmarksCercaDeZona(municipality!.lat, municipality!.lng),
           totalPropiedades: municipality!.propiedades,
           cercaDosoBocas: municipality!.cercaDosoBocas,
         };

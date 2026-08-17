@@ -34,9 +34,12 @@ export default function GraciasPage() {
           Tu anuncio ha sido recibido y estará disponible en Vive Villahermosa próximamente.
         </p>
         {propId && (
-          <p className="text-xs text-gray-400 bg-gray-50 rounded-lg py-2 px-4 inline-block mb-6">
-            ID de referencia: <code className="font-mono">{propId}</code>
-          </p>
+          <Link
+            href={`/propiedades/${propId}`}
+            className="inline-flex items-center gap-1.5 text-sm text-brand font-semibold hover:underline mb-6"
+          >
+            Ver mi ficha pública <ChevronRight size={14} />
+          </Link>
         )}
 
         <div className="bg-brand-pale rounded-2xl p-5 mb-6 text-left">

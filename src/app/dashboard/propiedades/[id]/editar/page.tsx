@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Save } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button, buttonClasses } from '@/components/ui/Button';
@@ -149,6 +149,13 @@ export default function EditarPropiedadPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <nav className="flex items-center gap-1 text-xs text-gray-400 mb-4 flex-wrap">
+        <Link href="/dashboard" className="hover:text-brand transition-colors">Panel</Link>
+        <ChevronRight size={12} />
+        <Link href="/dashboard/propiedades" className="hover:text-brand transition-colors">Mis propiedades</Link>
+        <ChevronRight size={12} />
+        <span className="text-gray-600 font-medium truncate max-w-[200px]">Editar</span>
+      </nav>
       <div className="flex items-center gap-3 mb-6">
         <Link href="/dashboard/propiedades" className="text-gray-400 hover:text-brand transition-colors">
           <ArrowLeft size={20} />
@@ -210,8 +217,8 @@ export default function EditarPropiedadPage() {
           <div className="grid grid-cols-3 gap-2">
             {RIESGO_OPTIONS.map(({ value, label }) => (
               <label key={value} className="cursor-pointer">
-                <input type="radio" value={value} {...register('riesgoInundacion')} className="sr-only" />
-                <div className={`border-2 rounded-xl p-2.5 text-center text-xs font-semibold transition-colors ${
+                <input type="radio" value={value} {...register('riesgoInundacion')} className="sr-only peer" />
+                <div className={`border-2 rounded-xl p-2.5 text-center text-xs font-semibold transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-brand peer-focus-visible:ring-offset-2 ${
                   riesgoActual === value ? 'border-brand bg-brand-pale text-brand' : 'border-gray-200 text-gray-500 hover:border-brand/40'
                 }`}>
                   {label}
@@ -229,8 +236,8 @@ export default function EditarPropiedadPage() {
           <div className="grid grid-cols-3 gap-2">
             {METODO_CONTACTO_OPTIONS.map((opt) => (
               <label key={opt.value} className="cursor-pointer">
-                <input type="radio" value={opt.value} {...register('metodoContacto')} className="sr-only" />
-                <div className={`border-2 rounded-xl p-2.5 text-center text-sm font-semibold transition-colors ${
+                <input type="radio" value={opt.value} {...register('metodoContacto')} className="sr-only peer" />
+                <div className={`border-2 rounded-xl p-2.5 text-center text-sm font-semibold transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-brand peer-focus-visible:ring-offset-2 ${
                   watch('metodoContacto') === opt.value ? 'border-brand bg-brand-pale text-brand' : 'border-gray-200 text-gray-500 hover:border-brand/40'
                 }`}>
                   {opt.label}

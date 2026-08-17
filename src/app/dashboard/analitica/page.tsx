@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Info, Eye, MessageCircle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { mapMiaBackend, type MiPropiedad } from '@/lib/misPropiedadesDemo';
+import { mapMiaBackend, type MiPropiedad } from '@/lib/misPropiedades';
 import { backendFetch } from '@/lib/backendApi';
 import type { BackendPublicProperty } from '@/lib/api';
 import { getSerieDemo, sumar, cambioPorcentual } from '@/lib/analiticaDemo';

@@ -25,9 +25,15 @@ const variantClasses: Record<Variant, string> = {
     'bg-danger text-white hover:opacity-90 active:scale-95',
 };
 
+// `md` (el tamaño default) sube de py-2.5 a py-3 para alcanzar el touch
+// target mínimo de 44px (12px×2 padding + 20px de line-height de text-sm =
+// 44px) — antes quedaba en ~40px. Ver docs/PLAN-AUDITORIA-FASE1-MVP.md
+// hallazgo #6. `sm` se deja igual a propósito: se usa en UI densa
+// (tablas/admin) donde forzar 44px tendría un efecto visual más amplio que
+// revisar en esta pasada — queda pendiente si se decide aplicar ahí también.
 const sizeClasses: Record<Size, string> = {
   sm: 'text-sm px-3 py-1.5 rounded-lg',
-  md: 'text-sm px-4 py-2.5 rounded-xl',
+  md: 'text-sm px-4 py-3 rounded-xl',
   lg: 'text-base px-6 py-3 rounded-xl',
   xl: 'text-sm px-7 py-3.5 rounded-2xl',
 };

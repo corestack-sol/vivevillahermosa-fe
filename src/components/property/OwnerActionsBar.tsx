@@ -6,7 +6,7 @@ import { Building2, Pencil, Trash2, Play, Pause, Archive, Star, ArrowRight } fro
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
-import { ESTADOS_ARCHIVADOS, ESTADO_CFG, type EstadoPublicacion } from '@/lib/misPropiedadesDemo';
+import { ESTADOS_ARCHIVADOS, ESTADO_CFG, type EstadoPublicacion } from '@/lib/misPropiedades';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { ArchivarPropiedadModal } from '@/components/property/ArchivarPropiedadModal';
 import { EliminarPropiedadModal } from '@/components/property/EliminarPropiedadModal';
@@ -16,7 +16,8 @@ import { useRouter } from 'next/navigation';
 // Debe coincidir con LIMITE_PROPIEDADES_ACTIVAS en el backend
 // (properties.service.ts) — solo se usa para el mensaje de error, el
 // servidor es quien de verdad lo hace cumplir (código LIMITE_PROPIEDADES_ALCANZADO).
-const LIMITE_PROPIEDADES = 4;
+// 2026-08-10: bajado de 4 a 3, ver docs/PLAN-AUDITORIA-FASE1-MVP.md punto 0.
+const LIMITE_PROPIEDADES = 3;
 
 interface MiaBackend {
   id: string;
