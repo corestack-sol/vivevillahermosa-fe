@@ -112,17 +112,24 @@ export default async function HomePage() {
 
           Collage de íconos de Tabasco (cacao, marimba, pejelagarto, cabeza
           olmeca, iguana, garza, sombrero, canoa, torre petrolera, puente,
-          skyline) — public/images/hero-bg-collage.svg, generado en Canva a
-          partir de src/assets/bgcollage.svg — se apila sobre el mismo
-          degradado de antes (no lo reemplaza) vía `background-image` con
-          dos capas, porque el collage no es un patrón que se repita sin
-          costura (960×540 fijo): "cover" lo estira/recorta según la
-          pantalla, y el degradado se sigue viendo en cualquier borde que
-          el collage no alcance a cubrir. */}
+          skyline) — public/images/hero-bg-collage.webp. Pasó por SVG
+          8.4MB → JPG 1280×720 (22-28KB) → WebP 4000×2250 (74KB): la
+          versión de 1280px se veía borrosa en pantallas anchas porque
+          `background-size: cover` la agrandaba más allá de su resolución
+          real (esta `<section>` no tiene `max-w`, ocupa el ancho completo
+          de la pantalla) — no era un problema de compresión ni de
+          formato, era de origen. La versión de 4000px cubre cualquier
+          monitor real sin necesidad de agrandarla. El canal alfa del PNG
+          original no aportaba nada (imagen ya opaca) pero sí costaba peso
+          — aplanarlo a blanco sólido antes de codificar bajó el archivo
+          de 450KB a 74KB con el mismo resultado visual. Se apila sobre el
+          mismo degradado de antes (no lo reemplaza) vía `background-image`
+          con dos capas — el degradado de abajo sigue sirviendo de base
+          para cualquier borde que la imagen no alcance a cubrir. */}
       <section
         className="relative"
         style={{
-          backgroundImage: 'url(/images/hero-bg-collage.svg), linear-gradient(to bottom right, var(--color-brand-pale), #ffffff, var(--color-sand))',
+          backgroundImage: 'url(/images/hero-bg-collage.webp), linear-gradient(to bottom right, var(--color-brand-pale), #ffffff, var(--color-sand))',
           backgroundSize: 'cover, cover',
           backgroundPosition: 'center, center',
           backgroundRepeat: 'no-repeat, no-repeat',

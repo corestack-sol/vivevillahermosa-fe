@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { SlidersHorizontal, X, Map, LayoutGrid, Search, ChevronDown, Loader2, Sparkles, MapPin, Clock } from 'lucide-react';
-import type { Property } from '@/types/property';
+import type { Property, PropertyType, OperationType } from '@/types/property';
 import type { SearchFilters } from '@/types/search';
 import { useFilters } from '@/hooks/useFilters';
 import { useSearch } from '@/hooks/useSearch';
@@ -33,6 +33,27 @@ const TIPO_PLURAL: Record<string, string> = {
   casa: 'Casas', departamento: 'Departamentos', terreno: 'Terrenos',
   local: 'Locales', oficina: 'Oficinas', bodega: 'Bodegas', habitacion: 'Habitaciones',
 };
+
+// Chips de filtro rápido para el modo mapa — pedido explícito 2026-08-17.
+// En modo mapa el <aside> con FilterPanel se oculta por completo (línea
+// ~526, "viewMode === 'grid'"), así que sin esto no había NINGUNA forma de
+// cambiar de filtro sin volver a modo lista primero. Mismos chips/mismos
+// tipos que ya usa /mapa (MapaClient.tsx) para que el patrón se sienta
+// igual en toda la plataforma.
+const MAP_TYPE_CHIPS: { value: PropertyType | ''; label: string }[] = [
+  { value: '',             label: 'Todos'    },
+  { value: 'casa',         label: 'Casa'     },
+  { value: 'departamento', label: 'Depto'    },
+  { value: 'terreno',      label: 'Terreno'  },
+  { value: 'local',        label: 'Local'    },
+  { value: 'habitacion',   label: 'Cuarto'   },
+];
+
+const MAP_OP_CHIPS: { value: OperationType | ''; label: string }[] = [
+  { value: '',       label: 'Todo'   },
+  { value: 'venta',  label: 'Venta'  },
+  { value: 'renta',  label: 'Renta'  },
+];
 
 // Detecta, mientras el usuario todavía está escribiendo (antes de someter
 // la búsqueda), que lo que hay en `q` es una oración larga en vez de un
@@ -373,11 +394,15 @@ export function PropertiesClient({ allProperties }: Props) {
                   </span>
                 )}
               </h1>
-              {isLoading && (
-                <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
-                  <Loader2 size={11} className="animate-spin" /> Buscando...
-                </p>
-              )}
+              {/* Altura fija (h-4) siempre reservada, aparezca o no el
+                  texto — antes este <p> solo existía en el DOM mientras
+                  isLoading, así que su aparición/desaparición cambiaba la
+                  altura del header y empujaba todo lo de abajo (el mapa
+                  incluido) — el "salto" reportado 2026-08-17 al pulsar un
+                  chip de filtro en modo mapa. */}
+              <p className="text-xs text-gray-400 mt-0.5 h-4 flex items-center gap-1.5">
+                {isLoading && <><Loader2 size={11} className="animate-spin" /> Buscando...</>}
+              </p>
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -559,29 +584,84 @@ export function PropertiesClient({ allProperties }: Props) {
               <SortSelect value={filters.sort ?? 'relevancia'} onChange={(sort) => updateFilters({ sort })} />
             </div>
 
-            {/* Map view */}
+            {/* Map view — el mapa siempre se renderiza, aunque no haya
+                marcadores (antes, sin resultados, se reemplazaba TODO el
+                bloque por un mensaje de texto y el mapa nunca aparecía —
+                bug real reportado 2026-08-17: cambiar a modo mapa con un
+                filtro sin resultados no mostraba ningún mapa, perdiendo
+                el contexto geográfico de dónde se estaba buscando). El
+                aviso ahora es un overlay encima del mapa, no un reemplazo. */}
             {viewMode === 'map' && (
-              <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: 'calc(100vh - 260px)', minHeight: 400 }}>
-                {mapMarkers.length > 0 ? (
-                  <MapViewDynamic
-                    markers={mapMarkers}
-                    center={[17.9869, -92.9303]}
-                    zoom={11}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-white flex flex-col items-center justify-center text-gray-400 text-center px-6">
-                    <Map size={40} className="mb-3 opacity-30" />
-                    {esBusquedaSinInterpretar(filters) ? (
-                      <>
-                        <p className="text-sm font-medium">No pudimos interpretar del todo tu búsqueda</p>
-                        <p className="text-xs mt-1 max-w-xs">Prueba con menos palabras (ej. solo el lugar) o usa los filtros para acotar a mano</p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-sm font-medium">Sin propiedades en el mapa</p>
-                        <p className="text-xs mt-1">Ajusta los filtros para ver resultados</p>
-                      </>
-                    )}
+              <div className="relative rounded-2xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: 'calc(100vh - 260px)', minHeight: 400 }}>
+                <MapViewDynamic
+                  markers={mapMarkers}
+                  center={[17.9869, -92.9303]}
+                  zoom={11}
+                />
+
+                {/* Chips de tipo/operación — a diferencia de /mapa, aquí NO
+                    llevan lg:hidden: en esta página el <aside> con
+                    FilterPanel solo existe en modo lista (viewMode ===
+                    'grid'), así que en modo mapa esto es la ÚNICA forma de
+                    cambiar de filtro en cualquier tamaño de pantalla, no
+                    solo en móvil. Mismo degradado de máscara que ya usa
+                    /mapa para el overflow-x en pantallas angostas. */}
+                <div className="absolute top-3 left-3 right-3 z-[1002] flex items-center gap-1.5 overflow-x-auto"
+                     style={{
+                       scrollbarWidth: 'none',
+                       maskImage: 'linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%)',
+                       WebkitMaskImage: 'linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%)',
+                     }}>
+                  {MAP_TYPE_CHIPS.map((chip) => (
+                    <button
+                      key={chip.value}
+                      onClick={() => updateFilters({ tipo: chip.value as PropertyType | '' })}
+                      className={`flex-shrink-0 text-sm font-semibold px-3 py-2 rounded-xl shadow-sm border transition-all ${
+                        (filters.tipo ?? '') === chip.value
+                          ? 'bg-brand text-white border-brand'
+                          : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                  <div className="flex-shrink-0 w-px h-5 bg-gray-300 mx-0.5" />
+                  {MAP_OP_CHIPS.map((chip) => (
+                    <button
+                      key={chip.value}
+                      onClick={() => updateFilters({ operacion: chip.value as OperationType | '' })}
+                      className={`flex-shrink-0 text-sm font-semibold px-3 py-2 rounded-xl shadow-sm border transition-all ${
+                        (filters.operacion ?? '') === chip.value
+                          ? 'bg-accent text-white border-accent'
+                          : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+
+                {mapMarkers.length === 0 && (
+                  // pt-10 → pt-16: deja espacio para la fila de chips nueva
+                  // de arriba, para que no se solapen.
+                  <div className="absolute inset-0 z-[1002] pointer-events-none flex items-start justify-center pt-16">
+                    {/* Mismo fondo que la leyenda de privacidad de /mapa
+                        (MapaClient.tsx) — bg-brand-dark sólido, no
+                        blanco/translúcido, pedido explícito 2026-08-17. */}
+                    <div className="pointer-events-auto bg-brand-dark shadow-lg border border-brand-dark rounded-2xl px-6 py-4 text-center max-w-xs">
+                      <Map size={28} className="mb-2 mx-auto opacity-60 text-white" />
+                      {esBusquedaSinInterpretar(filters) ? (
+                        <>
+                          <p className="text-sm font-medium text-white">No pudimos interpretar del todo tu búsqueda</p>
+                          <p className="text-xs mt-1 text-white/60">Prueba con menos palabras (ej. solo el lugar) o usa los filtros para acotar a mano</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm font-medium text-white">Sin propiedades en el mapa</p>
+                          <p className="text-xs mt-1 text-white/60">Ajusta los filtros para ver resultados</p>
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

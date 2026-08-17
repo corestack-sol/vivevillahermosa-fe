@@ -152,12 +152,13 @@ export function MapView({
         // Tabasco — todo el catálogo está adentro (ver tabascoBoundary.ts,
         // que también bloquea publicar fuera del estado). maxBoundsViscosity
         // en 1.0 hace el límite sólido, no un rebote tras soltar.
-        // minZoom 8 → 9 (2026-08-17, pedido explícito): con 8 el zoom-out
-        // máximo dejaba ver franjas de fuera del estado alrededor del
-        // límite duro; 9 acerca la vista mínima al tamaño real de Tabasco.
+        // minZoom 8 → 9 → 10 (2026-08-17, pedidos explícitos sucesivos):
+        // cada paso acerca más la vista mínima al tamaño real de Tabasco,
+        // dejando ver menos franja de fuera del estado en el zoom-out
+        // máximo.
         maxBounds: TABASCO_BOUNDS,
         maxBoundsViscosity: 1.0,
-        minZoom: 9,
+        minZoom: 10,
       });
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
@@ -338,6 +339,16 @@ export function MapView({
       });
 
       if (hasCluster) mapRef.current.addLayer(clusterRef.current);
+
+      // Sin esto, si el contenedor del mapa cambió de tamaño por cualquier
+      // reflow de la página desde que Leaflet lo midió por última vez
+      // (ej. al hacer clic en un chip de filtro y que algo alrededor del
+      // mapa se reacomode), Leaflet sigue usando su tamaño cacheado viejo
+      // hasta que algo se lo avisa — eso se ve como un salto/desalineación
+      // del mapa. Bug real reportado 2026-08-17 (chips de filtro en modo
+      // mapa de /propiedades). `invalidateSize` es barato cuando no hace
+      // falta (no hace nada si el tamaño no cambió).
+      mapRef.current.invalidateSize();
 
       // Ver el comentario de `fitToMarkers` en MapViewProps — encuadra
       // sobre las posiciones YA colocadas (lmRef, después del jitter de

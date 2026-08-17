@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Menu, X, Plus, User, Heart, Bell, LayoutDashboard, LogOut, ChevronDown, Building2, Settings,
-  CalendarDays, Users, TrendingUp, UserPlus, ShieldCheck, type LucideIcon,
+  CalendarDays, Users, TrendingUp, UserPlus, ShieldCheck, Home, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { buttonClasses } from '@/components/ui/Button';
@@ -158,6 +158,16 @@ export function Navbar() {
             </Link>
 
             <div className="hidden lg:flex items-center gap-1">
+              <Link href="/" aria-label="Inicio"
+                className={`relative p-2 rounded-xl transition-colors ${
+                  pathname === '/' ? 'text-white' : 'text-white hover:bg-white/8'
+                }`}
+              >
+                <Home size={17} />
+                {pathname === '/' && (
+                  <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-accent" />
+                )}
+              </Link>
               {navLinks.map((link) => {
                 const active = isActive(link);
                 return (
@@ -271,6 +281,12 @@ export function Navbar() {
         {/* Mobile menu */}
         {isOpen && (
           <div className="lg:hidden border-t py-3 pb-4 space-y-0.5 border-white/10">
+            <Link href="/" onClick={() => setIsOpen(false)}
+              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                pathname === '/' ? 'text-white bg-white/10' : 'text-white hover:bg-white/8'
+              }`}>
+              <Home size={15} /> Inicio
+            </Link>
             {navLinks.map((link) => (
               <Link key={link.href} href={link.href} onClick={() => setIsOpen(false)}
                 className={`flex items-center px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
