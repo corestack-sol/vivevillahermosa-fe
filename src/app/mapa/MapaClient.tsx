@@ -487,17 +487,25 @@ export function MapaClient({ allProperties }: Props) {
         {/* ── Top overlay ── */}
         <div className="absolute top-3 left-3 right-3 lg:right-64 z-[1001] flex flex-col gap-2 pointer-events-none">
 
-          {/* Chips row — en móvil los chips de tipo (Todos/Casa/Depto/
-              Terreno/Local...) no caben todos y el overflow-x-auto los
-              corta en seco justo en el borde de la pantalla sin ninguna
-              pista de que se puede seguir deslizando (bug real confirmado
-              en auditoría de responsividad, 2026-08-10: "Local" quedaba
-              cortado a la mitad, ilegible). Mismo degradado de máscara que
-              ya usa el marquee de la Home (src/app/page.tsx) para el mismo
-              problema, con un ancho menor (24px) porque aquí el contenedor
-              es angosto (ancho de pantalla) — 90px se comía casi todos los
-              chips visibles a la vez. */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pointer-events-auto"
+          {/* Chips row — solo móvil (lg:hidden). En escritorio el <aside>
+              con FilterPanel (línea 337, hidden lg:flex) ya cubre
+              tipo/operación de forma permanente — repetirlo aquí arriba del
+              mapa era el mismo filtro dos veces a la vez, pedido explícito
+              del usuario 2026-08-17. En móvil ese <aside> está oculto, así
+              que estos chips siguen siendo el acceso rápido real (más el
+              botón de filtros completo, "lg:hidden" también, que abre el
+              panel deslizante).
+              En móvil los chips de tipo (Todos/Casa/Depto/Terreno/Local...)
+              no caben todos y el overflow-x-auto los corta en seco justo en
+              el borde de la pantalla sin ninguna pista de que se puede
+              seguir deslizando (bug real confirmado en auditoría de
+              responsividad, 2026-08-10: "Local" quedaba cortado a la mitad,
+              ilegible). Mismo degradado de máscara que ya usa el marquee de
+              la Home (src/app/page.tsx) para el mismo problema, con un
+              ancho menor (24px) porque aquí el contenedor es angosto (ancho
+              de pantalla) — 90px se comía casi todos los chips visibles a
+              la vez. */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pointer-events-auto lg:hidden"
                style={{
                  scrollbarWidth: 'none',
                  maskImage: 'linear-gradient(to right, transparent 0, black 24px, black calc(100% - 24px), transparent 100%)',
@@ -552,19 +560,28 @@ export function MapaClient({ allProperties }: Props) {
             ))}
           </div>
 
-          {/* Leyenda de privacidad: los pines no son la ubicación exacta */}
+          {/* Leyenda de privacidad: los pines no son la ubicación exacta.
+              Fondo sólido de marca (antes bg-white/95 + blur) — pedido
+              explícito 2026-08-17: blanco translúcido se perdía sobre las
+              zonas claras del mapa (calles, agua en el satélite). Un fondo
+              con color propio destaca sobre cualquier parte del mapa, no
+              solo las oscuras. */}
           <div className="flex justify-center">
-            <div className="flex items-center gap-1.5 bg-white/95 backdrop-blur-sm shadow-md
-                            border border-gray-200 text-gray-600 text-xs font-medium
+            <div className="flex items-center gap-1.5 bg-brand-dark shadow-md
+                            border border-brand-dark text-white text-xs font-medium
                             px-3.5 py-1.5 rounded-full">
-              <Info size={12} className="text-brand flex-shrink-0" />
-              Los pines muestran la zona aproximada, no la ubicación exacta
+              <Info size={12} className="text-white/70 flex-shrink-0" />
+              Por seguridad, los pines muestran la zona aproximada. Ubicación exacta al contactar
             </div>
           </div>
         </div>
 
         {/* ── Right floating buttons ── */}
-        <div className="absolute bottom-20 right-3 z-[1001] flex flex-col gap-2">
+        {/* bottom-20 → bottom-28 (2026-08-17): quedaba solapado con el
+            control de zoom de Leaflet (bottomright, ~62px de alto + 10px
+            de margen propio de Leaflet) — el margen que dejaba antes era
+            de unos pocos px, demasiado ajustado en la práctica. */}
+        <div className="absolute bottom-28 right-3 z-[1001] flex flex-col gap-2">
           {/* Satellite toggle — equivalente táctil del toggle Mapa/Satélite
               del panel de escritorio (hidden lg:pointer-fine:flex más
               arriba). Antes decía "mobile only" pero estaba gateado por
@@ -583,25 +600,35 @@ export function MapaClient({ allProperties }: Props) {
             {tileType === 'street' ? <Satellite size={16} /> : <MapIcon size={16} />}
           </button>
 
-          {/* Mi ubicación */}
+          {/* Mi ubicación — mismo criterio que la leyenda de privacidad de
+              arriba: fondo sólido de marca en vez de blanco, para que no
+              se pierda contra zonas claras del mapa (pedido explícito
+              2026-08-17). El botón ya era bg-white 100% opaco, no
+              translúcido — el problema real era contraste de color, no
+              opacidad. */}
           <button
             onClick={handleGeolocate}
             disabled={geoLoading}
             title="Mi ubicación"
-            className="w-10 h-10 bg-white shadow-lg border border-gray-200 rounded-xl
-                       flex items-center justify-center text-gray-600
-                       hover:bg-brand-pale hover:text-brand hover:border-brand/30
+            className="w-10 h-10 bg-brand-dark shadow-lg border border-brand-dark rounded-xl
+                       flex items-center justify-center text-white
+                       hover:bg-brand hover:border-brand
                        transition-all disabled:opacity-50"
           >
             {geoLoading
-              ? <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+              // border-white/40, no border-brand — sobre el nuevo fondo
+              // bg-brand-dark el spinner anterior (tono teal similar al
+              // fondo) prácticamente no se veía girar.
+              ? <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
               : <Navigation size={16} />}
           </button>
         </div>
 
-        {/* Geo error tooltip */}
+        {/* Geo error tooltip — bottom-36 → bottom-44, misma corrección que
+            el grupo de botones de abajo (+32px), para seguir apareciendo
+            arriba del botón "Mi ubicación" y no encima. */}
         {geoError && (
-          <div className="absolute bottom-36 right-3 z-[1001] bg-red-50 border border-red-200
+          <div className="absolute bottom-44 right-3 z-[1001] bg-red-50 border border-red-200
                           text-red-600 text-sm px-3 py-2 rounded-xl shadow-md max-w-48">
             {geoError}
           </div>

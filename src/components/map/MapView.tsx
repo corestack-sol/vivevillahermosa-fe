@@ -152,9 +152,12 @@ export function MapView({
         // Tabasco — todo el catálogo está adentro (ver tabascoBoundary.ts,
         // que también bloquea publicar fuera del estado). maxBoundsViscosity
         // en 1.0 hace el límite sólido, no un rebote tras soltar.
+        // minZoom 8 → 9 (2026-08-17, pedido explícito): con 8 el zoom-out
+        // máximo dejaba ver franjas de fuera del estado alrededor del
+        // límite duro; 9 acerca la vista mínima al tamaño real de Tabasco.
         maxBounds: TABASCO_BOUNDS,
         maxBoundsViscosity: 1.0,
-        minZoom: 8,
+        minZoom: 9,
       });
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 

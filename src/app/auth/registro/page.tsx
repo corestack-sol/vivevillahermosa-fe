@@ -92,13 +92,14 @@ function RegistroContent() {
         <div className="hidden lg:flex flex-col justify-between w-[460px] flex-shrink-0
                         bg-gradient-to-br from-brand-dark via-brand to-brand-light p-10">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-              </svg>
-            </div>
+            {/* Mismo logo real y mismo lockup que Navbar.tsx/login — antes
+                esta card tenía un ícono de casa genérico y "VveVH" con un
+                color (#F59E0B) que no era ni el acento de marca ni
+                coincidía con el logo nuevo. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/logo-mark.png" alt="" className="h-9 w-auto flex-shrink-0" />
             <span className="font-display font-black text-white text-xl">
-              Vive<span style={{ color: '#F59E0B' }}>VH</span>
+              Vive <span className="text-coral">Villahermosa</span>
             </span>
           </Link>
 

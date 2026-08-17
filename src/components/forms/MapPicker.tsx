@@ -56,9 +56,10 @@ export function MapPicker({ value, onChange, center = [17.9869, -92.9303], onRej
       // Restringe panning/zoom a Tabasco + margen — ver TABASCO_BOUNDS.
       // maxBoundsViscosity=1.0 hace el límite "sólido" (no se puede
       // arrastrar más allá, en vez de solo rebotar tras soltar).
+      // minZoom 8 → 9, mismo ajuste que MapView.tsx (2026-08-17).
       maxBounds={TABASCO_BOUNDS}
       maxBoundsViscosity={1.0}
-      minZoom={8}
+      minZoom={9}
       style={{ height: '100%', width: '100%' }}
       attributionControl={false}
     >
