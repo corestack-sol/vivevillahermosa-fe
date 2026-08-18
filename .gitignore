@@ -37,6 +37,13 @@ yarn-error.log*
 # vercel
 .vercel
 
+# cloudflare (OpenNext build output + wrangler local state)
+.open-next/
+.wrangler/
+
+# Claude Code — overrides de permisos locales, propias de esta máquina.
+.claude/settings.local.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

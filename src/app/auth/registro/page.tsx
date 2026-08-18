@@ -10,6 +10,7 @@ import { Eye, EyeOff, Shield, MapPin, Bell, Check } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { safeRedirectPath } from '@/lib/safeRedirect';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
+import { BrandParticlesDynamic } from '@/components/brand/BrandParticlesDynamic';
 
 const schema = z.object({
   nombre:   z.string().min(2, 'Ingresa tu nombre'),
@@ -89,9 +90,13 @@ function RegistroContent() {
       <div className="w-full max-w-sm lg:max-w-5xl bg-white rounded-2xl shadow-xl overflow-hidden lg:flex">
 
         {/* ── Left: brand ── */}
-        <div className="hidden lg:flex flex-col justify-between w-[460px] flex-shrink-0
-                        bg-gradient-to-br from-brand-dark via-brand to-brand-light p-10">
-          <Link href="/" className="flex items-center gap-2.5">
+        <div className="relative hidden lg:flex flex-col justify-between w-[460px] flex-shrink-0
+                        bg-gradient-to-br from-brand-dark via-brand to-brand-light p-10 overflow-hidden">
+          {/* Nube de puntos + constelación de fondo, tenue — ver
+              src/components/brand/BrandParticles.tsx. */}
+          <BrandParticlesDynamic />
+
+          <Link href="/" className="relative z-10 flex items-center gap-2.5">
             {/* Mismo logo real y mismo lockup que Navbar.tsx/login — antes
                 esta card tenía un ícono de casa genérico y "VveVH" con un
                 color (#F59E0B) que no era ni el acento de marca ni
@@ -103,7 +108,7 @@ function RegistroContent() {
             </span>
           </Link>
 
-          <div>
+          <div className="relative z-10">
             <h2 className="text-2xl font-heading font-bold text-white mb-2 leading-snug">
               Empieza gratis.<br />Sin comisiones.
             </h2>
@@ -129,7 +134,7 @@ function RegistroContent() {
             </div>
           </div>
 
-          <p className="text-white/30 text-xs">© {new Date().getFullYear()} Vive Villahermosa · Tabasco, México</p>
+          <p className="relative z-10 text-white/30 text-xs">© {new Date().getFullYear()} Vive Villahermosa · Tabasco, México</p>
         </div>
 
         {/* ── Right: form ── */}

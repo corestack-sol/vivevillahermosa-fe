@@ -10,6 +10,20 @@ const backendOrigin = process.env.NEXT_PUBLIC_API_URL
   ? new URL(process.env.NEXT_PUBLIC_API_URL).origin
   : '';
 
+// Mismo problema que backendOrigin arriba, detectado 2026-08-18: sin el
+// host de PostHog en connect-src, posthog-js nunca podía mandar ni un
+// evento en ningún ambiente — el build compilaba bien y no había ningún
+// error visible salvo abriendo la consola del navegador. PostHog sirve su
+// loader/config desde un subdominio "-assets" aparte del host de ingesta
+// (ej. us-assets.i.posthog.com vs us.i.posthog.com) — hacen falta los dos.
+const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST
+  ? new URL(process.env.NEXT_PUBLIC_POSTHOG_HOST).origin
+  : '';
+const posthogAssetsHost = posthogHost.replace(
+  /^https:\/\/([a-z]+)\.i\.posthog\.com$/,
+  'https://$1-assets.i.posthog.com',
+);
+
 // Cabeceras de seguridad ausentes antes de esta auditoría (hallazgo H2):
 // sin ellas, el login y el formulario de publicar podían embeberse en un
 // iframe ajeno (clickjacking) y no había ninguna capa de contención ante
@@ -23,7 +37,12 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'",
+      // posthog-js carga su script de Surveys dinámicamente
+      // (us-assets.i.posthog.com/static/surveys.js) — sin este host en
+      // script-src, ese <script> se bloquea (distinto al bloqueo de
+      // connect-src de arriba, mismo origen del problema: falta el host
+      // de PostHog en CSP). Detectado en el mismo QA manual, 2026-08-18.
+      `script-src 'self' 'unsafe-inline' ${posthogAssetsHost}`.trim(),
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
@@ -35,7 +54,7 @@ const securityHeaders = [
       // navegador. Sin esto, ninguna subida de foto llega a completarse
       // (bloqueada en silencio). Detectado en QA manual con navegador real,
       // 2026-08-12/13.
-      `connect-src 'self' data: ${backendOrigin} https://accounts.google.com https://graph.facebook.com`.trim(),
+      `connect-src 'self' data: ${backendOrigin} ${posthogHost} ${posthogAssetsHost} https://accounts.google.com https://graph.facebook.com`.trim(),
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
