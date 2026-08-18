@@ -12,6 +12,10 @@ import { safeRedirectPath } from '@/lib/safeRedirect';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { BrandParticlesDynamic } from '@/components/brand/BrandParticlesDynamic';
 
+// Botón de Facebook escondido provisionalmente — pedido explícito
+// 2026-08-18. Mismo flag en /auth/registro/page.tsx.
+const FACEBOOK_LOGIN_ENABLED = false;
+
 const schema = z.object({
   email:    z.string().email('Email inválido'),
   password: z.string().min(1, 'Ingresa tu contraseña'),
@@ -170,17 +174,22 @@ function LoginContent() {
                 <GoogleIcon />
                 Continuar con Google
               </a>
-              <a
-                href={`${process.env.NEXT_PUBLIC_API_URL}/auth/facebook?next=${encodeURIComponent(next)}`}
-                className="w-full flex items-center justify-center gap-3 font-semibold
-                           text-sm py-3 rounded-xl transition-colors text-white"
-                style={{ background: '#1877F2' }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#1565d8')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = '#1877F2')}
-              >
-                <FacebookIcon />
-                Continuar con Facebook
-              </a>
+              {/* Escondido provisionalmente (pedido explícito 2026-08-18)
+                  — la ruta /auth/facebook y el botón siguen intactos, solo
+                  oculto. Quitar FACEBOOK_LOGIN_ENABLED para reactivarlo. */}
+              {FACEBOOK_LOGIN_ENABLED && (
+                <a
+                  href={`${process.env.NEXT_PUBLIC_API_URL}/auth/facebook?next=${encodeURIComponent(next)}`}
+                  className="w-full flex items-center justify-center gap-3 font-semibold
+                             text-sm py-3 rounded-xl transition-colors text-white"
+                  style={{ background: '#1877F2' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = '#1565d8')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = '#1877F2')}
+                >
+                  <FacebookIcon />
+                  Continuar con Facebook
+                </a>
+              )}
             </div>
 
             {/* Divider */}

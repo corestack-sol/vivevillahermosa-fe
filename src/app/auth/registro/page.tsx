@@ -12,6 +12,10 @@ import { safeRedirectPath } from '@/lib/safeRedirect';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { BrandParticlesDynamic } from '@/components/brand/BrandParticlesDynamic';
 
+// Botón de Facebook escondido provisionalmente — pedido explícito
+// 2026-08-18. Mismo flag en /auth/login/page.tsx.
+const FACEBOOK_LOGIN_ENABLED = false;
+
 const schema = z.object({
   nombre:   z.string().min(2, 'Ingresa tu nombre'),
   email:    z.string().email('Email inválido'),
@@ -162,6 +166,10 @@ function RegistroContent() {
                 <GoogleIcon />
                 Continuar con Google
               </a>
+              {/* Escondido provisionalmente (pedido explícito 2026-08-18)
+                  — la ruta /auth/facebook y el botón siguen intactos, solo
+                  oculto. Quitar FACEBOOK_LOGIN_ENABLED para reactivarlo. */}
+              {FACEBOOK_LOGIN_ENABLED && (
               <a
                 href={`${process.env.NEXT_PUBLIC_API_URL}/auth/facebook?next=${encodeURIComponent(next)}`}
                 className="w-full flex items-center justify-center gap-3 font-semibold
@@ -173,6 +181,7 @@ function RegistroContent() {
                 <FacebookIcon />
                 Continuar con Facebook
               </a>
+              )}
             </div>
 
             {/* Divider */}
