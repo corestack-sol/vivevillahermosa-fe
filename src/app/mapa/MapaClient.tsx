@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   SlidersHorizontal, X, ChevronLeft, Navigation,
   Satellite, Map as MapIcon, Info, MapPin, ArrowRight,
-  Droplets, Check, RotateCw, List,
+  Droplets, Check, RotateCw, List, Maximize2, Minimize2,
 } from 'lucide-react';
 import Link from 'next/link';
 import type { Property } from '@/types/property';
@@ -209,6 +209,35 @@ export function MapaClient({ allProperties }: Props) {
   const [geoLoading,    setGeoLoading]    = useState(false);
   const [geoError,      setGeoError]      = useState('');
 
+  // Pantalla completa real (Fullscreen API) — pedido explícito 2026-08-18:
+  // "que no se vean las pestañas del navegador". Requiere gesto del
+  // usuario (no se puede activar solo al cargar la página, los
+  // navegadores lo bloquean). Se fullscreenea este contenedor completo
+  // (mapContainerRef, la raíz de /mapa) en vez de solo el <canvas> del
+  // mapa — así el header/nav del sitio (que vive fuera de este árbol,
+  // en layout.tsx) también queda tapado, no solo el chrome del navegador.
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fullscreenSupported, setFullscreenSupported] = useState(false);
+
+  useEffect(() => {
+    function checkSupport() {
+      setFullscreenSupported(typeof document !== 'undefined' && document.fullscreenEnabled);
+    }
+    checkSupport();
+    function onChange() { setIsFullscreen(!!document.fullscreenElement); }
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      mapContainerRef.current?.requestFullscreen().catch(() => {});
+    }
+  }
+
   // "Ir a zona" — top colonias reales por cantidad de propiedades activas
   // (mismo criterio que /zonas y Home, ver getColoniasRankedByPropiedades),
   // resolviendo cada una contra el catálogo de coordenadas verificadas
@@ -301,7 +330,7 @@ export function MapaClient({ allProperties }: Props) {
     // y el mapa siempre ganaba sin importar qué z-index se le pusiera al
     // header, porque nada dentro de este div podía "escapar" a competir con
     // hermanos fuera de él una vez que este div tiene su propio z-index.
-    <div className="relative z-0 flex h-[calc(100vh-64px)] max-lg:landscape:pointer-coarse:h-screen">
+    <div ref={mapContainerRef} className="relative z-0 flex h-[calc(100vh-64px)] max-lg:landscape:pointer-coarse:h-screen [&:fullscreen]:h-screen bg-white">
 
       {/* ══ Aviso "gira tu dispositivo" — solo móvil/tablet en vertical ══
           .rotate-hint (globals.css) lo muestra solo por CSS (max-width
@@ -597,6 +626,21 @@ export function MapaClient({ allProperties }: Props) {
             de margen propio de Leaflet) — el margen que dejaba antes era
             de unos pocos px, demasiado ajustado en la práctica. */}
         <div className="absolute bottom-28 right-3 z-[1001] flex flex-col gap-2">
+          {/* Pantalla completa — pedido explícito 2026-08-18. Oculto si el
+              navegador no soporta la Fullscreen API (ej. Safari iOS) en
+              vez de mostrar un botón que no hace nada al tocarlo. */}
+          {fullscreenSupported && (
+            <button
+              onClick={toggleFullscreen}
+              title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+              className="w-10 h-10 bg-brand-dark shadow-lg border border-brand-dark rounded-xl
+                         flex items-center justify-center text-white
+                         hover:bg-brand hover:border-brand transition-all"
+            >
+              {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            </button>
+          )}
+
           {/* Satellite toggle — equivalente táctil del toggle Mapa/Satélite
               del panel de escritorio (hidden lg:pointer-fine:flex más
               arriba). Antes decía "mobile only" pero estaba gateado por

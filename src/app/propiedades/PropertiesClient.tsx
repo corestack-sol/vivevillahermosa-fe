@@ -148,6 +148,36 @@ export function PropertiesClient({ allProperties }: Props) {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [buscandoIA, setBuscandoIA] = useState(false);
+
+  // Pantalla completa al cambiar a modo mapa — pedido explícito
+  // 2026-08-18, "solo para tablets y móviles". El toggle grid/mapa
+  // embebido de esta página solo existe desde `sm:` (640px) — un teléfono
+  // en vertical va directo a /mapa (ver el Link "Ver en mapa" más abajo,
+  // sm:hidden), pero uno en horizontal ya cruza los 640px y sí ve este
+  // toggle, de ahí el "(horizontal)" del pedido. pointer:coarse en vez de
+  // ancho para no activarlo con mouse/trackpad en una ventana angosta de
+  // escritorio. Mismo patrón (ref + Fullscreen API) que /mapa/MapaClient.tsx.
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
+
+  useEffect(() => {
+    function onChange() { setIsMapFullscreen(!!document.fullscreenElement); }
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  useEffect(() => {
+    if (viewMode === 'map' && window.matchMedia('(pointer: coarse)').matches) {
+      mapContainerRef.current?.requestFullscreen().catch(() => {});
+    } else if (viewMode !== 'map' && document.fullscreenElement) {
+      document.exitFullscreen();
+    }
+  }, [viewMode]);
+
+  function volverACuadricula() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    setViewMode('grid');
+  }
   const toast = useToast();
 
   // Dropdown de sugerencias/historial para el buscador inline — mismo
@@ -592,7 +622,11 @@ export function PropertiesClient({ allProperties }: Props) {
                 el contexto geográfico de dónde se estaba buscando). El
                 aviso ahora es un overlay encima del mapa, no un reemplazo. */}
             {viewMode === 'map' && (
-              <div className="relative rounded-2xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: 'calc(100vh - 260px)', minHeight: 400 }}>
+              <div
+                ref={mapContainerRef}
+                className={`relative overflow-hidden border border-gray-200 shadow-sm ${isMapFullscreen ? '' : 'rounded-2xl'}`}
+                style={{ height: isMapFullscreen ? '100vh' : 'calc(100vh - 260px)', minHeight: 400 }}
+              >
                 <MapViewDynamic
                   markers={mapMarkers}
                   center={[17.9869, -92.9303]}
@@ -612,6 +646,17 @@ export function PropertiesClient({ allProperties }: Props) {
                        maskImage: 'linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%)',
                        WebkitMaskImage: 'linear-gradient(to right, transparent 0, black 16px, black calc(100% - 16px), transparent 100%)',
                      }}>
+                  {/* Volver a cuadrícula — solo táctil (tablets/móviles en
+                      horizontal), pedido explícito 2026-08-18. En
+                      escritorio el toggle grid/mapa de la fila de arriba
+                      ya cubre esto sin necesitar pantalla completa. */}
+                  <button
+                    onClick={volverACuadricula}
+                    className="hidden pointer-coarse:flex flex-shrink-0 items-center gap-1.5 bg-brand-dark text-white
+                               text-sm font-semibold px-3 py-2 rounded-xl shadow-sm border border-brand-dark"
+                  >
+                    <LayoutGrid size={14} /> Cuadrícula
+                  </button>
                   {MAP_TYPE_CHIPS.map((chip) => (
                     <button
                       key={chip.value}

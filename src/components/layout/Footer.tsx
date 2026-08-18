@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, MapPin, Phone, Mail, Droplets } from 'lucide-react';
+import { MapPin, Mail, Droplets } from 'lucide-react';
 
 function FooterMinimal() {
   // Mismo trío cálido del Hero (brand-pale → blanco → sand, ver page.tsx)
@@ -34,9 +34,11 @@ function FooterFull() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <span className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
-                <Home size={16} className="text-white" />
-              </span>
+              {/* Logo real, mismo lockup que Navbar.tsx/login/registro —
+                  antes era un ícono de casa genérico en placa de color,
+                  pedido explícito 2026-08-18: "no se muestra el logo actual". */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/images/logo-mark.png" alt="" className="h-8 w-auto flex-shrink-0" />
               <span className="font-display font-bold text-lg">
                 {/* coral, no accent — mismo cambio que el wordmark del Navbar,
                     para que "Villahermosa" se vea del mismo color en los dos. */}
@@ -48,12 +50,6 @@ function FooterFull() {
               terrenos y cuartos en los 17 municipios del estado. Gratis para todos.
             </p>
             <div className="space-y-2">
-              <a
-                href="tel:+529931234567"
-                className="flex items-center gap-2 text-sm text-white/70 hover:text-accent transition-colors"
-              >
-                <Phone size={14} /> +52 993 123 4567
-              </a>
               <a
                 href="mailto:hola@vivevillahermosa.mx"
                 className="flex items-center gap-2 text-sm text-white/70 hover:text-accent transition-colors"

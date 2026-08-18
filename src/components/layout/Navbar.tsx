@@ -288,35 +288,13 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Mobile menu */}
+        {/* Mobile menu — orden pedido explícito 2026-08-18: cuenta
+            (iniciar sesión, o el menú de usuario si ya hay sesión) arriba
+            del todo, "Publicar gratis" hasta el final. */}
         {isOpen && (
           <div className="lg:hidden border-t py-3 pb-4 space-y-0.5 border-white/10">
-            <Link href="/" onClick={() => setIsOpen(false)}
-              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                pathname === '/' ? 'text-white bg-white/10' : 'text-white hover:bg-white/8'
-              }`}>
-              <Home size={15} /> Inicio
-            </Link>
-            {navLinks.map((link) => (
-              <Link key={link.href} href={link.href} onClick={() => setIsOpen(false)}
-                className={`flex items-center px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                  isActive(link)
-                    ? 'text-white bg-white/10'
-                    : 'text-white hover:bg-white/8'
-                }`}>
-                {link.label}
-              </Link>
-            ))}
-            {!esProfesional && (
-              <div className="pt-2 px-4">
-                <Link href="/publicar" onClick={() => setIsOpen(false)}
-                  className={buttonClasses('primary', 'lg', 'w-full')}>
-                  <Plus size={15} strokeWidth={2.5} /> Publicar gratis
-                </Link>
-              </div>
-            )}
             {user ? (
-              <div className="border-t mt-2 pt-2 border-white/10">
+              <div className="pb-2 mb-2 border-b border-white/10 space-y-0.5">
                 {buildMenuGroups(esProfesional, !!user.esAdmin).map((group, gi) => (
                   <div key={gi} className={`space-y-0.5 ${gi > 0 ? 'border-t border-white/10 mt-2 pt-2' : ''}`}>
                     {group.label && (
@@ -339,9 +317,35 @@ export function Navbar() {
               </div>
             ) : (
               <Link href="/auth/login" onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl text-white hover:bg-white/10">
+                className="flex items-center gap-2 px-4 py-2.5 mb-2 text-sm font-medium rounded-xl text-white hover:bg-white/10">
                 <User size={14} /> Iniciar sesión
               </Link>
+            )}
+
+            <Link href="/" onClick={() => setIsOpen(false)}
+              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                pathname === '/' ? 'text-white bg-white/10' : 'text-white hover:bg-white/8'
+              }`}>
+              <Home size={15} /> Inicio
+            </Link>
+            {navLinks.map((link) => (
+              <Link key={link.href} href={link.href} onClick={() => setIsOpen(false)}
+                className={`flex items-center px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                  isActive(link)
+                    ? 'text-white bg-white/10'
+                    : 'text-white hover:bg-white/8'
+                }`}>
+                {link.label}
+              </Link>
+            ))}
+
+            {!esProfesional && (
+              <div className="pt-2 px-4">
+                <Link href="/publicar" onClick={() => setIsOpen(false)}
+                  className={buttonClasses('primary', 'lg', 'w-full')}>
+                  <Plus size={15} strokeWidth={2.5} /> Publicar gratis
+                </Link>
+              </div>
             )}
           </div>
         )}

@@ -48,7 +48,7 @@ interface IconDef {
 }
 
 const ICON_DEFS: IconDef[] = [
-  { src: '/images/icons/head-icon.webp', aspect: 139 / 183, heightRatio: 0.238, opacity: 0.15 },
+  { src: '/images/icons/head-icon.webp', aspect: 139 / 183, heightRatio: 0.2023, opacity: 0.15 },
   { src: '/images/icons/cacao-icon.webp', aspect: 73 / 81, heightRatio: 0.09, opacity: 0.12 },
   { src: '/images/icons/cube-icon.webp', aspect: 67 / 71, heightRatio: 0.1197, opacity: 0.09 },
   { src: '/images/icons/peje-icon.webp', aspect: 132 / 101, heightRatio: 0.153, opacity: 0.13 },

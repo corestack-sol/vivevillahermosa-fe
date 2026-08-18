@@ -4,8 +4,10 @@ import { Clock, ArrowRight } from 'lucide-react';
 import blogData from '@/data/blog.json';
 
 export const metadata: Metadata = {
-  title: 'Blog Inmobiliario de Tabasco | Vive Villahermosa',
-  description: 'Guías, comparativas y consejos sobre el mercado inmobiliario de Tabasco y Villahermosa. Inundaciones, colonias, precios y más.',
+  // Sin "inmobiliario" en el título — mismo criterio que /nosotros
+  // (2026-08-18): la marca no debe quedar encasillada a un solo rubro.
+  title: 'Blog de Tabasco | Vive Villahermosa',
+  description: 'Guías, comparativas y consejos sobre vivienda y vida en Tabasco y Villahermosa. Inundaciones, colonias, precios y más.',
 };
 
 const CATEGORIA_COLORS: Record<string, string> = {
@@ -22,7 +24,7 @@ export default function BlogPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="mb-10">
         <h1 className="text-3xl font-heading font-bold text-gray-900 mb-2 animate-fade-up">
-          Blog inmobiliario de Tabasco
+          Blog de Tabasco
         </h1>
         <p className="text-gray-500 animate-fade-up" style={{ animationDelay: '80ms' }}>
           Todo lo que necesitas saber para encontrar, rentar o vender una propiedad en Tabasco.
