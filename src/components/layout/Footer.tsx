@@ -4,24 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, MapPin, Phone, Mail, Droplets } from 'lucide-react';
 
-const propertyLinks = [
-  { href: '/propiedades?tipo=casa&operacion=venta', label: 'Casas en venta' },
-  { href: '/propiedades?tipo=casa&operacion=renta', label: 'Casas en renta' },
-  { href: '/propiedades?tipo=departamento', label: 'Departamentos' },
-  { href: '/propiedades?tipo=terreno', label: 'Terrenos' },
-  { href: '/propiedades?tipo=local', label: 'Locales comerciales' },
-  { href: '/propiedades?tipo=habitacion', label: 'Habitaciones / Roomies' },
-];
-
-const zoneLinks = [
-  { href: '/zonas/villahermosa', label: 'Villahermosa' },
-  { href: '/zonas/paraiso', label: 'Paraíso / Dos Bocas' },
-  { href: '/zonas/cardenas', label: 'Cárdenas' },
-  { href: '/zonas/comalcalco', label: 'Comalcalco' },
-  { href: '/zonas/nacajuca', label: 'Nacajuca' },
-  { href: '/zonas/jalpa-de-mendez', label: 'Jalpa de Méndez' },
-];
-
 function FooterMinimal() {
   // Mismo trío cálido del Hero (brand-pale → blanco → sand, ver page.tsx)
   // en vez de un bg-white plano — así el footer, aunque minimalista, no
@@ -48,7 +30,7 @@ function FooterFull() {
     // falta repetirla aquí (ver el mismo cambio en Navbar.tsx).
     <footer className="bg-brand-dark text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2 mb-4">
@@ -82,44 +64,6 @@ function FooterFull() {
                 <MapPin size={14} /> Villahermosa, Tabasco, México
               </span>
             </div>
-          </div>
-
-          {/* Propiedades */}
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-white/50 mb-4">
-              Propiedades
-            </h3>
-            <ul className="space-y-2">
-              {propertyLinks.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-white/70 hover:text-accent transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Zonas */}
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-white/50 mb-4">
-              Zonas
-            </h3>
-            <ul className="space-y-2">
-              {zoneLinks.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-white/70 hover:text-accent transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
           </div>
 
           {/* Legal */}

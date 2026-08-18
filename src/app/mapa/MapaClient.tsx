@@ -301,7 +301,7 @@ export function MapaClient({ allProperties }: Props) {
     // y el mapa siempre ganaba sin importar qué z-index se le pusiera al
     // header, porque nada dentro de este div podía "escapar" a competir con
     // hermanos fuera de él una vez que este div tiene su propio z-index.
-    <div className="relative z-0 flex h-[calc(100vh-64px)]">
+    <div className="relative z-0 flex h-[calc(100vh-64px)] max-lg:landscape:pointer-coarse:h-screen">
 
       {/* ══ Aviso "gira tu dispositivo" — solo móvil/tablet en vertical ══
           .rotate-hint (globals.css) lo muestra solo por CSS (max-width
@@ -511,6 +511,21 @@ export function MapaClient({ allProperties }: Props) {
                  maskImage: 'linear-gradient(to right, transparent 0, black 24px, black calc(100% - 24px), transparent 100%)',
                  WebkitMaskImage: 'linear-gradient(to right, transparent 0, black 24px, black calc(100% - 24px), transparent 100%)',
                }}>
+
+            {/* Volver al inicio — solo aparece cuando el header está
+                escondido (móvil horizontal, ver Navbar.tsx `isMapa`).
+                En vertical el rotate-hint ya cubre toda la pantalla y
+                trae su propio link de salida, así que este solo hace
+                falta en horizontal. Mismo criterio de detección exacto
+                que el header (max-lg + landscape + pointer:coarse) para
+                que aparezcan/desaparezcan juntos. */}
+            <Link
+              href="/"
+              className="hidden max-lg:landscape:pointer-coarse:flex flex-shrink-0 items-center gap-1.5 bg-brand-dark shadow-md
+                         border border-brand-dark text-white text-sm font-semibold px-3 py-2 rounded-xl"
+            >
+              <ChevronLeft size={14} /> Inicio
+            </Link>
 
             {/* Mobile: filter button */}
             <button

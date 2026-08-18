@@ -4,7 +4,10 @@ import { Shield, Map, Zap, Users, ChevronRight, MapPin } from 'lucide-react';
 import { getStats } from '@/lib/api';
 
 export const metadata: Metadata = {
-  title: '¿Quiénes somos? | Vive Villahermosa — Plataforma inmobiliaria de Tabasco',
+  // Sin "plataforma inmobiliaria" en el título — a futuro esto crece a más
+  // servicios/ramas además de vivienda, pedido explícito 2026-08-18: no
+  // encasillar la identidad de la marca a un solo rubro.
+  title: '¿Quiénes somos? | Vive Villahermosa — Hecho en Tabasco, para Tabasco',
   description:
     'Vive Villahermosa nació en Tabasco para ayudar a las personas a encontrar dónde vivir sin complicaciones. Conoce nuestra historia, misión y por qué incluimos el mapa de inundaciones.',
 };
@@ -28,7 +31,7 @@ const VALUES = [
   {
     icon: <Users size={24} className="text-brand" />,
     title: 'Comunidad primero',
-    desc: 'No somos una franquicia nacional. Somos el portal inmobiliario que construye comunidad en Tabasco desde Tabasco.',
+    desc: 'No somos una franquicia nacional. Somos la plataforma que construye comunidad en Tabasco, desde Tabasco.',
   },
 ];
 
@@ -42,12 +45,12 @@ export default async function NosotrosPage() {
           <MapPin size={14} /> Hecho en Tabasco
         </div>
         <h1 className="text-4xl md:text-5xl font-display font-black text-gray-900 mb-4 animate-fade-up" style={{ animationDelay: '80ms' }}>
-          La plataforma inmobiliaria que Tabasco
+          La plataforma que Tabasco
           <span className="text-brand"> merecía</span>
         </h1>
         <p className="text-lg text-gray-500 animate-fade-up" style={{ animationDelay: '160ms' }}>
           Vive Villahermosa nació de una pregunta sencilla: ¿por qué es tan difícil encontrar casa en Tabasco?
-          Creamos la plataforma que nos hubiera gustado tener cuando nosotros buscábamos.
+          Empezamos ahí — y seguimos construyendo, siempre para Tabasco.
         </p>
       </div>
 

@@ -115,13 +115,23 @@ export function Navbar() {
     return true;
   };
 
+  // /mapa ya tiene su propio botón "Volver al inicio" en horizontal móvil
+  // (MapaClient.tsx) — pedido explícito 2026-08-18: en esa pantalla el
+  // header no debe verse, el mapa se queda con el 100vh completo. Mismo
+  // criterio de detección que .rotate-hint (globals.css): max-width
+  // 1023px (bajo `lg`) + landscape + pointer:coarse, para no esconder el
+  // header en una ventana de escritorio angosta.
+  const isMapa = pathname.startsWith('/mapa');
+
   return (
     // Header oscuro a propósito — el resto del sitio es blanco/gris claro,
     // así que un header en brand-dark es lo que da el golpe de marca desde
     // el primer scroll, en vez de fundirse con el contenido de abajo.
     // (theme-tabasco ya se aplica sitio-completo en layout.tsx — el header
     // hereda la paleta sin necesitar su propia clase condicional.)
-    <header className="sticky top-0 z-40 bg-brand-dark/97 backdrop-blur-md border-b border-white/10 shadow-lg shadow-black/10">
+    <header className={`sticky top-0 z-40 bg-brand-dark/97 backdrop-blur-md border-b border-white/10 shadow-lg shadow-black/10 ${
+      isMapa ? 'max-lg:landscape:pointer-coarse:hidden' : ''
+    }`}>
       {/* El header es chrome global, no contenido de página — a propósito
           NO lleva max-w-7xl mx-auto como el resto del sitio. Con eso, en
           pantallas anchas el logo quedaba flotando a ~300px del borde real
