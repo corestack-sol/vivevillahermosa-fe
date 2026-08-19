@@ -356,14 +356,14 @@ export interface ColoniasOrdenadasPorDemanda {
    * false cuando todavía no hay ningún evento real de demanda (plataforma
    * recién desplegada, o falló la llamada al backend) — en ese caso
    * `colonias` cae a la misma lista/orden de `getColoniasRankedByPropiedades`
-   * (por oferta) y `esLaMasSolicitada` siempre da false. Quien consuma esto
-   * debe usar este flag para decidir qué texto mostrar ("más solicitadas"
+   * (por oferta) y `tieneDemandaReal` siempre da false. Quien consuma esto
+   * debe usar este flag para decidir qué texto mostrar ("más buscadas"
    * vs. "con más propiedades") — nunca afirmar demanda real cuando en
    * realidad se está mostrando el respaldo por oferta.
    */
   porDemanda: boolean;
-  /** true solo para la(s) colonia(s) que empatan en el TOP del ranking de demanda (BACKEND.md §9.1) — nunca las 9 de la tarjeta. */
-  esLaMasSolicitada(nombre: string): boolean;
+  /** true para cualquier colonia con demanda real registrada (total > 0 en /colonias/tendencia) — pedido explícito 2026-08-19: la llama debe verse en todas las cards que de verdad tienen búsquedas, no solo la primera. */
+  tieneDemandaReal(nombre: string): boolean;
 }
 
 /**
@@ -387,7 +387,7 @@ export async function getColoniasOrdenadasPorDemanda(): Promise<ColoniasOrdenada
     return {
       colonias: coloniasRanked,
       porDemanda: false,
-      esLaMasSolicitada: () => false,
+      tieneDemandaReal: () => false,
     };
   }
 
@@ -403,8 +403,8 @@ export async function getColoniasOrdenadasPorDemanda(): Promise<ColoniasOrdenada
   return {
     colonias,
     porDemanda: true,
-    esLaMasSolicitada: (nombre: string) =>
-      (totalPorColonia.get(normalizarNombreParaTendencia(nombre)) ?? 0) === maxTendencia,
+    tieneDemandaReal: (nombre: string) =>
+      (totalPorColonia.get(normalizarNombreParaTendencia(nombre)) ?? 0) > 0,
   };
 }
 

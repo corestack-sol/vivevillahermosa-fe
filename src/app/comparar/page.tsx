@@ -51,9 +51,9 @@ function HighlightTag({ label }: { label: string }) {
  *  una tabla de 15 filas sin tener que leer cada etiqueta letra por letra. */
 function RowLabel({ icon: Icon, children }: { icon: typeof DollarSign; children: React.ReactNode }) {
   return (
-    <span className="flex items-center gap-1.5">
-      <Icon size={12} className="text-gray-300 flex-shrink-0" />
-      {children}
+    <span className="flex items-start gap-1">
+      <Icon size={11} className="text-gray-300 flex-shrink-0 mt-0.5" />
+      <span>{children}</span>
     </span>
   );
 }
@@ -162,7 +162,13 @@ function ComparisonTable({ properties, onRemove }: { properties: Property[]; onR
   // no solo la celda apuntada. Tailwind emite los estilos `group-hover:`
   // después de los `bg-*` base en el CSS generado, así que sí le gana al
   // `bg-white`/`bg-brand-pale` de cada celda aunque compartan especificidad.
-  const thBase = 'sticky left-0 z-10 text-left align-middle px-4 py-4 text-[11px] font-bold uppercase tracking-wide text-gray-400 whitespace-nowrap group-hover:bg-brand-pale/70 transition-colors';
+  // w-28 fijo en vez de min-w-[140px] en el <th> vacío de la cabecera —
+  // antes esto solo ponía un MÍNIMO, así que el ancho real de la columna
+  // terminaba siendo el de la etiqueta más larga ("Riesgo de inundación")
+  // sin envolver (whitespace-nowrap), bastante más ancha que 140px en la
+  // práctica. Pedido explícito 2026-08-18: "compactes para reducir espacio
+  // horizontal". Ahora el texto envuelve a 2 líneas dentro de un ancho fijo.
+  const thBase = 'sticky left-0 z-10 w-28 text-left align-middle px-2.5 py-4 text-[10px] font-bold uppercase tracking-wide text-gray-400 leading-tight group-hover:bg-brand-pale/70 transition-colors';
   const tdBase = 'align-middle px-4 py-4 text-sm text-gray-700 min-w-[180px] group-hover:bg-brand-pale/25 transition-colors';
   const rowBorder = 'group border-b border-gray-100';
 
@@ -184,7 +190,7 @@ function ComparisonTable({ properties, onRemove }: { properties: Property[]; onR
       <table className="w-full border-collapse bg-white" style={{ borderSpacing: 0 }}>
         <thead>
           <tr>
-            <th className="sticky left-0 z-10 bg-page min-w-[140px]" />
+            <th className="sticky left-0 z-10 bg-page w-28" />
             {properties.map((p) => {
               const cfg = getPropertyTypeConfig(p.tipo);
               return (

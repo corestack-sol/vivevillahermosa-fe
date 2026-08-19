@@ -1,11 +1,89 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { MapPin, ChevronRight, Zap, Building2, Map as MapIcon, Flame } from 'lucide-react';
+import Image from 'next/image';
+import {
+  MapPin, ChevronRight, Zap, Map as MapIcon, Flame,
+  type LucideIcon,
+} from 'lucide-react';
 import { getMunicipalitiesWithLiveStats, getColoniasOrdenadasPorDemanda } from '@/lib/api';
 import { formatPrice } from '@/lib/format';
 import { ExploreZonasCta } from '@/components/search/ExploreZonasCta';
+import { ColoniaChipsList } from '@/components/zonas/ColoniaChipsList';
 
-const MAX_CARDS = 9;
+const MAX_CARDS = 6;
+
+// Ícono de marca de agua por municipio — pedido explícito 2026-08-18:
+// "un icono relacionado con las características que se describe por
+// municipio... como marca de agua, como en las cards verdes" (esas usan
+// Building2 fijo para todas). Elegido a mano contra la descripción REAL de
+// cada uno (src/data/municipalities.json), no decoración arbitraria —
+// municipios que de verdad comparten el mismo rasgo (ganadero, ribereño,
+// agrícola) comparten ícono a propósito, no todos tienen que ser únicos.
+// Dos entradas usan íconos propios (recortados de src/assets/icons/,
+// public/images/icons/*-color.webp) en su color original — pedido
+// explícito 2026-08-19 ("apliquenlos tal cual estan, con colores"), no
+// se tiñen de verde de marca como los Lucide.
+type MunIconSpec = { type: 'lucide'; Icon: LucideIcon } | { type: 'color'; src: string; aspect: number; scale?: number };
+
+const GANADERIA: MunIconSpec = { type: 'color', src: '/images/icons/ganaderia-color.webp', aspect: 154 / 156 };
+const MASCARA_TENOSIQUE: MunIconSpec = { type: 'color', src: '/images/icons/mask-tenosique-color.webp', aspect: 159 / 169 };
+const CASCADA: MunIconSpec = { type: 'color', src: '/images/icons/cascada-color.webp', aspect: 148 / 164 };
+const PEZ: MunIconSpec = { type: 'color', src: '/images/icons/pez-color.webp', aspect: 156 / 98 };
+const CACAO: MunIconSpec = { type: 'color', src: '/images/icons/cacao-color.webp', aspect: 154 / 155 };
+// aspect muy ancho (3.1) — reduce un 15% el tamaño general y luego el
+// ancho 20% + 15% más (aspect *0.8*0.85) para que no se salga tanto de
+// la card, pedido explícito 2026-08-19.
+const PEJE: MunIconSpec = { type: 'color', src: '/images/icons/peje-color.webp', aspect: (155 / 50) * 0.8 * 0.85, scale: 0.85 };
+const OLMECA: MunIconSpec = { type: 'color', src: '/images/icons/olmeca-color.webp', aspect: 159 / 178 };
+const AGROINDUSTRIA: MunIconSpec = { type: 'color', src: '/images/icons/agroindustria-color.webp', aspect: 157 / 129 };
+const ARTESANIA: MunIconSpec = { type: 'color', src: '/images/icons/artesania-color.webp', aspect: 151 / 184 };
+const JICARA: MunIconSpec = { type: 'color', src: '/images/icons/jicara-color.webp', aspect: 153 / 245 };
+
+const MUNICIPIO_ICON: Record<string, MunIconSpec> = {
+  'centro':            OLMECA,                                    // capital del estado — cabeza olmeca, pedido explícito 2026-08-19
+  'cardenas':          CACAO,                                    // agroindustria — cacao, pedido explícito 2026-08-19
+  'comalcalco':        CACAO,                                    // ciudad del cacao — pedido explícito 2026-08-19
+  'paraiso':           PEZ,                                      // zona costera junto a la Refinería Dos Bocas — pedido explícito 2026-08-19
+  'jalpa-de-mendez':   JICARA,                                    // jícaras pintadas — pedido explícito 2026-08-19
+  'nacajuca':          ARTESANIA,                                // artesanía de mimbre y bejuco — pedido explícito 2026-08-19
+  'huimanguillo':      GANADERIA,                                // ganadero y petrolero — pedido explícito 2026-08-19
+  'centla':            PEZ,                                      // pesca, reservas naturales — pedido explícito 2026-08-19
+  'macuspana':         PEJE,                                     // pejelagarto — pedido explícito 2026-08-19
+  'cunduacan':         AGROINDUSTRIA,                             // agroindustrial — pedido explícito 2026-08-19
+  'tenosique':         MASCARA_TENOSIQUE,                         // Baile del Pochó — máscara real, pedido explícito 2026-08-19
+  'emiliano-zapata':   AGROINDUSTRIA,                             // ribereño y agroindustrial — pedido explícito 2026-08-19
+  'balancán':          GANADERIA,                                 // ganadero, grandes extensiones — pedido explícito 2026-08-19
+  'jonuta':            PEZ,                                      // pesca y agricultura, ribereño — pedido explícito 2026-08-19
+  'jalapa':            AGROINDUSTRIA,                             // vocación agrícola — pedido explícito 2026-08-19
+  'tacotalpa':         CASCADA,                                  // "Sierra tabasqueña" — cascadas de la sierra, pedido explícito 2026-08-19
+  'teapa':             CASCADA,                                  // balnearios y cascadas — ícono propio, pedido explícito 2026-08-19
+};
+
+/** Ícono de municipio — Lucide normal (se tiñe con `text-brand` vía
+ *  `className`), o ícono propio en su color original (ver MunIconSpec). */
+function MunicipioIcon({ spec, size, className }: { spec: MunIconSpec; size: number; className?: string }) {
+  if (spec.type === 'lucide') {
+    const { Icon } = spec;
+    return <Icon size={size} strokeWidth={size > 40 ? 1 : 1.75} className={className} />;
+  }
+  const height = Math.round(size * (spec.scale ?? 1));
+  const width = Math.round(height * spec.aspect);
+  return (
+    <Image
+      src={spec.src}
+      alt=""
+      width={width}
+      height={height}
+      className="flex-shrink-0 object-contain"
+    />
+  );
+}
+// Tope duro de la lista de chips ("También:") — pedido explícito
+// 2026-08-18: "la lista no debe ser mayor a 20 chips". El catálogo de
+// colonias verificadas pasa de 60, sin este tope la fila crecía sin
+// límite. El resto (20+) simplemente no aparece aquí — sigue disponible
+// buscando por nombre en /propiedades.
+const MAX_CHIPS = 20;
 
 export const metadata: Metadata = {
   title: 'Colonias y municipios de Tabasco | Vive Villahermosa',
@@ -23,9 +101,9 @@ export default async function ZonasPage() {
   // casos es, así el texto de abajo nunca afirma una demanda que en
   // realidad no está midiendo. Las primeras MAX_CARDS se ven como tarjeta
   // grande, el resto como chip.
-  const { colonias: coloniasRanked, porDemanda, esLaMasSolicitada } = await getColoniasOrdenadasPorDemanda();
+  const { colonias: coloniasRanked, porDemanda, tieneDemandaReal } = await getColoniasOrdenadasPorDemanda();
   const coloniasCards = coloniasRanked.slice(0, MAX_CARDS);
-  const coloniasChips = coloniasRanked.slice(MAX_CARDS);
+  const coloniasChips = coloniasRanked.slice(MAX_CARDS, MAX_CARDS + MAX_CHIPS);
   // Respaldo por oferta (cuando porDemanda es false): solo se marca "con más
   // propiedades" cuando de verdad se despega del resto (no cuando todas
   // empatan en 1 propiedad) — evita que la llama pierda significado si el
@@ -40,23 +118,33 @@ export default async function ZonasPage() {
           ¿En qué parte de Tabasco quieres vivir?
         </h1>
         <p className="text-gray-500 animate-fade-up" style={{ animationDelay: '160ms' }}>
-          Empieza por la colonia con más movimiento, o explora los 17 municipios del estado.
+          {/* "movimiento" no decía de qué (¿ventas? ¿búsquedas? ¿nuevas
+              publicaciones?) — pedido explícito 2026-08-18: "no queda
+              claro de qué". Ahora dice exactamente lo mismo que el título
+              de la sección de abajo (mismo dato real, misma condición
+              porDemanda), en vez de un término aparte sin definir. */}
+          Empieza por la colonia {porDemanda ? 'más buscada' : 'con más propiedades'}, o explora los 17 municipios del estado.
         </p>
       </div>
 
       {/* ── Colonias con más propiedades — mismo lenguaje visual que las
           tarjetas de zona del home (gradiente de marca, texto abajo).
           Ordenadas por actividad real, no por curación manual: las primeras
-          MAX_CARDS se ven en grande, el resto como chip. ── */}
+          MAX_CARDS (6, igual en móvil y escritorio — pedido explícito
+          2026-08-19) se ven en grande, el resto como chip. ── */}
       <section className="mb-10">
         <h2 className="text-xl font-heading font-bold text-gray-900 mb-5">
-          {porDemanda ? 'Colonias más solicitadas' : 'Colonias con más propiedades'}
+          {porDemanda ? 'Colonias más buscadas' : 'Colonias con más propiedades'}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {coloniasCards.map((colonia) => {
             const href = colonia.slug ? `/zonas/${colonia.slug}` : `/propiedades?q=${encodeURIComponent(colonia.nombre)}`;
-            const conMasPropiedades = porDemanda
-              ? esLaMasSolicitada(colonia.nombre)
+            // Llama: en modo demanda, en TODAS las colonias con búsquedas
+            // reales registradas (no solo la #1) — pedido explícito
+            // 2026-08-19. En el respaldo por oferta, solo cuando de verdad
+            // se despega del resto.
+            const mostrarLlama = porDemanda
+              ? tieneDemandaReal(colonia.nombre)
               : maxPropiedades > 1 && colonia.propiedades === maxPropiedades;
             return (
               <Link
@@ -64,9 +152,9 @@ export default async function ZonasPage() {
                 href={href}
                 className="group relative h-52 rounded-3xl overflow-hidden bg-gradient-to-br from-brand-dark to-brand shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
               >
-                {/* Ícono de marca de agua — mismo truco que PropertyCard, sutil, no compite con el texto */}
-                <div className="absolute -right-5 -bottom-6 opacity-[0.12] pointer-events-none">
-                  <Building2 size={150} strokeWidth={1} className="text-white" />
+                {/* Ícono de marca de agua — mismo truco que PropertyCard, sutil, no compite con el texto — pedido explícito 2026-08-19 */}
+                <div className="absolute -right-5 -bottom-6 opacity-[0.15] pointer-events-none">
+                  <Image src="/images/icons/colonia-color.webp" alt="" width={218} height={130} className="object-contain" />
                 </div>
                 <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
 
@@ -75,9 +163,12 @@ export default async function ZonasPage() {
                     <span className="flex items-center gap-1 bg-white/15 backdrop-blur-sm text-white/90 text-[11px] font-semibold px-2.5 py-1 rounded-full">
                       <MapPin size={10} /> {colonia.municipio === 'Centro' ? 'Villahermosa' : colonia.municipio}
                     </span>
-                    {conMasPropiedades && (
-                      <span title={porDemanda ? 'La colonia más solicitada ahora mismo' : 'La colonia con más propiedades publicadas ahora mismo'} className="flex-shrink-0">
-                        <Flame size={18} className="text-amber-400" strokeWidth={2} />
+                    {mostrarLlama && (
+                      <span title={porDemanda ? 'Con búsquedas reales recientes' : 'La colonia con más propiedades publicadas ahora mismo'} className="relative inline-flex flex-shrink-0">
+                        <Flame size={18} className="text-amber-400 animate-flame" strokeWidth={2} />
+                        <span aria-hidden="true" className="absolute -top-0.5 right-0 w-1 h-1 rounded-full bg-amber-300 animate-spark" />
+                        <span aria-hidden="true" className="absolute -top-0.5 right-0.5 w-1 h-1 rounded-full bg-amber-200 animate-spark [animation-delay:0.4s]" />
+                        <span aria-hidden="true" className="absolute top-0 left-0.5 w-1 h-1 rounded-full bg-amber-200/80 animate-spark-slow" />
                       </span>
                     )}
                   </div>
@@ -112,20 +203,7 @@ export default async function ZonasPage() {
           })}
         </div>
 
-        {coloniasChips.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 mt-5">
-            <span className="text-xs font-semibold text-gray-400 mr-1">También:</span>
-            {coloniasChips.map((c) => {
-              const href = c.slug ? `/zonas/${c.slug}` : `/propiedades?q=${encodeURIComponent(c.nombre)}`;
-              return (
-                <Link key={c.nombre} href={href}
-                  className="text-sm font-medium text-gray-600 hover:text-brand bg-white border border-gray-200 hover:border-brand/40 hover:bg-brand-pale/40 px-3 py-1.5 rounded-full transition-all">
-                  {c.nombre}
-                </Link>
-              );
-            })}
-          </div>
-        )}
+        {coloniasChips.length > 0 && <ColoniaChipsList chips={coloniasChips} />}
       </section>
 
       {/* ── Municipios — grid más denso (17 items), tarjetas claras y compactas ── */}
@@ -134,33 +212,43 @@ export default async function ZonasPage() {
           Los 17 municipios — más allá de Villahermosa
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {municipalities.map((mun) => (
-            <Link
-              key={mun.id}
-              href={`/zonas/${mun.slug}`}
-              className="group bg-white rounded-2xl border border-gray-100 hover:border-brand/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 p-5"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-9 h-9 rounded-xl bg-brand-pale flex items-center justify-center text-brand flex-shrink-0">
-                  <MapIcon size={16} strokeWidth={1.75} />
+          {municipalities.map((mun) => {
+            const munSpec = MUNICIPIO_ICON[mun.id] ?? { type: 'lucide' as const, Icon: MapIcon };
+            return (
+              <Link
+                key={mun.id}
+                href={`/zonas/${mun.slug}`}
+                className="group relative overflow-hidden bg-white rounded-2xl border border-gray-100 hover:border-brand/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 p-5"
+              >
+                {/* Marca de agua — mismo lenguaje que las cards verdes de
+                    arriba, pero el ícono cambia según lo que de verdad
+                    distingue a este municipio (ver MUNICIPIO_ICON). */}
+                <div className="absolute -right-4 -bottom-5 opacity-[0.07] pointer-events-none">
+                  <MunicipioIcon spec={munSpec} size={110} className="text-brand" />
                 </div>
-                {mun.cercaDosoBocas && (
-                  <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full flex-shrink-0">
-                    <Zap size={9} /> PEMEX
+
+                <div className="relative flex items-start justify-between mb-3">
+                  <div className="w-9 h-9 rounded-xl bg-brand-pale flex items-center justify-center text-brand flex-shrink-0">
+                    <MunicipioIcon spec={munSpec} size={16} />
+                  </div>
+                  {mun.cercaDosoBocas && (
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full flex-shrink-0">
+                      <Zap size={9} /> PEMEX
+                    </span>
+                  )}
+                </div>
+                <h3 className="relative font-heading font-bold text-gray-900 text-sm mb-1 group-hover:text-brand transition-colors">
+                  {mun.nombre}
+                </h3>
+                <p className="relative text-xs text-gray-400 line-clamp-2 mb-4 leading-relaxed min-h-[2rem]">{mun.descripcion}</p>
+                <div className="relative pt-3 border-t border-gray-50">
+                  <span className={`text-xs font-semibold ${mun.propiedades > 0 ? 'text-brand' : 'text-gray-300'}`}>
+                    {mun.propiedades > 0 ? `${mun.propiedades} propiedad${mun.propiedades !== 1 ? 'es' : ''}` : 'Sin propiedades'}
                   </span>
-                )}
-              </div>
-              <h3 className="font-heading font-bold text-gray-900 text-sm mb-1 group-hover:text-brand transition-colors">
-                {mun.nombre}
-              </h3>
-              <p className="text-xs text-gray-400 line-clamp-2 mb-4 leading-relaxed min-h-[2rem]">{mun.descripcion}</p>
-              <div className="pt-3 border-t border-gray-50">
-                <span className={`text-xs font-semibold ${mun.propiedades > 0 ? 'text-brand' : 'text-gray-300'}`}>
-                  {mun.propiedades > 0 ? `${mun.propiedades} propiedad${mun.propiedades !== 1 ? 'es' : ''}` : 'Sin propiedades'}
-                </span>
-              </div>
-            </Link>
-          ))}
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </section>
 

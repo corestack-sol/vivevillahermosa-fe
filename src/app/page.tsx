@@ -353,7 +353,7 @@ export default async function HomePage() {
                 selección aparte que mantener sincronizada a mano. */}
             <p className="text-xs font-bold text-brand uppercase tracking-[0.15em] mb-1.5">Datos en tiempo real</p>
             <h2 className="text-3xl font-display font-black text-gray-900 leading-tight">
-              {porDemanda ? 'Colonias más solicitadas' : 'Colonias con más propiedades'}
+              {porDemanda ? 'Colonias más buscadas' : 'Colonias con más propiedades'}
             </h2>
           </div>
           <Link href="/zonas" className="flex items-center gap-1.5 text-sm font-semibold text-brand hover:text-brand-dark group">

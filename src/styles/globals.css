@@ -256,11 +256,46 @@
   animation: marquee 32s linear infinite;
 }
 
+/* Parpadeo sutil del ícono de llama (colonias con demanda real, /zonas) —
+   solo transform+opacity (compositor, no repintado/reflow), pedido
+   explícito 2026-08-19: "efecto de movimiento con la API nativa, sin
+   gasto de rendimiento". */
+@keyframes flameFlicker {
+  0%   { transform: scale(1) rotate(0deg); opacity: 1; }
+  15%  { transform: scale(1.18) rotate(3.5deg); opacity: 0.9; }
+  32%  { transform: scale(0.9) rotate(-4.2deg); opacity: 1; }
+  50%  { transform: scale(1.28) rotate(2.8deg); opacity: 0.69; }
+  68%  { transform: scale(0.97) rotate(-2.1deg); opacity: 0.97; }
+  84%  { transform: scale(1.11) rotate(1.4deg); opacity: 0.83; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.animate-flame {
+  animation: flameFlicker 0.7s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+
+/* Chispa que salta de la punta de la llama — pura transform+opacity,
+   pedido explícito 2026-08-19 ("efecto de chispa en la punta"). */
+@keyframes sparkPop {
+  0%   { transform: translate(0, 0) scale(0.3); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translate(5px, -13px) scale(0); opacity: 0; }
+}
+.animate-spark {
+  animation: sparkPop 1s ease-out infinite;
+}
+.animate-spark-slow {
+  animation: sparkPop 2.2s ease-out infinite;
+}
+
 /* Respeta la preferencia del sistema de reducir movimiento — aplica a todas
    las animaciones decorativas de la app (hallazgo de accesibilidad). */
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-up, .animate-slide-in, .animate-count, .animate-shimmer, .animate-toast-in, .animate-marquee {
+  .animate-fade-up, .animate-slide-in, .animate-count, .animate-shimmer, .animate-toast-in, .animate-marquee, .animate-flame {
     animation: none !important;
+  }
+  .animate-spark, .animate-spark-slow {
+    display: none;
   }
 }
 
