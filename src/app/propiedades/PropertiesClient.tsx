@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { SlidersHorizontal, X, Map, LayoutGrid, Search, ChevronDown, Loader2, Sparkles, MapPin, Clock } from 'lucide-react';
+import { SlidersHorizontal, X, Map, LayoutGrid, Search, ChevronDown, Loader2, Sparkles, MapPin, Clock, Info } from 'lucide-react';
 import type { Property, PropertyType, OperationType } from '@/types/property';
 import type { SearchFilters } from '@/types/search';
 import { useFilters } from '@/hooks/useFilters';
@@ -14,6 +14,8 @@ import { ActiveFilters } from '@/components/search/ActiveFilters';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { MapViewDynamic } from '@/components/map/MapViewDynamic';
+import { SelectedPropertyCard } from '@/components/map/SelectedPropertyCard';
+import type { MapMarker } from '@/components/map/MapView';
 import { getLandmark, CATEGORIAS_GENERICAS, precargarLandmarks } from '@/lib/landmarks';
 import { matchColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
 import { interpretarBusqueda, esOracionLarga } from '@/lib/interpretarBusqueda';
@@ -107,7 +109,7 @@ function heroLabel(sort: SearchFilters['sort']): string | null {
   }
 }
 
-// Grilla dinámica de tarjetas (auto-fit + minmax), no columnas fijas por
+// Grilla dinámica de tarjetas (auto-fill + minmax), no columnas fijas por
 // breakpoint — el número de columnas sale solo de cuánto ancho hay
 // disponible, en vez de saltar en escalones rígidos. minWidth crece por
 // breakpoint (más chico en móvil, para garantizar 2 columnas incluso en
@@ -116,6 +118,12 @@ function heroLabel(sort: SearchFilters['sort']): string | null {
 // 1366-1600px de ancho" a la vez — pedido explícito (2026-08-09): mínimo
 // 2, máximo 5, y que 3 sea el punto natural en resoluciones de laptop
 // grande/escritorio estándar.
+// auto-fill, NO auto-fit — con auto-fit, las columnas vacías colapsan y
+// el 1fr restante se lo reparte entre las tarjetas que sí existen (con 1
+// solo resultado, esa tarjeta se estira a ocupar toda la fila). auto-fill
+// mantiene las columnas vacías como espacio muerto, así el tamaño de
+// cada tarjeta no depende de cuántos resultados haya — pedido explícito
+// 2026-08-19.
 //
 // Matemática de los puntos de quiebre (ancho de grilla ya sin sidebar/
 // padding/gaps, con gap-4 = 16px entre tarjetas):
@@ -130,10 +138,10 @@ function heroLabel(sort: SearchFilters['sort']): string | null {
 // matemáticamente no cabe en 2200px de contenedor.
 const GRID_CLASSES =
   'grid gap-4 ' +
-  'grid-cols-[repeat(auto-fit,minmax(140px,1fr))] ' +
-  'sm:grid-cols-[repeat(auto-fit,minmax(220px,1fr))] ' +
-  'lg:grid-cols-[repeat(auto-fit,minmax(260px,1fr))] ' +
-  'xl:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]';
+  'grid-cols-[repeat(auto-fill,minmax(140px,1fr))] ' +
+  'sm:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] ' +
+  'lg:grid-cols-[repeat(auto-fill,minmax(260px,1fr))] ' +
+  'xl:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]';
 
 export function PropertiesClient({ allProperties }: Props) {
   const { filters, updateFilters, clearFilters, activeCount } = useFilters();
@@ -148,6 +156,10 @@ export function PropertiesClient({ allProperties }: Props) {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [buscandoIA, setBuscandoIA] = useState(false);
+  // Detalle del marcador seleccionado en modo mapa — antes no existía
+  // ningún estado para esto, así que hacer clic en un pin no mostraba
+  // nada (bug real reportado 2026-08-19). Mismo componente que /mapa.
+  const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
 
   // Pantalla completa al cambiar a modo mapa — pedido explícito
   // 2026-08-18, "solo para tablets y móviles". El toggle grid/mapa
@@ -631,6 +643,8 @@ export function PropertiesClient({ allProperties }: Props) {
                   markers={mapMarkers}
                   center={[17.9869, -92.9303]}
                   zoom={11}
+                  selectedId={selectedMarker?.id ?? null}
+                  onMarkerSelect={setSelectedMarker}
                 />
 
                 {/* Chips de tipo/operación — a diferencia de /mapa, aquí NO
@@ -686,6 +700,18 @@ export function PropertiesClient({ allProperties }: Props) {
                   ))}
                 </div>
 
+                {/* Leyenda de privacidad: los pines no son la ubicación
+                    exacta — mismo texto/estilo que /mapa (MapaClient.tsx),
+                    pedido explícito 2026-08-19. */}
+                <div className="absolute top-14 left-3 right-3 z-[1001] flex justify-center pointer-events-none">
+                  <div className="flex items-center gap-1.5 bg-brand-dark shadow-md
+                                  border border-brand-dark text-white text-xs font-medium
+                                  px-3.5 py-1.5 rounded-full">
+                    <Info size={12} className="text-white/70 flex-shrink-0" />
+                    Por seguridad, los pines muestran la zona aproximada. Ubicación exacta al contactar
+                  </div>
+                </div>
+
                 {mapMarkers.length === 0 && (
                   // pt-10 → pt-16: deja espacio para la fila de chips nueva
                   // de arriba, para que no se solapen.
@@ -708,6 +734,13 @@ export function PropertiesClient({ allProperties }: Props) {
                       )}
                     </div>
                   </div>
+                )}
+
+                {selectedMarker && (
+                  <SelectedPropertyCard
+                    marker={selectedMarker}
+                    onClose={() => setSelectedMarker(null)}
+                  />
                 )}
               </div>
             )}

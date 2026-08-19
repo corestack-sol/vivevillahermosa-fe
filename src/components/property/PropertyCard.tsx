@@ -49,7 +49,7 @@ export function PropertyCard({ property, landmarkQuery }: PropertyCardProps) {
     // aspect-[20/21] = 20% más de alto que el aspect-[8/7] anterior, misma proporción de ancho
     // @container: el ancho real de ESTA tarjeta (no el viewport) es lo que
     // decide su propio tamaño de texto/padding más abajo — necesario porque
-    // el grid de /propiedades usa auto-fit (PropertiesClient.tsx) con un
+    // el grid de /propiedades usa auto-fill (PropertiesClient.tsx) con un
     // mínimo explícito de 2 columnas incluso en móvil (pedido 2026-08-09),
     // así que la misma tarjeta puede terminar con 140px de ancho en un
     // teléfono angosto o 300px+ en escritorio — un solo breakpoint de
