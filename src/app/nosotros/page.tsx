@@ -26,7 +26,7 @@ const VALUES = [
   {
     icon: <Zap size={24} className="text-brand" />,
     title: 'Tecnología accesible',
-    desc: 'Una plataforma rápida, con mapas y sin complicaciones. Publicar es gratis. Ver propiedades es gratis. Siempre.',
+    desc: 'Una plataforma rápida, con mapas y sin complicaciones. Publicar es gratis. Ver propiedades es gratis.',
   },
   {
     icon: <Users size={24} className="text-brand" />,
@@ -45,8 +45,8 @@ export default async function NosotrosPage() {
           <MapPin size={14} /> Hecho en Tabasco
         </div>
         <h1 className="text-4xl md:text-5xl font-display font-black text-gray-900 mb-4 animate-fade-up" style={{ animationDelay: '80ms' }}>
-          La plataforma que Tabasco
-          <span className="text-brand"> merecía</span>
+          Una plataforma pensada
+          <span className="text-brand"> para Tabasco</span>
         </h1>
         <p className="text-lg text-gray-500 animate-fade-up" style={{ animationDelay: '160ms' }}>
           Vive Villahermosa nació de una pregunta sencilla: ¿por qué es tan difícil encontrar casa en Tabasco?
@@ -92,12 +92,14 @@ export default async function NosotrosPage() {
             nacionales no muestran esta información.
           </p>
           <p>
-            Además, con la Refinería Dos Bocas en Paraíso, la demanda de renta en la zona costera
-            se ha disparado — y nadie tenía una plataforma local para canalizarla.
+            Además, la Refinería Dos Bocas en Paraíso transformó el mercado de renta de la zona
+            costera — primero disparando los precios con la llegada de miles de trabajadores, después
+            dejando propiedades vacías cuando terminó la construcción. Es justo el tipo de cambio que
+            Vive Villahermosa quiere ayudar a navegar.
           </p>
           <p>
-            Vive Villahermosa integra el Atlas de Riesgos del Municipio de Centro, filtro especial Dos
-            Bocas/PEMEX, cobertura de los 17 municipios y publicación 100% gratuita para propietarios.
+            Vive Villahermosa integra el Atlas de Riesgos del Municipio de Centro, cobertura de los 17
+            municipios y publicación 100% gratuita para propietarios.
           </p>
         </div>
       </div>

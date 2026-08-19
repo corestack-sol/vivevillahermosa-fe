@@ -22,13 +22,7 @@ export const metadata: Metadata = defaultMetadata;
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={inter.variable}>
-      {/* theme-tabasco (ver globals.css) aplicada aquí, en la raíz, para
-          que TODA la plataforma —páginas públicas y paneles internos
-          (/dashboard, /admin)— use la misma paleta. Antes vivía repetida
-          en Navbar/Footer/Home/Comparar porque el rediseño era solo para
-          Home; ahora que es sitio-completo, un solo punto le gana a
-          cuatro copias del mismo condicional de pathname. */}
-      <body className="min-h-screen flex flex-col bg-page theme-tabasco">
+      <body className="min-h-screen flex flex-col bg-page">
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[200]

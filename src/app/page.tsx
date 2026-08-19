@@ -147,8 +147,8 @@ export default async function HomePage() {
               radial-gradient necesita el color con su propio alpha, y
               CSS no puede componer una var() de #hex con una opacidad
               aparte dentro del mismo valor — se escriben literales,
-              actualizados a mano junto con .theme-tabasco (globals.css)
-              cada vez que cambie la paleta. */}
+              actualizados a mano junto con la paleta de globals.css cada
+              vez que cambie. */}
           <div className="absolute -top-20 right-0 w-[550px] h-[450px] rounded-full blur-[130px]" style={{ background: 'radial-gradient(ellipse, rgba(63,107,74,0.12) 0%, transparent 70%)' }} />
           <div className="absolute bottom-0 left-0 w-[350px] h-[350px] rounded-full blur-[110px]" style={{ background: 'radial-gradient(ellipse, rgba(181,100,58,0.14) 0%, transparent 70%)' }} />
         </div>

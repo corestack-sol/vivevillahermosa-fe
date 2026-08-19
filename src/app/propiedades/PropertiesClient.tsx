@@ -24,6 +24,7 @@ import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/r
 import { ExploreZonasCta } from '@/components/search/ExploreZonasCta';
 import { BUSQUEDA_SIN_INTERPRETAR_KEY } from '@/components/search/SearchBar';
 import { useToast } from '@/context/ToastContext';
+import { PROPERTY_GRID_CLASSES } from '@/lib/gridClasses';
 
 const PER_PAGE = 12;
 
@@ -108,40 +109,6 @@ function heroLabel(sort: SearchFilters['sort']): string | null {
     default:             return null;
   }
 }
-
-// Grilla dinámica de tarjetas (auto-fill + minmax), no columnas fijas por
-// breakpoint — el número de columnas sale solo de cuánto ancho hay
-// disponible, en vez de saltar en escalones rígidos. minWidth crece por
-// breakpoint (más chico en móvil, para garantizar 2 columnas incluso en
-// un teléfono angosto; más grande en escritorio) porque un solo valor no
-// puede servir para "mínimo 2 en móvil" Y "3 columnas alrededor de
-// 1366-1600px de ancho" a la vez — pedido explícito (2026-08-09): mínimo
-// 2, máximo 5, y que 3 sea el punto natural en resoluciones de laptop
-// grande/escritorio estándar.
-// auto-fill, NO auto-fit — con auto-fit, las columnas vacías colapsan y
-// el 1fr restante se lo reparte entre las tarjetas que sí existen (con 1
-// solo resultado, esa tarjeta se estira a ocupar toda la fila). auto-fill
-// mantiene las columnas vacías como espacio muerto, así el tamaño de
-// cada tarjeta no depende de cuántos resultados haya — pedido explícito
-// 2026-08-19.
-//
-// Matemática de los puntos de quiebre (ancho de grilla ya sin sidebar/
-// padding/gaps, con gap-4 = 16px entre tarjetas):
-//   móvil  (<640px):  minmax(140px,1fr) → nunca baja de 2 columnas
-//   sm     (≥640px):  minmax(220px,1fr) → 2-3 según ancho
-//   lg     (≥1024px): minmax(260px,1fr) → 2-3, sidebar de filtros ya visible
-//   xl     (≥1280px): minmax(300px,1fr) → 3 columnas ~1010-1600px de
-//                      grilla (cubre laptop/escritorio estándar), 4 a
-//                      partir de ~1600px, 5 a partir de ~1920px.
-// El techo de nunca pasar de 5 lo pone el contenedor (max-w-[2200px] más
-// abajo), no esta clase — con minWidth=300px, una 6ª columna
-// matemáticamente no cabe en 2200px de contenedor.
-const GRID_CLASSES =
-  'grid gap-4 ' +
-  'grid-cols-[repeat(auto-fill,minmax(140px,1fr))] ' +
-  'sm:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] ' +
-  'lg:grid-cols-[repeat(auto-fill,minmax(260px,1fr))] ' +
-  'xl:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]';
 
 export function PropertiesClient({ allProperties }: Props) {
   const { filters, updateFilters, clearFilters, activeCount } = useFilters();
@@ -413,8 +380,19 @@ export function PropertiesClient({ allProperties }: Props) {
       {/* animate-fade-up (globals.css) — entra una sola vez al montar la
           página. No se vuelve a disparar en cada cambio de filtro porque
           React reconcilia el mismo nodo (mismo className), solo cambia el
-          texto/contenido de adentro. */}
-      <div className="bg-white border-b border-gray-100 shadow-sm animate-fade-up">
+          texto/contenido de adentro.
+          relative z-10 — bug real reportado 2026-08-19: el keyframe de
+          animate-fade-up deja un `transform` residual (identity matrix)
+          en el elemento aun después de terminar la animación, y CUALQUIER
+          transform ≠ none crea un nuevo contexto de apilamiento — sin
+          querer, eso aislaba el dropdown de "búsquedas recientes" (z-30
+          adentro del <form>, línea de abajo) dentro de esta caja. Como la
+          caja en sí seguía siendo `position: static`, pintaba en el orden
+          normal del DOM y el sidebar de filtros/las cards (hermano
+          siguiente, también `static`) la tapaban por encima. Promoverla a
+          positioned con z-index saca todo su contenido (dropdown incluido)
+          por encima del resto, sin tocar animate-fade-up. */}
+      <div className="relative z-10 bg-white border-b border-gray-100 shadow-sm animate-fade-up">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
 
           {/* Row 1: title + controls — flex-col en móvil: el título ya no
@@ -749,7 +727,7 @@ export function PropertiesClient({ allProperties }: Props) {
             {viewMode === 'grid' && (
               <>
                 {isLoading ? (
-                  <div className={GRID_CLASSES}>
+                  <div className={PROPERTY_GRID_CLASSES}>
                     {Array.from({ length: skeletonCount }).map((_, i) => (
                       <Skeleton key={i} variant="card" />
                     ))}
@@ -774,7 +752,7 @@ export function PropertiesClient({ allProperties }: Props) {
                       Quitar filtros
                     </button>
                     {resultadosSimilares.length > 0 ? (
-                      <div className={`${GRID_CLASSES} w-full`}>
+                      <div className={`${PROPERTY_GRID_CLASSES} w-full`}>
                         {resultadosSimilares.map((p) => (
                           <PropertyCard key={p.id} property={p} landmarkQuery={landmarkQuery} />
                         ))}
@@ -806,7 +784,7 @@ export function PropertiesClient({ allProperties }: Props) {
                         )}
                       </div>
                     )}
-                    <div className={GRID_CLASSES}>
+                    <div className={PROPERTY_GRID_CLASSES}>
                       {restoResultados.map((p) => (
                         <PropertyCard key={p.id} property={p} landmarkQuery={landmarkQuery} />
                       ))}
@@ -836,7 +814,7 @@ export function PropertiesClient({ allProperties }: Props) {
                         <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">
                           Todo lo demás ({resultadosSimilares.length})
                         </p>
-                        <div className={GRID_CLASSES}>
+                        <div className={PROPERTY_GRID_CLASSES}>
                           {resultadosSimilares.map((p) => (
                             <PropertyCard key={p.id} property={p} landmarkQuery={landmarkQuery} />
                           ))}

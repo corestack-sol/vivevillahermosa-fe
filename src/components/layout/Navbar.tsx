@@ -12,12 +12,16 @@ import { buttonClasses } from '@/components/ui/Button';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { useClickOutside } from '@/hooks/useClickOutside';
 
+// /blog se queda fuera del menú a propósito — pedido explícito 2026-08-19:
+// las páginas siguen vivas (indexables, ver sitemap.ts) mientras se decide
+// el rumbo real de la sección (ver análisis de esa fecha), pero no se le
+// promete al usuario contenido nuevo constante ocupando un lugar en el
+// menú principal.
 const navLinks = [
   { href: '/propiedades?operacion=venta', base: '/propiedades', operacion: 'venta', label: 'Comprar' },
   { href: '/propiedades?operacion=renta', base: '/propiedades', operacion: 'renta', label: 'Rentar' },
   { href: '/zonas',  base: '/zonas',  label: 'Zonas' },
   { href: '/mapa',   base: '/mapa',   label: 'Mapa' },
-  { href: '/blog',   base: '/blog',   label: 'Blog' },
 ];
 
 interface MenuItem { href: string; icon: LucideIcon; label: string }
@@ -127,8 +131,6 @@ export function Navbar() {
     // Header oscuro a propósito — el resto del sitio es blanco/gris claro,
     // así que un header en brand-dark es lo que da el golpe de marca desde
     // el primer scroll, en vez de fundirse con el contenido de abajo.
-    // (theme-tabasco ya se aplica sitio-completo en layout.tsx — el header
-    // hereda la paleta sin necesitar su propia clase condicional.)
     <header className={`sticky top-0 z-40 bg-brand-dark/97 backdrop-blur-md border-b border-white/10 shadow-lg shadow-black/10 ${
       isMapa ? 'max-lg:landscape:pointer-coarse:hidden' : ''
     }`}>

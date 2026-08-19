@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import { ShieldCheck, Trash2 } from 'lucide-react';
 import { EliminarCuentaSection } from '@/components/account/EliminarCuentaSection';
 
@@ -9,14 +10,19 @@ export const metadata: Metadata = {
 
 export default function PrivacidadPage() {
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="flex items-center gap-2 mb-2">
         <ShieldCheck size={22} className="text-brand" />
         <h1 className="text-3xl font-heading font-bold text-gray-900">Aviso de privacidad</h1>
       </div>
-      <p className="text-sm text-gray-400 mb-10">Última actualización: 17 de agosto de 2026</p>
+      <p className="text-sm text-gray-400 mb-10">Última actualización: 19 de agosto de 2026</p>
 
-      <div className="prose prose-sm max-w-none text-gray-700 space-y-8">
+      {/* Grid principal + mascota fija a la derecha — mismo patrón sticky
+          que el sidebar de /zonas/[slug] (lg:col-span-1, sticky top-24).
+          Pedido explícito 2026-08-19: ícono propio de "terms & conditions"
+          del lado derecho, mantiene su posición al hacer scroll. */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="lg:col-span-2 prose prose-sm max-w-none text-gray-700 space-y-8">
         <section>
           <h2 className="text-lg font-heading font-bold text-gray-900 mb-2">1. Responsable</h2>
           <p className="leading-relaxed">
@@ -32,7 +38,7 @@ export default function PrivacidadPage() {
             <li>Datos de contacto que escribes al enviar un mensaje sobre una propiedad: nombre, teléfono y correo.</li>
             <li>Preferencias de búsqueda que guardas como alertas (municipio, tipo de propiedad, precio máximo, etc.).</li>
             <li>Si publicas una propiedad: los datos de contacto que tú decides mostrar a interesados (nombre, teléfono, correo).</li>
-            <li>Analítica de uso (qué páginas se visitan, qué botones se usan) mediante PostHog — sin usar cookies de rastreo, y sin registrar lo que escribes en ningún formulario (nombre, teléfono, correo, mensajes). Solo mide comportamiento agregado, nunca el contenido de lo que escribes.</li>
+            <li>Analítica de uso (qué páginas se visitan, qué botones se usan) mediante PostHog — sin usar cookies de rastreo, y sin registrar lo que escribes en ningún formulario (nombre, teléfono, correo, mensajes). Solo mide comportamiento agregado, nunca el contenido de lo que escribes. Adicionalmente, si ocurre un error técnico en nuestro servidor mientras usas la plataforma, se envía a PostHog información técnica del momento del error (tu dirección IP, navegador, y la ruta que estabas usando) — únicamente con fines de diagnóstico, nunca el contenido de lo que escribiste.</li>
           </ul>
           <p className="leading-relaxed mt-3">
             Algunas preferencias (propiedades favoritas antes de iniciar sesión, comparador, búsquedas recientes) se guardan únicamente en tu navegador (localStorage), no en nuestros servidores, y desaparecen si borras los datos de ese navegador.
@@ -56,8 +62,15 @@ export default function PrivacidadPage() {
         <section>
           <h2 className="text-lg font-heading font-bold text-gray-900 mb-2">4. Con quién compartimos tus datos</h2>
           <p className="leading-relaxed">
-            Hoy no compartimos tus datos personales con terceros para fines comerciales. Sí usamos proveedores de servicio que procesan datos en nuestro nombre para que la plataforma funcione: un proveedor de correo transaccional para enviar las notificaciones de alertas, proveedores de autenticación (Google, Facebook) cuando eliges iniciar sesión con ellos, y PostHog para analítica de uso (nunca para publicidad).
+            Hoy no compartimos tus datos personales con terceros para fines comerciales. Sí usamos proveedores de servicio que procesan datos en nuestro nombre para que la plataforma funcione:
           </p>
+          <ul className="list-disc pl-5 space-y-1.5 leading-relaxed mt-2">
+            <li>Un proveedor de correo transaccional para enviar las notificaciones de alertas.</li>
+            <li>Proveedores de autenticación (Google, Facebook) cuando eliges iniciar sesión con ellos.</li>
+            <li>PostHog para analítica de uso (nunca para publicidad).</li>
+            <li>Cloudinary — almacenamiento de las fotos que subes al publicar una propiedad.</li>
+            <li>OpenRouter (Google Gemini) — procesa el texto de tus publicaciones (título, descripción) para el análisis automático de fraude y la generación de descripciones asistida, y el texto de tus búsquedas para el buscador con IA.</li>
+          </ul>
         </section>
 
         <section>
@@ -73,6 +86,25 @@ export default function PrivacidadPage() {
             Si cambiamos este aviso de forma importante, lo publicaremos aquí con una nueva fecha de actualización.
           </p>
         </section>
+      </div>
+
+      {/* Sidebar — solo decorativa (mascota), sticky para que acompañe el
+          scroll del contenido largo sin quedar huérfana arriba. Oculta en
+          móvil (no hay ancho para un tercer riel). */}
+      <div className="hidden lg:block lg:col-span-1">
+        <div className="sticky top-24 bg-brand-pale rounded-2xl shadow-sm p-6 text-center">
+          <Image
+            src="/images/icons/terms-mascota.webp"
+            alt=""
+            width={180}
+            height={217}
+            className="mx-auto"
+          />
+          <p className="text-sm text-gray-600 mt-2">
+            Aquí no hay letra chica — este aviso dice exactamente lo que recolectamos y para qué.
+          </p>
+        </div>
+      </div>
       </div>
 
       {/* Eliminar cuenta */}

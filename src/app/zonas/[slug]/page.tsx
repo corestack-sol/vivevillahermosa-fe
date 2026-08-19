@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ChevronRight, MapPin, Zap, TrendingUp, Map as MapIcon, Building2, Construction } from 'lucide-react';
+import Image from 'next/image';
+import { ChevronRight, MapPin, Zap, TrendingUp, Map as MapIcon, Building2 } from 'lucide-react';
 import { getAllZones, getAllMunicipalities, getAllProperties, getZonesWithLiveStats, getMunicipalitiesWithLiveStats } from '@/lib/api';
 import { buildZoneMetadata } from '@/lib/seo';
 import { PropertyCard } from '@/components/property/PropertyCard';
@@ -10,7 +11,23 @@ import { formatPrice } from '@/lib/format';
 import { obtenerLandmarksBackend, distanciaKm } from '@/lib/landmarks';
 import { detectarRiesgoInundacion } from '@/lib/zonas-inundacion';
 import { backendFetchServer } from '@/lib/backendApiServer';
+import { PROPERTY_GRID_CLASSES } from '@/lib/gridClasses';
 import type { Zone, Municipality } from '@/types/zone';
+
+// Fotos reales de Wikimedia Commons (2026-08-19, pedido explícito) para el
+// hero de cada uno de los 17 municipios — antes era un degradado sólido sin
+// foto ("Ya existe ese componente pero solo como una card verde"). CC-BY-SA
+// exige crédito al autor; se muestra igual para las de dominio público, por
+// cortesía. Fuente/licencia de cada una documentada en el historial de este
+// cambio, no repetida aquí para no inflar el archivo.
+const MUNICIPIO_FOTO_CREDITO: Record<string, string> = {
+  centro: 'Alfonsobouchot', cardenas: 'Alfonsobouchot', comalcalco: 'Miguel Marín',
+  paraiso: 'Alfonsobouchot', 'jalpa-de-mendez': 'Olavarria10', nacajuca: 'Cultura Yokotan',
+  huimanguillo: 'Alfonsobouchot', centla: 'Alfonsobouchot', macuspana: 'Alfonsobouchot',
+  cunduacan: 'Alfonsobouchot', tenosique: 'ProtoplasmaKid', 'emiliano-zapata': 'Kazekage AMT',
+  balancán: 'Kazekage AMT', jonuta: 'Kazekage AMT', jalapa: 'Alfonsobouchot',
+  tacotalpa: 'Alfonsobouchot', teapa: 'Haikabio',
+};
 
 // Radio generoso para "cerca de la zona" (el centro de una colonia/municipio
 // está más lejos de un landmark que una propiedad puntual dentro de ella) —
@@ -31,40 +48,37 @@ async function landmarksCercaDeZona(lat: number, lng: number): Promise<string[]>
 }
 
 /**
- * BACKEND.md §9.2 — genera la descripción contra datos verificados
- * (landmarks reales, stats en vivo, Atlas de Riesgos vía
- * `detectarRiesgoInundacion`); si la llamada falla por cualquier razón, cae
- * al texto estático editorial (zones.json/municipalities.json) en vez de
- * dejar la sección vacía — mismo criterio de resiliencia que ya aplica en
- * todo el módulo de IA.
+ * BACKEND.md §9.2 — para COLONIAS, genera la descripción contra datos
+ * verificados (landmarks reales, stats en vivo, Atlas de Riesgos vía
+ * `detectarRiesgoInundacion`); si la llamada falla, cae al texto estático
+ * editorial (zones.json) en vez de dejar la sección vacía.
+ *
+ * Para MUNICIPIOS ya no se llama a la IA — pedido explícito 2026-08-19:
+ * "no incluiste una descripción breve e interesante (cultura, industria,
+ * zonas de interés), solo está la descripción genérica de siempre". La IA
+ * generaba una plantilla genérica ("es un municipio ubicado en Tabasco...")
+ * que le ganaba en prioridad al texto editorial investigado en Wikipedia
+ * (municipalities.json, con hechos reales de historia/cultura/economía por
+ * municipio) — ese texto SIEMPRE es mejor que la plantilla, así que ya no
+ * hace falta ni la llamada.
  */
 async function resolverDescripcion(zone: Zone | undefined, municipality: Municipality | undefined): Promise<string> {
   const estatica = (zone?.descripcion ?? municipality?.descripcion) ?? '';
+  if (municipality) return estatica;
   try {
     const riesgo = zone
-      ? detectarRiesgoInundacion(zone.nombre, zone.municipio)
+      ? detectarRiesgoInundacion(zone!.nombre, zone!.municipio)
       : null;
-    const body = zone
-      ? {
-          nombre: zone.nombre,
-          tipo: 'colonia' as const,
-          municipio: zone.municipio,
-          landmarksCercanos: await landmarksCercaDeZona(zone.lat, zone.lng),
-          totalPropiedades: zone.propiedades,
-          precioPromedioVenta: zone.precioPromedioVenta > 0 ? zone.precioPromedioVenta : undefined,
-          precioPromedioRenta: zone.precioPromedioRenta > 0 ? zone.precioPromedioRenta : undefined,
-          riesgoInundacion: riesgo?.confianza === 'confirmada' ? riesgo.riesgo : undefined,
-        }
-      : {
-          // "Centro (Villahermosa)" en prosa suena a un paréntesis suelto —
-          // mismo criterio que ya usa el resto de esta página (ver los
-          // `href` de abajo) para el caso especial de este único municipio.
-          nombre: municipality!.nombre.replace(' (Villahermosa)', ''),
-          tipo: 'municipio' as const,
-          landmarksCercanos: await landmarksCercaDeZona(municipality!.lat, municipality!.lng),
-          totalPropiedades: municipality!.propiedades,
-          cercaDosoBocas: municipality!.cercaDosoBocas,
-        };
+    const body = {
+      nombre: zone!.nombre,
+      tipo: 'colonia' as const,
+      municipio: zone!.municipio,
+      landmarksCercanos: await landmarksCercaDeZona(zone!.lat, zone!.lng),
+      totalPropiedades: zone!.propiedades,
+      precioPromedioVenta: zone!.precioPromedioVenta > 0 ? zone!.precioPromedioVenta : undefined,
+      precioPromedioRenta: zone!.precioPromedioRenta > 0 ? zone!.precioPromedioRenta : undefined,
+      riesgoInundacion: riesgo?.confianza === 'confirmada' ? riesgo.riesgo : undefined,
+    };
     const { descripcion } = await backendFetchServer<{ descripcion: string }>('/ia/descripcion-zona', {
       method: 'POST',
       body: JSON.stringify(body),
@@ -147,9 +161,6 @@ export default async function ZonaDetailPage({ params }: Props) {
   const isMunicipality = !!municipality;
   const isCercaDosoBocas = municipality?.cercaDosoBocas ?? false;
 
-  const centerMarker = zoneProperties.length === 0
-    ? [{ id: 'center', slug: '', lat, lng, titulo: name, precio: 0, operacion: 'venta' as const, tipo: 'casa', colonia: name, foto: null, riesgoInundacion: 'bajo' as const }]
-    : markers;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -165,15 +176,32 @@ export default async function ZonaDetailPage({ params }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Hero card */}
-          <div className="relative h-48 bg-gradient-to-br from-brand-dark to-brand rounded-3xl overflow-hidden">
-            <div className="absolute inset-0 flex items-center justify-center opacity-20">
-              {isMunicipality ? <MapIcon size={110} strokeWidth={1} /> : <Building2 size={110} strokeWidth={1} />}
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+          {/* Hero card — foto real (Wikimedia Commons) para municipios,
+              antes un degradado sólido sin imagen. Las colonias (`zone`)
+              no tienen foto propia, se quedan con el degradado + ícono.
+              h-64 sm:h-80 (antes h-48 fijo) — pedido explícito 2026-08-19
+              ("mejora el diseño"): con foto real de calidad, 192px se
+              sentía corto/recortado; más alto deja respirar la imagen sin
+              perder el título encima. */}
+          <div className="relative h-64 sm:h-80 bg-gradient-to-br from-brand-dark to-brand rounded-3xl overflow-hidden animate-fade-up">
+            {isMunicipality && municipality?.foto ? (
+              <Image
+                src={municipality.foto}
+                alt={name}
+                fill
+                priority
+                sizes="(min-width: 1024px) 66vw, 100vw"
+                className="object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                {isMunicipality ? <MapIcon size={110} strokeWidth={1} /> : <Building2 size={110} strokeWidth={1} />}
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
             <div className="absolute bottom-0 left-0 p-6">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="bg-white/20 backdrop-blur-sm text-white text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
                   <MapPin size={10} />
                   {isMunicipality ? 'Municipio de Tabasco' : `Colonia · ${zone!.municipio}`}
                 </span>
@@ -183,45 +211,67 @@ export default async function ZonaDetailPage({ params }: Props) {
                   </span>
                 )}
               </div>
-              <h1 className="text-2xl font-heading font-bold text-white">{name}</h1>
+              <h1 className="text-3xl sm:text-4xl font-heading font-bold text-white drop-shadow-sm">{name}</h1>
             </div>
+            {isMunicipality && municipality?.foto && (
+              <span className="absolute top-3 right-3 bg-black/25 backdrop-blur-sm text-white/80 text-[10px] px-2 py-1 rounded-full">
+                Foto: {MUNICIPIO_FOTO_CREDITO[municipality.id] ?? 'Wikimedia Commons'} / Wikimedia Commons
+              </span>
+            )}
           </div>
 
           {/* Description */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5">
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 animate-fade-up" style={{ animationDelay: '60ms' }}>
             <h2 className="font-heading font-bold text-gray-800 mb-2">Sobre {isMunicipality ? 'el municipio' : 'la colonia'}</h2>
             <p className="text-gray-600 text-sm leading-relaxed">{description}</p>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div className="bg-brand-pale rounded-2xl p-4 text-center">
-              <p className="text-2xl font-display font-black text-brand">{zoneProperties.length}</p>
-              <p className="text-xs text-gray-600 mt-1">Propiedades</p>
+          {/* Stats — para municipios (sin precio promedio de zona) un solo
+              stat real existe, así que se muestra como tira ancha en vez
+              de una grilla de 3 columnas con 2 huecos vacíos al lado
+              (pedido explícito 2026-08-19). Las colonias con precios sí
+              llenan la grilla de verdad. */}
+          {zone && (zone.precioPromedioRenta > 0 || zone.precioPromedioVenta > 0) ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="bg-brand-pale rounded-2xl p-4 text-center">
+                <p className="text-2xl font-display font-black text-brand">{zoneProperties.length}</p>
+                <p className="text-xs text-gray-600 mt-1">Propiedades</p>
+              </div>
+              {zone.precioPromedioRenta > 0 && (
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 text-center">
+                  <p className="text-lg font-heading font-bold text-gray-800">
+                    {formatPrice(zone.precioPromedioRenta, 'renta')}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Renta promedio</p>
+                </div>
+              )}
+              {zone.precioPromedioVenta > 0 && (
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 text-center">
+                  <p className="text-lg font-heading font-bold text-gray-800">
+                    {formatPrice(zone.precioPromedioVenta, 'venta')}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Venta promedio</p>
+                </div>
+              )}
             </div>
-            {zone && zone.precioPromedioRenta > 0 && (
-              <div className="bg-white border border-gray-200 rounded-2xl p-4 text-center">
-                <p className="text-lg font-heading font-bold text-gray-800">
-                  {formatPrice(zone.precioPromedioRenta, 'renta')}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">Renta promedio</p>
-              </div>
-            )}
-            {zone && zone.precioPromedioVenta > 0 && (
-              <div className="bg-white border border-gray-200 rounded-2xl p-4 text-center">
-                <p className="text-lg font-heading font-bold text-gray-800">
-                  {formatPrice(zone.precioPromedioVenta, 'venta')}
-                </p>
-                <p className="text-xs text-gray-500 mt-1">Venta promedio</p>
-              </div>
-            )}
-          </div>
+          ) : (
+            <div className="bg-brand-pale rounded-2xl p-4 flex items-center gap-4">
+              <p className="text-2xl font-display font-black text-brand flex-shrink-0">{zoneProperties.length}</p>
+              <p className="text-xs text-gray-600">
+                propiedad{zoneProperties.length !== 1 ? 'es' : ''} publicada{zoneProperties.length !== 1 ? 's' : ''} en {name}
+              </p>
+            </div>
+          )}
 
           {/* Map */}
           <div>
             <h2 className="font-heading font-bold text-gray-800 mb-3">Mapa de la zona</h2>
             <div className="h-64 rounded-2xl overflow-hidden border border-gray-200">
-              <MapViewDynamic markers={centerMarker} center={[lat, lng]} zoom={isMunicipality ? 12 : 14} />
+              {/* Sin pin "$0" inventado cuando no hay propiedades — pedido
+                  explícito 2026-08-19: "no quiero que se vea nada... mas
+                  que el solo mapa". `center`/`zoom` ya posicionan el mapa
+                  sin necesitar un marcador falso. */}
+              <MapViewDynamic markers={markers} center={[lat, lng]} zoom={isMunicipality ? 12 : 14} />
             </div>
           </div>
         </div>
@@ -252,19 +302,26 @@ export default async function ZonaDetailPage({ params }: Props) {
                 consolidadas... buena plusvalía") para cualquier colonia,
                 lo cual es falso para casi todas por definición. Ahora solo
                 hechos verificables: ubicación real, sin adjetivos de
-                oportunidad/demanda/plusvalía. */}
-            <div className="bg-brand-pale rounded-2xl p-4">
-              <p className="text-xs font-semibold text-brand-dark mb-2 flex items-center gap-1">
-                <TrendingUp size={13} /> Sobre la zona
-              </p>
-              <p className="text-xs text-gray-600">
-                {isCercaDosoBocas
-                  ? 'Ubicada cerca de la Refinería Dos Bocas / Pemex.'
-                  : isMunicipality
-                  ? `${name} es un municipio fuera de Villahermosa, conectado por carretera al centro del estado.`
-                  : `${name} es una colonia del municipio de ${zone!.municipio}.`}
-              </p>
-            </div>
+                oportunidad/demanda/plusvalía.
+                Para municipios ya no se muestra si no hay nada real que
+                decir (pedido explícito 2026-08-19): la frase genérica
+                "conectado por carretera al centro del estado" quedaba
+                repetida (y para Centro mismo, sin sentido — ES el centro)
+                junto a la descripción real de arriba. Se queda solo el
+                caso con dato real (Dos Bocas) o el de colonia (municipio
+                al que pertenece, útil y no repetido en otro lado). */}
+            {(isCercaDosoBocas || !isMunicipality) && (
+              <div className="bg-brand-pale rounded-2xl p-4">
+                <p className="text-xs font-semibold text-brand-dark mb-2 flex items-center gap-1">
+                  <TrendingUp size={13} /> Sobre la zona
+                </p>
+                <p className="text-xs text-gray-600">
+                  {isCercaDosoBocas
+                    ? 'Ubicada cerca de la Refinería Dos Bocas / Pemex.'
+                    : `${name} es una colonia del municipio de ${zone!.municipio}.`}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -275,7 +332,13 @@ export default async function ZonaDetailPage({ params }: Props) {
           <h2 className="text-xl font-heading font-bold text-gray-800 mb-5">
             Propiedades en {name}
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Misma grilla auto-fill que /propiedades (PROPERTY_GRID_CLASSES,
+              src/lib/gridClasses.ts) — antes era grid-cols-1 md:grid-cols-2
+              fijo, así que con pocos resultados (ej. un municipio con solo
+              3 propiedades) las tarjetas se veían más grandes que en
+              cualquier otra página. Pedido explícito 2026-08-19: mismo
+              tamaño haya o no haya más propiedades. */}
+          <div className={PROPERTY_GRID_CLASSES}>
             {zoneProperties.map((p) => (
               <PropertyCard key={p.id} property={p} />
             ))}
@@ -283,7 +346,16 @@ export default async function ZonaDetailPage({ params }: Props) {
         </section>
       ) : (
         <div className="mt-10 bg-gray-50 rounded-2xl p-10 text-center">
-          <Construction size={36} className="mx-auto mb-3 text-gray-300" strokeWidth={1.5} />
+          {/* Mascota 404 propia en vez del ícono genérico de construcción —
+              pedido explícito 2026-08-19, aplica a las 17 páginas de
+              municipio (y a colonia, mismo bloque compartido). */}
+          <Image
+            src="/images/icons/404-mascota.webp"
+            alt=""
+            width={140}
+            height={87}
+            className="mx-auto mb-3"
+          />
           <p className="font-semibold text-gray-700 mb-2">Próximamente en {name}</p>
           <p className="text-gray-500 text-sm mb-4">
             Aún no hay propiedades publicadas en esta zona. ¿Tienes una? Publícala gratis.

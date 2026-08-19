@@ -1,6 +1,7 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
-import { Home, ArrowRight, SearchX } from 'lucide-react';
+import { Home, ArrowRight } from 'lucide-react';
 import { SearchBar } from '@/components/search/SearchBar';
 import { buttonClasses } from '@/components/ui/Button';
 
@@ -17,9 +18,18 @@ export default function NotFound() {
 
       <div className="relative min-h-[70vh] flex items-center justify-center px-4 py-20">
         <div className="max-w-lg w-full text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 border border-white/15 mb-6">
-            <SearchX size={28} className="text-white/70" strokeWidth={1.5} />
-          </div>
+          {/* Misma mascota que "Próximamente en [municipio]" (/zonas/[slug])
+              — pedido explícito 2026-08-19, un solo ícono de "esto no está
+              listo/no existe" en toda la plataforma en vez de uno genérico
+              por página. */}
+          <Image
+            src="/images/icons/404-mascota.webp"
+            alt=""
+            width={168}
+            height={104}
+            priority
+            className="mx-auto mb-6"
+          />
 
           <p className="text-white/50 text-xs font-bold uppercase tracking-[0.2em] mb-3">Error 404</p>
           <h1 className="font-display font-black text-white leading-tight mb-3"

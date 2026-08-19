@@ -113,9 +113,6 @@ export function AgentCard({ agent, propiedadId, propertyTitle, requiereMensajePr
             <LogIn size={16} />
             Inicia sesión para ver el contacto
           </Link>
-          <p className={`text-xs mt-2 text-center ${dark ? 'text-white/50' : 'text-gray-400'}`}>
-            Así evitamos que bots cosechen números en lote — a las personas reales no les cuesta nada de más.
-          </p>
         </div>
       ) : requiereMensajePrimero ? (
         <div className="space-y-2">

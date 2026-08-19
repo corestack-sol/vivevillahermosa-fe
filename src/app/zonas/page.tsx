@@ -78,12 +78,16 @@ function MunicipioIcon({ spec, size, className }: { spec: MunIconSpec; size: num
     />
   );
 }
-// Tope duro de la lista de chips ("También:") — pedido explícito
-// 2026-08-18: "la lista no debe ser mayor a 20 chips". El catálogo de
-// colonias verificadas pasa de 60, sin este tope la fila crecía sin
-// límite. El resto (20+) simplemente no aparece aquí — sigue disponible
-// buscando por nombre en /propiedades.
-const MAX_CHIPS = 20;
+// Tope de chips ("También:") por grupo — pedido explícito 2026-08-19: con
+// un tope plano de 20 (el de antes), Centro por sí solo (18+ colonias con
+// propiedad) llenaba las 20 y ningún otro municipio llegaba a aparecer en
+// escritorio, donde se ven todos de una vez sin "Ver más". Ahora Centro
+// aporta como máximo MAX_CHIPS_CENTRO, y el resto de municipios (los más
+// cercanos primero, mismo orden de siempre) aportan como máximo
+// MAX_CHIPS_POR_MUNICIPIO cada uno, hasta MAX_MUNICIPIOS_CHIPS distintos.
+const MAX_CHIPS_CENTRO = 10;
+const MAX_CHIPS_POR_MUNICIPIO = 4;
+const MAX_MUNICIPIOS_CHIPS = 4;
 
 export const metadata: Metadata = {
   title: 'Colonias y municipios de Tabasco | Vive Villahermosa',
@@ -103,7 +107,40 @@ export default async function ZonasPage() {
   // grande, el resto como chip.
   const { colonias: coloniasRanked, porDemanda, tieneDemandaReal } = await getColoniasOrdenadasPorDemanda();
   const coloniasCards = coloniasRanked.slice(0, MAX_CARDS);
-  const coloniasChips = coloniasRanked.slice(MAX_CARDS, MAX_CARDS + MAX_CHIPS);
+
+  // El resto ya viene ordenado por cercanía real (Centro primero, luego
+  // municipios de más cerca a más lejos, ver getColoniasOrdenadasPorDemanda)
+  // — recorrerlo en ese mismo orden aplicando los topes por grupo preserva
+  // el orden geográfico sin que Centro se coma todo el cupo.
+  const resto = coloniasRanked.slice(MAX_CARDS);
+  // MAX_CHIPS_CENTRO es el tope de Centro en TODA la página, no solo en los
+  // chips — las cards verdes de arriba (casi siempre de Centro, por ser el
+  // municipio con más oferta) ya cuentan contra ese cupo.
+  const centroEnCards = coloniasCards.filter((c) => c.municipio === 'Centro').length;
+  const centroChips = resto.filter((c) => c.municipio === 'Centro').slice(0, Math.max(0, MAX_CHIPS_CENTRO - centroEnCards));
+  const conteoPorMunicipio = new Map<string, number>();
+  const otrosChips: typeof resto = [];
+  for (const c of resto) {
+    if (c.municipio === 'Centro') continue;
+    if (!conteoPorMunicipio.has(c.municipio)) {
+      if (conteoPorMunicipio.size >= MAX_MUNICIPIOS_CHIPS) continue;
+      conteoPorMunicipio.set(c.municipio, 0);
+    }
+    const n = conteoPorMunicipio.get(c.municipio)!;
+    if (n < MAX_CHIPS_POR_MUNICIPIO) {
+      otrosChips.push(c);
+      conteoPorMunicipio.set(c.municipio, n + 1);
+    }
+  }
+  const coloniasChips = [...centroChips, ...otrosChips];
+  // Municipio -> slug real (/zonas/[slug]) para que la etiqueta de grupo de
+  // ColoniaChipsList ("Nacajuca:") enlace a esa página — pedido explícito
+  // 2026-08-19. `municipalities` ya viene cargado para la grilla de abajo,
+  // sin fetch aparte. `nombre` coincide tal cual con `colonia.municipio`
+  // para todos salvo Centro ("Centro (Villahermosa)" vs. "Centro"), pero
+  // Centro nunca lleva etiqueta de grupo (ver ColoniaChipsList), así que
+  // ese caso no hace falta cubrirlo aquí.
+  const municipioSlugPorNombre = Object.fromEntries(municipalities.map((m) => [m.nombre, m.slug]));
   // Respaldo por oferta (cuando porDemanda es false): solo se marca "con más
   // propiedades" cuando de verdad se despega del resto (no cuando todas
   // empatan en 1 propiedad) — evita que la llama pierda significado si el
@@ -203,7 +240,7 @@ export default async function ZonasPage() {
           })}
         </div>
 
-        {coloniasChips.length > 0 && <ColoniaChipsList chips={coloniasChips} />}
+        {coloniasChips.length > 0 && <ColoniaChipsList chips={coloniasChips} municipioSlugs={municipioSlugPorNombre} />}
       </section>
 
       {/* ── Municipios — grid más denso (17 items), tarjetas claras y compactas ── */}

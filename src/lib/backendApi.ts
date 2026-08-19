@@ -11,7 +11,15 @@ export const BACKEND_URL = rawUrl.replace(/\/$/, '');
 // coincidir con COOKIE_NAME del backend (mismo secreto compartido, ver
 // "Decisiones abiertas" punto 1 de docs/BACKEND.md). auth.ts la reexporta
 // para no romper a quien ya la importaba desde ahí.
-export const SESSION_COOKIE = 'vivevillahermosa_session';
+// Bug real 2026-08-19: este valor no coincidía con el COOKIE_NAME real del
+// backend en Railway ("vv_session") — el navegador sí mandaba la cookie
+// real automáticamente (por eso el header/menú se veía bien logueado),
+// pero getSession()/backendFetchServer() la buscaban server-side por este
+// nombre exacto, nunca la encontraban, y mandaban a /auth/login rutas
+// protegidas (/publicar, /dashboard, /favoritos, /alertas,
+// /servicios/publicar) aunque la sesión sí existiera. Confirmado por el
+// equipo de backend contra las variables reales de Railway.
+export const SESSION_COOKIE = 'vv_session';
 
 /** Forma real de GET /auth/me y equivalentes del backend (AuthService.PublicUser). */
 export interface BackendUser {

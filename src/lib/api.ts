@@ -5,6 +5,7 @@ import type { Agent } from '@/types/agent';
 import municipalitiesData from '@/data/municipalities.json';
 import agentsData from '@/data/agents.json';
 import { backendFetch } from '@/lib/backendApi';
+import { distanciaKm } from '@/lib/landmarks';
 
 // ⚠️ 2026-08-10 (docs/BACKEND.md §3): Property ya es real en el backend
 // separado — esta capa le hace fetch a GET /propiedades en vez de leer
@@ -293,12 +294,41 @@ export interface ColoniaCard {
   precioPromedioRenta: number | null;
 }
 
+function normalizarNombreMunicipio(s: string): string {
+  // "Centro (Villahermosa)" (municipalities.json) vs. "Centro" (Property.municipio)
+  // — se les quita el paréntesis antes de comparar.
+  return s.replace(/\s*\([^)]*\)\s*/g, '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+const CENTRO_MUNICIPIO = municipalitiesData.find((m) => m.id === 'centro')!;
+
+// Distancia real (Haversine, mismo helper que src/lib/landmarks.ts) de cada
+// municipio al Centro — pedido explícito 2026-08-19: "las colonias más
+// buscadas" deben agruparse primero por Centro, luego por municipio del más
+// cercano al más lejano, en vez de una lista plana por demanda/oferta.
+const DISTANCIA_MUNICIPIO_DESDE_CENTRO = new Map<string, number>(
+  municipalitiesData.map((m) => [
+    normalizarNombreMunicipio(m.nombre),
+    distanciaKm(CENTRO_MUNICIPIO.lat, CENTRO_MUNICIPIO.lng, m.lat, m.lng),
+  ]),
+);
+
+/** Infinity para un municipio sin coordenadas conocidas — se va al final, no rompe el orden del resto. */
+function distanciaMunicipioDesdeCentro(nombreMunicipio: string): number {
+  return DISTANCIA_MUNICIPIO_DESDE_CENTRO.get(normalizarNombreMunicipio(nombreMunicipio)) ?? Infinity;
+}
+
 /**
  * Todas las colonias con propiedades reales — tengan o no ficha editorial
  * curada en /admin/zonas —, ordenadas de mayor a menor por cantidad de
  * propiedades. Ranking por OFERTA (cuántas propiedades activas tiene la
  * colonia) — para DEMANDA (búsquedas/vistas/contactos reales), ver
  * `getColoniasOrdenadasPorDemanda` más abajo (BACKEND.md §9.1).
+ *
+ * A propósito NO agrupa por cercanía a Centro (a diferencia de
+ * `getColoniasOrdenadasPorDemanda`) — MapaClient.tsx la usa para "Ir a
+ * zona", donde lo que importa es volar al mercado con más oferta real, no
+ * mostrar Centro primero.
  */
 export async function getColoniasRankedByPropiedades(): Promise<ColoniaCard[]> {
   const [all, zones] = await Promise.all([getAllProperties(), getAllZones()]);
@@ -371,10 +401,12 @@ export interface ColoniasOrdenadasPorDemanda {
  * `getColoniasRankedByPropiedades` (descripción, precio promedio, conteo),
  * pero reordenado por DEMANDA real (búsquedas con IA + vistas + contactos de
  * los últimos 7 días, ver /ia/busqueda-inteligente y
- * /propiedades/:id(/contacto) del backend) en vez de por oferta. `sort` es
- * estable (garantizado desde ES2019): cuando `porDemanda` es false, el orden
- * resultante es exactamente el de `getColoniasRankedByPropiedades`, sin
- * ninguna rama especial.
+ * /propiedades/:id(/contacto) del backend) en vez de por oferta. En ambos
+ * casos (con o sin demanda real) se agrupa primero por cercanía real del
+ * municipio al Centro — Centro primero, luego el resto de más cerca a más
+ * lejos — pedido explícito 2026-08-19: "las colonias más buscadas" en
+ * /zonas y Home deben mostrar primero la capital y expandirse hacia afuera,
+ * no una lista plana por demanda/oferta sin ningún criterio geográfico.
  */
 export async function getColoniasOrdenadasPorDemanda(): Promise<ColoniasOrdenadasPorDemanda> {
   const [coloniasRanked, tendencia] = await Promise.all([
@@ -382,10 +414,15 @@ export async function getColoniasOrdenadasPorDemanda(): Promise<ColoniasOrdenada
     obtenerTendenciaColonias(),
   ]);
 
+  const porCercaniaYOferta = [...coloniasRanked].sort((a, b) => {
+    const distancia = distanciaMunicipioDesdeCentro(a.municipio) - distanciaMunicipioDesdeCentro(b.municipio);
+    return distancia !== 0 ? distancia : b.propiedades - a.propiedades;
+  });
+
   const maxTendencia = tendencia.reduce((max, t) => Math.max(max, t.total), 0);
   if (maxTendencia === 0) {
     return {
-      colonias: coloniasRanked,
+      colonias: porCercaniaYOferta,
       porDemanda: false,
       tieneDemandaReal: () => false,
     };
@@ -394,11 +431,14 @@ export async function getColoniasOrdenadasPorDemanda(): Promise<ColoniasOrdenada
   const totalPorColonia = new Map(
     tendencia.map((t) => [normalizarNombreParaTendencia(t.colonia), t.total]),
   );
-  const colonias = [...coloniasRanked].sort(
-    (a, b) =>
+  const colonias = [...coloniasRanked].sort((a, b) => {
+    const distancia = distanciaMunicipioDesdeCentro(a.municipio) - distanciaMunicipioDesdeCentro(b.municipio);
+    if (distancia !== 0) return distancia;
+    return (
       (totalPorColonia.get(normalizarNombreParaTendencia(b.nombre)) ?? 0) -
-      (totalPorColonia.get(normalizarNombreParaTendencia(a.nombre)) ?? 0),
-  );
+      (totalPorColonia.get(normalizarNombreParaTendencia(a.nombre)) ?? 0)
+    );
+  });
 
   return {
     colonias,

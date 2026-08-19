@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Clock, ArrowLeft, ChevronRight } from 'lucide-react';
 import blogData from '@/data/blog.json';
+import { getCategoriaVisual } from '../categoriaConfig';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -28,6 +29,7 @@ export default async function BlogPostPage({ params }: Props) {
   if (!post) notFound();
 
   const related = blogData.filter((p) => p.slug !== slug).slice(0, 3);
+  const visual = getCategoriaVisual(post.categoria);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -44,7 +46,10 @@ export default async function BlogPostPage({ params }: Props) {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-4">
-            <span className="text-xs font-semibold bg-brand-pale text-brand px-2.5 py-1 rounded-full">
+            <span
+              className="text-xs font-semibold px-2.5 py-1 rounded-full"
+              style={{ background: visual.from, color: visual.accent }}
+            >
               {post.categoria}
             </span>
             <span className="text-xs text-gray-400 flex items-center gap-1">
@@ -54,7 +59,13 @@ export default async function BlogPostPage({ params }: Props) {
               {new Date(post.fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
             </span>
           </div>
-          <div className="text-5xl mb-4">{post.imagen}</div>
+          {/* Ícono + degradado por categoría, no el emoji suelto de antes */}
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+            style={{ background: `linear-gradient(to bottom right, ${visual.from}, ${visual.to})` }}
+          >
+            <visual.Icon size={28} strokeWidth={1.5} style={{ color: visual.accent }} />
+          </div>
           <h1 className="text-2xl md:text-3xl font-heading font-bold text-gray-900 leading-snug mb-3">
             {post.titulo}
           </h1>
@@ -97,16 +108,24 @@ export default async function BlogPostPage({ params }: Props) {
         <section className="border-t border-gray-200 pt-10">
           <h2 className="text-lg font-heading font-bold text-gray-800 mb-5">Más artículos</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            {related.map((r) => (
-              <Link key={r.id} href={`/blog/${r.slug}`}
-                className="group bg-white rounded-2xl border border-gray-200 p-5 hover:border-brand/30 hover:shadow-md transition-all">
-                <div className="text-3xl mb-3">{r.imagen}</div>
-                <p className="text-xs text-brand font-semibold mb-1">{r.categoria}</p>
-                <h3 className="text-sm font-semibold text-gray-800 group-hover:text-brand transition-colors line-clamp-2">
-                  {r.titulo}
-                </h3>
-              </Link>
-            ))}
+            {related.map((r) => {
+              const rVisual = getCategoriaVisual(r.categoria);
+              return (
+                <Link key={r.id} href={`/blog/${r.slug}`}
+                  className="group bg-white rounded-2xl border border-gray-200 p-5 hover:border-brand/30 hover:shadow-md transition-all">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
+                    style={{ background: `linear-gradient(to bottom right, ${rVisual.from}, ${rVisual.to})` }}
+                  >
+                    <rVisual.Icon size={18} strokeWidth={1.5} style={{ color: rVisual.accent }} />
+                  </div>
+                  <p className="text-xs text-brand font-semibold mb-1">{r.categoria}</p>
+                  <h3 className="text-sm font-semibold text-gray-800 group-hover:text-brand transition-colors line-clamp-2">
+                    {r.titulo}
+                  </h3>
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}

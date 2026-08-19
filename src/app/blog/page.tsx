@@ -2,19 +2,13 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Clock, ArrowRight } from 'lucide-react';
 import blogData from '@/data/blog.json';
+import { getCategoriaVisual } from './categoriaConfig';
 
 export const metadata: Metadata = {
   // Sin "inmobiliario" en el título — mismo criterio que /nosotros
   // (2026-08-18): la marca no debe quedar encasillada a un solo rubro.
   title: 'Blog de Tabasco | Vive Villahermosa',
   description: 'Guías, comparativas y consejos sobre vivienda y vida en Tabasco y Villahermosa. Inundaciones, colonias, precios y más.',
-};
-
-const CATEGORIA_COLORS: Record<string, string> = {
-  Guía: 'bg-blue-50 text-blue-700',
-  Comparativa: 'bg-purple-50 text-purple-700',
-  Consejos: 'bg-green-50 text-green-700',
-  Mercado: 'bg-amber-50 text-amber-700',
 };
 
 export default function BlogPage() {
@@ -32,20 +26,25 @@ export default function BlogPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {posts.map((post) => (
+        {posts.map((post) => {
+          const visual = getCategoriaVisual(post.categoria);
+          return (
           <Link
             key={post.id}
             href={`/blog/${post.slug}`}
             className="group bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg hover:border-brand/30 transition-all"
           >
-            {/* Thumbnail */}
-            <div className="h-36 bg-gradient-to-br from-brand-pale to-sky/20 flex items-center justify-center text-5xl">
-              {post.imagen}
+            {/* Thumbnail — ícono + degradado por categoría, no el emoji suelto de antes */}
+            <div className="h-36 flex items-center justify-center" style={{ background: `linear-gradient(to bottom right, ${visual.from}, ${visual.to})` }}>
+              <visual.Icon size={34} strokeWidth={1.5} style={{ color: visual.accent }} />
             </div>
 
             <div className="p-5">
               <div className="flex items-center gap-2 mb-3">
-                <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${CATEGORIA_COLORS[post.categoria] ?? 'bg-gray-100 text-gray-600'}`}>
+                <span
+                  className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
+                  style={{ background: visual.from, color: visual.accent }}
+                >
                   {post.categoria}
                 </span>
                 <span className="text-xs text-gray-400 flex items-center gap-1">
@@ -68,7 +67,8 @@ export default function BlogPage() {
               </div>
             </div>
           </Link>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

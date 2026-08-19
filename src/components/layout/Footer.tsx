@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { MapPin, Mail, Droplets } from 'lucide-react';
+import { MapPin, Droplets } from 'lucide-react';
 
 function FooterMinimal() {
   // Mismo trío cálido del Hero (brand-pale → blanco → sand, ver page.tsx)
@@ -26,8 +26,6 @@ function FooterMinimal() {
 
 function FooterFull() {
   return (
-    // theme-tabasco ya se aplica sitio-completo en layout.tsx — no hace
-    // falta repetirla aquí (ver el mismo cambio en Navbar.tsx).
     <footer className="bg-brand-dark text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -51,10 +49,14 @@ function FooterFull() {
             </p>
             <div className="space-y-2">
               <a
-                href="mailto:hola@vivevillahermosa.mx"
+                href="mailto:corestack.sol@gmail.com"
                 className="flex items-center gap-2 text-sm text-white/70 hover:text-accent transition-colors"
               >
-                <Mail size={14} /> hola@vivevillahermosa.mx
+                {/* Logo de Corestack Solutions en vez del ícono de sobre
+                    genérico — pedido explícito 2026-08-19. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/images/icons/corestack-logo.webp" alt="" className="h-[15px] w-auto flex-shrink-0" />
+                corestack.sol@gmail.com
               </a>
               <span className="flex items-center gap-2 text-sm text-white/70">
                 <MapPin size={14} /> Villahermosa, Tabasco, México
