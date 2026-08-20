@@ -5,7 +5,7 @@ import { Loader2, CheckCircle2, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { formatRelativeDate } from '@/lib/format';
-import { backendFetch } from '@/lib/backendApi';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
 interface Servicio {
   id: string;
@@ -23,6 +23,7 @@ export default function AdminServiciosPage() {
   const [loading, setLoading] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [confirmar, setConfirmar] = useState<Servicio | null>(null);
+  const [error, setError] = useState('');
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -36,13 +37,22 @@ export default function AdminServiciosPage() {
   async function toggle() {
     if (!confirmar) return;
     setEnviando(true);
-    await backendFetch(`/admin/servicios/${confirmar.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ activo: !confirmar.activo }),
-    }).catch(() => {});
-    setEnviando(false);
-    setConfirmar(null);
-    cargar();
+    setError('');
+    try {
+      await backendFetch(`/admin/servicios/${confirmar.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ activo: !confirmar.activo }),
+      });
+      setConfirmar(null);
+      cargar();
+    } catch (err) {
+      // Antes fallaba en silencio: el modal se cerraba como si hubiera
+      // funcionado y solo el refetch revelaba, sin explicación, que la fila
+      // no cambió.
+      setError(err instanceof BackendApiError ? err.message : 'No se pudo actualizar el servicio.');
+    } finally {
+      setEnviando(false);
+    }
   }
 
   return (
@@ -87,7 +97,7 @@ export default function AdminServiciosPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Button size="sm" variant={s.activo ? 'danger' : 'outline'} onClick={() => setConfirmar(s)}>
+                      <Button size="sm" variant={s.activo ? 'danger' : 'outline'} onClick={() => { setConfirmar(s); setError(''); }}>
                         {s.activo ? 'Pausar' : 'Reactivar'}
                       </Button>
                     </td>
@@ -113,6 +123,7 @@ export default function AdminServiciosPage() {
               <strong className="text-gray-800">{confirmar.nombre}</strong> de {confirmar.user.nombre} ({confirmar.user.email}).
               {confirmar.activo && ' Dejará de verse en el catálogo público hasta que lo reactives.'}
             </p>
+            {error && <p className="text-sm text-danger">{error}</p>}
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setConfirmar(null)}>Cancelar</Button>
               <Button variant={confirmar.activo ? 'danger' : 'primary'} onClick={toggle} isLoading={enviando}>

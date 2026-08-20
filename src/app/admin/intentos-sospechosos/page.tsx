@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Loader2, Ban, CheckCircle2 } from 'lucide-react';
 import { formatRelativeDate } from '@/lib/format';
 import { backendFetch } from '@/lib/backendApi';
+import { Modal } from '@/components/ui/Modal';
 
 interface Intento {
   id: string;
@@ -17,6 +18,7 @@ interface Intento {
 export default function AdminIntentosSospechososPage() {
   const [intentos, setIntentos] = useState<Intento[]>([]);
   const [loading, setLoading] = useState(true);
+  const [detalle, setDetalle] = useState<Intento | null>(null);
 
   useEffect(() => {
     backendFetch<Intento[]>('/admin/intentos-sospechosos')
@@ -50,7 +52,7 @@ export default function AdminIntentosSospechososPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {intentos.map((i) => (
-                  <tr key={i.id}>
+                  <tr key={i.id} onClick={() => setDetalle(i)} className="cursor-pointer hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-800">{i.user.nombre}</p>
                       <p className="text-xs text-gray-400">{i.user.email}</p>
@@ -72,6 +74,24 @@ export default function AdminIntentosSospechososPage() {
           </div>
         </div>
       )}
+
+      {/* Antes solo había un `title` (tooltip nativo) para leer el texto
+          completo de una búsqueda marcada — incómodo para triage real de
+          payloads largos. */}
+      <Modal isOpen={!!detalle} onClose={() => setDetalle(null)} title="Detalle del intento">
+        {detalle && (
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Búsqueda completa</p>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap break-words bg-gray-50 rounded-xl p-3">{detalle.consulta}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Marcador</p>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap break-words bg-gray-50 rounded-xl p-3">{detalle.marcador}</p>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

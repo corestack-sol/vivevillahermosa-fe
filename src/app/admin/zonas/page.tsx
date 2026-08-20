@@ -8,6 +8,7 @@ import { useToast } from '@/context/ToastContext';
 import { resizeImageToDataUrl } from '@/lib/imageResize';
 import { backendFetch } from '@/lib/backendApi';
 import { MUNICIPIO_OPTIONS } from '@/lib/publishSchema';
+import { estaEnTabasco } from '@/lib/tabascoBoundary';
 
 interface ColoniaFicha {
   id: string;
@@ -82,7 +83,7 @@ export default function AdminZonasPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => { function cargarInicial() { cargar(); } cargarInicial(); }, [cargar]);
 
   function abrirCrear(prefill?: { nombre: string; municipio: string | null }) {
     setForm({ ...FORM_VACIO, nombre: prefill?.nombre ?? '', municipio: prefill?.municipio ?? '' });
@@ -137,13 +138,31 @@ export default function AdminZonasPage() {
       toast.error('Nombre, municipio, latitud y longitud son obligatorios.');
       return;
     }
+    // "abc" en lat/lng antes pasaba este chequeo (solo revisaba que el
+    // string no estuviera vacío) — Number("abc") es NaN, y JSON.stringify
+    // serializa NaN como null, así que se guardaba en silencio sin ningún
+    // error visible. estaEnTabasco() de paso descarta coordenadas válidas
+    // pero fuera del estado (typo de dígito, lat/lng invertidos).
+    const lat = Number(form.lat);
+    const lng = Number(form.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || !estaEnTabasco(lat, lng)) {
+      toast.error('Latitud/longitud inválidas — verifica que sean números dentro de Tabasco.');
+      return;
+    }
+    const duplicada = colonias.some(
+      (c) => c.id !== form.id && c.municipio === form.municipio && c.nombre.trim().toLowerCase() === form.nombre.trim().toLowerCase(),
+    );
+    if (duplicada) {
+      toast.error('Ya existe una ficha con ese nombre en ese municipio.');
+      return;
+    }
     setGuardando(true);
     try {
       const body = {
         nombre: form.nombre.trim(),
         municipio: form.municipio,
-        lat: Number(form.lat),
-        lng: Number(form.lng),
+        lat,
+        lng,
         foto: form.foto ?? undefined,
         destacada: form.destacada,
       };
@@ -367,7 +386,7 @@ export default function AdminZonasPage() {
         {aBorrar && (
           <div className="space-y-4">
             <p className="text-sm text-gray-600">
-              Vas a eliminar la ficha de <strong className="text-gray-800">{aBorrar.nombre}</strong>. Deja de tener página propia (/zonas/{aBorrar.slug}) — sus propiedades siguen viéndose en resultados de búsqueda.
+              Vas a eliminar la ficha de <strong className="text-gray-800">{aBorrar.nombre}</strong>. Deja de tener página propia (/zonas/{aBorrar.slug}) en hasta 60 segundos (la página pública se regenera cada minuto) — sus propiedades siguen viéndose en resultados de búsqueda.
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setABorrar(null)}>Cancelar</Button>

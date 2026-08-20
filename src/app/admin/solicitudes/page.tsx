@@ -48,6 +48,17 @@ export default function AdminSolicitudesPage() {
     setEnviando(true);
     setError('');
     try {
+      // Revalida contra el servidor justo antes de mutar — la lista en
+      // pantalla puede tener minutos, y otro admin pudo haber resuelto esta
+      // misma solicitud mientras tanto. Sin esto se mandaba la resolución a
+      // ciegas sobre datos obsoletos.
+      const frescas = await backendFetch<Solicitud[]>('/admin/solicitudes-revision?estado=pendiente');
+      const sigueVigente = (frescas ?? []).some((s) => s.id === confirmar.solicitud.id);
+      if (!sigueVigente) {
+        setError('Otro admin ya resolvió esta solicitud — la lista se va a actualizar.');
+        cargar();
+        return;
+      }
       await backendFetch(`/admin/solicitudes-revision/${confirmar.solicitud.id}/resolver`, {
         method: 'POST',
         body: JSON.stringify({ estado: confirmar.nuevoEstado, respuestaAdmin: respuesta.trim() || undefined }),
