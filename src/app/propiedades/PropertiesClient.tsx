@@ -409,7 +409,7 @@ export function PropertiesClient({ allProperties }: Props) {
             <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-display font-black text-gray-900 leading-tight" style={{ letterSpacing: '-0.02em' }}>
                 {buildTitle(filters)}
-                {!isLoading && (
+                {!isLoading && !buscandoIA && (
                   <span className="ml-2 text-sm font-semibold text-gray-400 align-middle">
                     ({total})
                   </span>
@@ -420,9 +420,13 @@ export function PropertiesClient({ allProperties }: Props) {
                   isLoading, así que su aparición/desaparición cambiaba la
                   altura del header y empujaba todo lo de abajo (el mapa
                   incluido) — el "salto" reportado 2026-08-17 al pulsar un
-                  chip de filtro en modo mapa. */}
+                  chip de filtro en modo mapa. También se muestra durante
+                  buscandoIA (la interpretación de texto libre puede tardar
+                  varios segundos) — antes, con resultados ya visibles en
+                  pantalla, el único indicador de que algo pasaba era el
+                  spinner de 14px dentro del input, fácil de pasar por alto. */}
               <p className="text-xs text-gray-400 mt-0.5 h-4 flex items-center gap-1.5">
-                {isLoading && <><Loader2 size={11} className="animate-spin" /> Buscando...</>}
+                {(isLoading || buscandoIA) && <><Loader2 size={11} className="animate-spin" /> Buscando...</>}
               </p>
             </div>
 
