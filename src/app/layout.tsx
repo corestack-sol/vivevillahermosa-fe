@@ -8,6 +8,7 @@ import { defaultMetadata } from '@/lib/seo';
 import { AuthProvider } from '@/context/AuthContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { CompareProvider } from '@/context/CompareContext';
+import { FavoritesProvider } from '@/context/FavoritesContext';
 import { CompareBar } from '@/components/property/CompareBar';
 
 const inter = Inter({
@@ -34,10 +35,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <ToastProvider>
             <CompareProvider>
-              <Suspense fallback={<NavbarFallback />}><Navbar /></Suspense>
-              <main id="main-content" className="flex-1">{children}</main>
-              <Footer />
-              <CompareBar />
+              <FavoritesProvider>
+                <Suspense fallback={<NavbarFallback />}><Navbar /></Suspense>
+                <main id="main-content" className="flex-1">{children}</main>
+                <Footer />
+                <CompareBar />
+              </FavoritesProvider>
             </CompareProvider>
           </ToastProvider>
         </AuthProvider>
