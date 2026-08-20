@@ -3,8 +3,10 @@ const MAX_SOURCE_BYTES = 8 * 1024 * 1024; // 8MB
 /**
  * Redimensiona una imagen a un cuadro máximo (por defecto 320px) y la
  * devuelve como data URI PNG — corre entero en el navegador via <canvas>,
- * así el archivo que llega al servidor ya es pequeño (ver
- * src/app/api/perfil-inmobiliaria/route.ts para el límite del lado servidor).
+ * así el archivo que llega al servidor ya es pequeño. El límite del lado
+ * servidor vive en el backend separado (NestJS, fuera de este repo desde
+ * el pivote de arquitectura 2026-08-06) — este comentario antes apuntaba a
+ * una ruta de este mismo repo que ya no existe.
  *
  * El límite de tamaño de salida ya está resuelto por el resize — lo que
  * faltaba era un límite de *entrada*: sin esto, elegir una foto de 40MB

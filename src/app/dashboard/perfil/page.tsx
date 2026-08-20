@@ -22,6 +22,10 @@ export default function PerfilInmobiliariaPage() {
   const [fetching, setFetching] = useState(true);
   const [nombreEmpresa, setNombreEmpresa] = useState('');
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+  // Snapshot de lo cargado/guardado del servidor — compara contra esto para
+  // saber si hay cambios sin guardar. Estado, no ref: se lee durante el
+  // render para calcular hayCambiosSinGuardar.
+  const [guardado, setGuardado] = useState({ nombreEmpresa: '', logoDataUrl: null as string | null });
   const [saving, setSaving] = useState(false);
   const [procesandoImagen, setProcesandoImagen] = useState(false);
   const [estadoVerificacion, setEstadoVerificacion] = useState<EstadoVerificacion>('sin_solicitar');
@@ -33,11 +37,29 @@ export default function PerfilInmobiliariaPage() {
     if (!user) return;
     backendFetch<{ perfil: { nombreEmpresa: string | null; logoDataUrl: string | null } | null }>('/perfil-inmobiliaria')
       .then((d) => {
-        setNombreEmpresa(d.perfil?.nombreEmpresa ?? '');
-        setLogoDataUrl(d.perfil?.logoDataUrl ?? null);
+        const nombre = d.perfil?.nombreEmpresa ?? '';
+        const logo = d.perfil?.logoDataUrl ?? null;
+        setNombreEmpresa(nombre);
+        setLogoDataUrl(logo);
+        setGuardado({ nombreEmpresa: nombre, logoDataUrl: logo });
       })
       .finally(() => setFetching(false));
   }, [user, loading, router]);
+
+  const hayCambiosSinGuardar = nombreEmpresa !== guardado.nombreEmpresa || logoDataUrl !== guardado.logoDataUrl;
+
+  // Sin esto, subir un logo nuevo o editar el nombre y luego cerrar la
+  // pestaña/recargar descartaba los cambios en silencio, sin ningún aviso
+  // — a diferencia de PublishForm, este formulario no tenía ninguna
+  // protección.
+  useEffect(() => {
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (!hayCambiosSinGuardar) return;
+      e.preventDefault();
+    }
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [hayCambiosSinGuardar]);
 
   // El estado de verificación solo existe en localStorage — se resuelve en
   // un efecto para que el primer render coincida con el del servidor.
@@ -81,6 +103,7 @@ export default function PerfilInmobiliariaPage() {
         method: 'PUT',
         body: JSON.stringify({ nombreEmpresa: nombreEmpresa.trim() || null, logoDataUrl }),
       });
+      setGuardado({ nombreEmpresa, logoDataUrl });
       toast.success('Perfil de la inmobiliaria actualizado.');
     } catch {
       toast.error('No se pudo guardar el perfil. Intenta de nuevo.');
@@ -155,10 +178,13 @@ export default function PerfilInmobiliariaPage() {
           <p className="text-xs text-gray-400 mt-2">PNG, JPG o WebP. Se ajusta automáticamente a 320×320px.</p>
         </div>
 
-        <div className="pt-2 border-t border-gray-100">
+        <div className="pt-2 border-t border-gray-100 flex items-center gap-3">
           <Button type="button" onClick={handleGuardar} isLoading={saving}>
             Guardar cambios
           </Button>
+          {hayCambiosSinGuardar && !saving && (
+            <span className="text-xs text-amber-600">Tienes cambios sin guardar</span>
+          )}
         </div>
       </div>
 

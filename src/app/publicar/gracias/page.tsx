@@ -13,7 +13,7 @@ export default function GraciasPage() {
         const saved = sessionStorage.getItem('lastPublishedProperty');
         if (saved) {
           const parsed = JSON.parse(saved);
-          setPropId(parsed.id ?? null);
+          setPropId(typeof parsed?.id === 'string' ? parsed.id : null);
         }
       } catch {}
     }

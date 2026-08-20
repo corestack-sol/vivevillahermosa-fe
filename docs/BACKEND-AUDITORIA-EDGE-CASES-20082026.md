@@ -39,6 +39,24 @@ Sin evidencia file:line posible desde este repo — recomendado auditar directo 
 - **Cuentas anónimas y el sistema de 3 avisos** — confirmar si pueden repetir el mismo patrón de abuso sin acumular avisos (el sistema es descrito como solo para cuentas con sesión).
 - **Spoofing de `X-Forwarded-For`** — confirmar que la corrección ya aplicada a las rutas de búsqueda no deja alguna otra ruta con el mismo patrón vulnerable sin corregir.
 
+## 6. Admin no puede revisar un anuncio reportado si el dueño lo pausó
+
+**Contexto:** `admin/reportes/page.tsx` enlaza a la ficha pública `/propiedades/[id]`, que solo muestra propiedades pausadas a su propio dueño (`notFound()` para cualquier otra sesión, incluida un admin). Si el dueño pausa la propiedad entre que la reportan y que un admin la revisa — posiblemente a propósito, para evadir la revisión — "Ver publicación" da 404 y el admin tiene que resolver el reporte a ciegas.
+
+**Pedido:** un endpoint o parámetro de admin (ej. `GET /admin/propiedades/:id`, o un flag en el existente que bypasee el chequeo de dueño cuando la sesión es `esAdmin`) para que un admin siempre pueda ver el contenido reportado, esté pausada o no.
+
+## 7. Reactivación del dueño puede deshacer una pausa de moderación
+
+**Contexto:** `dashboard/servicios/page.tsx` (dueño) y `admin/servicios/page.tsx` (admin) llaman al mismo campo `activo: boolean` sin distinción — un admin pausa un servicio por fraude/abuso, y el dueño simplemente lo reactiva desde su propio panel, deshaciendo la acción de moderación sin que nada lo impida.
+
+**Pedido:** un campo separado (ej. `suspendidoPorAdmin: boolean`) que el PATCH del dueño no pueda tocar — solo `PATCH /admin/servicios/:id` lo puede limpiar. El frontend ya está listo para ocultar/deshabilitar el botón de reactivar del dueño en cuanto ese campo exista (`ServicioPublico`/`MiServicio` type se extiende cuando el backend lo mande).
+
+## 8. Paginación real en el log de auditoría
+
+**Contexto:** `admin/auditoria/page.tsx` pide `/admin/auditoria` sin ningún parámetro de página/cursor y la copia dice "Últimas 200" como techo fijo — no hay forma de ver acciones más viejas una vez superado ese número.
+
+**Pedido:** que `GET /admin/auditoria` acepte `page`/`cursor` (y de preferencia filtros por admin/tipo de acción/rango de fecha) para que el frontend pueda paginar en vez de pedir todo de una vez con un techo arbitrario.
+
 ## Resumen
 
 | # | Punto | Acción pedida |
@@ -48,3 +66,6 @@ Sin evidencia file:line posible desde este repo — recomendado auditar directo 
 | 3 | Techo de precio | Validar el mismo límite (o uno definido por el equipo) en `POST /propiedades` |
 | 4 | Auto-revocación de admin | Rechazar en servidor si es el último admin, no solo advertir en UI |
 | 5 | Parseo de precios, timing de moderación, bypass anónimo, spoofing de IP | Auditoría directa en el repo NestJS — sin evidencia posible desde aquí |
+| 6 | Admin no ve reportes de propiedades pausadas | Endpoint/flag de admin que bypasee el chequeo de dueño |
+| 7 | Dueño puede deshacer una pausa de moderación de servicios | Campo `suspendidoPorAdmin` separado de `activo`, solo editable por admin |
+| 8 | Log de auditoría sin paginación (techo fijo de 200) | `page`/`cursor` en `GET /admin/auditoria` |
