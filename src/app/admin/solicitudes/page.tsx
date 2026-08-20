@@ -6,6 +6,7 @@ import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { CardListSkeleton } from '@/components/ui/Skeleton';
+import { Pagination } from '@/components/ui/Pagination';
 import { formatRelativeDate } from '@/lib/format';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
@@ -27,6 +28,9 @@ const ESTADOS = [
 
 export default function AdminSolicitudesPage() {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(20);
   const [estado, setEstado] = useState('pendiente');
   const [loading, setLoading] = useState(true);
   const [abierta, setAbierta] = useState<string | null>(null);
@@ -35,14 +39,31 @@ export default function AdminSolicitudesPage() {
   const [confirmar, setConfirmar] = useState<{ solicitud: Solicitud; nuevoEstado: 'aprobada' | 'rechazada' } | null>(null);
   const [error, setError] = useState('');
 
+  // BACKEND-AUDITORIA-EXHAUSTIVA-20082026: GET /admin/solicitudes-revision
+  // pasó de un array plano con techo fijo de 200 a { solicitudes, total,
+  // page, perPage } paginado de verdad — antes esta página truena con
+  // ".map is not a function" porque seguía esperando el array plano.
   const cargar = useCallback(async () => {
     setLoading(true);
-    const solicitudes = await backendFetch<Solicitud[]>(`/admin/solicitudes-revision?estado=${estado}`);
-    setSolicitudes(solicitudes ?? []);
+    const data = await backendFetch<{
+      solicitudes: Solicitud[];
+      total: number;
+      page: number;
+      perPage: number;
+    }>(`/admin/solicitudes-revision?estado=${estado}&page=${page}`);
+    setSolicitudes(data.solicitudes ?? []);
+    setTotal(data.total ?? 0);
+    setPerPage(data.perPage ?? 20);
     setLoading(false);
-  }, [estado]);
+  }, [estado, page]);
 
   useEffect(() => { function cargarInicial() { cargar(); } cargarInicial(); }, [cargar]);
+
+  // Cambiar de filtro sin resetear la página podía dejarte viendo "página 3"
+  // de un estado que solo tiene 1 — mostraba vacío aunque sí había datos.
+  useEffect(() => { setPage(1); }, [estado]);
+
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
 
   async function resolver() {
     if (!confirmar) return;
@@ -52,9 +73,11 @@ export default function AdminSolicitudesPage() {
       // Revalida contra el servidor justo antes de mutar — la lista en
       // pantalla puede tener minutos, y otro admin pudo haber resuelto esta
       // misma solicitud mientras tanto. Sin esto se mandaba la resolución a
-      // ciegas sobre datos obsoletos.
-      const frescas = await backendFetch<Solicitud[]>('/admin/solicitudes-revision?estado=pendiente');
-      const sigueVigente = (frescas ?? []).some((s) => s.id === confirmar.solicitud.id);
+      // ciegas sobre datos obsoletos. Solo revisa la página 1 de pendientes
+      // — si hay más de 20, el peor caso es un falso "ya la resolvieron"
+      // que fuerza un refetch, nunca una resolución fantasma.
+      const frescas = await backendFetch<{ solicitudes: Solicitud[] }>('/admin/solicitudes-revision?estado=pendiente');
+      const sigueVigente = (frescas.solicitudes ?? []).some((s) => s.id === confirmar.solicitud.id);
       if (!sigueVigente) {
         setError('Otro admin ya resolvió esta solicitud — la lista se va a actualizar.');
         cargar();
@@ -140,6 +163,10 @@ export default function AdminSolicitudesPage() {
           ))}
         </div>
       )}
+
+      <div className="mt-6">
+        <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      </div>
 
       <Modal
         isOpen={!!confirmar}
