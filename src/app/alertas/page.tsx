@@ -32,6 +32,7 @@ interface Alerta {
   dosBocas: boolean;
   sinRiesgo: boolean;
   createdAt: string;
+  expiraEn?: string | null;
 }
 
 const TIPO_OPTIONS = [
@@ -226,7 +227,7 @@ export default function AlertasPage() {
         <div className="text-center py-10 bg-white rounded-2xl border border-gray-100">
           <Bell size={40} className="text-gray-200 mx-auto mb-4" />
           <p className="text-gray-500 font-medium mb-2">No tienes alertas activas todavía</p>
-          <p className="text-gray-400 text-sm mb-6">Te avisamos por correo y en tu panel en cuanto se publique algo que coincida.</p>
+          <p className="text-gray-400 text-sm mb-6">Te avisamos por correo y en tu panel en cuanto se publique algo que coincida. Cada alerta dura 15 días.</p>
           <button type="button" onClick={irAlFormulario}
             className="inline-flex items-center gap-2 bg-brand text-white font-semibold px-5 py-2.5 rounded-xl text-sm hover:bg-brand-dark transition-colors">
             <Plus size={15} /> Crear tu primera alerta
@@ -245,6 +246,7 @@ export default function AlertasPage() {
                   <p className="text-sm font-medium text-gray-800">{alertaLabel(a)}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
                     Creada el {new Date(a.createdAt).toLocaleDateString('es-MX')}
+                    {a.expiraEn && ` · expira el ${new Date(a.expiraEn).toLocaleDateString('es-MX')}`}
                   </p>
                 </div>
               </div>
