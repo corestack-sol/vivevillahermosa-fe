@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Search, ShieldCheck, ShieldOff, Ban, CheckCircle2, Loader2, AlertTriangle } from 'lucide-react';
+import { Search, ShieldCheck, ShieldOff, Ban, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Pagination } from '@/components/ui/Pagination';
+import { TableRowsSkeleton } from '@/components/ui/Skeleton';
 import { formatRelativeDate } from '@/lib/format';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { useAuth } from '@/context/AuthContext';
@@ -126,7 +127,7 @@ export default function AdminUsuariosPage() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {loading ? (
-                <tr><td colSpan={5} className="px-4 py-10 text-center text-gray-400"><Loader2 className="animate-spin inline" size={18} /></td></tr>
+                <TableRowsSkeleton rows={6} cols={5} />
               ) : usuarios.length === 0 ? (
                 <tr><td colSpan={5} className="px-4 py-10 text-center text-gray-400">Sin resultados</td></tr>
               ) : usuarios.map((u) => (

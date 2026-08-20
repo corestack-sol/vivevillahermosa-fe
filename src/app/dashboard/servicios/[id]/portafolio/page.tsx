@@ -10,6 +10,7 @@ import { resizeImageToDataUrl } from '@/lib/imageResize';
 import { backendFetch } from '@/lib/backendApi';
 import type { TrabajoServicio as Trabajo } from '@/lib/api';
 import { MAX_TRABAJOS_POR_SERVICIO } from '@/lib/publishServicioSchema';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 function fetchTrabajos(servicioId: string): Promise<Trabajo[]> {
   return backendFetch<Trabajo[]>(`/servicios/${servicioId}/trabajos`).catch(() => []);
@@ -115,8 +116,13 @@ export default function PortafolioPage() {
 
   if (nombre === undefined) {
     return (
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16 flex justify-center">
-        <Loader2 className="animate-spin text-brand" size={22} />
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Skeleton className="w-40 mb-6" />
+        <Skeleton variant="image" className="w-full h-48 rounded-2xl mb-6" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Skeleton variant="image" className="w-full h-44 rounded-2xl" />
+          <Skeleton variant="image" className="w-full h-44 rounded-2xl" />
+        </div>
       </div>
     );
   }
@@ -194,7 +200,10 @@ export default function PortafolioPage() {
       </div>
 
       {trabajos === null ? (
-        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-brand" size={22} /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Skeleton variant="image" className="w-full h-44 rounded-2xl" />
+          <Skeleton variant="image" className="w-full h-44 rounded-2xl" />
+        </div>
       ) : trabajos.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
           <Camera size={28} className="mx-auto mb-3 text-gray-300" strokeWidth={1.5} />

@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Ban, CheckCircle2 } from 'lucide-react';
+import { Ban, CheckCircle2 } from 'lucide-react';
 import { formatRelativeDate } from '@/lib/format';
 import { backendFetch } from '@/lib/backendApi';
 import { Modal } from '@/components/ui/Modal';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 
 interface Intento {
   id: string;
@@ -34,7 +35,7 @@ export default function AdminIntentosSospechososPage() {
       </p>
 
       {loading ? (
-        <div className="text-center py-10 text-gray-400"><Loader2 className="animate-spin inline" size={20} /></div>
+        <TableSkeleton headers={['Usuario', 'Búsqueda', 'Marcador', 'Estado', 'Fecha']} />
       ) : intentos.length === 0 ? (
         <div className="text-center py-10 text-gray-400 text-sm">Sin intentos registrados</div>
       ) : (

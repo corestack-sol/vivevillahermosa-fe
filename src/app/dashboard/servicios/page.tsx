@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Eye, Trash2, Play, Pause, Loader2, Wrench, Link2, Check, Camera } from 'lucide-react';
+import { ArrowLeft, Plus, Eye, Trash2, Play, Pause, Wrench, Link2, Check, Camera } from 'lucide-react';
 import { categoriaServicioLabel } from '@/lib/publishServicioSchema';
 import { buttonClasses } from '@/components/ui/Button';
+import { CardListSkeleton } from '@/components/ui/Skeleton';
 import { useToast } from '@/context/ToastContext';
 import { backendFetch } from '@/lib/backendApi';
 
@@ -87,7 +88,7 @@ export default function MisServiciosPage() {
       </div>
 
       {items === null ? (
-        <div className="flex justify-center py-16"><Loader2 className="animate-spin text-brand" size={24} /></div>
+        <CardListSkeleton rows={3} />
       ) : items.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
           <Wrench size={32} className="mx-auto mb-3 text-gray-300" strokeWidth={1.5} />

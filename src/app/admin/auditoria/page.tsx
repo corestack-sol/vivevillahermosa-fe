@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import { formatRelativeDate } from '@/lib/format';
 import { backendFetch } from '@/lib/backendApi';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 
 interface Accion {
   id: string;
@@ -41,7 +41,7 @@ export default function AdminAuditoriaPage() {
       <p className="text-gray-500 text-sm mb-6">Registro de cada acción tomada desde este panel — quién, qué y sobre qué. Últimas 200.</p>
 
       {loading ? (
-        <div className="text-center py-10 text-gray-400"><Loader2 className="animate-spin inline" size={20} /></div>
+        <TableSkeleton headers={['Admin', 'Acción', 'Objetivo', 'Detalle', 'Fecha']} />
       ) : acciones.length === 0 ? (
         <div className="text-center py-10 text-gray-400 text-sm">Sin acciones registradas todavía</div>
       ) : (

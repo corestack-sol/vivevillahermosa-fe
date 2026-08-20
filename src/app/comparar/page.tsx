@@ -12,6 +12,7 @@ import { getAllProperties, getPriceContext, type PriceContext } from '@/lib/api'
 import { getPropertyTypeConfig } from '@/lib/propertyTypeConfig';
 import { FLOOD_COLOR, FLOOD_LABEL } from '@/lib/floodColors';
 import { formatRelativeDate } from '@/lib/format';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { Property } from '@/types/property';
 
 const TIPO_LABEL: Record<string, string> = {
@@ -71,7 +72,20 @@ export default function CompararPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ids]);
 
-  if (properties === null) return null; // evita parpadeo antes de leer localStorage
+  if (properties === null) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="flex items-center gap-3 mb-8">
+          <Skeleton variant="circle" className="w-6 h-6" />
+          <Skeleton className="w-56" />
+        </div>
+        <div className="flex gap-4 overflow-hidden">
+          <Skeleton variant="image" className="w-64 h-72 rounded-2xl flex-shrink-0" />
+          <Skeleton variant="image" className="w-64 h-72 rounded-2xl flex-shrink-0" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

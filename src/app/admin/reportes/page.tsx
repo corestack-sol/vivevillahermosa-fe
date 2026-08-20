@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Loader2, CheckCircle2, XCircle, ArrowUpRight } from 'lucide-react';
+import { CheckCircle2, XCircle, ArrowUpRight } from 'lucide-react';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { CardListSkeleton } from '@/components/ui/Skeleton';
 import { formatRelativeDate } from '@/lib/format';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
@@ -80,7 +81,7 @@ export default function AdminReportesPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-10 text-gray-400"><Loader2 className="animate-spin inline" size={20} /></div>
+        <CardListSkeleton />
       ) : reportes.length === 0 ? (
         <div className="text-center py-10 text-gray-400 text-sm">Sin reportes {estado === 'pendiente' ? 'pendientes' : `en estado "${estado}"`}</div>
       ) : (

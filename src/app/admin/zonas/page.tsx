@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Loader2, Plus, Pencil, Trash2, ImagePlus, Star, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import { useToast } from '@/context/ToastContext';
 import { resizeImageToDataUrl } from '@/lib/imageResize';
 import { backendFetch } from '@/lib/backendApi';
@@ -217,7 +218,7 @@ export default function AdminZonasPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-10 text-gray-400"><Loader2 className="animate-spin inline" size={20} /></div>
+        <TableSkeleton headers={['Colonia', 'Municipio', 'Coordenadas', 'Destacada', 'Acciones']} />
       ) : (
         <>
           {pendientes.length > 0 && (

@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Loader2, CheckCircle2, Ban } from 'lucide-react';
+import { CheckCircle2, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { TableSkeleton } from '@/components/ui/Skeleton';
 import { formatRelativeDate } from '@/lib/format';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
@@ -61,7 +62,7 @@ export default function AdminServiciosPage() {
       <p className="text-gray-500 text-sm mb-6">Directorio de proveedores (plomería, pintura, mudanza, etc.) — pausar oculta el servicio del catálogo público.</p>
 
       {loading ? (
-        <div className="text-center py-10 text-gray-400"><Loader2 className="animate-spin inline" size={20} /></div>
+        <TableSkeleton headers={['Servicio', 'Proveedor', 'Zona', 'Estado', 'Acciones']} />
       ) : servicios.length === 0 ? (
         <div className="text-center py-10 text-gray-400 text-sm">Sin servicios publicados</div>
       ) : (

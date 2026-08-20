@@ -18,6 +18,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { ArchivarPropiedadModal } from '@/components/property/ArchivarPropiedadModal';
 import { EliminarPropiedadModal } from '@/components/property/EliminarPropiedadModal';
 import { DestacarPropiedadModal } from '@/components/property/DestacarPropiedadModal';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 // Debe coincidir con LIMITE_PROPIEDADES_ACTIVAS en el backend
 // (properties.service.ts) — solo para el mensaje, el servidor lo hace
@@ -50,6 +51,11 @@ export default function MisPropiedadesPage() {
   const perfil = usePerfilInmobiliaria(true);
   const [filter, setFilter] = useState<FiltroEstado>('todas');
   const [items, setItems] = useState<MiPropiedad[]>([]);
+  // Sin esto, `items` arrancaba en [] y la página mostraba "no tienes
+  // propiedades" un instante antes de que el fetch resolviera y las
+  // reemplazara — un flash real del estado vacío incorrecto para
+  // cualquier dueño que sí tiene propiedades.
+  const [cargando, setCargando] = useState(true);
   const [archivando, setArchivando] = useState<string | null>(null);
   const [eliminando, setEliminando] = useState<string | null>(null);
   const [destacando, setDestacando] = useState<string | null>(null);
@@ -59,7 +65,8 @@ export default function MisPropiedadesPage() {
     if (!user) return;
     backendFetch<{ propiedades: BackendPublicProperty[] }>('/propiedades/mias')
       .then(({ propiedades }) => setItems(propiedades.map(mapMiaBackend)))
-      .catch(() => toast.error('No se pudieron cargar tus propiedades.'));
+      .catch(() => toast.error('No se pudieron cargar tus propiedades.'))
+      .finally(() => setCargando(false));
   };
 
   useEffect(() => {
@@ -242,7 +249,13 @@ export default function MisPropiedadesPage() {
       </div>
 
       {/* Lista */}
-      {filtered.length === 0 ? (
+      {cargando ? (
+        <div className="space-y-3">
+          <Skeleton variant="image" className="w-full h-24 rounded-2xl" />
+          <Skeleton variant="image" className="w-full h-24 rounded-2xl" />
+          <Skeleton variant="image" className="w-full h-24 rounded-2xl" />
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
           <Building2 size={48} className="text-gray-200 mx-auto mb-4" />
           <p className="text-gray-500 font-medium mb-2">
