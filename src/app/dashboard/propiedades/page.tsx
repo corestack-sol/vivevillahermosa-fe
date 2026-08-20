@@ -41,6 +41,11 @@ function fmtMoney(n: number) {
 
 export default function MisPropiedadesPage() {
   const { user } = useAuth();
+  // "Descargar reporte" e "Importar CSV" son herramientas de volumen —
+  // pensadas para inmobiliarias con cartera grande, no para un particular
+  // con 1-2 propiedades. Mismo criterio ya usado en PlanesInmobiliaria.tsx
+  // para distinguir cuenta profesional. Pedido explícito 2026-08-19.
+  const esProfesional = !!user && user.rol !== 'buscador';
   const toast = useToast();
   const perfil = usePerfilInmobiliaria(true);
   const [filter, setFilter] = useState<FiltroEstado>('todas');
@@ -182,19 +187,23 @@ export default function MisPropiedadesPage() {
             className="flex items-center gap-2 bg-white border-2 border-gray-200 hover:border-brand/40 text-gray-700 hover:text-brand text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
             <TrendingUp size={15} /> Analítica
           </Link>
-          <button
-            type="button"
-            onClick={descargarReporte}
-            disabled={items.length === 0 || generandoReporte}
-            className="flex items-center gap-2 bg-white border-2 border-gray-200 hover:border-brand/40 text-gray-700 hover:text-brand text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {generandoReporte ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-            {generandoReporte ? 'Generando...' : 'Descargar reporte'}
-          </button>
-          <Link href="/dashboard/propiedades/importar"
-            className="flex items-center gap-2 bg-white border-2 border-gray-200 hover:border-brand/40 text-gray-700 hover:text-brand text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
-            <Upload size={15} /> Importar CSV
-          </Link>
+          {esProfesional && (
+            <>
+              <button
+                type="button"
+                onClick={descargarReporte}
+                disabled={items.length === 0 || generandoReporte}
+                className="flex items-center gap-2 bg-white border-2 border-gray-200 hover:border-brand/40 text-gray-700 hover:text-brand text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {generandoReporte ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                {generandoReporte ? 'Generando...' : 'Descargar reporte'}
+              </button>
+              <Link href="/dashboard/propiedades/importar"
+                className="flex items-center gap-2 bg-white border-2 border-gray-200 hover:border-brand/40 text-gray-700 hover:text-brand text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+                <Upload size={15} /> Importar CSV
+              </Link>
+            </>
+          )}
           <Link href="/publicar"
             className="flex items-center gap-2 bg-brand hover:bg-brand-dark text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
             <Plus size={15} /> Publicar nueva
