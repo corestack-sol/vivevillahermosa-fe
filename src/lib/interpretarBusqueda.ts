@@ -37,6 +37,13 @@ export interface FiltrosIA {
 // anterior.
 const TIMEOUT_CLIENTE_MS = 12_000;
 
+// Ninguna búsqueda real de una dirección/colonia se acerca a esto — un
+// input sin tope permitía pegar un bloque de varios KB y mandarlo tal cual
+// al backend (y, antes de este fix, potencialmente dos veces por el
+// reintento automático). Tope generoso para no cortar una oración larga
+// legítima, no ajustado al límite real de una búsqueda inmobiliaria.
+export const MAX_QUERY_LENGTH = 200;
+
 async function llamarBusquedaIA(query: string): Promise<{ ok: true; filtros: FiltrosIA } | { ok: false; status?: number }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_CLIENTE_MS);
@@ -71,9 +78,13 @@ async function llamarBusquedaIA(query: string): Promise<{ ok: true; filtros: Fil
  * llamada fallida tirando toda la búsqueda a texto literal es un costo
  * demasiado alto para algo tan transitorio como un timeout de red. El
  * backend nunca responde `429` para esta ruta en particular (el límite de
- * tasa cae a la heurística en vez de rechazar, ver resiliencia en §8) — el
- * chequeo de `429` queda como defensa adicional por si eso cambia, pero en
- * la práctica cualquier falla real aquí es transitoria (red, timeout).
+ * tasa cae a la heurística en vez de rechazar, ver resiliencia en §8), y
+ * siempre responde 200 aunque OpenRouter falle (línea ~28) — así que
+ * cualquier `status` HTTP definido aquí (400/500/lo que sea) es una falla
+ * real del backend, no un hipo transitorio, y reintentarla solo duplica el
+ * costo contra OpenRouter durante una caída real. Solo se reintenta cuando
+ * `status` es `undefined` — fetch/timeout del lado del cliente, el único
+ * caso genuinamente transitorio.
  *
  * Compartido entre SearchBar.tsx (búsqueda desde Home, navega a resultados
  * nuevos) y PropertiesClient.tsx (búsqueda dentro de /propiedades, aplica
@@ -81,9 +92,10 @@ async function llamarBusquedaIA(query: string): Promise<{ ok: true; filtros: Fil
  * hacer con el resultado.
  */
 export async function interpretarBusqueda(query: string): Promise<FiltrosIA> {
+  query = query.slice(0, MAX_QUERY_LENGTH);
   const primero = await llamarBusquedaIA(query);
   if (primero.ok) return primero.filtros;
-  if (primero.status === 429) return {};
+  if (primero.status !== undefined) return {};
 
   await new Promise((resolve) => setTimeout(resolve, 400));
   const segundo = await llamarBusquedaIA(query);

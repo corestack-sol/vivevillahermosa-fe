@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Search, MapPin, Clock, X, Loader2 } from 'lucide-react';
 import { getAllProperties } from '@/lib/api';
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches';
-import { interpretarBusqueda, esOracionLarga, type FiltrosIA } from '@/lib/interpretarBusqueda';
+import { interpretarBusqueda, esOracionLarga, MAX_QUERY_LENGTH, type FiltrosIA } from '@/lib/interpretarBusqueda';
 
 // Bandera de un solo uso para avisar en /propiedades que la búsqueda que
 // trajo hasta ahí no tenía nada concreto que interpretar (ver irA más abajo)
@@ -201,6 +201,7 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
           value={value}
           onChange={(e) => { setValue(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
+          maxLength={MAX_QUERY_LENGTH}
           placeholder={placeholder ?? 'Tabasco 2000, Gaviotas, Paraíso, Comalcalco...'}
           className="flex-1 text-base text-gray-800 placeholder-gray-400 bg-transparent focus:outline-none min-w-0"
         />

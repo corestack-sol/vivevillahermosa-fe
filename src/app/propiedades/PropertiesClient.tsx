@@ -18,7 +18,7 @@ import { SelectedPropertyCard } from '@/components/map/SelectedPropertyCard';
 import type { MapMarker } from '@/components/map/MapView';
 import { getLandmark, CATEGORIAS_GENERICAS, precargarLandmarks } from '@/lib/landmarks';
 import { matchColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
-import { interpretarBusqueda, esOracionLarga } from '@/lib/interpretarBusqueda';
+import { interpretarBusqueda, esOracionLarga, MAX_QUERY_LENGTH } from '@/lib/interpretarBusqueda';
 import { getResultadosSimilares } from '@/lib/filters';
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches';
 import { ExploreZonasCta } from '@/components/search/ExploreZonasCta';
@@ -498,6 +498,7 @@ export function PropertiesClient({ allProperties }: Props) {
               value={filters.q ?? ''}
               onChange={(e) => { updateFilters({ q: e.target.value }); setSearchOpen(true); }}
               onFocus={() => setSearchOpen(true)}
+              maxLength={MAX_QUERY_LENGTH}
               placeholder="Buscar por colonia, municipio... o descríbelo y presiona Enter"
               className="w-full pl-9 pr-4 py-2.5 text-base sm:text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand focus:bg-white transition-colors placeholder-gray-400 text-gray-800"
             />
