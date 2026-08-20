@@ -50,7 +50,7 @@ const MAP_TYPE_CHIPS: { value: PropertyType | ''; label: string }[] = [
   { value: 'departamento', label: 'Depto'    },
   { value: 'terreno',      label: 'Terreno'  },
   { value: 'local',        label: 'Local'    },
-  { value: 'habitacion',   label: 'Cuarto'   },
+  { value: 'habitacion',   label: 'Habitación' },
 ];
 
 const MAP_OP_CHIPS: { value: OperationType | ''; label: string }[] = [
