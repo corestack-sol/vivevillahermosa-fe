@@ -52,6 +52,7 @@ export function SelectedPropertyCard({ marker, onClose }: { marker: MapMarker; o
         <FavoriteButton propiedadId={marker.id} size="sm" />
         <button
           onClick={onClose}
+          aria-label="Cerrar"
           className="w-8 h-8 bg-black/30 hover:bg-black/50
                      text-white rounded-full flex items-center justify-center transition-colors backdrop-blur-sm"
         >

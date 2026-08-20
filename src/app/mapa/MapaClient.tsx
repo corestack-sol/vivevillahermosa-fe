@@ -56,8 +56,12 @@ const OP_CHIPS: { value: OperationType | ''; label: string }[] = [
 const ZOOM_ZONA = 15;
 const MAX_ZONAS_IR_A = 7; // mismo tope que la lista fija anterior
 
+// Filtra con las MISMAS coordenadas que se dibujan (latPublico/lngPublico,
+// enmascaradas por privacidad) — antes filtraba con lat/lng reales mientras
+// los pines se dibujaban con las públicas, así que el conteo "N propiedades
+// en esta zona" y los pines visibles podían no coincidir tras un pan/zoom.
 function isInBounds(p: Property, b: MapBounds): boolean {
-  return p.lat >= b.south && p.lat <= b.north && p.lng >= b.west && p.lng <= b.east;
+  return p.latPublico >= b.south && p.latPublico <= b.north && p.lngPublico >= b.west && p.lngPublico <= b.east;
 }
 
 // ── Main Component ───────────────────────────────────────────────────────
@@ -73,6 +77,8 @@ export function MapaClient({ allProperties }: Props) {
   const properties = allProperties;
 
   const [panelOpen,     setPanelOpen]     = useState(false);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
   const [riesgoActive,  setRiesgoActive]  = useState<Set<RiesgoLevel>>(new Set(['bajo', 'medio', 'alto']));
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [activeBounds,  setActiveBounds]  = useState<MapBounds | null>(null);
@@ -110,6 +116,22 @@ export function MapaClient({ allProperties }: Props) {
       mapContainerRef.current?.requestFullscreen().catch(() => {});
     }
   }
+
+  // Drawer de filtros móvil: entra el foco al abrir, Escape cierra, el
+  // foco vuelve al botón que lo abrió al cerrar.
+  useEffect(() => {
+    if (!panelOpen) return;
+    const trigger = filterButtonRef.current;
+    drawerRef.current?.focus();
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setPanelOpen(false);
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      trigger?.focus();
+    };
+  }, [panelOpen]);
 
   // "Ir a zona" — top colonias reales por cantidad de propiedades activas
   // (mismo criterio que /zonas y Home, ver getColoniasRankedByPropiedades),
@@ -157,9 +179,14 @@ export function MapaClient({ allProperties }: Props) {
   // visible como filtro. Ahora se aplica solo al mover/hacer zoom — es
   // filtrado local instantáneo (sin costo de red), así que no hace falta
   // el paso manual, y libera ese espacio para la leyenda de privacidad.
+  // Debounce corto: sin esto, cada paso intermedio de un pan/zoom continuo
+  // reconstruye el array completo de marcadores — invisible con el
+  // catálogo actual, pero se nota con más inventario.
+  const boundsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   function handleBoundsChange(bounds: MapBounds) {
     if (!boundsInitializedRef.current) { boundsInitializedRef.current = true; return; }
-    setActiveBounds(bounds);
+    if (boundsDebounceRef.current) clearTimeout(boundsDebounceRef.current);
+    boundsDebounceRef.current = setTimeout(() => setActiveBounds(bounds), 150);
   }
 
   function handleGeolocate() {
@@ -274,6 +301,25 @@ export function MapaClient({ allProperties }: Props) {
           onBoundsChange={handleBoundsChange}
           onMapReady={handleMapReady}
         />
+
+        {/* Sin resultados — antes el mapa quedaba en blanco sin ninguna
+            guía cuando los filtros (o el recuadro visible) no dejaban
+            ninguna propiedad. */}
+        {filtered.length === 0 && (
+          <div className="absolute inset-0 z-[1001] flex items-center justify-center pointer-events-none px-4">
+            <div className="pointer-events-auto bg-white rounded-2xl shadow-xl border border-gray-100 px-6 py-5 text-center max-w-xs">
+              <p className="text-sm font-semibold text-gray-800 mb-1">Sin propiedades aquí</p>
+              <p className="text-xs text-gray-500 mb-3">Ninguna propiedad coincide con tus filtros en esta zona del mapa.</p>
+              <button
+                type="button"
+                onClick={() => { clearFilters(); setActiveBounds(null); mapControls?.flyTo(17.9869, -92.9303, 11); }}
+                className="text-xs font-semibold text-brand hover:text-brand-dark transition-colors"
+              >
+                Limpiar filtros y volver a Villahermosa
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ══ Right map panel — desktop only ══════════════════════════════
             hidden lg:pointer-fine:flex, no solo hidden lg:flex — un
@@ -431,6 +477,7 @@ export function MapaClient({ allProperties }: Props) {
 
             {/* Mobile: filter button */}
             <button
+              ref={filterButtonRef}
               onClick={() => setPanelOpen(true)}
               className="lg:hidden flex-shrink-0 flex items-center gap-1.5 bg-white shadow-md
                          border border-gray-200 text-gray-700 text-sm font-semibold px-3 py-2 rounded-xl"
@@ -506,7 +553,8 @@ export function MapaClient({ allProperties }: Props) {
             <button
               onClick={toggleFullscreen}
               title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-              className="w-10 h-10 bg-brand-dark shadow-lg border border-brand-dark rounded-xl
+              aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+              className="w-11 h-11 bg-brand-dark shadow-lg border border-brand-dark rounded-xl
                          flex items-center justify-center text-white
                          hover:bg-brand hover:border-brand transition-all"
             >
@@ -523,7 +571,8 @@ export function MapaClient({ allProperties }: Props) {
             <Link
               href="/favoritos?from=mapa"
               title="Mis favoritos"
-              className="w-10 h-10 bg-brand-dark shadow-lg border border-brand-dark rounded-xl
+              aria-label="Mis favoritos"
+              className="w-11 h-11 bg-brand-dark shadow-lg border border-brand-dark rounded-xl
                          flex items-center justify-center text-white
                          hover:bg-brand hover:border-brand transition-all"
             >
@@ -543,7 +592,8 @@ export function MapaClient({ allProperties }: Props) {
           <button
             onClick={() => setTileType((t) => (t === 'street' ? 'satellite' : 'street'))}
             title={tileType === 'street' ? 'Ver satélite' : 'Ver mapa'}
-            className="hidden pointer-coarse:flex w-10 h-10 bg-white shadow-lg border border-gray-200 rounded-xl
+            aria-label={tileType === 'street' ? 'Ver satélite' : 'Ver mapa'}
+            className="hidden pointer-coarse:flex w-11 h-11 bg-white shadow-lg border border-gray-200 rounded-xl
                        items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
           >
             {tileType === 'street' ? <Satellite size={16} /> : <MapIcon size={16} />}
@@ -559,7 +609,8 @@ export function MapaClient({ allProperties }: Props) {
             onClick={handleGeolocate}
             disabled={geoLoading}
             title="Mi ubicación"
-            className="w-10 h-10 bg-brand-dark shadow-lg border border-brand-dark rounded-xl
+            aria-label="Mi ubicación"
+            className="w-11 h-11 bg-brand-dark shadow-lg border border-brand-dark rounded-xl
                        flex items-center justify-center text-white
                        hover:bg-brand hover:border-brand
                        transition-all disabled:opacity-50"
@@ -625,14 +676,17 @@ export function MapaClient({ allProperties }: Props) {
         )}
       </div>
 
-      {/* ══ Mobile filter drawer ═════════════════════════════════════════ */}
+      {/* ══ Mobile filter drawer ═════════════════════════════════════════
+          Accesible por teclado: Escape cierra, el foco entra al abrir y
+          vuelve al botón que lo abrió al cerrar — antes solo se podía
+          cerrar tocando la X o el fondo. */}
       {panelOpen && (
-        <div className="fixed inset-0 z-[1200] lg:hidden">
+        <div className="fixed inset-0 z-[1200] lg:hidden" role="dialog" aria-modal="true" aria-label="Filtrar mapa">
           <div className="absolute inset-0 bg-black/50" onClick={() => setPanelOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-80 max-w-full bg-brand-dark overflow-y-auto shadow-xl">
+          <div ref={drawerRef} tabIndex={-1} className="absolute left-0 top-0 bottom-0 w-80 max-w-full bg-brand-dark overflow-y-auto shadow-xl outline-none">
             <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
               <h2 className="font-semibold text-white">Filtrar mapa</h2>
-              <button onClick={() => setPanelOpen(false)} className="text-white/50 hover:text-white transition-colors">
+              <button onClick={() => setPanelOpen(false)} aria-label="Cerrar filtros" className="text-white/50 hover:text-white transition-colors">
                 <X size={20} />
               </button>
             </div>

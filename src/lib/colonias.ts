@@ -410,13 +410,44 @@ function todasLasColonias(): ColoniaCoord[] {
     : [...COLONIAS_COORDS, ...COLONIAS_MUNICIPIOS];
 }
 
-/** Busca una colonia por nombre libre (como lo extrae la IA) — null si no está catalogada aquí. */
+function distanciaLevenshtein(a: string, b: string): number {
+  const dp: number[][] = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+/**
+ * Busca una colonia por nombre libre (como lo extrae la IA) — undefined si
+ * no está catalogada aquí. Match exacto primero; si falla, un fallback de
+ * tolerancia a typos por distancia de edición — pero solo si hay UN único
+ * candidato dentro del margen, nunca el más cercano entre varios: adivinar
+ * mal la colonia (mandar a alguien a la colonia equivocada) es peor que no
+ * encontrar nada.
+ */
 export function matchColonia(nombre: string): ColoniaCoord | undefined {
   const n = normalizarNombreColonia(nombre);
   if (!n) return undefined;
-  return todasLasColonias().find(
+
+  const exacto = todasLasColonias().find(
     (c) => normalizarNombreColonia(c.label) === n || (c.aliases ?? []).some((a) => normalizarNombreColonia(a) === n)
   );
+  if (exacto) return exacto;
+
+  // Margen conservador: 1 typo cada ~8 caracteres, tope de 3 — nombres
+  // cortos (ej. "Reforma") casi no toleran error, nombres largos sí.
+  const margen = Math.min(3, Math.max(1, Math.floor(n.length / 8)));
+  const candidatos = todasLasColonias().filter((c) => {
+    const etiquetas = [c.label, ...(c.aliases ?? [])].map(normalizarNombreColonia);
+    return etiquetas.some((e) => distanciaLevenshtein(e, n) <= margen);
+  });
+  return candidatos.length === 1 ? candidatos[0] : undefined;
 }
 
 /** Busca por key exacta (ej. desde `?cercaColonia=magisterial` en la URL) — mismo patrón que getLandmark(). */
