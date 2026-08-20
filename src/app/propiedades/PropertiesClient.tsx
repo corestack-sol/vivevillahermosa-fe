@@ -494,65 +494,79 @@ export function PropertiesClient({ allProperties }: Props) {
               el DOM) podía pintarse encima del dropdown. */}
           <form
             ref={searchFormRef}
-            className="relative z-20 mb-3"
+            className="flex items-center gap-2 z-20 mb-3"
             onSubmit={(e) => { e.preventDefault(); setSearchOpen(false); aplicarBusquedaIA(filters.q ?? ''); }}
           >
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <input
-              type="text"
-              value={filters.q ?? ''}
-              onChange={(e) => { updateFilters({ q: e.target.value }); setSearchOpen(true); }}
-              onFocus={() => setSearchOpen(true)}
-              maxLength={MAX_QUERY_LENGTH}
-              placeholder="Buscar por colonia, municipio... o descríbelo y presiona Enter"
-              className="w-full pl-9 pr-4 py-2.5 text-base sm:text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand focus:bg-white transition-colors placeholder-gray-400 text-gray-800"
-            />
-            {buscandoIA ? (
-              <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand animate-spin" />
-            ) : filters.q && (
-              <button
-                type="button"
-                onClick={() => updateFilters({ q: '' })}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X size={14} />
-              </button>
-            )}
+            <div className="relative flex-1">
+              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                value={filters.q ?? ''}
+                onChange={(e) => { updateFilters({ q: e.target.value }); setSearchOpen(true); }}
+                onFocus={() => setSearchOpen(true)}
+                maxLength={MAX_QUERY_LENGTH}
+                placeholder="Buscar por colonia, municipio... o descríbelo"
+                className="w-full pl-9 pr-9 py-2.5 text-base sm:text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand focus:bg-white transition-colors placeholder-gray-400 text-gray-800"
+              />
+              {buscandoIA ? (
+                <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand animate-spin" />
+              ) : filters.q && (
+                <button
+                  type="button"
+                  onClick={() => updateFilters({ q: '' })}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={14} />
+                </button>
+              )}
 
-            {(showSuggestions || showRecent) && (
-              <ul className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden z-30">
-                {showSuggestions && filteredPlaces.map((s) => (
-                  <li key={s}>
-                    <button type="button" onClick={() => handleSuggestionClick(s)}
-                      className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors">
-                      <MapPin size={13} className="text-gray-400 flex-shrink-0" />
-                      {s}
-                    </button>
-                  </li>
-                ))}
-
-                {showRecent && (
-                  <>
-                    <li className="flex items-center justify-between px-5 pt-3 pb-1.5">
-                      <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Búsquedas recientes</span>
-                      <button type="button" onClick={handleClearRecent}
-                        className="flex items-center gap-1 text-xs text-gray-300 hover:text-red-500 transition-colors">
-                        <X size={11} /> Borrar
+              {(showSuggestions || showRecent) && (
+                <ul className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden z-30">
+                  {showSuggestions && filteredPlaces.map((s) => (
+                    <li key={s}>
+                      <button type="button" onClick={() => handleSuggestionClick(s)}
+                        className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors">
+                        <MapPin size={13} className="text-gray-400 flex-shrink-0" />
+                        {s}
                       </button>
                     </li>
-                    {recent.map((s) => (
-                      <li key={s}>
-                        <button type="button" onClick={() => handleRecentClick(s)}
-                          className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors">
-                          <Clock size={13} className="text-gray-400 flex-shrink-0" />
-                          {s}
+                  ))}
+
+                  {showRecent && (
+                    <>
+                      <li className="flex items-center justify-between px-5 pt-3 pb-1.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Búsquedas recientes</span>
+                        <button type="button" onClick={handleClearRecent}
+                          className="flex items-center gap-1 text-xs text-gray-300 hover:text-red-500 transition-colors">
+                          <X size={11} /> Borrar
                         </button>
                       </li>
-                    ))}
-                  </>
-                )}
-              </ul>
-            )}
+                      {recent.map((s) => (
+                        <li key={s}>
+                          <button type="button" onClick={() => handleRecentClick(s)}
+                            className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors">
+                            <Clock size={13} className="text-gray-400 flex-shrink-0" />
+                            {s}
+                          </button>
+                        </li>
+                      ))}
+                    </>
+                  )}
+                </ul>
+              )}
+            </div>
+
+            {/* Antes solo se podía buscar con Enter — sin ningún botón
+                visible, no era obvio que el input disparaba una búsqueda
+                real (mismo patrón que ya tiene SearchBar.tsx en Home). */}
+            <button
+              type="submit"
+              disabled={buscandoIA}
+              className="flex-shrink-0 flex items-center gap-1.5 bg-brand hover:bg-brand-dark text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors disabled:opacity-70"
+            >
+              {buscandoIA ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+              <span className="hidden sm:inline">Buscar</span>
+            </button>
           </form>
 
           {/* Row 3: Active filters */}
