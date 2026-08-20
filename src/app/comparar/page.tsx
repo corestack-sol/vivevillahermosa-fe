@@ -59,13 +59,16 @@ function RowLabel({ icon: Icon, children }: { icon: typeof DollarSign; children:
 }
 
 export default function CompararPage() {
-  const { ids, toggle, clear } = useCompare();
+  const { ids, toggle, clear, prune } = useCompare();
   const [properties, setProperties] = useState<Property[] | null>(null);
 
   useEffect(() => {
     getAllProperties().then((all) => {
-      setProperties(ids.map((id) => all.find((p) => p.id === id)).filter((p): p is Property => Boolean(p)));
+      const resueltas = ids.map((id) => all.find((p) => p.id === id)).filter((p): p is Property => Boolean(p));
+      setProperties(resueltas);
+      if (resueltas.length < ids.length) prune(resueltas.map((p) => p.id));
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ids]);
 
   if (properties === null) return null; // evita parpadeo antes de leer localStorage

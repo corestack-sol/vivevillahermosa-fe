@@ -9,6 +9,7 @@ import { useToast } from '@/context/ToastContext';
 import { resizeImageToDataUrl } from '@/lib/imageResize';
 import { backendFetch } from '@/lib/backendApi';
 import type { TrabajoServicio as Trabajo } from '@/lib/api';
+import { MAX_TRABAJOS_POR_SERVICIO } from '@/lib/publishServicioSchema';
 
 function fetchTrabajos(servicioId: string): Promise<Trabajo[]> {
   return backendFetch<Trabajo[]>(`/servicios/${servicioId}/trabajos`).catch(() => []);
@@ -104,6 +105,7 @@ export default function PortafolioPage() {
     try {
       await backendFetch(`/servicios/${servicioId}/trabajos/${id}`, { method: 'DELETE' });
       setTrabajos(await fetchTrabajos(servicioId));
+      toast.success('Entrada eliminada');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'No se pudo eliminar, intenta de nuevo.');
     } finally {
@@ -171,6 +173,13 @@ export default function PortafolioPage() {
               </Button>
             </div>
           </div>
+        ) : (trabajos?.length ?? 0) >= MAX_TRABAJOS_POR_SERVICIO ? (
+          // El límite existía en el schema (pensado para acotar el peso de
+          // la página/BD por proveedor) pero nunca se aplicaba ni se
+          // mostraba aquí — el botón seguía habilitado sin límite.
+          <p className="text-center py-8 text-sm text-gray-400">
+            Llegaste al máximo de {MAX_TRABAJOS_POR_SERVICIO} entradas. Elimina una para agregar otra.
+          </p>
         ) : (
           <button
             type="button"

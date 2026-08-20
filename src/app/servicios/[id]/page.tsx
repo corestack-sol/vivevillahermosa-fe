@@ -13,7 +13,11 @@ interface Props {
 
 async function getServicio(id: string) {
   const servicio = await getServicioById(id);
-  if (!servicio) return null;
+  // GET /servicios (lista) filtra por activo — si el backend algún día
+  // manda `activo` también en este endpoint de un solo recurso, se respeta
+  // aquí en vez de renderizar contacto/portafolio funcionando para un
+  // servicio pausado/moderado.
+  if (!servicio || servicio.activo === false) return null;
   const trabajos = await getTrabajosServicio(id);
   return { ...servicio, trabajos };
 }

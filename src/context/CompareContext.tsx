@@ -11,6 +11,7 @@ interface CompareContextValue {
   isSelected: (id: string) => boolean;
   toggle: (id: string) => void;
   clear: () => void;
+  prune: (validIds: string[]) => void;
 }
 
 const CompareContext = createContext<CompareContextValue | null>(null);
@@ -60,11 +61,21 @@ export function CompareProvider({ children }: { children: ReactNode }) {
     setIds([]);
   }
 
+  // Un id cuya propiedad ya no resuelve (borrada/archivada) antes se
+  // quedaba en `ids`/localStorage para siempre — /comparar lo dejaba fuera
+  // de lo que se veía, pero el slot seguía "ocupado" en MAX_COMPARE, así
+  // que no se podía agregar nada más sin usar "Vaciar todo" (que también
+  // borraba las selecciones válidas).
+  function prune(validIds: string[]) {
+    setIds((prev) => prev.filter((id) => validIds.includes(id)));
+  }
+
   const value: CompareContextValue = {
     ids,
     isSelected: (id) => ids.includes(id),
     toggle,
     clear,
+    prune,
   };
 
   return <CompareContext.Provider value={value}>{children}</CompareContext.Provider>;

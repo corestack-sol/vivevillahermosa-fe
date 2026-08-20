@@ -516,6 +516,12 @@ export interface ServicioPublico {
   colonia: string | null;
   foto: string | null;
   createdAt: string;
+  // Opcional: GET /servicios (lista) ya filtra por activo, pero el detalle
+  // de un solo recurso (GET /servicios/:id) podría no aplicar el mismo
+  // filtro — si el backend lo manda, servicios/[id]/page.tsx lo respeta en
+  // vez de mostrar contacto/portafolio funcionando para un servicio
+  // pausado/moderado.
+  activo?: boolean;
 }
 
 export interface TrabajoServicio {
