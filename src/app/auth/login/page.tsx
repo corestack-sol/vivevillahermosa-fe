@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -49,12 +49,18 @@ function FacebookIcon() {
 
 function LoginContent() {
   const router = useRouter();
-  const { refresh } = useAuth();
+  const { user, loading: authLoading, refresh } = useAuth();
   const searchParams  = useSearchParams();
   const oauthError    = searchParams.get('error');
   // Si llegaste redirigido desde una ruta protegida (ej. /publicar), el
   // proxy manda ?next=/publicar — de vuelta ahí después de iniciar sesión.
   const next = safeRedirectPath(searchParams.get('next'));
+
+  // Quien ya tiene sesión no necesita ver el formulario — reintentar login
+  // con credenciales válidas solo lo mandaba a `next` de nuevo, redundante.
+  useEffect(() => {
+    if (!authLoading && user) router.replace(next);
+  }, [authLoading, user, router, next]);
 
   const [showPass, setShowPass]       = useState(false);
   const [serverError, setServerError] = useState('');
@@ -81,6 +87,10 @@ function LoginContent() {
         setServerError(err.message);
         setCuentaBloqueada(err.status === 403);
         setEmailIntentado(data.email);
+      } else {
+        // Error de red/timeout, no del backend — antes esto no ponía
+        // ningún mensaje, el botón solo dejaba de girar sin explicación.
+        setServerError('No se pudo conectar. Revisa tu conexión e intenta de nuevo.');
       }
       return;
     }

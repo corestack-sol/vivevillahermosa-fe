@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -20,6 +20,10 @@ const schema = z.object({
   nombre:   z.string().min(2, 'Ingresa tu nombre'),
   email:    z.string().email('Email inválido'),
   password: z.string().min(10, 'Mínimo 10 caracteres'),
+  confirmarPassword: z.string(),
+}).refine((data) => data.password === data.confirmarPassword, {
+  message: 'Las contraseñas no coinciden',
+  path: ['confirmarPassword'],
 });
 type FormData = z.infer<typeof schema>;
 
@@ -50,10 +54,15 @@ function FacebookIcon() {
 
 function RegistroContent() {
   const router = useRouter();
-  const { refresh } = useAuth();
+  const { user, loading: authLoading, refresh } = useAuth();
   const searchParams  = useSearchParams();
   const oauthError    = searchParams.get('error');
   const next = safeRedirectPath(searchParams.get('next'));
+
+  // Quien ya tiene sesión no necesita ver el formulario de registro.
+  useEffect(() => {
+    if (!authLoading && user) router.replace(next);
+  }, [authLoading, user, router, next]);
 
   const [showPass, setShowPass]       = useState(false);
   const [serverError, setServerError] = useState('');
@@ -67,7 +76,7 @@ function RegistroContent() {
     try {
       await backendFetch('/auth/registro', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: JSON.stringify({ nombre: data.nombre, email: data.email, password: data.password }),
       });
     } catch (err) {
       setServerError(err instanceof BackendApiError ? err.message : 'Error al crear la cuenta.');
@@ -219,6 +228,14 @@ function RegistroContent() {
                   </button>
                 </div>
                 {errors.password && <p className="text-xs text-red-500 mt-1">{errors.password.message}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Confirma tu contraseña</label>
+                <input type={showPass ? 'text' : 'password'} {...register('confirmarPassword')}
+                  placeholder="Repite tu contraseña" autoComplete="new-password"
+                  className={inputCls(!!errors.confirmarPassword)} />
+                {errors.confirmarPassword && <p className="text-xs text-red-500 mt-1">{errors.confirmarPassword.message}</p>}
               </div>
 
               {serverError && (
