@@ -22,6 +22,7 @@ export default function FavoritosPage() {
 function FavoritosContent() {
   const { user, loading } = useAuth();
   const [favorites, setFavorites] = useState<Property[]>([]);
+  const [huerfanos, setHuerfanos] = useState(0);
   const [fetching, setFetching] = useState(true);
   const searchParams = useSearchParams();
   const backHref = searchParams.get('from') === 'mapa' ? '/mapa' : '/dashboard';
@@ -34,9 +35,12 @@ function FavoritosContent() {
         getAllProperties(),
       ])
         .then(([{ favoritos: favIds }, allProps]) => {
-          setFavorites(
-            favIds.map((id) => allProps.find((p) => p.id === id)).filter(Boolean) as Property[],
-          );
+          const resueltos = favIds.map((id) => allProps.find((p) => p.id === id)).filter(Boolean) as Property[];
+          // Un favorito cuya propiedad ya no resuelve (el dueño la borró o
+          // archivó) antes desaparecía en silencio — el contador simplemente
+          // encogía sin explicación.
+          setHuerfanos(favIds.length - resueltos.length);
+          setFavorites(resueltos);
         })
         .finally(() => setFetching(false));
     }
@@ -86,6 +90,12 @@ function FavoritosContent() {
           <p className="text-sm text-gray-500">{favorites.length} propiedad{favorites.length !== 1 ? 'es' : ''} guardada{favorites.length !== 1 ? 's' : ''}</p>
         </div>
       </div>
+
+      {huerfanos > 0 && (
+        <p className="text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-xl px-3.5 py-2.5 mb-6">
+          {huerfanos} favorito{huerfanos !== 1 ? 's' : ''} ya no {huerfanos !== 1 ? 'están' : 'está'} disponible{huerfanos !== 1 ? 's' : ''} — es posible que el dueño haya quitado esa propiedad.
+        </p>
+      )}
 
       {favorites.length === 0 ? (
         <div className="text-center py-16">

@@ -59,7 +59,7 @@ export default function BlogPage() {
 
               <div className="flex items-center justify-between">
                 <span className="text-xs text-gray-400">
-                  {new Date(post.fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  {new Date(post.fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Mexico_City' })}
                 </span>
                 <span className="text-xs text-brand font-semibold flex items-center gap-1 group-hover:gap-2 transition-all">
                   Leer <ArrowRight size={12} />

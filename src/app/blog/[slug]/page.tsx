@@ -56,7 +56,7 @@ export default async function BlogPostPage({ params }: Props) {
               <Clock size={11} /> {post.lectura} min de lectura
             </span>
             <span className="text-xs text-gray-400">
-              {new Date(post.fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
+              {new Date(post.fecha).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Mexico_City' })}
             </span>
           </div>
           {/* Ícono + degradado por categoría, no el emoji suelto de antes */}

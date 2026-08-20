@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { backendFetch } from '@/lib/backendApi';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { MUNICIPIO_OPTIONS } from '@/lib/publishSchema';
 
@@ -48,6 +48,7 @@ export default function AlertasPage() {
   const toast = useToast();
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [fetching, setFetching] = useState(true);
+  const [eliminando, setEliminando] = useState<Set<string>>(new Set());
   const formRef = useRef<HTMLDivElement>(null);
 
   const { register, handleSubmit, reset, setFocus, formState: { isSubmitting } } = useForm<FormData>({
@@ -77,6 +78,13 @@ export default function AlertasPage() {
       dosBocas: data.dosBocas,
       sinRiesgo: data.sinRiesgo,
     };
+    // Sin ningún filtro, la alerta coincide con TODA publicación futura —
+    // válido (alertaLabel ya contempla "Todas las propiedades"), pero
+    // merece una confirmación explícita en vez de crearse con un clic.
+    const vacia = !body.municipio && !body.tipo && !body.operacion && !body.precioMax && !body.dosBocas && !body.sinRiesgo;
+    if (vacia && !window.confirm('No elegiste ningún filtro — esta alerta te avisará de TODAS las propiedades nuevas que se publiquen. ¿Crearla así?')) {
+      return;
+    }
     try {
       const d = await backendFetch<{ alerta: Alerta }>('/alertas', {
         method: 'POST',
@@ -93,6 +101,11 @@ export default function AlertasPage() {
   }
 
   async function deleteAlerta(id: string) {
+    // Un doble clic rápido antes disparaba un segundo DELETE sobre un id
+    // ya borrado — el servidor lo rechazaba y el catch mostraba "no se
+    // pudo eliminar" aunque el borrado original sí funcionó.
+    if (eliminando.has(id)) return;
+    setEliminando((prev) => new Set(prev).add(id));
     const previous = alertas;
     const removed  = previous.find((a) => a.id === id);
     setAlertas((prev) => prev.filter((a) => a.id !== id)); // optimista
@@ -102,6 +115,8 @@ export default function AlertasPage() {
     } catch {
       setAlertas(previous); // revertir
       toast.error('No se pudo eliminar la alerta. Intenta de nuevo.');
+    } finally {
+      setEliminando((prev) => { const next = new Set(prev); next.delete(id); return next; });
     }
   }
 
@@ -123,8 +138,8 @@ export default function AlertasPage() {
       });
       setAlertas((prev) => [d.alerta, ...prev]);
       toast.success('Alerta restaurada.');
-    } catch {
-      toast.error('No se pudo restaurar la alerta.');
+    } catch (err) {
+      toast.error(err instanceof BackendApiError ? err.message : 'No se pudo restaurar la alerta.');
     }
   }
 
@@ -245,13 +260,13 @@ export default function AlertasPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-800">{alertaLabel(a)}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    Creada el {new Date(a.createdAt).toLocaleDateString('es-MX')}
-                    {a.expiraEn && ` · expira el ${new Date(a.expiraEn).toLocaleDateString('es-MX')}`}
+                    Creada el {new Date(a.createdAt).toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City' })}
+                    {a.expiraEn && ` · expira el ${new Date(a.expiraEn).toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City' })}`}
                   </p>
                 </div>
               </div>
-              <button onClick={() => deleteAlerta(a.id)}
-                className="text-gray-300 hover:text-red-500 transition-colors p-1 flex-shrink-0">
+              <button onClick={() => deleteAlerta(a.id)} disabled={eliminando.has(a.id)}
+                className="text-gray-300 hover:text-red-500 transition-colors p-1 flex-shrink-0 disabled:opacity-40">
                 <Trash2 size={15} />
               </button>
             </div>

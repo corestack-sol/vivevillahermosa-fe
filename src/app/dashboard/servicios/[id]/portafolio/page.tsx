@@ -200,7 +200,7 @@ export default function PortafolioPage() {
               <div className="p-3">
                 {t.descripcion && <p className="text-sm text-gray-700 whitespace-pre-line mb-2">{t.descripcion}</p>}
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-gray-400">{new Date(t.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                  <span className="text-[11px] text-gray-400">{new Date(t.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Mexico_City' })}</span>
                   <button
                     type="button"
                     onClick={() => eliminarTrabajo(t.id)}
