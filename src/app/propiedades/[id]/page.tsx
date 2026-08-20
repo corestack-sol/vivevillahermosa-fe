@@ -4,7 +4,7 @@ import { mapBackendProperty, type BackendPublicProperty } from '@/lib/api';
 import { backendFetchServer } from '@/lib/backendApiServer';
 import { BackendApiError } from '@/lib/backendApi';
 import { getSession } from '@/lib/auth';
-import { buildPropertyMetadata } from '@/lib/seo';
+import { buildPropertyMetadata, safeJsonLdString } from '@/lib/seo';
 import { getLandmark, distanciaKm, distanciaMinimaACategoria, CATEGORIAS_GENERICAS, obtenerLandmarksBackend } from '@/lib/landmarks';
 import { getColoniaByKey, obtenerColoniaDescubiertaBackend } from '@/lib/colonias';
 import { PropertyDetailView } from '@/components/property/PropertyDetailView';
@@ -163,7 +163,7 @@ export default async function PropertyDetailPage({ params, searchParams }: Props
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLdString(jsonLd) }}
       />
       <PropertyDetailView
         property={property}
