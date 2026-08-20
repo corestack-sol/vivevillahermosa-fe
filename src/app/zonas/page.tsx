@@ -252,18 +252,10 @@ export default async function ZonasPage() {
           {municipalities.map((mun) => {
             const munSpec = MUNICIPIO_ICON[mun.id] ?? { type: 'lucide' as const, Icon: MapIcon };
             return (
-              // Degradado atado al dato real (mun.propiedades), no
-              // decorativo al azar — más rico/cálido para municipios con
-              // inventario real, plano/apagado para "Sin propiedades" en
-              // vez de prometer lo mismo visualmente sin nada detrás.
               <Link
                 key={mun.id}
                 href={`/zonas/${mun.slug}`}
-                className={`group relative overflow-hidden rounded-2xl border p-5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${
-                  mun.propiedades > 0
-                    ? 'bg-gradient-to-br from-brand-pale/70 via-white to-white border-brand/10 hover:border-brand/30'
-                    : 'bg-gray-50/70 border-gray-100 hover:border-gray-200'
-                }`}
+                className="group relative overflow-hidden rounded-2xl border border-brand/10 bg-gradient-to-br from-brand-pale/70 via-white to-white p-5 transition-all duration-200 hover:border-brand/30 hover:shadow-lg hover:-translate-y-0.5"
               >
                 <div className="relative flex items-start justify-between mb-3">
                   {/* El ícono pasa de insignia pequeña + marca de agua casi
