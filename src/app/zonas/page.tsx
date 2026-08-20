@@ -252,21 +252,27 @@ export default async function ZonasPage() {
           {municipalities.map((mun) => {
             const munSpec = MUNICIPIO_ICON[mun.id] ?? { type: 'lucide' as const, Icon: MapIcon };
             return (
+              // Degradado atado al dato real (mun.propiedades), no
+              // decorativo al azar — más rico/cálido para municipios con
+              // inventario real, plano/apagado para "Sin propiedades" en
+              // vez de prometer lo mismo visualmente sin nada detrás.
               <Link
                 key={mun.id}
                 href={`/zonas/${mun.slug}`}
-                className="group relative overflow-hidden bg-white rounded-2xl border border-gray-100 hover:border-brand/30 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 p-5"
+                className={`group relative overflow-hidden rounded-2xl border p-5 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 ${
+                  mun.propiedades > 0
+                    ? 'bg-gradient-to-br from-brand-pale/70 via-white to-white border-brand/10 hover:border-brand/30'
+                    : 'bg-gray-50/70 border-gray-100 hover:border-gray-200'
+                }`}
               >
-                {/* Marca de agua — mismo lenguaje que las cards verdes de
-                    arriba, pero el ícono cambia según lo que de verdad
-                    distingue a este municipio (ver MUNICIPIO_ICON). */}
-                <div className="absolute -right-4 -bottom-5 opacity-[0.07] pointer-events-none">
-                  <MunicipioIcon spec={munSpec} size={110} className="text-brand" />
-                </div>
-
                 <div className="relative flex items-start justify-between mb-3">
-                  <div className="w-9 h-9 rounded-xl bg-brand-pale flex items-center justify-center text-brand flex-shrink-0">
-                    <MunicipioIcon spec={munSpec} size={16} />
+                  {/* El ícono pasa de insignia pequeña + marca de agua casi
+                      invisible a protagonista único, a color real (los
+                      íconos "color" ya traen su propio color, no se tiñen)
+                      — se eligieron a mano por lo que de verdad distingue
+                      a cada municipio, mejor mostrarlos que esconderlos. */}
+                  <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center flex-shrink-0">
+                    <MunicipioIcon spec={munSpec} size={30} className={munSpec.type === 'lucide' ? 'text-brand' : ''} />
                   </div>
                   {mun.cercaDosoBocas && (
                     <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full flex-shrink-0">
@@ -278,7 +284,7 @@ export default async function ZonasPage() {
                   {mun.nombre}
                 </h3>
                 <p className="relative text-xs text-gray-400 line-clamp-2 mb-4 leading-relaxed min-h-[2rem]">{mun.descripcion}</p>
-                <div className="relative pt-3 border-t border-gray-50">
+                <div className="relative pt-3 border-t border-gray-900/5">
                   <span className={`text-xs font-semibold ${mun.propiedades > 0 ? 'text-brand' : 'text-gray-300'}`}>
                     {mun.propiedades > 0 ? `${mun.propiedades} propiedad${mun.propiedades !== 1 ? 'es' : ''}` : 'Sin propiedades'}
                   </span>
