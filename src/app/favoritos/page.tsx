@@ -91,8 +91,8 @@ function FavoritosContent() {
         <div className="text-center py-16">
           <Heart size={48} className="text-gray-200 mx-auto mb-4" />
           <p className="text-gray-500 font-medium mb-2">Aún no tienes favoritos</p>
-          <p className="flex items-center justify-center gap-1.5 text-gray-400 text-sm mb-6">
-            Presiona el <Heart size={14} className="text-red-400 fill-current" /> en cualquier propiedad para guardarla aquí.
+          <p className="text-gray-400 text-sm mb-6">
+            Presiona el <Heart size={14} className="inline-block align-text-bottom text-red-400 fill-current" /> en cualquier propiedad para guardarla aquí.
           </p>
           <Link href="/propiedades" className="inline-flex items-center gap-2 bg-brand text-white font-semibold px-5 py-2.5 rounded-xl text-sm hover:bg-brand-dark transition-colors">
             Explorar propiedades
