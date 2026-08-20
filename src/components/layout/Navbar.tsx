@@ -106,6 +106,8 @@ export function Navbar() {
   const esProfesional = !!user && user.rol !== 'buscador';
   const userMenuRef = useRef<HTMLDivElement>(null);
   useClickOutside(userMenuRef, userMenuOpen, () => setUserMenuOpen(false));
+  const navRef = useRef<HTMLElement>(null);
+  useClickOutside(navRef, isOpen, () => setIsOpen(false));
 
   async function handleLogout() {
     setUserMenuOpen(false);
@@ -141,7 +143,7 @@ export function Navbar() {
           que es justo lo contrario de "pegado a la izquierda". Ahora el
           logo y las acciones quedan pegados a los bordes reales de la
           ventana, con el mismo padding que usa el resto del sitio. */}
-      <nav className="px-4 sm:px-6 lg:px-8">
+      <nav ref={navRef} className="px-4 sm:px-6 lg:px-8">
         {/* Dos zonas: logo+nav agrupados a la izquierda (con aire razonable
             entre ellos, no centrados a media pantalla), acciones empujadas
             del todo a la derecha con ml-auto. El problema original no era
