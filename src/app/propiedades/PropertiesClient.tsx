@@ -740,7 +740,7 @@ export function PropertiesClient({ allProperties }: Props) {
                         "esto no está/no se encontró" en toda la plataforma
                         en vez de un ícono genérico — pedido explícito
                         2026-08-20. */}
-                    <Image src="/images/icons/sin-resultados.webp" alt="" width={180} height={145} className="mb-3" />
+                    <Image src="/images/icons/sin-resultados.webp" alt="" width={166} height={98} className="mb-3" />
                     <h3 className="font-heading font-bold text-gray-800 text-lg mb-2 text-center">
                       {esBusquedaSinInterpretar(filters) ? 'No pudimos interpretar tu búsqueda' : 'Sin resultados'}
                     </h3>
