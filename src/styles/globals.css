@@ -142,6 +142,23 @@
     font-family: var(--font-heading);
     letter-spacing: -0.02em;
   }
+
+  /* Feedback táctil por defecto para CUALQUIER <button> del sitio — antes
+     solo lo tenían los botones que pasan por components/ui/Button.tsx
+     (active:scale-95); los decenas de <button> sueltos repartidos por el
+     resto del código (filtros, tablas de admin, flechas de galería,
+     modales…) no reaccionaban visualmente al presionarlos, pedido
+     explícito 2026-08-20: "no se sabe si reaccionó al presionar un
+     botón". Selector de elemento, especificidad baja a propósito — un
+     componente con su propio active:scale-* (más específico) sigue
+     ganando, esto es solo el piso para todo lo demás. :disabled queda
+     fuera para no sugerir que un botón deshabilitado sí reaccionó. */
+  button:not(:disabled) {
+    transition: transform 0.1s ease-out;
+  }
+  button:not(:disabled):active {
+    transform: scale(0.96);
+  }
 }
 
 /* Fade-up animation for sections */
@@ -258,6 +275,13 @@
   }
   .animate-spark, .animate-spark-slow {
     display: none;
+  }
+  /* !important a propósito: también apaga el active:scale-* propio de
+     componentes como Button.tsx, no solo el piso genérico de arriba —
+     bajo movimiento reducido, ningún botón debería encogerse al
+     presionarlo, tenga o no su propia clase de escala. */
+  button:active {
+    transform: none !important;
   }
 }
 
