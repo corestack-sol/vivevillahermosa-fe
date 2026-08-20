@@ -1,7 +1,8 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import {
-  ChevronRight, Shield, ArrowRight, Zap,
+  ChevronRight, Shield, ArrowRight, Zap, MapPin, Flame,
   MessageCircle, Droplets, Camera, CheckCircle2, Sparkles, Bot,
 } from 'lucide-react';
 import { SearchBar } from '@/components/search/SearchBar';
@@ -82,7 +83,7 @@ export default async function HomePage() {
   // /zonas. Pedido explícito (2026-08-09): nada en la plataforma debe
   // quedarse en datos sueltos/editoriales si ya existe una fuente real que
   // se pueda usar en su lugar.
-  const { colonias: coloniasPorDemanda, porDemanda } = await getColoniasOrdenadasPorDemanda();
+  const { colonias: coloniasPorDemanda, porDemanda, tieneDemandaReal } = await getColoniasOrdenadasPorDemanda();
   const zones = coloniasPorDemanda.slice(0, 4);
   const stats = await getStats();
 
@@ -382,6 +383,12 @@ export default async function HomePage() {
             perder cohesión. Gradiente por `style` (no clases from-X/to-X)
             porque "coral" necesita un stop oscurecido con color-mix() que
             Tailwind no genera como utilidad. */}
+        {/* Mismo ícono de marca de agua + insignia de llama que ya usa
+            /zonas/page.tsx para esta misma fuente de datos (ColoniaCard) —
+            estas tarjetas se habían quedado como color plano sin ninguno
+            de los dos, pedido explícito 2026-08-20: "se ven como simples
+            mockups". maxPropiedades sobre `zones` (ya recortado a 4) para
+            el mismo criterio de respaldo por oferta que /zonas. */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {zones.map((zone, i) => {
             const gradientes = [
@@ -395,19 +402,33 @@ export default async function HomePage() {
             // al catálogo filtrado por nombre en vez de a un slug que no
             // existe.
             const href = zone.slug ? `/zonas/${zone.slug}` : `/propiedades?q=${encodeURIComponent(zone.nombre)}`;
+            const maxPropiedades = zones[0]?.propiedades ?? 0;
+            const mostrarLlama = porDemanda
+              ? tieneDemandaReal(zone.nombre)
+              : maxPropiedades > 1 && zone.propiedades === maxPropiedades;
             return (
               <Link key={zone.nombre} href={href}
                 style={{ background: gradientes[i % gradientes.length] }}
                 className="group relative h-40 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+                <div className="absolute -right-4 -bottom-5 opacity-[0.18] pointer-events-none">
+                  <Image src="/images/icons/colonia-color.webp" alt="" width={150} height={90} className="object-contain" />
+                </div>
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
                 <div className="absolute inset-0 flex flex-col justify-end p-4">
                   <p className="font-heading font-bold text-white text-sm leading-snug">{zone.nombre}</p>
                   <p className="text-white/60 text-xs mt-0.5">{zone.propiedades} propiedades</p>
                 </div>
-                <div className="absolute top-3 left-3">
-                  <span className="bg-black/30 backdrop-blur-sm text-white/80 text-[10px] font-medium px-2 py-0.5 rounded-full">
-                    {zone.municipio}
+                <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                  <span className="flex items-center gap-1 bg-black/30 backdrop-blur-sm text-white/80 text-[10px] font-medium px-2 py-0.5 rounded-full">
+                    <MapPin size={9} /> {zone.municipio}
                   </span>
+                  {mostrarLlama && (
+                    <span title={porDemanda ? 'Con búsquedas reales recientes' : 'La colonia con más propiedades publicadas ahora mismo'} className="relative inline-flex flex-shrink-0">
+                      <Flame size={15} className="text-amber-400 animate-flame" strokeWidth={2} />
+                      <span aria-hidden="true" className="absolute -top-0.5 right-0 w-1 h-1 rounded-full bg-amber-300 animate-spark" />
+                      <span aria-hidden="true" className="absolute -top-0.5 right-0.5 w-1 h-1 rounded-full bg-amber-200 animate-spark [animation-delay:0.4s]" />
+                    </span>
+                  )}
                 </div>
                 <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                   <ChevronRight size={16} className="text-white" />
