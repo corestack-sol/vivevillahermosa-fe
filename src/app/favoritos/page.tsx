@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Heart, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { backendFetch } from '@/lib/backendApi';
@@ -11,9 +12,19 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import type { Property } from '@/types/property';
 
 export default function FavoritosPage() {
+  return (
+    <Suspense fallback={null}>
+      <FavoritosContent />
+    </Suspense>
+  );
+}
+
+function FavoritosContent() {
   const { user, loading } = useAuth();
   const [favorites, setFavorites] = useState<Property[]>([]);
   const [fetching, setFetching] = useState(true);
+  const searchParams = useSearchParams();
+  const backHref = searchParams.get('from') === 'mapa' ? '/mapa' : '/dashboard';
 
   useEffect(() => {
     function cargarFavoritos() {
@@ -65,7 +76,7 @@ export default function FavoritosPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="flex items-center gap-3 mb-8">
-        <Link href="/dashboard" className="text-gray-400 hover:text-brand transition-colors">
+        <Link href={backHref} className="text-gray-400 hover:text-brand transition-colors">
           <ArrowLeft size={20} />
         </Link>
         <div>

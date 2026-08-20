@@ -521,7 +521,7 @@ export function MapaClient({ allProperties }: Props) {
               es una función de cuenta). */}
           {user && (
             <Link
-              href="/favoritos"
+              href="/favoritos?from=mapa"
               title="Mis favoritos"
               className="w-10 h-10 bg-brand-dark shadow-lg border border-brand-dark rounded-xl
                          flex items-center justify-center text-white
