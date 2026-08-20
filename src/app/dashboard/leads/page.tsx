@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, Info, Phone, Mail, MapPin, FileText, User as UserIcon, Tag, EyeOff, Eye } from 'lucide-react';
 import { getPropertyById } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import {
   getLeadsDemo, aplicarEstadosGuardados, moverLead, ESTADO_LEAD_CFG, ORDEN_PIPELINE,
@@ -11,6 +13,7 @@ import {
 } from '@/lib/leadsDemo';
 import { formatRelativeDate, formatDate } from '@/lib/format';
 import { Modal } from '@/components/ui/Modal';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { readJson, writeJson } from '@/lib/localStore';
 
 const KEY_COLUMNAS_OCULTAS = 'vivevillahermosa_leads_columnas_ocultas';
@@ -41,10 +44,19 @@ function SelectorEtapa({ lead, onMover, className }: { lead: LeadConEstado; onMo
 
 export default function LeadsPage() {
   const toast = useToast();
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [leads, setLeads] = useState<LeadConEstado[]>(getLeadsDemo());
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [ocultas, setOcultas] = useState<Set<EstadoLead>>(new Set());
   const [propiedadesPorId, setPropiedadesPorId] = useState<Record<string, { slug: string; titulo: string }>>({});
+
+  // Mismo criterio que dashboard/citas/page.tsx: leads es una herramienta
+  // profesional, una cuenta buscador no debe verla ni de muestra.
+  useEffect(() => {
+    if (!authLoading && !user) { router.push('/auth/login'); return; }
+    if (!authLoading && user && user.rol === 'buscador') { router.push('/dashboard'); }
+  }, [authLoading, user, router]);
 
   // Los cambios de estado y las columnas ocultas guardadas solo existen en
   // cliente — se aplican en un efecto para que el primer render (servidor y
@@ -95,6 +107,15 @@ export default function LeadsPage() {
 
   const detalleLead = detalleId ? leads.find((l) => l.id === detalleId) ?? null : null;
   const columnasVisibles = ORDEN_PIPELINE.filter((e) => !ocultas.has(e));
+
+  if (authLoading || !user || user.rol === 'buscador') {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <Skeleton className="w-48 mb-8" />
+        <Skeleton variant="image" className="w-full h-96 rounded-2xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

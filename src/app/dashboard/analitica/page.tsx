@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, Info, Eye, MessageCircle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { mapMiaBackend, type MiPropiedad } from '@/lib/misPropiedades';
 import { backendFetch } from '@/lib/backendApi';
@@ -9,6 +10,7 @@ import type { BackendPublicProperty } from '@/lib/api';
 import { getSerieDemo, sumar, cambioPorcentual } from '@/lib/analiticaDemo';
 import { useAuth } from '@/context/AuthContext';
 import { Sparkline } from '@/components/dashboard/Sparkline';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 function TendenciaBadge({ pct }: { pct: number | null }) {
   if (pct === null) {
@@ -27,8 +29,16 @@ function TendenciaBadge({ pct }: { pct: number | null }) {
 }
 
 export default function AnaliticaPage() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [items, setItems] = useState<MiPropiedad[]>([]);
+
+  // Mismo criterio que dashboard/citas y dashboard/leads: herramienta
+  // profesional, una cuenta buscador no debe verla ni de muestra.
+  useEffect(() => {
+    if (!authLoading && !user) { router.push('/auth/login'); return; }
+    if (!authLoading && user && user.rol === 'buscador') { router.push('/dashboard'); }
+  }, [authLoading, user, router]);
 
   useEffect(() => {
     if (!user) return;
@@ -57,6 +67,15 @@ export default function AnaliticaPage() {
   const totalVistasAnterior = porPropiedad.reduce((acc, p) => acc + p.vistasAnterior, 0);
   const totalContactos = porPropiedad.reduce((acc, p) => acc + p.contactos30, 0);
   const cambioTotalVistas = cambioPorcentual(totalVistas, totalVistasAnterior);
+
+  if (authLoading || !user || user.rol === 'buscador') {
+    return (
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <Skeleton className="w-48 mb-8" />
+        <Skeleton variant="image" className="w-full h-96 rounded-2xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

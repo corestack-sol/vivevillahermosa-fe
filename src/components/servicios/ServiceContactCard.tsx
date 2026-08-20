@@ -7,6 +7,7 @@ import { Phone, Mail, MessageCircle, Eye, Loader2, LogIn } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { loginRedirectUrl } from '@/lib/authRedirect';
 import { backendFetch } from '@/lib/backendApi';
+import { whatsappUrl } from '@/lib/phone';
 
 interface Contacto {
   telefono: string;
@@ -60,7 +61,7 @@ export function ServiceContactCard({ servicioId, nombre }: { servicioId: string;
         <>
           {contacto.whatsapp && (
             <a
-              href={`https://wa.me/${contacto.whatsapp.replace(/[^\d+]/g, '')}?text=${encodeURIComponent(`Hola, vi tu servicio "${nombre}" en Vive Villahermosa y me interesa.`)}`}
+              href={whatsappUrl(contacto.whatsapp, `Hola, vi tu servicio "${nombre}" en Vive Villahermosa y me interesa.`)}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full text-sm font-semibold py-2.5 rounded-xl transition-all active:scale-[0.98] text-white"

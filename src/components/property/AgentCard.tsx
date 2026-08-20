@@ -9,6 +9,7 @@ import { usePropiedadEstado } from '@/hooks/usePropiedadEstado';
 import { useAuth } from '@/context/AuthContext';
 import { loginRedirectUrl } from '@/lib/authRedirect';
 import { backendFetch } from '@/lib/backendApi';
+import { whatsappUrl } from '@/lib/phone';
 
 // Subconjunto público y seguro de mostrar de entrada — nombre y estado de
 // verificación no son datos sensibles.
@@ -164,7 +165,7 @@ export function AgentCard({ agent, propiedadId, propertyTitle, requiereMensajePr
         <div className="space-y-2">
           {contacto.whatsapp && (
             <a
-              href={`https://wa.me/${contacto.whatsapp.replace(/[^\d+]/g, '')}?text=${encodeURIComponent(`Hola, vi tu propiedad "${propertyTitle}" en Vive Villahermosa y me interesa.`)}`}
+              href={whatsappUrl(contacto.whatsapp, `Hola, vi tu propiedad "${propertyTitle}" en Vive Villahermosa y me interesa.`)}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full text-sm font-semibold py-2.5 rounded-xl transition-all active:scale-[0.98] text-white"

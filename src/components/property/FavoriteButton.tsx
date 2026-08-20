@@ -65,6 +65,7 @@ export function FavoriteButton({ propiedadId, size = 'md' }: FavoriteButtonProps
   return (
     <button
       onClick={toggle}
+      disabled={pending}
       aria-label={isFav ? 'Quitar de favoritos' : 'Guardar en favoritos'}
       aria-pressed={isFav}
       className={`${base} transition-all active:scale-90 ${

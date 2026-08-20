@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, Info, Users, UserPlus, Trash2, Mail, ShieldCheck, Clock } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -9,6 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { getMiembros, invitarMiembro, eliminarMiembro, type MiembroEquipo, type RolEquipo } from '@/lib/equipoDemo';
 
 const ROL_OPTIONS = [
@@ -17,13 +19,22 @@ const ROL_OPTIONS = [
 ];
 
 export default function EquipoPage() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const toast = useToast();
   const [miembros, setMiembros] = useState<MiembroEquipo[]>([]);
   const [showInvitar, setShowInvitar] = useState(false);
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [rol, setRol] = useState<RolEquipo>('agente');
+
+  // Mismo criterio que dashboard/citas, dashboard/leads y
+  // dashboard/analitica: herramienta profesional, una cuenta buscador no
+  // debe verla ni de muestra.
+  useEffect(() => {
+    if (!authLoading && !user) { router.push('/auth/login'); return; }
+    if (!authLoading && user && user.rol === 'buscador') { router.push('/dashboard'); }
+  }, [authLoading, user, router]);
 
   // localStorage solo existe en cliente — se resuelve en un efecto para que
   // el primer render coincida con el del servidor.
@@ -49,6 +60,15 @@ export default function EquipoPage() {
     eliminarMiembro(id);
     setMiembros(getMiembros());
     toast.success(`${nombreMiembro} se quitó del equipo.`);
+  }
+
+  if (authLoading || !user || user.rol === 'buscador') {
+    return (
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <Skeleton className="w-48 mb-8" />
+        <Skeleton variant="image" className="w-full h-96 rounded-2xl" />
+      </div>
+    );
   }
 
   return (
