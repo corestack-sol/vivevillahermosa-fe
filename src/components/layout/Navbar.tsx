@@ -8,6 +8,7 @@ import {
   CalendarDays, Users, TrendingUp, UserPlus, ShieldCheck, Home, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
 import { buttonClasses } from '@/components/ui/Button';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { useClickOutside } from '@/hooks/useClickOutside';
@@ -103,6 +104,7 @@ export function Navbar() {
   const searchParams = useSearchParams();
   const router       = useRouter();
   const { user, loading, logout } = useAuth();
+  const toast = useToast();
   const esProfesional = !!user && user.rol !== 'buscador';
   const userMenuRef = useRef<HTMLDivElement>(null);
   useClickOutside(userMenuRef, userMenuOpen, () => setUserMenuOpen(false));
@@ -111,7 +113,15 @@ export function Navbar() {
 
   async function handleLogout() {
     setUserMenuOpen(false);
-    await logout();
+    try {
+      await logout();
+    } catch {
+      // logout() ya limpió la sesión local aunque el servidor haya
+      // fallado (ver AuthContext.tsx) — se avisa igual, por si la
+      // persona está en un equipo compartido y esperaba que el
+      // servidor también cerrara la sesión.
+      toast.error('Cerraste sesión en este dispositivo, pero hubo un problema al avisar al servidor.');
+    }
     router.push('/');
   }
 

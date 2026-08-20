@@ -52,9 +52,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // setUser(null) va en `finally`: si /auth/logout falla (red, 5xx), la
+  // sesión local igual se limpia — nunca dejar la UI mostrando "sesión
+  // activa" después de que la persona pidió cerrarla (riesgo real en
+  // equipo/computadora compartida). El error se relanza para que quien
+  // llame a logout() pueda avisar que la sesión del servidor quizás no
+  // se cerró del todo.
   const logout = useCallback(async () => {
-    await backendFetch('/auth/logout', { method: 'POST' });
-    setUser(null);
+    try {
+      await backendFetch('/auth/logout', { method: 'POST' });
+    } finally {
+      setUser(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -62,6 +71,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       refresh();
     }
     cargarSesion();
+  }, [refresh]);
+
+  // Re-valida la sesión al volver a esta pestaña — sin esto, cerrar sesión
+  // (o que un admin bloquee/degrade la cuenta) en otra pestaña dejaba esta
+  // mostrando datos de usuario obsoletos hasta la próxima navegación.
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') refresh();
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, [refresh]);
 
   return (
