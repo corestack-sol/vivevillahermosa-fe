@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { SlidersHorizontal, X, Map, LayoutGrid, Search, ChevronDown, Loader2, Sparkles, MapPin, Clock, Info } from 'lucide-react';
 import type { Property, PropertyType, OperationType } from '@/types/property';
@@ -735,9 +736,11 @@ export function PropertiesClient({ allProperties }: Props) {
                   </div>
                 ) : results.length === 0 ? (
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center py-16 px-6">
-                    <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mb-4">
-                      <Search size={28} className="text-gray-300" strokeWidth={1.5} />
-                    </div>
+                    {/* Mismo criterio que not-found.tsx: un solo mascota de
+                        "esto no está/no se encontró" en toda la plataforma
+                        en vez de un ícono genérico — pedido explícito
+                        2026-08-20. */}
+                    <Image src="/images/icons/sin-resultados.webp" alt="" width={180} height={145} className="mb-3" />
                     <h3 className="font-heading font-bold text-gray-800 text-lg mb-2 text-center">
                       {esBusquedaSinInterpretar(filters) ? 'No pudimos interpretar tu búsqueda' : 'Sin resultados'}
                     </h3>
