@@ -6,6 +6,7 @@ import { CheckCircle2, XCircle, ArrowUpRight } from 'lucide-react';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { Pagination } from '@/components/ui/Pagination';
 import { CardListSkeleton } from '@/components/ui/Skeleton';
 import { formatRelativeDate } from '@/lib/format';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
@@ -36,20 +37,36 @@ const MOTIVO_LABEL: Record<string, string> = {
 
 export default function AdminReportesPage() {
   const [reportes, setReportes] = useState<Reporte[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(20);
   const [estado, setEstado] = useState('pendiente');
   const [loading, setLoading] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [confirmar, setConfirmar] = useState<{ reporte: Reporte; nuevoEstado: 'revisado' | 'descartado' } | null>(null);
   const [error, setError] = useState('');
 
+  // BACKEND-AUDITORIA-EDGE-CASES-20082026.md #8: GET /admin/reportes pasó de
+  // un array plano con techo fijo de 200 a { reportes, total, page, perPage }
+  // paginado de verdad — antes esta página truena con ".map is not a
+  // function" porque seguía esperando el array plano.
   const cargar = useCallback(async () => {
     setLoading(true);
-    const reportes = await backendFetch<Reporte[]>(`/admin/reportes?estado=${estado}`);
-    setReportes(reportes ?? []);
+    const data = await backendFetch<{
+      reportes: Reporte[];
+      total: number;
+      page: number;
+      perPage: number;
+    }>(`/admin/reportes?estado=${estado}&page=${page}`);
+    setReportes(data.reportes ?? []);
+    setTotal(data.total ?? 0);
+    setPerPage(data.perPage ?? 20);
     setLoading(false);
-  }, [estado]);
+  }, [estado, page]);
 
   useEffect(() => { function cargarInicial() { cargar(); } cargarInicial(); }, [cargar]);
+
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
 
   async function resolver() {
     if (!confirmar) return;
@@ -77,7 +94,7 @@ export default function AdminReportesPage() {
       </p>
 
       <div className="w-52 mb-5">
-        <Select options={ESTADOS} value={estado} onChange={(e) => setEstado(e.target.value)} placeholder="" />
+        <Select options={ESTADOS} value={estado} onChange={(e) => { setPage(1); setEstado(e.target.value); }} placeholder="" />
       </div>
 
       {loading ? (
@@ -116,6 +133,10 @@ export default function AdminReportesPage() {
           ))}
         </div>
       )}
+
+      <div className="mt-6">
+        <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      </div>
 
       <Modal
         isOpen={!!confirmar}
