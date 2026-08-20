@@ -7,7 +7,7 @@ import { categoriaServicioLabel } from '@/lib/publishServicioSchema';
 import { buttonClasses } from '@/components/ui/Button';
 import { CardListSkeleton } from '@/components/ui/Skeleton';
 import { useToast } from '@/context/ToastContext';
-import { backendFetch } from '@/lib/backendApi';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
 interface MiServicio {
   id: string;
@@ -17,6 +17,12 @@ interface MiServicio {
   municipio: string;
   colonia: string | null;
   activo: boolean;
+  // BACKEND-AUDITORIA-EDGE-CASES-20082026.md #7: separado de `activo` — un
+  // admin lo pausó por fraude/abuso, y el backend ya rechaza (403) que el
+  // dueño lo reactive desde aquí mientras siga en true. Se usa para
+  // deshabilitar el botón en vez de dejar que el dueño le dé clic sin
+  // ningún efecto ni explicación.
+  suspendidoPorAdmin: boolean;
   createdAt: string;
 }
 
@@ -58,10 +64,17 @@ export default function MisServiciosPage() {
 
   async function togglePausa(id: string, activo: boolean) {
     setOcupado(id);
-    await backendFetch(`/servicios/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ activo: !activo }),
-    }).catch(() => {});
+    try {
+      await backendFetch(`/servicios/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ activo: !activo }),
+      });
+    } catch (err) {
+      // Antes se tragaba en silencio — si el backend rechaza (ej. 403 por
+      // suspendidoPorAdmin), el dueño le daba clic a "Reactivar" y no
+      // pasaba nada, sin ninguna explicación.
+      toast.error(err instanceof BackendApiError ? err.message : 'No se pudo actualizar el servicio');
+    }
     setItems(await fetchMisServicios());
     setOcupado(null);
   }
@@ -104,7 +117,9 @@ export default function MisServiciosPage() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-[11px] font-bold uppercase tracking-wide text-brand">{categoriaServicioLabel(s.categoria)}</span>
-                  {!s.activo && (
+                  {s.suspendidoPorAdmin ? (
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600">Suspendido por administración</span>
+                  ) : !s.activo && (
                     <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Pausado</span>
                   )}
                 </div>
@@ -137,9 +152,13 @@ export default function MisServiciosPage() {
                 <button
                   type="button"
                   onClick={() => togglePausa(s.id, s.activo)}
-                  disabled={ocupado === s.id}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-brand hover:bg-brand-pale transition-colors disabled:opacity-50"
-                  title={s.activo ? 'Pausar' : 'Reactivar'}
+                  disabled={ocupado === s.id || (!s.activo && s.suspendidoPorAdmin)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-brand hover:bg-brand-pale transition-colors disabled:opacity-50 disabled:hover:text-gray-400 disabled:hover:bg-transparent"
+                  title={
+                    !s.activo && s.suspendidoPorAdmin
+                      ? 'Suspendido por un administrador — no se puede reactivar desde aquí'
+                      : s.activo ? 'Pausar' : 'Reactivar'
+                  }
                 >
                   {s.activo ? <Pause size={14} /> : <Play size={14} />}
                 </button>

@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { mapBackendProperty, type BackendPublicProperty } from '@/lib/api';
 import { backendFetchServer } from '@/lib/backendApiServer';
 import { BackendApiError } from '@/lib/backendApi';
+import { getSession } from '@/lib/auth';
 import { buildPropertyMetadata } from '@/lib/seo';
 import { getLandmark, distanciaKm, distanciaMinimaACategoria, CATEGORIAS_GENERICAS, obtenerLandmarksBackend } from '@/lib/landmarks';
 import { getColoniaByKey, obtenerColoniaDescubiertaBackend } from '@/lib/colonias';
@@ -15,16 +16,33 @@ import { PropertyDetailView } from '@/components/property/PropertyDetailView';
  * propiedad es su propio dueño, para poder mostrarla aunque esté pausada
  * (ver criterio de aceptación #3, BACKEND.md §3) y con lat/lng y contacto
  * reales en vez del punto público.
+ *
+ * BACKEND-AUDITORIA-EDGE-CASES-20082026.md #6: un admin que llega desde
+ * /admin/reportes a una propiedad que el dueño pausó/desactivó (para evadir
+ * la revisión) se topaba con un 404 igual que cualquier visitante — el
+ * endpoint público la sigue ocultando a quien no es el dueño, sea admin o
+ * no. Si el público 404 y la sesión es de un admin, GET
+ * /admin/propiedades/:id (sin el filtro de visibilidad) es el fallback real.
  */
-async function fetchProperty(id: string) {
+async function fetchProperty(id: string, esAdmin: boolean) {
   try {
     const bp = await backendFetchServer<BackendPublicProperty>(
       `/propiedades/${encodeURIComponent(id)}`,
     );
     return mapBackendProperty(bp);
   } catch (err) {
-    if (err instanceof BackendApiError && err.status === 404) return undefined;
-    throw err;
+    if (!(err instanceof BackendApiError) || err.status !== 404) throw err;
+    if (!esAdmin) return undefined;
+
+    try {
+      const bp = await backendFetchServer<BackendPublicProperty>(
+        `/admin/propiedades/${encodeURIComponent(id)}`,
+      );
+      return mapBackendProperty(bp);
+    } catch (adminErr) {
+      if (adminErr instanceof BackendApiError) return undefined;
+      throw adminErr;
+    }
   }
 }
 
@@ -55,7 +73,8 @@ export const revalidate = 60;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const property = await fetchProperty(id);
+  const session = await getSession();
+  const property = await fetchProperty(id, session?.esAdmin ?? false);
   if (property) return buildPropertyMetadata(property);
   return { title: 'Propiedad | Vive Villahermosa' };
 }
@@ -63,7 +82,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PropertyDetailPage({ params, searchParams }: Props) {
   const { id } = await params;
 
-  const property = await fetchProperty(id);
+  const session = await getSession();
+  const property = await fetchProperty(id, session?.esAdmin ?? false);
 
   if (!property) {
     notFound();
