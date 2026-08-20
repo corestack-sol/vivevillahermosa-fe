@@ -25,7 +25,12 @@ export const METODO_CONTACTO_OPTIONS = [
 const baseSchema = z.object({
   tipo:          str('Elige el tipo de propiedad antes de continuar').min(1, 'Elige el tipo de propiedad antes de continuar'),
   operacion:     str('Indica si es venta o renta').min(1, 'Indica si es venta o renta'),
-  precio:        num('Escribe el precio de la propiedad').positive('El precio debe ser mayor a $0'),
+  // Techo de $500 millones MXN — sin tope, un valor absurdo pasaba
+  // validación de cliente y llegaba sin freno a formateo/layout en
+  // cualquier lugar donde se muestra el precio. El servidor es quien de
+  // verdad lo hace cumplir, mismo criterio que LIMITE_PROPIEDADES en
+  // PublishForm.tsx — esto solo evita el caso obvio antes de enviarlo.
+  precio:        num('Escribe el precio de la propiedad').positive('El precio debe ser mayor a $0').max(500_000_000, 'Ese precio parece un error — verifica la cifra'),
   m2Construidos: num('Metros cuadrados inválidos').min(0).optional(),
   m2Terreno:     num('Metros de terreno inválidos').min(0).optional(),
   recamaras:     num('Número de recámaras inválido').min(0).optional(),

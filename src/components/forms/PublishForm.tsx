@@ -165,10 +165,36 @@ export function PublishForm() {
     return () => { cancelado = true; };
   }, []);
 
-  function addFiles(files: FileList | File[]) {
-    const arr = Array.from(files).filter((f) => f.type.startsWith('image/'));
+  // f.type viene del navegador (a veces solo la extensión, no el contenido
+  // real) — un archivo no-imagen renombrado podía pasar este filtro y
+  // luego fallar al decodificar en analizarFoto(), que responde "apta" por
+  // defecto ante cualquier error (fail-open pensado para fallas de red, no
+  // para archivos corruptos/falsos). createImageBitmap() sí valida el
+  // contenido real: si no decodifica, se rechaza aquí, antes de llegar al
+  // análisis de IA.
+  async function addFiles(files: FileList | File[]) {
+    const candidatos = Array.from(files).filter((f) => f.type.startsWith('image/'));
     const slots = MAX_FOTOS - fotos.length;
-    const toAdd = arr.slice(0, slots).map((file) => ({ file, preview: URL.createObjectURL(file), analisis: 'pendiente' as AnalisisFoto }));
+    const porRevisar = candidatos.slice(0, slots);
+
+    const validaciones = await Promise.all(
+      porRevisar.map(async (file) => {
+        try {
+          const bitmap = await createImageBitmap(file);
+          bitmap.close();
+          return { file, valido: true };
+        } catch {
+          return { file, valido: false };
+        }
+      })
+    );
+    const validos = validaciones.filter((v) => v.valido).map((v) => v.file);
+    const rechazados = validaciones.length - validos.length;
+    if (rechazados > 0) {
+      toast.error(`${rechazados} archivo${rechazados !== 1 ? 's' : ''} no ${rechazados !== 1 ? 'son' : 'es'} una imagen válida y no se agregó.`);
+    }
+
+    const toAdd = validos.map((file) => ({ file, preview: URL.createObjectURL(file), analisis: 'pendiente' as AnalisisFoto }));
     setFotos((prev) => [...prev, ...toAdd]);
 
     // Analiza cada foto en paralelo, sin bloquear la UI mientras se agregan
@@ -437,6 +463,12 @@ export function PublishForm() {
     const fotosUrls = resultados
       .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
       .map((r) => r.value);
+    // Antes esto pasaba en silencio: la propiedad se publicaba con menos
+    // fotos de las seleccionadas sin ningún aviso de cuál(es) fallaron.
+    const fotosFallidas = resultados.length - fotosUrls.length;
+    if (fotosFallidas > 0) {
+      toast.error(`${fotosFallidas} foto${fotosFallidas !== 1 ? 's' : ''} no se ${fotosFallidas !== 1 ? 'pudieron' : 'pudo'} subir y se publicará${fotosFallidas !== 1 ? 'n' : ''} sin ella${fotosFallidas !== 1 ? 's' : ''}.`);
+    }
 
     const centro = MUNICIPIO_CENTERS[data.municipio] ?? MUNICIPIO_CENTERS['Centro'];
     const lat = coords?.lat ?? centro[0];
