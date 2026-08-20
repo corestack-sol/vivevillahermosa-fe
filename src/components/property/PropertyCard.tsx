@@ -30,12 +30,16 @@ function formatPrice(precio: number, operacion: 'venta' | 'renta'): string {
 
 /**
  * Rediseño inspirado en src/assets/card2.png — tarjeta-retrato dominada por
- * la imagen (o, sin fotos reales todavía, el color de tipo como sustituto),
- * con un solo texto grande y un botón circular de acción, en vez de un
- * cuerpo blanco separado con lista de specs y una barra de botones.
+ * la primera foto real de la propiedad (o, si no tiene ninguna, el color de
+ * tipo como sustituto), con un solo texto grande y un botón circular de
+ * acción, en vez de un cuerpo blanco separado con lista de specs y una
+ * barra de botones.
  */
 export function PropertyCard({ property, landmarkQuery }: PropertyCardProps) {
   const cfg = getPropertyTypeConfig(property.tipo);
+  const [imgFailed, setImgFailed] = useState(false);
+  const foto = property.fotos[0];
+  const showFoto = !!foto && !imgFailed;
   const [priceCtx, setPriceCtx] = useState<PriceContext | null>(null);
   useEffect(() => {
     let cancelado = false;
@@ -58,13 +62,29 @@ export function PropertyCard({ property, landmarkQuery }: PropertyCardProps) {
       <Link
         href={`/propiedades/${property.slug}${landmarkQuery ?? ''}`}
         className="absolute inset-0 select-none"
-        style={{ background: `linear-gradient(160deg, ${cfg.from} 0%, ${cfg.to} 100%)` }}
+        style={showFoto ? undefined : { background: `linear-gradient(160deg, ${cfg.from} 0%, ${cfg.to} 100%)` }}
       >
-        {/* Sustituto de foto: ícono grande, muy sutil — hasta que haya fotos reales */}
-        <div className="absolute inset-0 flex items-start justify-center pt-10">
-          <cfg.Icon size={84} strokeWidth={1} style={{ color: cfg.accent, opacity: 0.16 }}
-            className="transition-transform duration-500 group-hover:scale-110" />
-        </div>
+        {showFoto ? (
+          // Ahora sí hay fotos reales (subidas a Cloudinary desde
+          // PublishForm) — este componente nunca las mostraba, siempre
+          // caía al sustituto de ícono+color pensado para cuando no
+          // existían. <img>, no next/image: mismo patrón que
+          // PropertyGallery.tsx para contenido de Cloudinary.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={foto}
+            alt=""
+            loading="lazy"
+            onError={() => setImgFailed(true)}
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          /* Sustituto de foto: ícono grande, muy sutil — sin fotos reales */
+          <div className="absolute inset-0 flex items-start justify-center pt-10">
+            <cfg.Icon size={84} strokeWidth={1} style={{ color: cfg.accent, opacity: 0.16 }}
+              className="transition-transform duration-500 group-hover:scale-110" />
+          </div>
+        )}
 
         {/* Velo de color de abajo hacia arriba — el mismo lenguaje que
             card2.png, pero con el tono propio de cada tipo de propiedad
