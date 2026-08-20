@@ -13,7 +13,12 @@ function FooterMinimal() {
   return (
     <footer className="bg-gradient-to-r from-brand-pale/30 via-white to-sand/30 border-t border-brand/15">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-1.5">
-        <p className="text-sm text-brand-dark/70">
+        <p className="flex items-center gap-1.5 text-sm text-brand-dark/70">
+          {/* Crédito de desarrollo, mismo logo que ya usa FooterFull en el
+              link de contacto — pedido explícito 2026-08-20: presente en
+              el footer de cada página que no sea Home. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/icons/corestack-logo.webp" alt="" title="Hecho por CoreStack Solutions" className="h-[15px] w-auto flex-shrink-0" />
           © {new Date().getFullYear()} Vive Villahermosa. Todos los derechos reservados.
         </p>
         <p className="text-sm text-brand/50">
