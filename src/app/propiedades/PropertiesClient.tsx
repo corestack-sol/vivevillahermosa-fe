@@ -168,6 +168,22 @@ export function PropertiesClient({ allProperties }: Props) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
   const searchFormRef = useRef<HTMLFormElement>(null);
+  // Texto tal cual se está escribiendo — antes el input escribía DIRECTO a
+  // filters.q en cada tecleo, y la grilla lo aplicaba en vivo como filtro
+  // literal. Cualquier búsqueda de varias palabras ("propiedades en
+  // comalcalco") mostraba "Sin resultados" mientras se escribía, ANTES de
+  // llegar a Enter/Buscar — que es donde de verdad se interpreta con IA y
+  // sí resuelve bien (confirmado: la misma frase, enviada, encuentra las
+  // 3 propiedades de Comalcalco). Ahora filters.q solo cambia al enviar
+  // (aplicarBusquedaIA) o por una acción externa (sugerencia, reciente,
+  // limpiar) — este estado sincroniza el input con esos cambios externos.
+  const [inputValue, setInputValue] = useState(filters.q ?? '');
+  useEffect(() => {
+    function sincronizarInput() {
+      setInputValue(filters.q ?? '');
+    }
+    sincronizarInput();
+  }, [filters.q]);
   const places = useMemo(() => {
     const set = new Set<string>();
     for (const p of properties) {
@@ -176,7 +192,7 @@ export function PropertiesClient({ allProperties }: Props) {
     }
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'));
   }, [properties]);
-  const q = filters.q ?? '';
+  const q = inputValue;
   const filteredPlaces = q.length >= 2 ? places.filter((s) => s.toLowerCase().includes(q.toLowerCase())).slice(0, 6) : [];
   const showSuggestions = searchOpen && filteredPlaces.length > 0;
   const showRecent = searchOpen && q.length < 2 && recent.length > 0;
@@ -495,14 +511,14 @@ export function PropertiesClient({ allProperties }: Props) {
           <form
             ref={searchFormRef}
             className="flex items-center gap-2 z-20 mb-3"
-            onSubmit={(e) => { e.preventDefault(); setSearchOpen(false); aplicarBusquedaIA(filters.q ?? ''); }}
+            onSubmit={(e) => { e.preventDefault(); setSearchOpen(false); aplicarBusquedaIA(inputValue); }}
           >
             <div className="relative flex-1">
               <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               <input
                 type="text"
-                value={filters.q ?? ''}
-                onChange={(e) => { updateFilters({ q: e.target.value }); setSearchOpen(true); }}
+                value={inputValue}
+                onChange={(e) => { setInputValue(e.target.value); setSearchOpen(true); }}
                 onFocus={() => setSearchOpen(true)}
                 maxLength={MAX_QUERY_LENGTH}
                 placeholder="Buscar por colonia, municipio... o descríbelo"
@@ -510,10 +526,10 @@ export function PropertiesClient({ allProperties }: Props) {
               />
               {buscandoIA ? (
                 <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand animate-spin" />
-              ) : filters.q && (
+              ) : inputValue && (
                 <button
                   type="button"
-                  onClick={() => updateFilters({ q: '' })}
+                  onClick={() => { setInputValue(''); updateFilters({ q: '' }); }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   <X size={14} />
