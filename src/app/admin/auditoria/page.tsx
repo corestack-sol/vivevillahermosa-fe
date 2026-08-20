@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { formatRelativeDate } from '@/lib/format';
 import { backendFetch } from '@/lib/backendApi';
 import { TableSkeleton } from '@/components/ui/Skeleton';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface Accion {
   id: string;
@@ -27,18 +28,37 @@ const ACCION_LABEL: Record<string, string> = {
 
 export default function AdminAuditoriaPage() {
   const [acciones, setAcciones] = useState<Accion[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(20);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    backendFetch<Accion[]>('/admin/auditoria')
-      .then((acciones) => setAcciones(acciones ?? []))
-      .finally(() => setLoading(false));
-  }, []);
+  // BACKEND-AUDITORIA-EDGE-CASES-20082026.md #8: GET /admin/auditoria pasó
+  // de un array plano con techo fijo de 200 a { acciones, total, page,
+  // perPage } paginado de verdad — antes esta página truena con ".map is
+  // not a function" porque seguía esperando el array plano.
+  const cargar = useCallback(async () => {
+    setLoading(true);
+    const data = await backendFetch<{
+      acciones: Accion[];
+      total: number;
+      page: number;
+      perPage: number;
+    }>(`/admin/auditoria?page=${page}`);
+    setAcciones(data.acciones ?? []);
+    setTotal(data.total ?? 0);
+    setPerPage(data.perPage ?? 20);
+    setLoading(false);
+  }, [page]);
+
+  useEffect(() => { function cargarInicial() { cargar(); } cargarInicial(); }, [cargar]);
+
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
 
   return (
     <div>
       <h1 className="text-2xl font-heading font-bold text-gray-900 mb-1">Auditoría</h1>
-      <p className="text-gray-500 text-sm mb-6">Registro de cada acción tomada desde este panel — quién, qué y sobre qué. Últimas 200.</p>
+      <p className="text-gray-500 text-sm mb-6">Registro de cada acción tomada desde este panel — quién, qué y sobre qué. {total} acci{total !== 1 ? 'ones' : 'ón'} en total.</p>
 
       {loading ? (
         <TableSkeleton headers={['Admin', 'Acción', 'Objetivo', 'Detalle', 'Fecha']} />
@@ -75,6 +95,10 @@ export default function AdminAuditoriaPage() {
           </div>
         </div>
       )}
+
+      <div className="mt-6">
+        <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      </div>
     </div>
   );
 }
