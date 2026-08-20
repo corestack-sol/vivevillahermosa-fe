@@ -6,7 +6,7 @@ import { ChevronRight, MapPin, Zap, TrendingUp, Map as MapIcon, Building2 } from
 import { getAllZones, getAllMunicipalities, getAllProperties, getZonesWithLiveStats, getMunicipalitiesWithLiveStats } from '@/lib/api';
 import { buildZoneMetadata } from '@/lib/seo';
 import { PropertyCard } from '@/components/property/PropertyCard';
-import { MapViewDynamic } from '@/components/map/MapViewDynamic';
+import { ZoneMap } from '@/components/map/ZoneMap';
 import { formatPrice } from '@/lib/format';
 import { obtenerLandmarksBackend, distanciaKm } from '@/lib/landmarks';
 import { detectarRiesgoInundacion } from '@/lib/zonas-inundacion';
@@ -143,8 +143,11 @@ export default async function ZonaDetailPage({ params }: Props) {
   const markers = zoneProperties.map((p) => ({
     id: p.id,
     slug: p.slug,
-    lat: p.lat,
-    lng: p.lng,
+    // latPublico/lngPublico (enmascaradas), no lat/lng reales — mismo
+    // criterio de privacidad que /mapa (MapaClient.tsx), este mapa se
+    // había quedado con las coordenadas exactas sin la máscara.
+    lat: p.latPublico,
+    lng: p.lngPublico,
     titulo: p.titulo,
     precio: p.precio,
     operacion: p.operacion,
@@ -271,7 +274,7 @@ export default async function ZonaDetailPage({ params }: Props) {
                   explícito 2026-08-19: "no quiero que se vea nada... mas
                   que el solo mapa". `center`/`zoom` ya posicionan el mapa
                   sin necesitar un marcador falso. */}
-              <MapViewDynamic markers={markers} center={[lat, lng]} zoom={isMunicipality ? 12 : 14} />
+              <ZoneMap markers={markers} center={[lat, lng]} zoom={isMunicipality ? 12 : 14} />
             </div>
           </div>
         </div>
