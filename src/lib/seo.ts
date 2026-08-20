@@ -7,6 +7,24 @@ const SITE_NAME = 'Vive Villahermosa';
 const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://vivevillahermosa.mx';
 const DEFAULT_OG = `${SITE_URL}/images/og-default.jpg`;
 
+/**
+ * `JSON.stringify` no escapa `<` — un título/descripción con
+ * `</script><script>...` dentro de un bloque JSON-LD inyectado vía
+ * `dangerouslySetInnerHTML` cierra el `<script>` y ejecuta HTML/JS
+ * arbitrario para cualquier visitante (XSS almacenado, sin necesitar
+ * sesión ni bypassear ningún formulario — basta con llamar al API
+ * directo). Técnica estándar: escapar `<`, `>` y `&` a su secuencia
+ * unicode antes de inyectar — sigue siendo JSON válido para
+ * `application/ld+json`, pero ya no puede cerrar la etiqueta que lo
+ * contiene.
+ */
+export function safeJsonLdString(data: unknown): string {
+  return JSON.stringify(data)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+}
+
 export function buildPropertyMetadata(property: Property): Metadata {
   const title = `${property.titulo} — ${formatPrice(property.precio, property.operacion)} | ${SITE_NAME}`;
   const description = `${property.descripcion.substring(0, 155)}...`;

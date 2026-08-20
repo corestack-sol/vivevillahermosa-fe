@@ -241,6 +241,12 @@ export function PublishForm() {
   });
 
   const tipo        = watch('tipo');
+  // local/oficina/bodega/habitacion no tienen "recámaras" — un espacio
+  // comercial o un cuarto individual no se describen en número de cuartos.
+  // terreno se queda incluido: puede tener una casa ya construida encima
+  // (mismo criterio que ya justifica dejar m² construidos/baños visibles
+  // ahí, ver el step de Detalles más abajo).
+  const tipoConRecamaras = tipo === 'casa' || tipo === 'departamento' || tipo === 'terreno';
   const colonia     = watch('colonia');
   const municipio   = watch('municipio');
   const descripcion = watch('descripcion');
@@ -277,6 +283,14 @@ export function PublishForm() {
       setValue('riesgoInundacion', undefined as unknown as 'alto' | 'medio' | 'bajo');
     }
   }
+
+  // Si el campo de recámaras queda oculto (tipo cambia a uno comercial),
+  // limpia el valor — sin esto, un número cargado con un tipo anterior
+  // (ej. "3" con "casa") seguía viajando escondido al submit tras cambiar
+  // a "local".
+  useEffect(() => {
+    if (!tipoConRecamaras) setValue('recamaras', 0);
+  }, [tipoConRecamaras, setValue]);
 
   // Text detection from colony name — GPS coords se guardan con la propiedad
   // pero no se usan para clasificar riesgo hasta tener shapefiles oficiales de IMPLAN.
@@ -696,10 +710,20 @@ export function PublishForm() {
                 Si el terreno ya tiene una construcción (ej. una casa, con el resto del lote disponible), indícalo aquí. Si está vacío, déjalo en 0.
               </p>
             )}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Recámaras no aplica a un tipo comercial (local/oficina/bodega
+                no tienen "cuartos") — antes se mostraba para cualquier
+                tipo, incluido local, sin ningún sentido. Se queda visible
+                para terreno por la misma razón que ya justifica m²
+                construidos/baños ahí arriba: puede tener una casa
+                construida encima. */}
+            {tipoConRecamaras ? (
+              <div className="grid grid-cols-2 gap-3">
+                <Input label="m² construidos" type="number" placeholder="0" {...register('m2Construidos', { valueAsNumber: true })} />
+                <Input label="Recámaras" type="number" placeholder="0" {...register('recamaras', { valueAsNumber: true })} />
+              </div>
+            ) : (
               <Input label="m² construidos" type="number" placeholder="0" {...register('m2Construidos', { valueAsNumber: true })} />
-              <Input label="Recámaras" type="number" placeholder="0" {...register('recamaras', { valueAsNumber: true })} />
-            </div>
+            )}
             <Input label="Baños" type="number" placeholder="0" {...register('banos', { valueAsNumber: true })} />
             {watch('operacion') === 'renta' && (
               <div className="pt-1">

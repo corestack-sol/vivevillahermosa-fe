@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { SlidersHorizontal, X, Map, LayoutGrid, Search, ChevronDown, Loader2, Sparkles, MapPin, Clock, Info } from 'lucide-react';
 import type { Property, PropertyType, OperationType } from '@/types/property';
@@ -49,7 +50,7 @@ const MAP_TYPE_CHIPS: { value: PropertyType | ''; label: string }[] = [
   { value: 'departamento', label: 'Depto'    },
   { value: 'terreno',      label: 'Terreno'  },
   { value: 'local',        label: 'Local'    },
-  { value: 'habitacion',   label: 'Cuarto'   },
+  { value: 'habitacion',   label: 'Habitación' },
 ];
 
 const MAP_OP_CHIPS: { value: OperationType | ''; label: string }[] = [
@@ -167,6 +168,22 @@ export function PropertiesClient({ allProperties }: Props) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
   const searchFormRef = useRef<HTMLFormElement>(null);
+  // Texto tal cual se está escribiendo — antes el input escribía DIRECTO a
+  // filters.q en cada tecleo, y la grilla lo aplicaba en vivo como filtro
+  // literal. Cualquier búsqueda de varias palabras ("propiedades en
+  // comalcalco") mostraba "Sin resultados" mientras se escribía, ANTES de
+  // llegar a Enter/Buscar — que es donde de verdad se interpreta con IA y
+  // sí resuelve bien (confirmado: la misma frase, enviada, encuentra las
+  // 3 propiedades de Comalcalco). Ahora filters.q solo cambia al enviar
+  // (aplicarBusquedaIA) o por una acción externa (sugerencia, reciente,
+  // limpiar) — este estado sincroniza el input con esos cambios externos.
+  const [inputValue, setInputValue] = useState(filters.q ?? '');
+  useEffect(() => {
+    function sincronizarInput() {
+      setInputValue(filters.q ?? '');
+    }
+    sincronizarInput();
+  }, [filters.q]);
   const places = useMemo(() => {
     const set = new Set<string>();
     for (const p of properties) {
@@ -175,7 +192,7 @@ export function PropertiesClient({ allProperties }: Props) {
     }
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'));
   }, [properties]);
-  const q = filters.q ?? '';
+  const q = inputValue;
   const filteredPlaces = q.length >= 2 ? places.filter((s) => s.toLowerCase().includes(q.toLowerCase())).slice(0, 6) : [];
   const showSuggestions = searchOpen && filteredPlaces.length > 0;
   const showRecent = searchOpen && q.length < 2 && recent.length > 0;
@@ -408,7 +425,7 @@ export function PropertiesClient({ allProperties }: Props) {
             <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-display font-black text-gray-900 leading-tight" style={{ letterSpacing: '-0.02em' }}>
                 {buildTitle(filters)}
-                {!isLoading && (
+                {!isLoading && !buscandoIA && (
                   <span className="ml-2 text-sm font-semibold text-gray-400 align-middle">
                     ({total})
                   </span>
@@ -419,9 +436,13 @@ export function PropertiesClient({ allProperties }: Props) {
                   isLoading, así que su aparición/desaparición cambiaba la
                   altura del header y empujaba todo lo de abajo (el mapa
                   incluido) — el "salto" reportado 2026-08-17 al pulsar un
-                  chip de filtro en modo mapa. */}
+                  chip de filtro en modo mapa. También se muestra durante
+                  buscandoIA (la interpretación de texto libre puede tardar
+                  varios segundos) — antes, con resultados ya visibles en
+                  pantalla, el único indicador de que algo pasaba era el
+                  spinner de 14px dentro del input, fácil de pasar por alto. */}
               <p className="text-xs text-gray-400 mt-0.5 h-4 flex items-center gap-1.5">
-                {isLoading && <><Loader2 size={11} className="animate-spin" /> Buscando...</>}
+                {(isLoading || buscandoIA) && <><Loader2 size={11} className="animate-spin" /> Buscando...</>}
               </p>
             </div>
 
@@ -489,65 +510,79 @@ export function PropertiesClient({ allProperties }: Props) {
               el DOM) podía pintarse encima del dropdown. */}
           <form
             ref={searchFormRef}
-            className="relative z-20 mb-3"
-            onSubmit={(e) => { e.preventDefault(); setSearchOpen(false); aplicarBusquedaIA(filters.q ?? ''); }}
+            className="flex items-center gap-2 z-20 mb-3"
+            onSubmit={(e) => { e.preventDefault(); setSearchOpen(false); aplicarBusquedaIA(inputValue); }}
           >
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <input
-              type="text"
-              value={filters.q ?? ''}
-              onChange={(e) => { updateFilters({ q: e.target.value }); setSearchOpen(true); }}
-              onFocus={() => setSearchOpen(true)}
-              maxLength={MAX_QUERY_LENGTH}
-              placeholder="Buscar por colonia, municipio... o descríbelo y presiona Enter"
-              className="w-full pl-9 pr-4 py-2.5 text-base sm:text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand focus:bg-white transition-colors placeholder-gray-400 text-gray-800"
-            />
-            {buscandoIA ? (
-              <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand animate-spin" />
-            ) : filters.q && (
-              <button
-                type="button"
-                onClick={() => updateFilters({ q: '' })}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X size={14} />
-              </button>
-            )}
+            <div className="relative flex-1">
+              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => { setInputValue(e.target.value); setSearchOpen(true); }}
+                onFocus={() => setSearchOpen(true)}
+                maxLength={MAX_QUERY_LENGTH}
+                placeholder="Buscar por colonia, municipio... o descríbelo"
+                className="w-full pl-9 pr-9 py-2.5 text-base sm:text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand focus:bg-white transition-colors placeholder-gray-400 text-gray-800"
+              />
+              {buscandoIA ? (
+                <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand animate-spin" />
+              ) : inputValue && (
+                <button
+                  type="button"
+                  onClick={() => { setInputValue(''); updateFilters({ q: '' }); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={14} />
+                </button>
+              )}
 
-            {(showSuggestions || showRecent) && (
-              <ul className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden z-30">
-                {showSuggestions && filteredPlaces.map((s) => (
-                  <li key={s}>
-                    <button type="button" onClick={() => handleSuggestionClick(s)}
-                      className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors">
-                      <MapPin size={13} className="text-gray-400 flex-shrink-0" />
-                      {s}
-                    </button>
-                  </li>
-                ))}
-
-                {showRecent && (
-                  <>
-                    <li className="flex items-center justify-between px-5 pt-3 pb-1.5">
-                      <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Búsquedas recientes</span>
-                      <button type="button" onClick={handleClearRecent}
-                        className="flex items-center gap-1 text-xs text-gray-300 hover:text-red-500 transition-colors">
-                        <X size={11} /> Borrar
+              {(showSuggestions || showRecent) && (
+                <ul className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden z-30">
+                  {showSuggestions && filteredPlaces.map((s) => (
+                    <li key={s}>
+                      <button type="button" onClick={() => handleSuggestionClick(s)}
+                        className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors">
+                        <MapPin size={13} className="text-gray-400 flex-shrink-0" />
+                        {s}
                       </button>
                     </li>
-                    {recent.map((s) => (
-                      <li key={s}>
-                        <button type="button" onClick={() => handleRecentClick(s)}
-                          className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors">
-                          <Clock size={13} className="text-gray-400 flex-shrink-0" />
-                          {s}
+                  ))}
+
+                  {showRecent && (
+                    <>
+                      <li className="flex items-center justify-between px-5 pt-3 pb-1.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Búsquedas recientes</span>
+                        <button type="button" onClick={handleClearRecent}
+                          className="flex items-center gap-1 text-xs text-gray-300 hover:text-red-500 transition-colors">
+                          <X size={11} /> Borrar
                         </button>
                       </li>
-                    ))}
-                  </>
-                )}
-              </ul>
-            )}
+                      {recent.map((s) => (
+                        <li key={s}>
+                          <button type="button" onClick={() => handleRecentClick(s)}
+                            className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors">
+                            <Clock size={13} className="text-gray-400 flex-shrink-0" />
+                            {s}
+                          </button>
+                        </li>
+                      ))}
+                    </>
+                  )}
+                </ul>
+              )}
+            </div>
+
+            {/* Antes solo se podía buscar con Enter — sin ningún botón
+                visible, no era obvio que el input disparaba una búsqueda
+                real (mismo patrón que ya tiene SearchBar.tsx en Home). */}
+            <button
+              type="submit"
+              disabled={buscandoIA}
+              className="flex-shrink-0 flex items-center gap-1.5 bg-brand hover:bg-brand-dark text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors disabled:opacity-70"
+            >
+              {buscandoIA ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+              <span className="hidden sm:inline">Buscar</span>
+            </button>
           </form>
 
           {/* Row 3: Active filters */}
@@ -735,9 +770,11 @@ export function PropertiesClient({ allProperties }: Props) {
                   </div>
                 ) : results.length === 0 ? (
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center py-16 px-6">
-                    <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mb-4">
-                      <Search size={28} className="text-gray-300" strokeWidth={1.5} />
-                    </div>
+                    {/* Mismo criterio que not-found.tsx: un solo mascota de
+                        "esto no está/no se encontró" en toda la plataforma
+                        en vez de un ícono genérico — pedido explícito
+                        2026-08-20. */}
+                    <Image src="/images/icons/sin-resultados.webp" alt="" width={166} height={98} className="mb-3" />
                     <h3 className="font-heading font-bold text-gray-800 text-lg mb-2 text-center">
                       {esBusquedaSinInterpretar(filters) ? 'No pudimos interpretar tu búsqueda' : 'Sin resultados'}
                     </h3>

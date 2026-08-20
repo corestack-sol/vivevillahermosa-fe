@@ -229,7 +229,7 @@ export default function MisPropiedadesPage() {
       </div>
 
       {/* Filtros por estado */}
-      <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1">
+      <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {FILTERS.map((f) => (
           <button
             key={f.value}
