@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, Images } from 'lucide-react';
 import type { PropertyType } from '@/types/property';
 import { getPropertyTypeConfig } from '@/lib/propertyTypeConfig';
+import { Carousel } from '@/components/ui/Carousel';
 
 interface PropertyGalleryProps {
   fotos: string[];
@@ -144,21 +145,23 @@ export function PropertyGallery({ fotos, titulo, tipo }: PropertyGalleryProps) {
 
         {/* Thumbnail strip */}
         {total > 1 && (
-          <div className="flex gap-1.5 p-2 bg-gray-50 border-t border-gray-100 overflow-x-auto">
-            {Array.from({ length: total }).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setActive(i)}
-                className={`relative flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden transition-all ${
-                  i === active
-                    ? 'ring-2 ring-brand ring-offset-1 opacity-100'
-                    : 'opacity-50 hover:opacity-80'
-                }`}
-                aria-label={`Foto ${i + 1}`}
-              >
-                <Photo src={fotos[i]} tipo={tipo} alt={`${titulo} — foto ${i + 1}`} />
-              </button>
-            ))}
+          <div className="bg-gray-50 border-t border-gray-100">
+            <Carousel fadeFrom="from-gray-50" fadeWidth="w-8" showArrows={false} trackClassName="gap-1.5 p-2">
+              {Array.from({ length: total }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActive(i)}
+                  className={`relative flex-shrink-0 w-16 h-12 rounded-lg overflow-hidden transition-all ${
+                    i === active
+                      ? 'ring-2 ring-brand ring-offset-1 opacity-100'
+                      : 'opacity-50 hover:opacity-80'
+                  }`}
+                  aria-label={`Foto ${i + 1}`}
+                >
+                  <Photo src={fotos[i]} tipo={tipo} alt={`${titulo} — foto ${i + 1}`} />
+                </button>
+              ))}
+            </Carousel>
           </div>
         )}
       </div>
@@ -228,7 +231,7 @@ export function PropertyGallery({ fotos, titulo, tipo }: PropertyGalleryProps) {
             </p>
 
             {total > 1 && (
-              <div className="flex gap-2 overflow-x-auto max-w-full px-1">
+              <Carousel fadeFrom="from-black" fadeWidth="w-10" showArrows={false} dark className="max-w-full" trackClassName="gap-2 px-1">
                 {Array.from({ length: total }).map((_, i) => (
                   <button
                     key={i}
@@ -243,7 +246,7 @@ export function PropertyGallery({ fotos, titulo, tipo }: PropertyGalleryProps) {
                     <Photo src={fotos[i]} tipo={tipo} alt={`Miniatura ${i + 1}`} />
                   </button>
                 ))}
-              </div>
+              </Carousel>
             )}
           </div>
         </div>

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { getAllProperties } from '@/lib/api';
 import { getRecentlyViewedIds } from '@/lib/recentlyViewed';
 import { PropertyCard } from './PropertyCard';
+import { Carousel } from '@/components/ui/Carousel';
 import type { Property } from '@/types/property';
 
 interface RecentlyViewedSectionProps {
@@ -53,9 +54,16 @@ export function RecentlyViewedSection({ excludeId, limit = 4 }: RecentlyViewedSe
           Ver todas <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
         </Link>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {properties.map((p) => <PropertyCard key={p.id} property={p} />)}
-      </div>
+      <Carousel
+        trackClassName="gap-4 pb-1"
+        desktopGridClassName="lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:snap-none"
+      >
+        {properties.map((p) => (
+          <div key={p.id} className="flex-shrink-0 w-[72%] sm:w-[42%] snap-start lg:w-auto">
+            <PropertyCard property={p} />
+          </div>
+        ))}
+      </Carousel>
     </section>
   );
 }

@@ -10,6 +10,7 @@ import { getFeaturedProperties, getAllProperties, getColoniasOrdenadasPorDemanda
 import { buttonClasses } from '@/components/ui/Button';
 import { RecentlyViewedSection } from '@/components/property/RecentlyViewedSection';
 import { PropertyCard } from '@/components/property/PropertyCard';
+import { Carousel } from '@/components/ui/Carousel';
 // ⚠️ PlanesInmobiliaria oculto a propósito (ver docs/BACKEND.md, sección
 // "V2.A — Panel profesional para inmobiliarias", nota sobre la página de
 // precios): esta sección promete "Anuncios destacados en el catálogo" y
@@ -283,9 +284,20 @@ export default async function HomePage() {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {featured.slice(0, 8).map((p) => <PropertyCard key={p.id} property={p} />)}
-          </div>
+          {/* Carrusel deslizable en móvil/tablet (evita una lista larga de
+              4 columnas apiladas en 1, mucho scroll vertical) — grid
+              estático desde lg:, donde ya hay ancho de sobra para verlas
+              todas sin scroll horizontal. Pedido explícito 2026-08-20. */}
+          <Carousel
+            trackClassName="gap-4 pb-1"
+            desktopGridClassName="lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:snap-none"
+          >
+            {featured.slice(0, 8).map((p) => (
+              <div key={p.id} className="flex-shrink-0 w-[72%] sm:w-[42%] snap-start lg:w-auto">
+                <PropertyCard property={p} />
+              </div>
+            ))}
+          </Carousel>
         </section>
       )}
 
