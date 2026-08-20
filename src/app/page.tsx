@@ -427,6 +427,7 @@ export default async function HomePage() {
                       <Flame size={15} className="text-amber-400 animate-flame" strokeWidth={2} />
                       <span aria-hidden="true" className="absolute -top-0.5 right-0 w-1 h-1 rounded-full bg-amber-300 animate-spark" />
                       <span aria-hidden="true" className="absolute -top-0.5 right-0.5 w-1 h-1 rounded-full bg-amber-200 animate-spark [animation-delay:0.4s]" />
+                      <span aria-hidden="true" className="absolute top-0 left-0.5 w-1 h-1 rounded-full bg-amber-200/80 animate-spark-slow" />
                     </span>
                   )}
                 </div>
