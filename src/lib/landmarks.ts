@@ -70,10 +70,17 @@ let cargaIniciada = false;
  * catálogo estuviera vacío hasta que sí cargue, ninguna búsqueda se rompe ni
  * espera por esto.
  */
-export function precargarLandmarks(): void {
-  if (cargaIniciada || typeof window === 'undefined') return;
+// Devuelve la promesa (antes era `void`) — `landmarksCache` es una
+// variable de módulo, no estado de React, así que nada vuelve a renderizar
+// solo porque este fetch resolvió. Quien necesite reaccionar cuando
+// termine (ver PropertiesClient.tsx, bug real 2026-08-20: un filtro
+// "cerca de X" podía correr antes de que esto cargara) puede engancharse
+// a este promise; los llamados fire-and-forget existentes siguen
+// funcionando igual, simplemente ignoran el valor de retorno.
+export function precargarLandmarks(): Promise<void> {
+  if (cargaIniciada || typeof window === 'undefined') return Promise.resolve();
   cargaIniciada = true;
-  backendFetch<Landmark[]>('/landmarks')
+  return backendFetch<Landmark[]>('/landmarks')
     .then((data) => { landmarksCache = data; })
     .catch(() => { /* silencioso — se sigue intentando en la próxima carga de página */ });
 }

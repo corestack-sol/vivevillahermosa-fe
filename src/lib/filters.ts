@@ -120,9 +120,18 @@ export function applyFilters(properties: Property[], filters: SearchFilters): Pr
     // colonia, así que buscarlo como texto siempre daría cero resultados
     // aunque la propiedad esté literalmente enfrente.
     const landmark = getLandmark(filters.landmark);
-    if (landmark) {
-      result = result.filter((p) => distanciaKm(p.lat, p.lng, landmark.lat, landmark.lng) <= landmark.radioKm);
-    }
+    // Bug real reportado 2026-08-20: "cerca del hospital rovirosa" devolvía
+    // una propiedad a 48km — el catálogo de landmarks se carga async
+    // (precargarLandmarks, fire-and-forget) y si la búsqueda corre antes de
+    // que termine, getLandmark() no encuentra nada. Antes, sin `landmark`
+    // el filtro simplemente no se aplicaba (`if (landmark) {...}` sin
+    // `else`), así que la lista completa sin filtrar pasaba como si fuera
+    // "cerca de" el lugar. Nunca hay que mostrar todo como si estuviera
+    // verificado cuando en realidad no se pudo verificar nada — vacío es
+    // el resultado honesto, no todo el catálogo.
+    result = landmark
+      ? result.filter((p) => distanciaKm(p.lat, p.lng, landmark.lat, landmark.lng) <= landmark.radioKm)
+      : [];
   } else if (filters.categoriaLandmark) {
     // "Cerca de un hospital" sin nombrar cuál — distancia al más cercano de
     // todos los landmarks catalogados en esa categoría. Se ignora si ya hay

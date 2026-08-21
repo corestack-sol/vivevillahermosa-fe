@@ -120,7 +120,12 @@ export function PropertiesClient({ allProperties }: Props) {
   // `allProperties` ya viene fresco del backend (ver propiedades/page.tsx)
   // — ya no hace falta fusionarlo con ninguna simulación local.
   const properties = allProperties;
-  const { results, allResults, total, hasMore, loadMore, isLoading } = useSearch(properties, filters);
+  // Se declaran aquí (antes de useSearch) porque se le pasan como extraDeps
+  // — ver el efecto más abajo que los llena, junto a precargarColonias
+  // Descubiertas()/precargarLandmarks().
+  const [coloniasReady, setColoniasReady] = useState(false);
+  const [landmarksReady, setLandmarksReady] = useState(false);
+  const { results, allResults, total, hasMore, loadMore, isLoading } = useSearch(properties, filters, [coloniasReady, landmarksReady]);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [buscandoIA, setBuscandoIA] = useState(false);
@@ -242,13 +247,15 @@ export function PropertiesClient({ allProperties }: Props) {
   // buscarColoniaEnTexto solo conocerían las 70 del catálogo estático hasta
   // el próximo refresh completo. No bloquea nada: si tarda o falla, la
   // búsqueda sigue funcionando igual con lo que ya había.
-  useEffect(() => { precargarColoniasDescubiertas(); }, []);
-
-  // Mismo patrón que arriba, pero para el catálogo de landmarks — migrado al
-  // backend 2026-08-17 (docs/message.txt). Sin esto, getLandmark/
-  // landmarksPorCategoria (ActiveFilters.tsx, filters.ts) se quedan con el
-  // cache vacío hasta que esto cargue; no bloquea ninguna búsqueda.
-  useEffect(() => { precargarLandmarks(); }, []);
+  // `coloniasReady`/`landmarksReady` se pasan a useSearch (extraDeps) para
+  // que el filtro se reevalúe en cuanto cada catálogo termine de cargar —
+  // sin esto, una búsqueda que llega ya con `?cerca=...`/`?colonia=...` en
+  // la URL (ej. desde el buscador de Home) podía correr ANTES de que el
+  // catálogo real cargara, con el cache todavía vacío. Bug real reportado
+  // 2026-08-20 ("cerca del hospital rovirosa" devolvía una propiedad a
+  // 48km — la primera pasada corrió con landmarksCache vacío).
+  useEffect(() => { precargarColoniasDescubiertas().then(() => setColoniasReady(true)); }, []);
+  useEffect(() => { precargarLandmarks().then(() => setLandmarksReady(true)); }, []);
 
   // Aviso de un solo uso cuando se llega desde el buscador de Home
   // (SearchBar.tsx) con una búsqueda que la IA no pudo interpretar en nada

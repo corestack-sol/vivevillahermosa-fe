@@ -317,10 +317,13 @@ interface ColoniaDescubiertaBackend {
  * abajo siguen funcionando igual, solo sin las colonias descubiertas más
  * recientes hasta que sí cargue.
  */
-export function precargarColoniasDescubiertas(): void {
-  if (cargaIniciada || typeof window === 'undefined') return;
+// Devuelve la promesa (antes era `void`) — mismo motivo que
+// precargarLandmarks() en landmarks.ts: quien necesite reaccionar cuando
+// termine puede engancharse; los fire-and-forget existentes no cambian.
+export function precargarColoniasDescubiertas(): Promise<void> {
+  if (cargaIniciada || typeof window === 'undefined') return Promise.resolve();
   cargaIniciada = true;
-  backendFetch<ColoniaDescubiertaBackend[]>('/colonias/descubiertas')
+  return backendFetch<ColoniaDescubiertaBackend[]>('/colonias/descubiertas')
     .then((data) => {
       coloniasDescubiertasCache = data.map((c) => ({
         key: c.key,
