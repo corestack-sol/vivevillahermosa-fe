@@ -50,7 +50,12 @@ export default function MisPropiedadesPage() {
   // 2026-08-20 ("no para cualquier usuario").
   const esProfesional = !!user && user.rol === 'inmobiliaria';
   const toast = useToast();
-  const perfil = usePerfilInmobiliaria(true);
+  // Antes se llamaba con `true` fijo — pegaba a /perfil-inmobiliaria para
+  // cualquier cuenta (particular/profesional/agente incluidas) aunque el
+  // dato solo se usa en descargarReporte(), que ya está detrás de
+  // `esProfesional` más abajo. Panel profesional es solo para
+  // inmobiliarias — pedido explícito 2026-08-20.
+  const perfil = usePerfilInmobiliaria(esProfesional);
   const [filter, setFilter] = useState<FiltroEstado>('todas');
   const [items, setItems] = useState<MiPropiedad[]>([]);
   // Sin esto, `items` arrancaba en [] y la página mostraba "no tienes
