@@ -510,7 +510,7 @@ export function PropertiesClient({ allProperties }: Props) {
               el DOM) podía pintarse encima del dropdown. */}
           <form
             ref={searchFormRef}
-            className="flex items-center gap-2 z-20 mb-3"
+            className="relative flex items-center gap-2 z-20 mb-3"
             onSubmit={(e) => { e.preventDefault(); setSearchOpen(false); aplicarBusquedaIA(inputValue); }}
           >
             <div className="relative flex-1">
