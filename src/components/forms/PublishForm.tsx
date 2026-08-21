@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useForm } from 'react-hook-form';
@@ -24,7 +24,7 @@ import { TermsModal } from './TermsModal';
 import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import posthog from 'posthog-js';
-import { matchColonia, distanciaKm } from '@/lib/colonias';
+import { matchColonia, distanciaKm, precargarColoniasDescubiertas } from '@/lib/colonias';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { resizeImageToDataUrl } from '@/lib/imageResize';
 import {
@@ -276,7 +276,21 @@ export function PublishForm() {
   // "no pudimos verificar" que "está mal"). 3km es generoso a propósito:
   // una colonia es un área, no un punto, así que solo se avisa cuando la
   // distancia ya no se explica por eso.
-  const coloniaVerificada = colonia ? matchColonia(colonia) : undefined;
+  // /publicar (a diferencia de /propiedades y /mapa) nunca disparaba la
+  // precarga del catálogo de colonias descubiertas dinámicamente
+  // (coloniasDescubiertasCache, colonias.ts) — quien llega directo aquí
+  // (el caso normal, "Publicar gratis") sin haber visitado antes /propiedades
+  // en la misma sesión se quedaba SIEMPRE sin poder verificar ninguna
+  // colonia fuera del catálogo estático de 70, no solo por una carrera de
+  // tiempos. Auditoría sitewide 2026-08-20 del mismo bug de fondo ya
+  // corregido en filters.ts/PropertiesClient.tsx/MapaClient.tsx.
+  const [coloniasReady, setColoniasReady] = useState(false);
+  useEffect(() => { precargarColoniasDescubiertas().then(() => setColoniasReady(true)); }, []);
+
+  const coloniaVerificada = useMemo(
+    () => (colonia ? matchColonia(colonia) : undefined),
+    [colonia, coloniasReady], // eslint-disable-line react-hooks/exhaustive-deps
+  );
   const distanciaPinColonia = coords && coloniaVerificada
     ? distanciaKm(coords.lat, coords.lng, coloniaVerificada.lat, coloniaVerificada.lng)
     : null;
