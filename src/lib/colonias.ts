@@ -88,9 +88,29 @@ export const RADIO_COLONIA_KM = 1.3;
  */
 export const COLONIAS_COORDS: ColoniaCoord[] = [
   // Ya verificadas en src/data/zones.json — mismas coordenadas, no se
-  // vuelven a geocodificar.
+  // vuelven a geocodificar. `tabasco-2000` confirmada dentro de tolerancia
+  // normal (~1.5km vs Nominatim) al reverificar el lote por el bug de
+  // 'gaviotas-norte' de abajo — no es el mismo lote el que arrastra el
+  // error, son entradas puntuales.
   { key: 'tabasco-2000', label: 'Tabasco 2000', municipio: 'Centro', lat: 17.9994, lng: -92.9316, radioKm: RADIO_COLONIA_KM },
-  { key: 'gaviotas-norte', label: 'Gaviotas Norte', municipio: 'Centro', lat: 18.0141, lng: -92.9312, radioKm: RADIO_COLONIA_KM },
+  // Corregida 2026-08-21 — reporte real: pin puesto en el centro visible
+  // de la colonia en el mapa marcaba "a 4km de Gaviotas Norte". El valor
+  // viejo (18.0141, -92.9312) resultó estar ~3.9km del punto real
+  // (confirmado vía Nominatim: "Colonia Gaviotas Norte", único resultado
+  // sin sufijo de sector, sin ambigüedad — a diferencia de Gaviotas Sur,
+  // ver comentario ahí abajo).
+  { key: 'gaviotas-norte', label: 'Gaviotas Norte', municipio: 'Centro', lat: 17.9811, lng: -92.9195, radioKm: RADIO_COLONIA_KM },
+  // ⚠️ Verificado 2026-08-21 junto con 'gaviotas-norte' de arriba — este
+  // valor (18.0089, -92.9278) también cae ~3.8km del cluster real en
+  // Nominatim, mismo tipo de error. A diferencia de Gaviotas Norte, NO hay
+  // un "Colonia Gaviotas Sur" sin sufijo en OSM — solo 3 variantes con
+  // sector ("Sector El Monal I/II", "Sector San José", lat 17.97-17.98,
+  // lng -92.90/-92.92), sin que ninguna sea claramente "la" colonia
+  // completa. Se deja el valor viejo sin tocar a propósito — corregirlo a
+  // ciegas eligiendo un sector arbitrario sería el mismo tipo de error que
+  // esto está arreglando. Necesita la misma verificación de dos fuentes
+  // independientes que ya exige el resto de este archivo antes de
+  // cambiarse.
   { key: 'gaviotas-sur', label: 'Gaviotas Sur', municipio: 'Centro', lat: 18.0089, lng: -92.9278, radioKm: RADIO_COLONIA_KM },
   { key: 'framboyanes', label: 'Framboyanes', municipio: 'Centro', lat: 18.0056, lng: -92.9288, radioKm: RADIO_COLONIA_KM },
   // "Sector Carrizal" — DISTINTO de "Fraccionamiento Carrizal" más abajo
