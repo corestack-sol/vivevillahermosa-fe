@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Building2, Pencil, Trash2, Play, Pause, Archive, Star, ArrowRight } from 'lucide-react';
+import { Building2, Pencil, Trash2, Play, Pause, Archive, Star, ArrowRight, MapPin } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
@@ -33,7 +33,7 @@ interface MiaBackend {
  * muestra ni localStorage. Mismas acciones que /dashboard/propiedades, para
  * no tener que salir de la ficha pública para gestionarla.
  */
-export function OwnerActionsBar({ propertyId }: { propertyId: string }) {
+export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; lat: number; lng: number }) {
   const { user } = useAuth();
   const toast = useToast();
   const router = useRouter();
@@ -86,6 +86,21 @@ export function OwnerActionsBar({ propertyId }: { propertyId: string }) {
 
   function togglePausa() {
     actualizarEstado(mine!.estado === 'activa' ? 'pausada' : 'activa');
+  }
+
+  // lat/lng aquí son los reales, no los enmascarados — el backend solo los
+  // manda cuando confirma que quien pide la propiedad es su propio dueño
+  // (ver el comentario en api.ts sobre BackendPublicProperty.lat/lng). Solo
+  // copia el link, no comparte nada — el dueño decide si lo pega o no en
+  // su conversación real de WhatsApp con el interesado.
+  async function copiarUbicacion() {
+    const url = `https://maps.google.com/?q=${lat},${lng}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Enlace de ubicación copiado — pégalo en tu conversación de WhatsApp.');
+    } catch {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   }
 
   function archivar() {
@@ -151,6 +166,15 @@ export function OwnerActionsBar({ propertyId }: { propertyId: string }) {
             </Tooltip>
           </>
         )}
+        <Tooltip label="Copiar mi ubicación exacta">
+          <button
+            type="button"
+            onClick={copiarUbicacion}
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-brand-dark/60 hover:text-brand hover:bg-white transition-colors"
+          >
+            <MapPin size={16} />
+          </button>
+        </Tooltip>
         <Tooltip label="Editar propiedad">
           <Link href={`/dashboard/propiedades/${propertyId}/editar`}
             className="w-9 h-9 rounded-xl flex items-center justify-center text-brand-dark/60 hover:text-brand hover:bg-white transition-colors"

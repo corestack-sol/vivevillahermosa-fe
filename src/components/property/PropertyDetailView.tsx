@@ -106,7 +106,7 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
           <span className="text-gray-600 font-medium truncate max-w-[200px]">{property.titulo}</span>
         </nav>
 
-        <OwnerActionsBar propertyId={property.id} />
+        <OwnerActionsBar propertyId={property.id} lat={property.lat} lng={property.lng} />
 
         {/* ── Main grid ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 pb-14">
