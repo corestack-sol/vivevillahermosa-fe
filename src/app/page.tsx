@@ -181,7 +181,7 @@ export default async function HomePage() {
           </h1>
 
           <p className="text-gray-600 text-base md:text-lg mb-8 max-w-lg leading-relaxed animate-fade-up" style={{ animationDelay: '180ms' }}>
-            Más de {formatPropertyCount(stats.propiedadesActivas).replace(/\+$/, '')} propiedades en Tabasco. Hablas directo con el dueño.
+            Más de {formatPropertyCount(stats.propiedadesActivas).replace(/\+$/, '')} propiedades disponibles. Hablas directo con el dueño.
             Sin formularios, sin esperas, sin intermediarios.
           </p>
 
