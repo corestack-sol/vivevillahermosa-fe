@@ -36,11 +36,25 @@ export class BackendApiError extends Error {
     public readonly status: number,
     public readonly body: unknown,
   ) {
-    super(
-      typeof body === 'object' && body && 'message' in body
-        ? String((body as { message: unknown }).message)
-        : `Backend respondió ${status}`,
-    );
+    super(BackendApiError.extraerMensaje(status, body));
+  }
+
+  // BACKEND-AUDITORIA-EXHAUSTIVA-20082026: el ValidationPipe de NestJS (con
+  // varios campos inválidos a la vez) manda `message` como un ARREGLO de
+  // strings, no uno solo — `String(mensaje)` sobre un arreglo usa el join
+  // implícito de JS (comas sin espacio, ej.
+  // "email debe ser un correo,la contraseña es muy corta"), ilegible para
+  // quien lo ve. Un solo campo inválido sigue mandando `message` como
+  // string normal, eso no cambia.
+  private static extraerMensaje(status: number, body: unknown): string {
+    if (typeof body !== 'object' || !body || !('message' in body)) {
+      return `Backend respondió ${status}`;
+    }
+    const mensaje = (body as { message: unknown }).message;
+    if (Array.isArray(mensaje)) {
+      return mensaje.map(String).join('. ');
+    }
+    return String(mensaje);
   }
 }
 
