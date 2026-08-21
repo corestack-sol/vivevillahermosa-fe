@@ -389,6 +389,21 @@ export function PublishForm() {
   }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function generarConIA() {
+    // Bug real reportado 2026-08-21: el botón siempre fallaba con "No se
+    // pudo generar la descripción", sin importar cuántas veces se
+    // presionara. Reproducido en vivo — el backend rechaza con 400
+    // ("metros must not be less than 1") cuando `metros` llega en 0, y
+    // m2Construidos SIEMPRE es 0 para un terreno sin construcción (se
+    // resetea a propósito, ver el checkbox de "terreno ya construido" más
+    // arriba) — para ese tipo, el m² real está en m2Terreno, no en
+    // m2Construidos. Se manda el que sí tenga valor; si ninguno lo tiene
+    // (ej. casa sin llenar m² todavía), se avisa qué falta en vez de
+    // mandar un 0 que el backend siempre va a rechazar.
+    const metros = watch('m2Construidos') || watch('m2Terreno') || 0;
+    if (metros < 1) {
+      toast.error('Agrega los metros cuadrados de la propiedad antes de generar la descripción con IA.');
+      return;
+    }
     setAiLoading(true);
     try {
       const data = await backendFetch<{ descripcion?: string }>('/ia/generar-anuncio', {
@@ -398,7 +413,7 @@ export function PublishForm() {
           operacion: watch('operacion'),
           colonia: watch('colonia') || 'Villahermosa',
           municipio: watch('municipio') || 'Centro',
-          metros: watch('m2Construidos') || 0,
+          metros,
           precio: watch('precio') || 0,
           recamaras: watch('recamaras') || 0,
           banos: watch('banos') || 0,
