@@ -8,6 +8,7 @@ import {
 import { SearchBar } from '@/components/search/SearchBar';
 import { ClickableMap } from '@/components/map/ClickableMap';
 import { getFeaturedProperties, getAllProperties, getColoniasOrdenadasPorDemanda, getStats } from '@/lib/api';
+import { formatPropertyCount } from '@/lib/format';
 import { buttonClasses } from '@/components/ui/Button';
 import { RecentlyViewedSection } from '@/components/property/RecentlyViewedSection';
 import { PropertyCard } from '@/components/property/PropertyCard';
@@ -180,7 +181,7 @@ export default async function HomePage() {
           </h1>
 
           <p className="text-gray-600 text-base md:text-lg mb-8 max-w-lg leading-relaxed animate-fade-up" style={{ animationDelay: '180ms' }}>
-            Más de {stats.propiedadesActivas} propiedades en Tabasco. Hablas directo con el dueño.
+            Más de {formatPropertyCount(stats.propiedadesActivas).replace(/\+$/, '')} propiedades en Tabasco. Hablas directo con el dueño.
             Sin formularios, sin esperas, sin intermediarios.
           </p>
 
@@ -208,7 +209,7 @@ export default async function HomePage() {
               separado, un pelín después de la búsqueda. */}
           <div className="flex flex-wrap items-center gap-5 mt-10 pt-8 border-t border-gray-900/10">
             {[
-              { n: `${stats.propiedadesActivas}+`, label: 'propiedades activas' },
+              { n: formatPropertyCount(stats.propiedadesActivas), label: 'propiedades activas' },
               { n: `${stats.municipiosCubiertos}`,  label: 'municipios cubiertos' },
               { n: '$0',                             label: 'para publicar' },
               { n: '5 min',                          label: 'para tener tu anuncio activo' },

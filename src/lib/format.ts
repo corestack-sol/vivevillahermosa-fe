@@ -21,6 +21,26 @@ export function formatPriceShort(price: number): string {
   return `$${price}`;
 }
 
+/**
+ * Contador del Hero ("Más de N propiedades") — antes mostraba el número
+ * exacto siempre (`${n}+`), sin ningún tope; con miles de propiedades
+ * activas esa cifra deja de ser legible de un vistazo. Mismo criterio que
+ * ya usa `formatPriceShort` para precios (K/M), aplicado a un conteo:
+ * exacto hasta 49, de 50 en 50 hasta 999, en "k" (décimas exactas, 1.1k,
+ * 3k...) hasta 999,999, en "m" desde 1,000,000. Redondea siempre HACIA
+ * ABAJO — el "+" nunca exagera el conteo real, solo lo hace legible.
+ */
+export function formatPropertyCount(n: number): string {
+  if (n < 50) return `${n}+`;
+  if (n < 1_000) return `${Math.floor(n / 50) * 50}+`;
+  if (n < 1_000_000) {
+    const miles = Math.floor(n / 100) / 10; // décimas de millar (100 en 100)
+    return `${Number.isInteger(miles) ? miles : miles.toFixed(1)}k+`;
+  }
+  const millones = Math.floor(n / 100_000) / 10; // décimas de millón
+  return `${Number.isInteger(millones) ? millones : millones.toFixed(1)}m+`;
+}
+
 export function formatArea(m2: number): string {
   return `${m2.toLocaleString('es-MX')} m²`;
 }
