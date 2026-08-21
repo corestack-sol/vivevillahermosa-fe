@@ -149,6 +149,17 @@ export default async function ZonasPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      {/* Gradiente de la llama (rojo abajo -> amarillo arriba, pedido
+          explícito 2026-08-20) — se define una sola vez aquí y cada
+          <Flame> de este archivo lo referencia por id via stroke. */}
+      <svg width="0" height="0" className="absolute" aria-hidden="true">
+        <defs>
+          <linearGradient id="flame-gradient" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0%" stopColor="#ef4444" />
+            <stop offset="100%" stopColor="#fbbf24" />
+          </linearGradient>
+        </defs>
+      </svg>
       <div className="mb-10">
         <p className="text-xs font-bold text-brand uppercase tracking-[0.15em] mb-1.5 animate-fade-up">Todo Tabasco</p>
         <h1 className="text-3xl font-display font-black text-gray-900 mb-2 animate-fade-up" style={{ animationDelay: '80ms' }}>
@@ -202,10 +213,10 @@ export default async function ZonasPage() {
                     </span>
                     {mostrarLlama && (
                       <span title={porDemanda ? 'Con búsquedas reales recientes' : 'La colonia con más propiedades publicadas ahora mismo'} className="relative inline-flex flex-shrink-0">
-                        <Flame size={18} className="text-amber-400 animate-flame" strokeWidth={2} />
+                        <Flame size={18} stroke="url(#flame-gradient)" className="animate-flame" strokeWidth={2} />
                         <span aria-hidden="true" className="absolute -top-0.5 right-0 w-1 h-1 rounded-full bg-amber-300 animate-spark" />
                         <span aria-hidden="true" className="absolute -top-0.5 right-0.5 w-1 h-1 rounded-full bg-amber-200 animate-spark [animation-delay:0.4s]" />
-                        <span aria-hidden="true" className="absolute top-0 left-0.5 w-1 h-1 rounded-full bg-amber-200/80 animate-spark-slow" />
+                        <span aria-hidden="true" className="absolute top-0 left-0.5 w-1 h-1 rounded-full bg-red-500 animate-spark-slow" />
                       </span>
                     )}
                   </div>
