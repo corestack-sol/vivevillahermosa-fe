@@ -40,10 +40,16 @@ export function FloodRiskBadge({ nivel, compact = false }: FloodRiskBadgeProps) 
   const c = config[nivel];
 
   if (compact) {
+    // truncate — este badge vive en filas flex justify-between de ancho
+    // apretado (PropertyDetailView.tsx, panel "Zona") donde el label más
+    // largo ("Históricamente inundable") puede no caber, sobre todo con
+    // texto de accesibilidad más grande — sin esto, el texto envolvía
+    // dentro de la píldora redonda en vez de recortarse con puntos
+    // suspensivos, rompiendo la forma del badge.
     return (
-      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm ${c.compactText}`}>
-        <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
-        {c.label}
+      <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm min-w-0 max-w-full truncate ${c.compactText}`}>
+        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${c.dot}`} />
+        <span className="truncate">{c.label}</span>
       </span>
     );
   }

@@ -91,14 +91,22 @@ export function SelectedPropertyCard({ marker, onClose }: { marker: MapMarker; o
           </div>
         )}
 
-        {/* Top chips */}
-        <div className="absolute top-2 left-2 flex gap-1">
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm ${
+        {/* Top chips — right-2 (antes sin límite derecho) fuerza a esta fila
+            a quedarse dentro del ancho real de la card en vez de crecer
+            "shrink-to-fit" sin tope; min-w-0 + truncate en la píldora de
+            tipo (typeCfg.label, ej. "Habitación") deja que SOLO ella se
+            recorte con puntos suspensivos si no cabe junto a Venta/Renta
+            (flex-shrink-0, siempre corta) — con texto de accesibilidad más
+            grande, antes el texto se recortaba a la mitad sin "…" por el
+            overflow-hidden del header de arriba, en vez de truncarse de
+            forma controlada. */}
+        <div className="absolute top-2 left-2 right-2 flex gap-1">
+          <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm ${
             marker.operacion === 'venta' ? 'bg-brand text-white' : 'bg-accent text-white'
           }`}>
             {marker.operacion === 'venta' ? 'Venta' : 'Renta'}
           </span>
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/30 text-white backdrop-blur-sm">
+          <span className="min-w-0 truncate text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/30 text-white backdrop-blur-sm">
             {typeCfg.label}
           </span>
         </div>

@@ -124,7 +124,7 @@ export function PropertyCard({ property, landmarkQuery }: PropertyCardProps) {
           </h3>
           <p className="flex items-center gap-1 text-white/80 text-[10px] @[220px]:text-xs mb-1.5 @[220px]:mb-3.5">
             <MapPin size={11} className="flex-shrink-0" />
-            <span className="truncate">{property.colonia}, {property.municipio}</span>
+            <span className="truncate min-w-0">{property.colonia}, {property.municipio}</span>
             <span
               className="w-1.5 h-1.5 rounded-full flex-shrink-0 ml-0.5"
               style={{ background: FLOOD_COLOR[property.riesgoInundacion] }}
