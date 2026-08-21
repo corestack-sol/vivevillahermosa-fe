@@ -345,7 +345,12 @@ export default async function HomePage() {
 
             {/* Mini map */}
             <div className="h-80 rounded-2xl overflow-hidden border border-gray-200 shadow-md">
-              <ClickableMap markers={markers} zoom={11} />
+              {/* minZoom más bajo que el default (10) — a diferencia de
+                  /mapa, esta caja es de solo 320px y fitToMarkers reparte
+                  ~28 propiedades por todo el estado: con el piso normal,
+                  el mapa carga ya pegado al mínimo y el botón "–" nace
+                  deshabilitado (bug real reportado 2026-08-20). */}
+              <ClickableMap markers={markers} zoom={11} minZoom={7} />
             </div>
           </div>
         </div>

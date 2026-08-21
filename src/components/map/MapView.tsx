@@ -66,6 +66,19 @@ interface MapViewProps {
    * explícitos porque el usuario navega/filtra el mapa a mano.
    */
   fitToMarkers?: boolean;
+  /**
+   * Piso de zoom-out. Default 10 — el mismo valor ya afinado (2026-08-17)
+   * para /mapa y el mapa embebido de /propiedades, donde el usuario
+   * navega a mano y no tiene sentido alejarse más allá de Tabasco. El
+   * mini-mapa del Home (ClickableMap, `fitToMarkers`) es distinto: con
+   * ~28 marcadores repartidos en todo el estado dentro de una caja de
+   * apenas 320px, `fitBounds` pide un zoom por debajo de 10 y queda
+   * pegado al piso desde que carga — el botón "–" nace deshabilitado.
+   * Bug real reportado 2026-08-20: "en el mapa de HOME no se puede hacer
+   * zoom out igual que en la pág de MAPA". No es que el botón falle, es
+   * que no hay a dónde alejarse. Bajar el piso solo para ese mini-mapa.
+   */
+  minZoom?: number;
 }
 
 const FLOOD_COLORS = { alto: '#EF4444', medio: '#F59E0B', bajo: '#10B981' } as const;
@@ -119,6 +132,7 @@ export function MapView({
   approximate = false,
   approximateRadius = 350,
   fitToMarkers = false,
+  minZoom = 10,
 }: MapViewProps) {
   const containerRef    = useRef<HTMLDivElement>(null);
   const mapRef          = useRef<any>(null);
@@ -158,7 +172,7 @@ export function MapView({
         // máximo.
         maxBounds: TABASCO_BOUNDS,
         maxBoundsViscosity: 1.0,
-        minZoom: 10,
+        minZoom,
       });
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
