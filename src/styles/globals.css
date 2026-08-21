@@ -288,7 +288,7 @@
   100% { transform: translate(6px, -17px) scale(0); opacity: 0; }
 }
 .animate-spark-slow {
-  animation: sparkPopRed 1.7s ease-out infinite;
+  animation: sparkPopRed 1.4s ease-out infinite;
 }
 
 /* Respeta la preferencia del sistema de reducir movimiento — aplica a todas
