@@ -115,6 +115,7 @@ export function Navbar() {
     setUserMenuOpen(false);
     try {
       await logout();
+      toast.success('Sesión cerrada.');
     } catch {
       // logout() ya limpió la sesión local aunque el servidor haya
       // fallado (ver AuthContext.tsx) — se avisa igual, por si la

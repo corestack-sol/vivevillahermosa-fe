@@ -5,7 +5,7 @@ import { PublishForm } from '@/components/forms/PublishForm';
 export const metadata: Metadata = {
   title: 'Publica tu propiedad gratis en Tabasco | Vive Villahermosa',
   description:
-    'Publica tu casa, departamento, cuarto o terreno en Villahermosa y Tabasco gratis. Sin comisiones. Contacto directo con interesados. Listo en minutos.',
+    'Publica tu casa, departamento, habitación o terreno en Villahermosa y Tabasco gratis. Sin comisiones. Contacto directo con interesados. Listo en minutos.',
 };
 
 export default function PublicarPage() {

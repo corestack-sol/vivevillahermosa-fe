@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
-import { backendFetch } from '@/lib/backendApi';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { getAllProperties } from '@/lib/api';
 
 const DURACION_OPTIONS = [15, 30, 45, 60, 90, 120].map((m) => ({ value: String(m), label: `${m} min` }));
@@ -100,8 +100,15 @@ export function NuevaCitaModal({ isOpen, onClose, fechaInicial, duracionDefault,
       toast.success('Cita agendada.');
       onCreated();
       onClose();
-    } catch {
-      toast.error('No se pudo agendar la cita. Intenta de nuevo.');
+    } catch (err) {
+      // El backend ahora valida disponibilidad real (horario laboral,
+      // traslape con otra cita) — mostrar el motivo específico en vez de
+      // un genérico "intenta de nuevo" que no explica nada.
+      toast.error(
+        err instanceof BackendApiError
+          ? err.message
+          : 'No se pudo agendar la cita. Intenta de nuevo.',
+      );
     }
   }
 

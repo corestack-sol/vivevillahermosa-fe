@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Ban, CheckCircle2 } from 'lucide-react';
 import { formatRelativeDate } from '@/lib/format';
 import { backendFetch } from '@/lib/backendApi';
 import { Modal } from '@/components/ui/Modal';
 import { TableSkeleton } from '@/components/ui/Skeleton';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface Intento {
   id: string;
@@ -18,14 +19,33 @@ interface Intento {
 
 export default function AdminIntentosSospechososPage() {
   const [intentos, setIntentos] = useState<Intento[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(30);
   const [loading, setLoading] = useState(true);
   const [detalle, setDetalle] = useState<Intento | null>(null);
 
-  useEffect(() => {
-    backendFetch<Intento[]>('/admin/intentos-sospechosos')
-      .then((intentos) => setIntentos(intentos ?? []))
-      .finally(() => setLoading(false));
-  }, []);
+  // BACKEND-AUDITORIA-EXHAUSTIVA-20082026: GET /admin/intentos-sospechosos
+  // pasó de un array plano con techo fijo de 200 a { intentos, total, page,
+  // perPage } paginado de verdad — antes esta página truena con ".map is
+  // not a function" porque seguía esperando el array plano.
+  const cargar = useCallback(async () => {
+    setLoading(true);
+    const data = await backendFetch<{
+      intentos: Intento[];
+      total: number;
+      page: number;
+      perPage: number;
+    }>(`/admin/intentos-sospechosos?page=${page}`);
+    setIntentos(data.intentos ?? []);
+    setTotal(data.total ?? 0);
+    setPerPage(data.perPage ?? 30);
+    setLoading(false);
+  }, [page]);
+
+  useEffect(() => { function cargarInicial() { cargar(); } cargarInicial(); }, [cargar]);
+
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
 
   return (
     <div>
@@ -75,6 +95,10 @@ export default function AdminIntentosSospechososPage() {
           </div>
         </div>
       )}
+
+      <div className="mt-6">
+        <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      </div>
 
       {/* Antes solo había un `title` (tooltip nativo) para leer el texto
           completo de una búsqueda marcada — incómodo para triage real de
