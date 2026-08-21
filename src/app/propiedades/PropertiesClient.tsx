@@ -537,7 +537,8 @@ export function PropertiesClient({ allProperties }: Props) {
                 <button
                   type="button"
                   onClick={() => { setInputValue(''); updateFilters({ q: '' }); }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Limpiar búsqueda"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600"
                 >
                   <X size={14} />
                 </button>
@@ -560,7 +561,7 @@ export function PropertiesClient({ allProperties }: Props) {
                       <li className="flex items-center justify-between px-5 pt-3 pb-1.5">
                         <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Búsquedas recientes</span>
                         <button type="button" onClick={handleClearRecent}
-                          className="flex items-center gap-1 text-xs text-gray-300 hover:text-red-500 transition-colors">
+                          className="flex items-center gap-1 px-1.5 py-1 -m-1 text-xs text-gray-500 hover:text-red-500 transition-colors">
                           <X size={11} /> Borrar
                         </button>
                       </li>
@@ -782,9 +783,13 @@ export function PropertiesClient({ allProperties }: Props) {
                         en vez de un ícono genérico — pedido explícito
                         2026-08-20. */}
                     <Image src="/images/icons/sin-resultados.webp" alt="" width={166} height={98} className="mb-3" />
-                    <h3 className="font-heading font-bold text-gray-800 text-lg mb-2 text-center">
+                    {/* h2, no h3 — era el primer subtítulo bajo el <h1> de la
+                        página (línea ~433) y saltaba directo a nivel 3 sin
+                        que existiera ningún h2 antes (hallazgo de
+                        accesibilidad, jerarquía de encabezados). */}
+                    <h2 className="font-heading font-bold text-gray-800 text-lg mb-2 text-center">
                       {esBusquedaSinInterpretar(filters) ? 'No pudimos interpretar tu búsqueda' : 'Sin resultados'}
-                    </h3>
+                    </h2>
                     <p className="text-gray-400 text-sm mb-2 max-w-sm leading-relaxed text-center">
                       {esBusquedaSinInterpretar(filters)
                         ? 'Prueba con menos palabras (ej. solo el lugar que buscas) o usa los filtros para acotar a mano.'

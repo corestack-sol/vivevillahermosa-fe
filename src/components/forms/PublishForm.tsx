@@ -821,7 +821,8 @@ export function PublishForm() {
                   <button
                     type="button"
                     onClick={() => setCoords(null)}
-                    className="ml-auto text-gray-300 hover:text-red-500 transition-colors"
+                    aria-label="Quitar ubicación seleccionada"
+                    className="ml-auto p-1.5 -m-1.5 text-gray-300 hover:text-red-500 transition-colors"
                   >
                     <X size={11} />
                   </button>

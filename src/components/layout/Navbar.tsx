@@ -238,6 +238,7 @@ export function Navbar() {
               user ? (
                 <div className="relative" ref={userMenuRef}>
                   <button onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    aria-haspopup="true" aria-expanded={userMenuOpen}
                     className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border transition-colors text-sm border-white/15 hover:border-white/30 hover:bg-white/8">
                     <div className="w-7 h-7 rounded-lg ring-1 ring-white/15 bg-gradient-to-br from-brand to-brand-light flex items-center justify-center text-white text-xs font-bold">
                       {user.nombre.charAt(0).toUpperCase()}

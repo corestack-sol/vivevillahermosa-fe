@@ -25,7 +25,7 @@ export function AdminNav({ nombre }: { nombre: string }) {
             <ShieldCheck size={18} className="text-accent" />
             Admin
           </Link>
-          <span className="text-xs text-white/40 hidden sm:inline mr-4">{nombre}</span>
+          <span className="text-xs text-white/70 hidden sm:inline mr-4">{nombre}</span>
         </div>
         <nav className="flex items-center gap-1 overflow-x-auto pb-2 -mt-1">
           {LINKS.map((link) => {

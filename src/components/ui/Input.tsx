@@ -22,7 +22,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         )}
         <div className="relative">
           {icon && (
-            <span className={`absolute left-3 top-1/2 -translate-y-1/2 ${dark ? 'text-white/40' : 'text-gray-400'}`}>
+            <span className={`absolute left-3 top-1/2 -translate-y-1/2 ${dark ? 'text-white/70' : 'text-gray-400'}`}>
               {icon}
             </span>
           )}
@@ -43,7 +43,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
         </div>
-        {hint && !error && <p className={`mt-1 text-xs ${dark ? 'text-white/40' : 'text-gray-500'}`}>{hint}</p>}
+        {hint && !error && <p className={`mt-1 text-xs ${dark ? 'text-white/70' : 'text-gray-500'}`}>{hint}</p>}
         {error && <p className={`mt-1 text-xs ${dark ? 'text-red-300' : 'text-danger'}`}>{error}</p>}
       </div>
     );

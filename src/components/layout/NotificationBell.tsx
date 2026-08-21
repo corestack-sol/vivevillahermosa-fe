@@ -59,6 +59,8 @@ export function NotificationBell() {
         onClick={() => setOpen((v) => !v)}
         className="relative p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/8 transition-colors"
         aria-label="Notificaciones"
+        aria-haspopup="true"
+        aria-expanded={open}
       >
         <Bell size={18} />
         {unread > 0 && (

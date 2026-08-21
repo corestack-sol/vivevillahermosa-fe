@@ -5,25 +5,41 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ variant = 'text', lines = 1, className = '' }: SkeletonProps) {
+  // role="status" + aria-label en cada variante — antes un lector de
+  // pantalla no tenía ninguna señal de que la página seguía cargando (los
+  // <div> del shimmer no llevan texto, así que quedaban en silencio total).
+  // sr-only en vez de visible: el shimmer ya comunica "cargando" a la
+  // vista, esto solo es el equivalente para quien usa lector de pantalla
+  // (hallazgo de accesibilidad).
   if (variant === 'card') {
     // Mismo silueta que PropertyCard (tarjeta-retrato tipo card2.png) —
     // antes era una forma distinta (imagen corta + cuerpo blanco) y el
     // remplazo por la tarjeta real se sentía como un salto de layout.
     return (
-      <div className={`rounded-3xl overflow-hidden aspect-[20/21] animate-shimmer ${className}`} />
+      <div role="status" aria-label="Cargando" className={`rounded-3xl overflow-hidden aspect-[20/21] animate-shimmer ${className}`}>
+        <span className="sr-only">Cargando…</span>
+      </div>
     );
   }
 
   if (variant === 'image') {
-    return <div className={`animate-shimmer rounded-xl ${className}`} />;
+    return (
+      <div role="status" aria-label="Cargando" className={`animate-shimmer rounded-xl ${className}`}>
+        <span className="sr-only">Cargando…</span>
+      </div>
+    );
   }
 
   if (variant === 'circle') {
-    return <div className={`animate-shimmer rounded-full ${className}`} />;
+    return (
+      <div role="status" aria-label="Cargando" className={`animate-shimmer rounded-full ${className}`}>
+        <span className="sr-only">Cargando…</span>
+      </div>
+    );
   }
 
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div role="status" aria-label="Cargando" className={`space-y-2 ${className}`}>
       {Array.from({ length: lines }).map((_, i) => (
         <div
           key={i}
@@ -31,6 +47,7 @@ export function Skeleton({ variant = 'text', lines = 1, className = '' }: Skelet
           style={{ width: i === lines - 1 && lines > 1 ? '60%' : '100%' }}
         />
       ))}
+      <span className="sr-only">Cargando…</span>
     </div>
   );
 }

@@ -92,7 +92,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <button
                 onClick={() => remove(t.id)}
                 aria-label="Cerrar notificación"
-                className="flex-shrink-0 text-gray-300 hover:text-gray-500 transition-colors"
+                className="flex-shrink-0 p-1.5 -m-1.5 text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <X size={14} />
               </button>

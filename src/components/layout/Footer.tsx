@@ -13,7 +13,7 @@ function FooterMinimal() {
   return (
     <footer className="bg-gradient-to-r from-brand-pale/30 via-white to-sand/30 border-t border-brand/15">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-1.5">
-        <p className="flex items-center gap-1.5 text-sm text-brand-dark/70">
+        <p className="flex items-center gap-1.5 text-sm text-brand-dark/85">
           {/* Crédito de desarrollo, mismo logo que ya usa FooterFull en el
               link de contacto — pedido explícito 2026-08-20: presente en
               el footer de cada página que no sea Home. */}
@@ -21,7 +21,10 @@ function FooterMinimal() {
           <img src="/images/icons/corestack-logo.webp" alt="" title="Hecho por CoreStack Solutions" className="h-[15px] w-auto flex-shrink-0" />
           © {new Date().getFullYear()} Vive Villahermosa. Todos los derechos reservados.
         </p>
-        <p className="text-sm text-brand/50">
+        {/* Antes text-brand/50 — ~2.1:1 sobre el fondo casi blanco del
+            footer, muy por debajo del 4.5:1 que pide WCAG para texto normal
+            (hallazgo de accesibilidad, contraste de color). */}
+        <p className="text-sm text-brand-dark/80">
           Villahermosa · Tabasco, México
         </p>
       </div>
@@ -71,7 +74,7 @@ function FooterFull() {
 
           {/* Legal */}
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-white/50 mb-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-white/70 mb-4">
               Empresa
             </h3>
             <ul className="space-y-2">
@@ -121,10 +124,13 @@ function FooterFull() {
         </div>
 
         <div className="mt-10 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-xs text-white/50">
+          {/* Antes /50 y /40 — ~3.8:1 y ~3:1 sobre bg-brand-dark, por debajo
+              del 4.5:1 que pide WCAG para texto de este tamaño (hallazgo de
+              accesibilidad, contraste de color). */}
+          <p className="text-xs text-white/70">
             © {new Date().getFullYear()} Vive Villahermosa. Todos los derechos reservados.
           </p>
-          <p className="text-xs text-white/40">
+          <p className="text-xs text-white/70">
             Villahermosa · Tabasco, México
           </p>
         </div>

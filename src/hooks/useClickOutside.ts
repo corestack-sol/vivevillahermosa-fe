@@ -22,7 +22,20 @@ export function useClickOutside<T extends HTMLElement>(
         onOutside();
       }
     }
+    // Escape también cierra — antes solo un clic fuera lo hacía, dejando
+    // a alguien navegando por teclado sin forma de cerrar el menú/dropdown
+    // sin tocar el mouse (hallazgo de accesibilidad, WCAG 2.1.2). Todos los
+    // usos actuales de este hook (menú de usuario y notificaciones del
+    // Navbar, NotificationBell) son overlays donde Escape-para-cerrar es el
+    // comportamiento esperado.
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onOutside();
+    }
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKey);
+    };
   }, [active, ref, onOutside]);
 }

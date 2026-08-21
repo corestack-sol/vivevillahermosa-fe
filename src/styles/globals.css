@@ -300,6 +300,13 @@
   .animate-spark, .animate-spark-b, .animate-spark-slow {
     display: none;
   }
+  /* animate-pulse es la utilidad nativa de Tailwind (usada en el punto
+     "en vivo" del Hero y el placeholder de carga del mapa en PublishForm)
+     — no estaba cubierta por el bloque de arriba porque no es una clase
+     propia de este archivo (hallazgo de accesibilidad). */
+  .animate-pulse {
+    animation: none !important;
+  }
   /* !important a propósito: también apaga el active:scale-* propio de
      componentes como Button.tsx, no solo el piso genérico de arriba —
      bajo movimiento reducido, ningún botón debería encogerse al

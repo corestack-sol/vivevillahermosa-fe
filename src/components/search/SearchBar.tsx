@@ -229,7 +229,7 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
               <li className="flex items-center justify-between px-5 pt-3 pb-1.5">
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Búsquedas recientes</span>
                 <button type="button" onClick={handleClearRecent}
-                  className="flex items-center gap-1 text-xs text-gray-300 hover:text-red-500 transition-colors">
+                  className="flex items-center gap-1 px-1.5 py-1 -m-1 text-xs text-gray-500 hover:text-red-500 transition-colors">
                   <X size={11} /> Borrar
                 </button>
               </li>
