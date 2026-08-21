@@ -301,8 +301,13 @@ export default async function HomePage() {
               4 columnas apiladas en 1, mucho scroll vertical) — grid
               estático desde lg:, donde ya hay ancho de sobra para verlas
               todas sin scroll horizontal. Pedido explícito 2026-08-20. */}
+          {/* px-3/pt-6 — mismo fix que SimilarCarousel.tsx: overflow-x-auto
+              recorta también en Y (quirk de CSS) el hover:-translate-y-1.5 +
+              hover:shadow-2xl de PropertyCard. Solo importa debajo de lg:
+              (arriba ya es un grid estático overflow-visible, sin recorte). */}
           <Carousel
-            trackClassName="gap-4 pb-1"
+            className="-mx-3 lg:mx-0"
+            trackClassName="gap-4 px-3 pt-6 pb-4 lg:px-0 lg:pt-0"
             desktopGridClassName="lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:snap-none"
           >
             {featured.slice(0, 8).map((p) => (

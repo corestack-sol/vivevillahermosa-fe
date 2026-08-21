@@ -54,8 +54,13 @@ export function RecentlyViewedSection({ excludeId, limit = 4 }: RecentlyViewedSe
           Ver todas <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
         </Link>
       </div>
+      {/* px-3/pt-6 — mismo fix que SimilarCarousel.tsx: overflow-x-auto
+          recorta también en Y (quirk de CSS) el hover:-translate-y-1.5 +
+          hover:shadow-2xl de PropertyCard. Solo importa debajo de lg:
+          (arriba ya es un grid estático overflow-visible, sin recorte). */}
       <Carousel
-        trackClassName="gap-4 pb-1"
+        className="-mx-3 lg:mx-0"
+        trackClassName="gap-4 px-3 pt-6 pb-4 lg:px-0 lg:pt-0"
         desktopGridClassName="lg:grid lg:grid-cols-4 lg:gap-5 lg:overflow-visible lg:snap-none"
       >
         {properties.map((p) => (
