@@ -263,6 +263,15 @@
 .animate-spark {
   animation: sparkPop 1s ease-out infinite;
 }
+/* Segunda chispa ámbar — antes solo tenía animation-delay (mismo 1s de
+   duración), así que quedaba como un eco fijo de la primera, siempre al
+   mismo compás. Pedido explícito 2026-08-20 ("que se vean desiguales"):
+   duración propia distinta (1.3s) para que la fase entre ambas vaya
+   derivando en vez de repetir el mismo patrón cada ciclo. */
+.animate-spark-b {
+  animation: sparkPop 1.3s ease-out infinite;
+  animation-delay: 0.25s;
+}
 
 /* Chispa roja lenta — antes reusaba sparkPop a 2.2s, pero esa curva solo
    toca opacity:1 en un instante (20%) y el resto del ciclo se pasa
@@ -288,7 +297,7 @@
   .animate-fade-up, .animate-slide-in, .animate-count, .animate-shimmer, .animate-toast-in, .animate-marquee, .animate-flame {
     animation: none !important;
   }
-  .animate-spark, .animate-spark-slow {
+  .animate-spark, .animate-spark-b, .animate-spark-slow {
     display: none;
   }
   /* !important a propósito: también apaga el active:scale-* propio de

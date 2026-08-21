@@ -443,8 +443,8 @@ export default async function HomePage() {
                     <span title={porDemanda ? 'Con búsquedas reales recientes' : 'La colonia con más propiedades publicadas ahora mismo'} className="relative inline-flex flex-shrink-0">
                       <Flame size={15} stroke="url(#flame-gradient)" className="animate-flame" strokeWidth={2} />
                       <span aria-hidden="true" className="absolute -top-0.5 right-0 w-1 h-1 rounded-full bg-amber-300 animate-spark" />
-                      <span aria-hidden="true" className="absolute -top-0.5 right-0.5 w-1 h-1 rounded-full bg-amber-200 animate-spark [animation-delay:0.4s]" />
-                      <span aria-hidden="true" className="absolute top-0 left-0.5 w-[2px] h-[2px] rounded-full bg-red-600 shadow-[0_0_2px_rgba(220,38,38,0.9)] animate-spark-slow" />
+                      <span aria-hidden="true" className="absolute -top-0.5 right-0.5 w-1 h-1 rounded-full bg-amber-200 animate-spark-b" />
+                      <span aria-hidden="true" className="absolute top-0 left-0.5 w-[1.5px] h-[1.5px] rounded-full bg-red-600 shadow-[0_0_1.5px_rgba(220,38,38,0.9)] animate-spark-slow" />
                     </span>
                   )}
                 </div>
