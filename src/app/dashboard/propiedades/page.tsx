@@ -46,7 +46,9 @@ export default function MisPropiedadesPage() {
   // pensadas para inmobiliarias con cartera grande, no para un particular
   // con 1-2 propiedades. Mismo criterio ya usado en PlanesInmobiliaria.tsx
   // para distinguir cuenta profesional. Pedido explícito 2026-08-19.
-  const esProfesional = !!user && user.rol !== 'particular';
+  // Panel profesional es solo para inmobiliarias — pedido explícito
+  // 2026-08-20 ("no para cualquier usuario").
+  const esProfesional = !!user && user.rol === 'inmobiliaria';
   const toast = useToast();
   const perfil = usePerfilInmobiliaria(true);
   const [filter, setFilter] = useState<FiltroEstado>('todas');

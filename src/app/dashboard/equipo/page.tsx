@@ -33,7 +33,7 @@ export default function EquipoPage() {
   // debe verla ni de muestra.
   useEffect(() => {
     if (!authLoading && !user) { router.push('/auth/login'); return; }
-    if (!authLoading && user && user.rol === 'particular') { router.push('/dashboard'); }
+    if (!authLoading && user && user.rol !== 'inmobiliaria') { router.push('/dashboard'); }
   }, [authLoading, user, router]);
 
   // localStorage solo existe en cliente — se resuelve en un efecto para que
@@ -62,7 +62,7 @@ export default function EquipoPage() {
     toast.success(`${nombreMiembro} se quitó del equipo.`);
   }
 
-  if (authLoading || !user || user.rol === 'particular') {
+  if (authLoading || !user || user.rol !== 'inmobiliaria') {
     return (
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <Skeleton className="w-48 mb-8" />

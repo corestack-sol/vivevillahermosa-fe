@@ -15,10 +15,20 @@ import { usePerfilInmobiliaria } from '@/hooks/usePerfilInmobiliaria';
 import type { Notificacion } from '@/components/layout/NotificationBell';
 import { formatRelativeDate } from '@/lib/format';
 
+// "buscador" se queda mapeado a la nueva etiqueta — el backend todavía no
+// migró el valor default (rename acordado 2026-08-20: buscador -> particular),
+// así que hoy sigue llegando literal "buscador" del backend. Sin esto, el
+// saludo del panel mostraba "Buscador" aunque ya decidimos llamarlo
+// "Particular" en toda la plataforma (reporte explícito: "sigo viendo que
+// sigue apareciendo el rol buscador"). Los otros 4 valores del enum nuevo
+// se agregan de una vez para cuando el backend sí migre.
 const ROL_LABEL: Record<string, string> = {
-  buscador: 'Buscador',
-  propietario: 'Propietario',
-  agente: 'Agente / Inmobiliaria',
+  buscador: 'Particular',
+  particular: 'Particular',
+  profesional: 'Profesional',
+  inmobiliaria: 'Inmobiliaria',
+  agente: 'Agente',
+  administrador: 'Administrador',
 };
 
 export default function DashboardPage() {
@@ -29,7 +39,9 @@ export default function DashboardPage() {
   const [misPropiedades, setMisPropiedades] = useState<MiPropiedad[]>([]);
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [generandoReporte, setGenerandoReporte] = useState(false);
-  const esProfesional = user ? user.rol !== 'particular' : false;
+  // Panel profesional es solo para inmobiliarias — pedido explícito
+  // 2026-08-20 ("no para cualquier usuario").
+  const esProfesional = user ? user.rol === 'inmobiliaria' : false;
   const perfil = usePerfilInmobiliaria(!!user && esProfesional);
 
   useEffect(() => {

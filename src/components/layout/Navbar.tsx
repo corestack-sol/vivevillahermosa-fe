@@ -105,7 +105,11 @@ export function Navbar() {
   const router       = useRouter();
   const { user, loading, logout } = useAuth();
   const toast = useToast();
-  const esProfesional = !!user && user.rol !== 'particular';
+  // Panel profesional es solo para inmobiliarias — pedido explícito
+  // 2026-08-20 ("no para cualquier usuario"). "profesional" (servicios,
+  // hoy en pausa) y "agente" quedan fuera hasta que tengan su propia
+  // experiencia real, en vez de heredar el panel de una inmobiliaria.
+  const esProfesional = !!user && user.rol === 'inmobiliaria';
   const userMenuRef = useRef<HTMLDivElement>(null);
   useClickOutside(userMenuRef, userMenuOpen, () => setUserMenuOpen(false));
   const navRef = useRef<HTMLElement>(null);
