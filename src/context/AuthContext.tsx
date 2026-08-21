@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { backendFetch, type BackendUser } from '@/lib/backendApi';
 
 export interface AuthUser {
@@ -29,11 +29,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // BACKEND-AUDITORIA-EXHAUSTIVA-20082026: refresh() se dispara desde varios
+  // sitios que pueden solaparse (montaje inicial, volver a la pestaña,
+  // llamadas manuales tras login/logout) — sin un guard de orden, si una
+  // llamada más VIEJA tarda más en responder que una más NUEVA (jitter de
+  // red normal), su resultado llegaba último y pisaba el estado correcto
+  // con datos obsoletos (ej. reaparecer "logueado" tras cerrar sesión en
+  // otra pestaña, o al revés). `refreshId` descarta cualquier respuesta que
+  // no sea la de la llamada más reciente.
+  const refreshId = useRef(0);
+
   const refresh = useCallback(async () => {
+    const id = ++refreshId.current;
     try {
       const { user: backendUser } = await backendFetch<{
         user: BackendUser | null;
       }>('/auth/me');
+      if (refreshId.current !== id) return;
       setUser(
         backendUser
           ? {
@@ -46,9 +58,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           : null,
       );
     } catch {
+      if (refreshId.current !== id) return;
       setUser(null);
     } finally {
-      setLoading(false);
+      if (refreshId.current === id) setLoading(false);
     }
   }, []);
 
