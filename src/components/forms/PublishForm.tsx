@@ -826,7 +826,7 @@ export function PublishForm() {
               {coords && (
                 <p className="flex items-start gap-1.5 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2 mt-2">
                   <ShieldAlert size={11} className="flex-shrink-0 mt-0.5" />
-                  Si aún vives en esta propiedad, considera no marcar el punto exacto — a los interesados serios puedes darles la dirección directamente por WhatsApp. En el anuncio público solo se mostrará la zona aproximada.
+                  Aunque marques el punto exacto, en el anuncio público solo se mostrará la zona aproximada — a los interesados serios les puedes dar la dirección exacta directamente por WhatsApp.
                 </p>
               )}
             </div>
