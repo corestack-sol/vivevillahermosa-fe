@@ -32,6 +32,7 @@ export default function AdminSolicitudesPage() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(20);
   const [estado, setEstado] = useState('pendiente');
+  const [estadoAnterior, setEstadoAnterior] = useState(estado);
   const [loading, setLoading] = useState(true);
   const [abierta, setAbierta] = useState<string | null>(null);
   const [respuesta, setRespuesta] = useState('');
@@ -61,7 +62,12 @@ export default function AdminSolicitudesPage() {
 
   // Cambiar de filtro sin resetear la página podía dejarte viendo "página 3"
   // de un estado que solo tiene 1 — mostraba vacío aunque sí había datos.
-  useEffect(() => { setPage(1); }, [estado]);
+  // Ajustado durante el render (no en un efecto) para evitar el render en
+  // cascada que useEffect(() => setPage(1), [estado]) provoca.
+  if (estado !== estadoAnterior) {
+    setEstadoAnterior(estado);
+    setPage(1);
+  }
 
   const totalPages = Math.max(1, Math.ceil(total / perPage));
 
