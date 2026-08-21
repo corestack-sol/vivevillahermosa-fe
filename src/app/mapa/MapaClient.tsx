@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   SlidersHorizontal, X, ChevronLeft, Navigation,
   Satellite, Map as MapIcon, Info, MapPin,
@@ -13,8 +13,9 @@ import { useFilters } from '@/hooks/useFilters';
 import { applyFilters } from '@/lib/filters';
 import { FilterPanel } from '@/components/search/FilterPanel';
 import { MapViewDynamic } from '@/components/map/MapViewDynamic';
-import { getColoniasRankedByPropiedades } from '@/lib/api';
-import { matchColonia } from '@/lib/colonias';
+import { getColoniasRankedByPropiedades, type ColoniaCard } from '@/lib/api';
+import { matchColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
+import { precargarLandmarks } from '@/lib/landmarks';
 import { useAuth } from '@/context/AuthContext';
 import { SelectedPropertyCard } from '@/components/map/SelectedPropertyCard';
 import type { MapMarker, MapControls, MapBounds } from '@/components/map/MapView';
@@ -88,6 +89,24 @@ export function MapaClient({ allProperties }: Props) {
   const [geoLoading,    setGeoLoading]    = useState(false);
   const [geoError,      setGeoError]      = useState('');
 
+  // `landmarksCache`/`coloniasDescubiertasCache` (src/lib/landmarks.ts,
+  // src/lib/colonias.ts) son variables de módulo llenadas por un fetch
+  // fire-and-forget — nada las conecta al ciclo de render de React por sí
+  // solas. /propiedades ya dispara la precarga (PropertiesClient.tsx), pero
+  // /mapa es su propia entrada (ej. el link "Ver en mapa" de una búsqueda
+  // "cerca de X" en móvil, más abajo) y antes NUNCA la disparaba — si
+  // alguien llegaba aquí directo (o más rápido de lo que tardaba el fetch
+  // de /propiedades), `filtered`/`zonasIrA` quedaban calculados con el
+  // caché todavía vacío y ningún re-render los corregía después (mismo bug
+  // reportado 2026-08-20 en filters.ts/PropertiesClient.tsx). Disparar la
+  // carga aquí también y usar estas banderas como dependencia de los
+  // cálculos de abajo cierra ambos huecos: el catálogo si carga en esta
+  // página, y su llegada tardía sí fuerza un recálculo.
+  const [landmarksReady, setLandmarksReady] = useState(false);
+  const [coloniasReady,  setColoniasReady]  = useState(false);
+  useEffect(() => { precargarLandmarks().then(() => setLandmarksReady(true)); }, []);
+  useEffect(() => { precargarColoniasDescubiertas().then(() => setColoniasReady(true)); }, []);
+
   // Pantalla completa real (Fullscreen API) — pedido explícito 2026-08-18:
   // "que no se vean las pestañas del navegador". Requiere gesto del
   // usuario (no se puede activar solo al cargar la página, los
@@ -136,30 +155,41 @@ export function MapaClient({ allProperties }: Props) {
   // "Ir a zona" — top colonias reales por cantidad de propiedades activas
   // (mismo criterio que /zonas y Home, ver getColoniasRankedByPropiedades),
   // resolviendo cada una contra el catálogo de coordenadas verificadas
-  // (matchColonia) para obtener lat/lng/radio reales. Se calcula una sola
-  // vez sobre el catálogo estático del servidor — igual que /zonas y Home
-  // (páginas de servidor), no reacciona a publicaciones locales de este
-  // navegador; sería inconsistente que el mapa mostrara una colonia
-  // "de moda" que nadie más ve. Las colonias rankeadas que no tengan
+  // (matchColonia) para obtener lat/lng/radio reales. El ranking en sí se
+  // pide una sola vez al montar — igual que /zonas y Home (páginas de
+  // servidor), no reacciona a publicaciones locales de este navegador;
+  // sería inconsistente que el mapa mostrara una colonia "de moda" que
+  // nadie más ve. La resolución a coordenada (abajo) sí se recalcula, ver
+  // comentario de `zonasIrA`. Las colonias rankeadas que no tengan
   // coordenada verificada (ej. detectadas por texto libre, sin catálogo)
   // se descartan aquí — no hay a dónde volar sin lat/lng real.
-  const [zonasIrA, setZonasIrA] = useState<{ label: string; lat: number; lng: number; radius: number }[]>([]);
+  const [coloniasRanked, setColoniasRanked] = useState<ColoniaCard[]>([]);
   useEffect(() => {
     let cancelado = false;
-    getColoniasRankedByPropiedades().then((coloniasRanked) => {
-      if (cancelado) return;
-      setZonasIrA(
-        coloniasRanked
-          .map((c) => {
-            const coord = matchColonia(c.nombre);
-            return coord ? { label: c.nombre, lat: coord.lat, lng: coord.lng, radius: coord.radioKm * 1000 } : null;
-          })
-          .filter((z): z is { label: string; lat: number; lng: number; radius: number } => z !== null)
-          .slice(0, MAX_ZONAS_IR_A)
-      );
+    getColoniasRankedByPropiedades().then((data) => {
+      if (!cancelado) setColoniasRanked(data);
     });
     return () => { cancelado = true; };
   }, []);
+  // Resuelto vía useMemo (no en el mismo efecto que arriba) y con
+  // `coloniasReady` como dependencia: si `matchColonia` corrió mientras
+  // `coloniasDescubiertasCache` seguía vacío, una colonia rankeada real se
+  // descartaba en silencio (sin coordenada verificada, `.filter` la quita) y
+  // se quedaba fuera de "Ir a zona" para siempre — nunca "todo" en vez de
+  // filtrado (ya es el resultado seguro), pero sí una lista incompleta que
+  // ningún reload posterior corregía. Con esto, en cuanto la precarga de
+  // arriba resuelve, la lista se recalcula contra el catálogo ya completo.
+  const zonasIrA = useMemo(
+    () =>
+      coloniasRanked
+        .map((c) => {
+          const coord = matchColonia(c.nombre);
+          return coord ? { label: c.nombre, lat: coord.lat, lng: coord.lng, radius: coord.radioKm * 1000 } : null;
+        })
+        .filter((z): z is { label: string; lat: number; lng: number; radius: number } => z !== null)
+        .slice(0, MAX_ZONAS_IR_A),
+    [coloniasRanked, coloniasReady] // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   // El primer "moveend" lo dispara Leaflet al montar el mapa (no una
   // interacción real del usuario) — se ignora para no filtrar antes de que
@@ -207,9 +237,19 @@ export function MapaClient({ allProperties }: Props) {
   const handleMapReady     = useCallback((controls: MapControls) => setMapControls(controls), []);
 
   // ── Filter chain ──
-  let filtered = applyFilters(properties, filters)
-    .filter((p) => riesgoActive.has((p.riesgoInundacion ?? 'bajo') as RiesgoLevel));
-  if (activeBounds) filtered = filtered.filter((p) => isInBounds(p, activeBounds));
+  // `landmarksReady`/`coloniasReady` en las dependencias: `applyFilters`
+  // (src/lib/filters.ts) ya falla seguro (vacío, nunca "todo") cuando
+  // filters.landmark/colonia/zonaDestacada llega antes de que el catálogo
+  // cargue (ver ?cerca=/?zona= que propaga el link "Ver en mapa" de
+  // PropertiesClient.tsx) — pero sin esto, ese resultado vacío se quedaba
+  // fijo: nada volvía a renderizar solo porque el caché terminó de llenarse
+  // después, el mismo bug de reactividad ya corregido en PropertiesClient.
+  const filtered = useMemo(() => {
+    let result = applyFilters(properties, filters)
+      .filter((p) => riesgoActive.has((p.riesgoInundacion ?? 'bajo') as RiesgoLevel));
+    if (activeBounds) result = result.filter((p) => isInBounds(p, activeBounds));
+    return result;
+  }, [properties, filters, riesgoActive, activeBounds, landmarksReady, coloniasReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const markers: MapMarker[] = filtered.map((p) => ({
     id: p.id, slug: p.slug, lat: p.latPublico, lng: p.lngPublico,
