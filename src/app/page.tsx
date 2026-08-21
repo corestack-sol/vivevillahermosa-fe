@@ -444,7 +444,7 @@ export default async function HomePage() {
                       <Flame size={15} stroke="url(#flame-gradient)" className="animate-flame" strokeWidth={2} />
                       <span aria-hidden="true" className="absolute -top-0.5 right-0 w-1 h-1 rounded-full bg-amber-300 animate-spark" />
                       <span aria-hidden="true" className="absolute -top-0.5 right-0.5 w-1 h-1 rounded-full bg-amber-200 animate-spark [animation-delay:0.4s]" />
-                      <span aria-hidden="true" className="absolute top-0 left-0.5 w-1 h-1 rounded-full bg-red-500 animate-spark-slow" />
+                      <span aria-hidden="true" className="absolute top-0 left-0.5 w-1.5 h-1.5 rounded-full bg-red-600 shadow-[0_0_5px_2px_rgba(220,38,38,0.9)] animate-spark-slow" />
                     </span>
                   )}
                 </div>

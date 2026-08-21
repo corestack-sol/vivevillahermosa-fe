@@ -263,8 +263,23 @@
 .animate-spark {
   animation: sparkPop 1s ease-out infinite;
 }
+
+/* Chispa roja lenta — antes reusaba sparkPop a 2.2s, pero esa curva solo
+   toca opacity:1 en un instante (20%) y el resto del ciclo se pasa
+   apagándose poco a poco: casi invisible casi todo el tiempo, y encima
+   roja sobre la base roja del degradado nuevo de la llama. Pedido
+   explícito 2026-08-20 ("ya no se ve, hazla más visible"): curva propia
+   que SOSTIENE la opacidad/escala al tope un tramo largo antes de
+   apagarse, punto más grande, con resplandor (box-shadow) para que
+   contraste incluso sobre el rojo de la base de la llama. */
+@keyframes sparkPopRed {
+  0%   { transform: translate(0, 0) scale(0.4); opacity: 0; }
+  18%  { transform: translate(1px, -4px) scale(1.15); opacity: 1; }
+  55%  { transform: translate(3px, -9px) scale(1); opacity: 1; }
+  100% { transform: translate(6px, -17px) scale(0); opacity: 0; }
+}
 .animate-spark-slow {
-  animation: sparkPop 2.2s ease-out infinite;
+  animation: sparkPopRed 2.2s ease-out infinite;
 }
 
 /* Respeta la preferencia del sistema de reducir movimiento — aplica a todas
