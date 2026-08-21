@@ -106,6 +106,8 @@ function LoginContent() {
     no_email: 'Tu cuenta no tiene email. Usa el formulario.',
     account_exists: 'Ya existe una cuenta con este correo. Inicia sesión con tu contraseña.',
     bloqueado: 'Esta cuenta fue bloqueada por uso indebido de la plataforma. Si crees que es un error, contáctanos.',
+    oauth_token_exchange_failed: 'No se pudo conectar con el proveedor. Intenta de nuevo.',
+    oauth_email_no_verificado: 'Tu proveedor no confirmó tu correo, así que no podemos vincularlo a una cuenta existente por seguridad. Usa el mismo método con el que iniciaste sesión antes, o escríbenos si el problema sigue.',
   };
 
   return (
