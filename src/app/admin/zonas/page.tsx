@@ -5,6 +5,7 @@ import { Loader2, Plus, Pencil, Trash2, ImagePlus, Star, Flame } from 'lucide-re
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { TableSkeleton } from '@/components/ui/Skeleton';
+import { Pagination } from '@/components/ui/Pagination';
 import { useToast } from '@/context/ToastContext';
 import { resizeImageToDataUrl } from '@/lib/imageResize';
 import { backendFetch } from '@/lib/backendApi';
@@ -64,6 +65,9 @@ export default function AdminZonasPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [colonias, setColonias] = useState<ColoniaFicha[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(20);
   const [pendientes, setPendientes] = useState<ColoniaPendiente[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -73,16 +77,27 @@ export default function AdminZonasPage() {
   const [aBorrar, setABorrar] = useState<ColoniaFicha | null>(null);
   const [borrando, setBorrando] = useState(false);
 
+  // BACKEND-AUDITORIA-EXHAUSTIVA-20082026: GET /admin/zonas/colonias pasó
+  // de un array plano con techo fijo de 200 a { colonias, total, page,
+  // perPage } paginado de verdad — antes esta página truena con ".map is
+  // not a function" porque seguía esperando el array plano. `pendientes`
+  // no pagina (lista de sugerencias, no un catálogo que crezca sin límite).
   const cargar = useCallback(async () => {
     setLoading(true);
     const [c, p] = await Promise.all([
-      backendFetch<ColoniaFicha[]>('/admin/zonas/colonias').catch(() => []),
+      backendFetch<{ colonias: ColoniaFicha[]; total: number; page: number; perPage: number }>(
+        `/admin/zonas/colonias?page=${page}`
+      ).catch(() => ({ colonias: [], total: 0, page: 1, perPage: 20 })),
       backendFetch<ColoniaPendiente[]>('/admin/zonas/colonias/pendientes').catch(() => []),
     ]);
-    setColonias(c);
+    setColonias(c.colonias);
+    setTotal(c.total);
+    setPerPage(c.perPage);
     setPendientes(p);
     setLoading(false);
-  }, []);
+  }, [page]);
+
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
 
   useEffect(() => { function cargarInicial() { cargar(); } cargarInicial(); }, [cargar]);
 
@@ -150,6 +165,10 @@ export default function AdminZonasPage() {
       toast.error('Latitud/longitud inválidas — verifica que sean números dentro de Tabasco.');
       return;
     }
+    // Solo alcanza a ver duplicados dentro de la página actual (ahora que
+    // `colonias` pagina) — es un aviso rápido, no la validación real: el
+    // backend igual rechaza con un slug duplicado (mismo nombre genera el
+    // mismo slug sin importar el municipio) si esto no lo atrapó primero.
     const duplicada = colonias.some(
       (c) => c.id !== form.id && c.municipio === form.municipio && c.nombre.trim().toLowerCase() === form.nombre.trim().toLowerCase(),
     );
@@ -289,6 +308,10 @@ export default function AdminZonasPage() {
               </div>
             </div>
           )}
+
+          <div className="mt-6">
+            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+          </div>
         </>
       )}
 

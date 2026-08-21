@@ -5,6 +5,7 @@ import { CheckCircle2, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { TableSkeleton } from '@/components/ui/Skeleton';
+import { Pagination } from '@/components/ui/Pagination';
 import { formatRelativeDate } from '@/lib/format';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
@@ -21,17 +22,33 @@ interface Servicio {
 
 export default function AdminServiciosPage() {
   const [servicios, setServicios] = useState<Servicio[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(20);
   const [loading, setLoading] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [confirmar, setConfirmar] = useState<Servicio | null>(null);
   const [error, setError] = useState('');
 
+  // BACKEND-AUDITORIA-EXHAUSTIVA-20082026: GET /admin/servicios pasó de un
+  // array plano con techo fijo de 200 a { servicios, total, page, perPage }
+  // paginado de verdad — antes esta página truena con ".map is not a
+  // function" porque seguía esperando el array plano.
   const cargar = useCallback(async () => {
     setLoading(true);
-    const servicios = await backendFetch<Servicio[]>('/admin/servicios');
-    setServicios(servicios ?? []);
+    const data = await backendFetch<{
+      servicios: Servicio[];
+      total: number;
+      page: number;
+      perPage: number;
+    }>(`/admin/servicios?page=${page}`);
+    setServicios(data.servicios ?? []);
+    setTotal(data.total ?? 0);
+    setPerPage(data.perPage ?? 20);
     setLoading(false);
-  }, []);
+  }, [page]);
+
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
 
   useEffect(() => { function cargarInicial() { cargar(); } cargarInicial(); }, [cargar]);
 
@@ -109,6 +126,10 @@ export default function AdminServiciosPage() {
           </div>
         </div>
       )}
+
+      <div className="mt-6">
+        <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+      </div>
 
       <Modal
         isOpen={!!confirmar}
