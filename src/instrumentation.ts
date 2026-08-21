@@ -6,13 +6,26 @@
  * ver docs/BACKEND.md §6) — funciona mientras el proceso de Node esté vivo
  * (`next dev` / `next start`).
  *
- * ⚠️ Este poller es SOLO para desarrollo local — no sirve en un despliegue
- * serverless (Vercel, etc.): una función serverless no queda corriendo en
- * segundo plano entre requests, así que `setInterval` nunca vuelve a
- * dispararse después del primer request. **El mecanismo real de producción
- * es `.github/workflows/citas-recordatorios.yml` en el repo del backend**
+ * ⚠️ Este poller es SOLO para desarrollo local — no sirve en ningún
+ * despliegue de producción, sea serverless (Vercel) o Workers (Cloudflare,
+ * este proyecto vía @opennextjs/cloudflare): un `setInterval` que sigue
+ * vivo entre requests no es un patrón soportado en esos entornos — en
+ * Cloudflare Workers en particular, la CPU de esos disparos en segundo
+ * plano se factura contra el request que "despierta" al isolate, lo que
+ * puede disparar el error 1102 (Worker exceeded resource limits).
+ * **El mecanismo real de producción es
+ * `.github/workflows/citas-recordatorios.yml` en el repo del backend**
  * (cron real, cada 5 min) — este poller no lo reemplaza, solo evita
  * depender de infraestructura externa para probar el flujo completo en dev.
+ *
+ * 2026-08-21: antes el guard solo descartaba `NEXT_RUNTIME === 'edge'`,
+ * asumiendo que cualquier otro valor era Node.js "de verdad" corriendo
+ * localmente. Falso para este proyecto: OpenNext Cloudflare corre Next.js
+ * sobre una capa de compatibilidad Node.js dentro de Workers
+ * (`nodejs_compat` en wrangler.jsonc), así que `NEXT_RUNTIME` vale
+ * `'nodejs'` ahí también — el guard no detenía nada en producción. Ahora
+ * se exige explícitamente `NODE_ENV !== 'production'`, sin importar qué
+ * plataforma sea: el poller nace y muere en desarrollo local, punto.
  *
  * 2026-08-13: antes este poller procesaba `Cita` de la base de datos LOCAL
  * de este repo (Prisma propio) — huérfana desde que Citas se migró al
@@ -20,14 +33,7 @@
  * sin ningún efecto real. Corregido para llamar al backend de verdad.
  */
 export async function register() {
-  // Igual que el patrón de la documentación oficial: se descarta
-  // explícitamente el runtime Edge, y se deja correr en cualquier otro
-  // caso. Un check `!== 'nodejs'` parecía equivalente pero no lo es: si
-  // `NEXT_RUNTIME` llega undefined en algún entorno/versión (no está
-  // garantizado que Next siempre lo setee para el runtime por defecto), esa
-  // condición sería true y el poller nunca arrancaría, en silencio, sin
-  // ningún error visible.
-  if (process.env.NEXT_RUNTIME === 'edge') return;
+  if (process.env.NODE_ENV === 'production') return;
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const cronSecret = process.env.CRON_SECRET;
