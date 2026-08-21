@@ -44,10 +44,38 @@ export default function EditarPropiedadPage() {
   const [property, setProperty] = useState<Property | null | undefined>(undefined);
 
   const {
-    register, handleSubmit, reset, watch,
+    register, handleSubmit, reset, watch, setValue,
     formState: { errors, isSubmitting },
   } = useForm<PublishFormData>({ resolver: zodResolver(publishSchema) });
   const tipoActual = watch('tipo');
+
+  // Mismo criterio que PublishForm.tsx (auditoría 2026-08-20: "pregunta
+  // recámaras y baños, lo cual no aplica" para terreno) — un terreno vacío
+  // no tiene m² construidos, recámaras ni baños; solo se piden si ya tenía
+  // una construcción encima. Aquí el checkbox arranca marcado si la
+  // propiedad guardada ya trae algo de eso, para no perderlo al abrir el
+  // formulario de edición.
+  const [terrenoConstruido, setTerrenoConstruido] = useState(false);
+  useEffect(() => {
+    if (property?.tipo === 'terreno') {
+      setTerrenoConstruido(!!(property.m2Construidos || property.recamaras || property.banos));
+    }
+  }, [property]);
+  useEffect(() => {
+    if (tipoActual !== 'terreno') setTerrenoConstruido(false);
+  }, [tipoActual]);
+  const mostrarCamposConstruccion = tipoActual !== 'terreno' || terrenoConstruido;
+  // Recámaras no aplica a local/oficina/bodega/habitación (no son "cuartos").
+  const tipoConRecamaras = mostrarCamposConstruccion && (tipoActual === 'casa' || tipoActual === 'departamento' || tipoActual === 'terreno');
+  useEffect(() => {
+    if (!mostrarCamposConstruccion) {
+      setValue('m2Construidos', 0);
+      setValue('banos', 0);
+    }
+  }, [mostrarCamposConstruccion, setValue]);
+  useEffect(() => {
+    if (!tipoConRecamaras) setValue('recamaras', 0);
+  }, [tipoConRecamaras, setValue]);
 
   // GET /propiedades/:id con sesión (backendFetch manda la cookie sola)
   // devuelve la vista de dueño si el id es tuyo — 403/404 si no.
@@ -174,26 +202,39 @@ export default function EditarPropiedadPage() {
 
         <Input label="Precio (MXN)" type="number" error={errors.precio?.message} {...register('precio', { valueAsNumber: true })} />
 
-        {/* Antes ocultaba m² construidos/recámaras/baños por completo para
-            "terreno" (mismo ajuste recién revertido en PublishForm.tsx) —
-            un terreno puede venderse con una casa ya construida y el
-            resto del lote disponible, así que sí necesita poder editar
-            esos datos. "m² de terreno" faltaba por completo aquí, se
-            agrega para terreno/bodega igual que en el formulario de
-            publicar. */}
+        {/* "m² de terreno" para terreno/bodega, igual que en el formulario
+            de publicar. */}
         {(tipoActual === 'terreno' || tipoActual === 'bodega') && (
           <Input label="m² de terreno" type="number" {...register('m2Terreno', { valueAsNumber: true })} />
         )}
+        {/* Un terreno vacío no tiene m² construidos, recámaras ni baños —
+            se piden solo si confirma que ya hay algo construido encima. */}
         {tipoActual === 'terreno' && (
-          <p className="text-xs text-gray-400">
-            Si el terreno ya tiene una construcción (ej. una casa, con el resto del lote disponible), indícalo aquí. Si está vacío, déjalo en 0.
-          </p>
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={terrenoConstruido}
+              onChange={(e) => setTerrenoConstruido(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-brand focus:ring-2 focus:ring-brand/30"
+            />
+            <span className="text-xs text-gray-500">Este terreno ya tiene una construcción (casa, bodega, etc.)</span>
+          </label>
         )}
-        <div className="grid grid-cols-2 gap-3">
-          <Input label="m² construidos" type="number" {...register('m2Construidos', { valueAsNumber: true })} />
-          <Input label="Recámaras" type="number" {...register('recamaras', { valueAsNumber: true })} />
-        </div>
-        <Input label="Baños" type="number" {...register('banos', { valueAsNumber: true })} />
+        {/* Recámaras no aplica a local/oficina/bodega/habitación (no son
+            "cuartos"), ni a un terreno vacío. */}
+        {mostrarCamposConstruccion && (
+          tipoConRecamaras ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="m² construidos" type="number" {...register('m2Construidos', { valueAsNumber: true })} />
+              <Input label="Recámaras" type="number" {...register('recamaras', { valueAsNumber: true })} />
+            </div>
+          ) : (
+            <Input label="m² construidos" type="number" {...register('m2Construidos', { valueAsNumber: true })} />
+          )
+        )}
+        {mostrarCamposConstruccion && (
+          <Input label="Baños" type="number" {...register('banos', { valueAsNumber: true })} />
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <Select label="Municipio" options={MUNICIPIO_OPTIONS} error={errors.municipio?.message} {...register('municipio')} />

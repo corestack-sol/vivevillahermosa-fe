@@ -241,12 +241,25 @@ export function PublishForm() {
   });
 
   const tipo        = watch('tipo');
-  // local/oficina/bodega/habitacion no tienen "recámaras" — un espacio
+  // Un terreno vacío no tiene m² construidos, recámaras ni baños — pedirlos
+  // siempre (como antes, con una nota "déjalo en 0 si no aplica") confundía
+  // más de lo que ayudaba (reporte explícito 2026-08-20: "pregunta recámaras
+  // y baños, lo cual no aplica"). Pero un terreno SÍ puede tener una casa ya
+  // construida encima, así que en vez de ocultar esos campos sin más, se
+  // pide confirmarlo con un checkbox — solo entonces se muestran.
+  const [terrenoConstruido, setTerrenoConstruido] = useState(false);
+  useEffect(() => {
+    if (tipo !== 'terreno') setTerrenoConstruido(false);
+  }, [tipo]);
+  // m² construidos y baños son parte de "área techada" — no aplican a un
+  // terreno vacío, sí a cualquier otro tipo (local/oficina/bodega/habitación
+  // sí tienen área construida y baños, aunque no "recámaras").
+  const mostrarCamposConstruccion = tipo !== 'terreno' || terrenoConstruido;
+  // Recámaras no aplica a local/oficina/bodega/habitación — un espacio
   // comercial o un cuarto individual no se describen en número de cuartos.
-  // terreno se queda incluido: puede tener una casa ya construida encima
-  // (mismo criterio que ya justifica dejar m² construidos/baños visibles
-  // ahí, ver el step de Detalles más abajo).
-  const tipoConRecamaras = tipo === 'casa' || tipo === 'departamento' || tipo === 'terreno';
+  // terreno se queda incluido: si ya tiene construcción (checkbox de
+  // arriba), esa construcción puede tener recámaras igual que una casa.
+  const tipoConRecamaras = mostrarCamposConstruccion && (tipo === 'casa' || tipo === 'departamento' || tipo === 'terreno');
   const colonia     = watch('colonia');
   const municipio   = watch('municipio');
   const descripcion = watch('descripcion');
@@ -284,13 +297,20 @@ export function PublishForm() {
     }
   }
 
-  // Si el campo de recámaras queda oculto (tipo cambia a uno comercial),
-  // limpia el valor — sin esto, un número cargado con un tipo anterior
-  // (ej. "3" con "casa") seguía viajando escondido al submit tras cambiar
-  // a "local".
+  // Si recámaras/m² construidos/baños quedan ocultos (tipo cambia a uno
+  // comercial, o un terreno deja de marcarse como "ya construido"), limpia
+  // los valores — sin esto, un número cargado con un tipo/estado anterior
+  // (ej. "3" recámaras con "casa") seguía viajando escondido al submit tras
+  // cambiar a "local" o desmarcar el checkbox de construcción.
   useEffect(() => {
     if (!tipoConRecamaras) setValue('recamaras', 0);
   }, [tipoConRecamaras, setValue]);
+  useEffect(() => {
+    if (!mostrarCamposConstruccion) {
+      setValue('m2Construidos', 0);
+      setValue('banos', 0);
+    }
+  }, [mostrarCamposConstruccion, setValue]);
 
   // Text detection from colony name — GPS coords se guardan con la propiedad
   // pero no se usan para clasificar riesgo hasta tener shapefiles oficiales de IMPLAN.
@@ -698,33 +718,38 @@ export function PublishForm() {
             {(tipo === 'terreno' || tipo === 'bodega') && (
               <Input label="m² de terreno" type="number" placeholder="0" {...register('m2Terreno', { valueAsNumber: true })} />
             )}
-            {/* Antes m² construidos/recámaras/baños se ocultaban por
-                completo para "terreno", asumiendo que un terreno siempre
-                está vacío — pero un terreno puede venderse con una casa
-                ya construida y el resto del lote disponible, así que sí
-                necesita poder capturar esos datos. Se dejan visibles para
-                todos los tipos; el placeholder "0" y la nota de abajo
-                dejan claro que son opcionales cuando no aplica. */}
+            {/* Un terreno vacío no tiene m² construidos, recámaras ni
+                baños — se piden solo si confirma que ya hay algo
+                construido encima (checkbox), en vez de mostrarlos siempre
+                "por si acaso" (reporte explícito 2026-08-20). */}
             {tipo === 'terreno' && (
-              <p className="text-xs text-gray-400 -mt-1">
-                Si el terreno ya tiene una construcción (ej. una casa, con el resto del lote disponible), indícalo aquí. Si está vacío, déjalo en 0.
-              </p>
+              <label className="flex items-center gap-2 -mt-1 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={terrenoConstruido}
+                  onChange={(e) => setTerrenoConstruido(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-brand focus:ring-2 focus:ring-brand/30"
+                />
+                <span className="text-xs text-gray-500">Este terreno ya tiene una construcción (casa, bodega, etc.)</span>
+              </label>
             )}
             {/* Recámaras no aplica a un tipo comercial (local/oficina/bodega
-                no tienen "cuartos") — antes se mostraba para cualquier
-                tipo, incluido local, sin ningún sentido. Se queda visible
-                para terreno por la misma razón que ya justifica m²
-                construidos/baños ahí arriba: puede tener una casa
-                construida encima. */}
-            {tipoConRecamaras ? (
-              <div className="grid grid-cols-2 gap-3">
+                no tienen "cuartos") ni a un terreno vacío. Se queda visible
+                para terreno solo si el checkbox de arriba confirma que ya
+                tiene una construcción encima. */}
+            {mostrarCamposConstruccion && (
+              tipoConRecamaras ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <Input label="m² construidos" type="number" placeholder="0" {...register('m2Construidos', { valueAsNumber: true })} />
+                  <Input label="Recámaras" type="number" placeholder="0" {...register('recamaras', { valueAsNumber: true })} />
+                </div>
+              ) : (
                 <Input label="m² construidos" type="number" placeholder="0" {...register('m2Construidos', { valueAsNumber: true })} />
-                <Input label="Recámaras" type="number" placeholder="0" {...register('recamaras', { valueAsNumber: true })} />
-              </div>
-            ) : (
-              <Input label="m² construidos" type="number" placeholder="0" {...register('m2Construidos', { valueAsNumber: true })} />
+              )
             )}
-            <Input label="Baños" type="number" placeholder="0" {...register('banos', { valueAsNumber: true })} />
+            {mostrarCamposConstruccion && (
+              <Input label="Baños" type="number" placeholder="0" {...register('banos', { valueAsNumber: true })} />
+            )}
             {watch('operacion') === 'renta' && (
               <div className="pt-1">
                 <p className="text-sm font-medium text-gray-700 mb-1">Servicios incluidos</p>
