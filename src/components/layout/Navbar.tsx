@@ -105,7 +105,7 @@ export function Navbar() {
   const router       = useRouter();
   const { user, loading, logout } = useAuth();
   const toast = useToast();
-  const esProfesional = !!user && user.rol !== 'buscador';
+  const esProfesional = !!user && user.rol !== 'particular';
   const userMenuRef = useRef<HTMLDivElement>(null);
   useClickOutside(userMenuRef, userMenuOpen, () => setUserMenuOpen(false));
   const navRef = useRef<HTMLElement>(null);

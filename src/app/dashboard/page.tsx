@@ -29,7 +29,7 @@ export default function DashboardPage() {
   const [misPropiedades, setMisPropiedades] = useState<MiPropiedad[]>([]);
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
   const [generandoReporte, setGenerandoReporte] = useState(false);
-  const esProfesional = user ? user.rol !== 'buscador' : false;
+  const esProfesional = user ? user.rol !== 'particular' : false;
   const perfil = usePerfilInmobiliaria(!!user && esProfesional);
 
   useEffect(() => {

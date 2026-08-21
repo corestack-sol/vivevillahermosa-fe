@@ -24,7 +24,7 @@ const INMOBILIARIA_FEATURES = [
 
 export function PlanesInmobiliaria() {
   const { user, loading } = useAuth();
-  const esProfesional = !!user && user.rol !== 'buscador';
+  const esProfesional = !!user && user.rol !== 'particular';
 
   return (
     <section className="bg-white border-y border-gray-100 py-16">

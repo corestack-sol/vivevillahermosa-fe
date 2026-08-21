@@ -67,7 +67,7 @@ export default function CitasPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const toast = useToast();
-  const esProfesional = !!user && user.rol !== 'buscador';
+  const esProfesional = !!user && user.rol !== 'particular';
 
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState(() => new Date());
@@ -94,7 +94,7 @@ export default function CitasPage() {
 
   useEffect(() => {
     if (!authLoading && !user) { router.push('/auth/login'); return; }
-    if (!authLoading && user && user.rol === 'buscador') { router.push('/dashboard'); }
+    if (!authLoading && user && user.rol === 'particular') { router.push('/dashboard'); }
   }, [authLoading, user, router]);
 
   const cargarCitas = useCallback(() => {
@@ -161,7 +161,7 @@ export default function CitasPage() {
     }
   }
 
-  if (authLoading || !user || user.rol === 'buscador') {
+  if (authLoading || !user || user.rol === 'particular') {
     return (
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <Skeleton className="w-48 mb-8" />
