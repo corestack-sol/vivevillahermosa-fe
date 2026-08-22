@@ -10,20 +10,28 @@ interface FloodRiskBadgeProps {
 // histórico (Atlas de Riesgos), no una predicción de la plataforma —
 // "Riesgo Alto/Medio/Bajo" sonaba a que estuviéramos pronosticando algo.
 //
-// `classes` usa bg-white (no bg-{color}-50) — pedido explícito 2026-08-21:
-// "no me gusta el contraste... con los badges". El fondo -50 pálido de
-// cada color quedaba demasiado cerca en luminosidad del bg-gray-100 del
-// footer donde vive este badge en PropertyDetailView.tsx — ambos tonos
-// pálidos y cálidos, se mezclaban en vez de distinguirse. bg-white da
-// contraste real contra ese fondo (y contra el blanco donde también se
-// usa, en PublishForm.tsx, simplemente no hace nada ahí — sigue siendo
-// blanco). El color de riesgo lo siguen llevando el borde, el ícono y el
-// texto, con contraste de sobra para leerse.
+// Rediseñado 2026-08-21 ("no me gusta el contraste... tú eres el experto").
+// El intento anterior (bg-{color}-50, luego bg-white) solo jugaba con
+// LUMINOSIDAD sobre fondos neutros cálidos (gray-100/gray-50 del footer en
+// PropertyDetailView.tsx) — pero el problema real es de FAMILIA de color:
+// ámbar es cálido, el beige/crema de toda esta paleta ("Tabasco patio")
+// también lo es, así que sin importar qué tan claro/oscuro quede el gris,
+// ámbar-sobre-beige siempre se siente turbio (misma zona del círculo
+// cromático). Achicar/aclarar el neutro no arregla un choque de matiz.
+//
+// Solución real: dejar de competir por background y usar ELEVACIÓN
+// (shadow-sm, funciona igual sobre cualquier neutro, cálido o no) +
+// un acento de color fuerte y localizado (franja izquierda sólida) en vez
+// de un tinte pálido de fondo. Mismo lenguaje visual en las dos cajas de
+// este componente (badge de riesgo + aviso informativo): tarjetas blancas
+// con sombra flotando sobre el footer, no otro tono de beige compitiendo
+// con los de al lado.
 const config = {
   alto: {
     label: 'Históricamente inundable',
     description: 'Esta zona tiene historial de inundaciones severas según el Atlas de Riesgos Municipal.',
-    classes: 'bg-white text-red-700 border-red-200',
+    borderAccent: 'border-l-red-500',
+    textClass: 'text-red-700',
     iconClass: 'text-red-500',
     dot: 'bg-red-500',
     compactText: 'text-red-300',
@@ -31,7 +39,8 @@ const config = {
   medio: {
     label: 'Inundaciones menores ocasionales',
     description: 'Zona con anegamiento ocasional en temporada de lluvias según el Atlas de Riesgos Municipal.',
-    classes: 'bg-white text-amber-700 border-amber-200',
+    borderAccent: 'border-l-amber-500',
+    textClass: 'text-amber-700',
     iconClass: 'text-amber-500',
     dot: 'bg-amber-400',
     compactText: 'text-amber-300',
@@ -39,7 +48,8 @@ const config = {
   bajo: {
     label: 'Bajo historial de inundaciones',
     description: 'Zona con bajo historial de inundaciones según el Atlas de Riesgos Municipal.',
-    classes: 'bg-white text-green-700 border-green-200',
+    borderAccent: 'border-l-emerald-500',
+    textClass: 'text-green-700',
     iconClass: 'text-green-500',
     dot: 'bg-emerald-400',
     compactText: 'text-emerald-300',
@@ -66,7 +76,7 @@ export function FloodRiskBadge({ nivel, compact = false }: FloodRiskBadgeProps) 
 
   return (
     <div className="space-y-2">
-      <div className={`flex gap-3 p-4 rounded-xl border ${c.classes}`}>
+      <div className={`flex gap-3 p-4 rounded-xl bg-white border-l-4 shadow-sm ${c.borderAccent} ${c.textClass}`}>
         <Droplets className={`flex-shrink-0 mt-1 ${c.iconClass}`} size={22} />
         <div className="min-w-0">
           <p className="font-bold text-xl leading-tight">{c.label}</p>
@@ -77,14 +87,10 @@ export function FloodRiskBadge({ nivel, compact = false }: FloodRiskBadgeProps) 
         </div>
       </div>
 
-      {/* bg-gray-200 (no gray-50) — este badge ahora también vive dentro
-          del footer de Riesgo de inundación en PropertyDetailView.tsx
-          (bg-gray-100). gray-50 es MÁS claro que ese fondo, así que la caja
-          "hundida" se veía invertida ahí — más clara que su propio
-          contenedor en vez de recedida. gray-200 preserva la misma
-          relación "un paso más oscuro que el padre" que ya tenía sobre
-          blanco, en cualquiera de los dos contextos donde se usa. */}
-      <div className="flex gap-2 bg-gray-200/60 border border-gray-300 rounded-xl px-3 py-3">
+      {/* Misma tarjeta blanca elevada que el badge de arriba — mismo
+          lenguaje visual (sombra, no color de fondo) para separarse del
+          footer, ver comentario junto a `config`. */}
+      <div className="flex gap-2 bg-white border border-gray-200 rounded-xl px-3 py-3 shadow-sm">
         <Info size={15} className="text-gray-400 flex-shrink-0 mt-0.5" />
         <div className="text-sm text-gray-500 leading-relaxed space-y-1.5">
           <p>
