@@ -13,6 +13,7 @@ import { buttonClasses } from '@/components/ui/Button';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { EliminarCuentaModal } from '@/components/account/EliminarCuentaModal';
+import { loginRedirectUrl } from '@/lib/authRedirect';
 
 // /blog se queda fuera del menú a propósito — pedido explícito 2026-08-19:
 // las páginas siguen vivas (indexables, ver sitemap.ts) mientras se decide
@@ -292,7 +293,12 @@ export function Navbar() {
                   )}
                 </div>
               ) : (
-                <Link href="/auth/login"
+                // loginRedirectUrl (no /auth/login pelón) — sin `next`,
+                // safeRedirectPath cae siempre al fallback /dashboard, sin
+                // importar desde qué página se entró a iniciar sesión. Bug
+                // real reportado 2026-08-21: "siempre reenvía al dashboard".
+                // Mismo patrón que ya usan AgentCard.tsx/EliminarCuentaSection.tsx.
+                <Link href={loginRedirectUrl(pathname)}
                   className="flex items-center gap-1.5 border text-sm font-medium px-3.5 py-2 rounded-xl transition-colors text-white border-white/20 hover:border-white/40">
                   <User size={14} /> Entrar
                 </Link>
@@ -358,7 +364,7 @@ export function Navbar() {
                 </div>
               </div>
             ) : (
-              <Link href="/auth/login" onClick={() => setIsOpen(false)}
+              <Link href={loginRedirectUrl(pathname)} onClick={() => setIsOpen(false)}
                 className="flex items-center gap-2 px-4 py-2.5 mb-2 text-sm font-medium rounded-xl text-white hover:bg-white/10">
                 <User size={14} /> Iniciar sesión
               </Link>

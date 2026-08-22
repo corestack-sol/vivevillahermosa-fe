@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Heart, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { loginRedirectUrl } from '@/lib/authRedirect';
 import { backendFetch } from '@/lib/backendApi';
 import { getAllProperties } from '@/lib/api';
 import { PropertyCard } from '@/components/property/PropertyCard';
@@ -69,7 +70,7 @@ function FavoritosContent() {
         <Heart size={40} className="text-gray-200 mx-auto mb-4" />
         <h1 className="text-xl font-heading font-bold text-gray-800 mb-2">Guarda tus propiedades favoritas</h1>
         <p className="text-gray-500 text-sm mb-6">Inicia sesión para guardar y ver tus propiedades guardadas.</p>
-        <Link href="/auth/login" className="inline-flex items-center gap-2 bg-brand text-white font-semibold px-6 py-3 rounded-xl text-sm hover:bg-brand-dark transition-colors">
+        <Link href={loginRedirectUrl('/favoritos')} className="inline-flex items-center gap-2 bg-brand text-white font-semibold px-6 py-3 rounded-xl text-sm hover:bg-brand-dark transition-colors">
           Iniciar sesión
         </Link>
       </div>
