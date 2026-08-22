@@ -340,16 +340,23 @@ export default function MisPropiedadesPage() {
                   </Tooltip>
                   {!ESTADOS_ARCHIVADOS.includes(estado) && (
                     <>
-                      <Tooltip label={p.featured ? 'Ya está destacada' : 'Destacar propiedad'}>
-                        <button
-                          type="button"
-                          disabled={p.featured}
-                          onClick={() => setDestacando(p.id)}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-amber-500 hover:bg-amber-50 transition-colors disabled:opacity-40 disabled:hover:text-gray-400 disabled:hover:bg-transparent disabled:cursor-default"
-                        >
-                          <Star size={15} className={p.featured ? 'fill-current text-amber-400' : ''} />
-                        </button>
-                      </Tooltip>
+                      {/* Destacar es feature profesional (inmobiliaria) —
+                          pedido explícito 2026-08-21: "los usuarios
+                          normales no deben tener esa opción". Antes solo
+                          se gateaba por estado archivado, cualquier cuenta
+                          (particular incluida) la veía. */}
+                      {esProfesional && (
+                        <Tooltip label={p.featured ? 'Ya está destacada' : 'Destacar propiedad'}>
+                          <button
+                            type="button"
+                            disabled={p.featured}
+                            onClick={() => setDestacando(p.id)}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-amber-500 hover:bg-amber-50 transition-colors disabled:opacity-40 disabled:hover:text-gray-400 disabled:hover:bg-transparent disabled:cursor-default"
+                          >
+                            <Star size={15} className={p.featured ? 'fill-current text-amber-400' : ''} />
+                          </button>
+                        </Tooltip>
+                      )}
                       <Tooltip label={p.operacion === 'venta' ? 'Marcar como vendida' : 'Marcar como rentada'}>
                         <button
                           type="button"

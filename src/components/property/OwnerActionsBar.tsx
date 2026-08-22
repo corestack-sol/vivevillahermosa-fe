@@ -37,6 +37,10 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
   const { user } = useAuth();
   const toast = useToast();
   const router = useRouter();
+  // Destacar es feature profesional (inmobiliaria) — pedido explícito
+  // 2026-08-21: "los usuarios normales no deben tener esa opción". Mismo
+  // criterio ya usado para "Panel profesional" (2026-08-20).
+  const esProfesional = !!user && user.rol === 'inmobiliaria';
 
   const [mine, setMine] = useState<MiaBackend | null>(null);
   const [showArchivar, setShowArchivar] = useState(false);
@@ -145,16 +149,18 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
         </Tooltip>
         {!ESTADOS_ARCHIVADOS.includes(mine.estado) && (
           <>
-            <Tooltip label={mine.featured ? 'Ya está destacada' : 'Destacar propiedad'}>
-              <button
-                type="button"
-                disabled={mine.featured}
-                onClick={() => setShowDestacar(true)}
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-brand-dark/60 hover:text-amber-500 hover:bg-white transition-colors disabled:opacity-40 disabled:hover:text-brand-dark/60 disabled:hover:bg-transparent disabled:cursor-default"
-              >
-                <Star size={16} className={mine.featured ? 'fill-current text-amber-400' : ''} />
-              </button>
-            </Tooltip>
+            {esProfesional && (
+              <Tooltip label={mine.featured ? 'Ya está destacada' : 'Destacar propiedad'}>
+                <button
+                  type="button"
+                  disabled={mine.featured}
+                  onClick={() => setShowDestacar(true)}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-brand-dark/60 hover:text-amber-500 hover:bg-white transition-colors disabled:opacity-40 disabled:hover:text-brand-dark/60 disabled:hover:bg-transparent disabled:cursor-default"
+                >
+                  <Star size={16} className={mine.featured ? 'fill-current text-amber-400' : ''} />
+                </button>
+              </Tooltip>
+            )}
             <Tooltip label={mine.operacion === 'venta' ? 'Marcar como vendida' : 'Marcar como rentada'}>
               <button
                 type="button"
