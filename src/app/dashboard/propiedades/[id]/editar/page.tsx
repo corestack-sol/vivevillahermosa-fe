@@ -16,6 +16,7 @@ import {
   publishSchema, type PublishFormData, type MetodoContacto,
   TIPO_OPTIONS, MUNICIPIO_OPTIONS, METODO_CONTACTO_OPTIONS,
 } from '@/lib/publishSchema';
+import { AMENIDADES_OPTIONS } from '@/lib/amenidades';
 import type { Property } from '@/types/property';
 
 const OPERACION_OPTIONS = [
@@ -80,6 +81,21 @@ export default function EditarPropiedadPage() {
     if (!tipoConRecamaras) setValue('recamaras', 0);
   }, [tipoConRecamaras, setValue]);
 
+  // amenidades no vive en publishSchema (igual que en PublishForm.tsx) —
+  // se maneja aparte, por label (Property.amenidades ya guarda strings
+  // legibles en datos reales, ver amenidades.ts). Bug real encontrado
+  // 2026-08-21: este formulario nunca las mostraba ni las mandaba en el
+  // PATCH — editar una propiedad podía perderlas en silencio.
+  const [amenidades, setAmenidades] = useState<string[]>([]);
+  useEffect(() => {
+    if (property) setAmenidades(property.amenidades);
+  }, [property]);
+  function toggleAmenidad(label: string) {
+    setAmenidades((prev) =>
+      prev.includes(label) ? prev.filter((a) => a !== label) : [...prev, label]
+    );
+  }
+
   // GET /propiedades/:id con sesión (backendFetch manda la cookie sola)
   // devuelve la vista de dueño si el id es tuyo — 403/404 si no.
   useEffect(() => {
@@ -140,6 +156,7 @@ export default function EditarPropiedadPage() {
           municipio: data.municipio,
           colonia: data.colonia,
           riesgoInundacion: data.riesgoInundacion,
+          amenidades,
           agenteNombre: data.nombreContacto,
           // A diferencia de PublishForm.tsx (construirAgenteContacto), aquí
           // sí hace falta mandar explícitamente `null` para el campo que ya
@@ -241,6 +258,32 @@ export default function EditarPropiedadPage() {
         {mostrarCamposConstruccion && (
           <Input label="Baños" type="number" {...register('banos', { valueAsNumber: true })} />
         )}
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Amenidades</label>
+          <p className="text-xs text-gray-400 mb-3">Toca para seleccionar las características de tu propiedad</p>
+          <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+            {AMENIDADES_OPTIONS.map(({ key, label, Icon }) => {
+              const active = amenidades.includes(label);
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  title={label}
+                  onClick={() => toggleAmenidad(label)}
+                  className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border-2 transition-colors ${
+                    active ? 'border-brand bg-brand-pale text-brand' : 'border-gray-200 text-gray-500 hover:border-brand/40'
+                  }`}
+                >
+                  <Icon size={18} />
+                  <span className="text-[9px] font-medium leading-tight text-center line-clamp-2">
+                    {label.split('/')[0].trim()}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <Select label="Municipio" options={MUNICIPIO_OPTIONS} error={errors.municipio?.message} {...register('municipio')} />

@@ -15,6 +15,7 @@ import {
   Tag, Key, Lightbulb, ShieldCheck, Loader2, EyeOff, RefreshCw, TrendingUp,
 } from 'lucide-react';
 import { SERVICIOS_RENTA } from '@/lib/servicios';
+import { AMENIDADES_OPTIONS, AMENIDADES_MAP } from '@/lib/amenidades';
 import { detectarLenguajeSensible } from '@/lib/contentModeration';
 import { detectarRiesgoInundacion } from '@/lib/zonas-inundacion';
 import type { RiesgoInundacion } from '@/lib/zonas-inundacion';
@@ -36,6 +37,12 @@ interface ResultadoImagenIA {
   relacionada: boolean;
   señalesFraude: string[];
   notas: string;
+  // Opcional — el backend todavía no lo manda (pendiente coordinar, ver
+  // AMENIDADES_OPTIONS en amenidades.ts para las labels válidas). Cuando
+  // exista, cada foto puede sugerir amenidades visibles en ella (alberca,
+  // jardín, etc.) — se usa para pre-marcar el selector manual de abajo,
+  // nunca para desmarcar lo que la persona ya eligió a mano.
+  amenidadesDetectadas?: string[];
 }
 
 type AnalisisFoto = 'pendiente' | ResultadoImagenIA;
@@ -141,6 +148,7 @@ export function PublishForm() {
   const [fotos, setFotos]         = useState<{ file: File; preview: string; analisis: AnalisisFoto }[]>([]);
   const [dragOver, setDragOver]   = useState(false);
   const [servicios, setServicios] = useState<string[]>([]);
+  const [amenidades, setAmenidades] = useState<string[]>([]);
   const [stepError, setStepError] = useState(false);
   const [termsModalOpen, setTermsModalOpen] = useState(false);
   const fileInputRef            = useRef<HTMLInputElement>(null);
@@ -203,6 +211,16 @@ export function PublishForm() {
     toAdd.forEach((item) => {
       analizarFoto(item.file).then((analisis) => {
         setFotos((prev) => prev.map((f) => (f.file === item.file ? { ...f, analisis } : f)));
+        // Solo AGREGA sugerencias, nunca quita lo que la persona ya marcó
+        // o desmarcó a mano — y solo acepta labels que de verdad existen
+        // en el catálogo (AMENIDADES_MAP), por si el backend algún día
+        // manda algo que no coincide exactamente.
+        if (analisis.amenidadesDetectadas?.length) {
+          const validas = analisis.amenidadesDetectadas.filter((a) => AMENIDADES_MAP.has(a));
+          if (validas.length > 0) {
+            setAmenidades((prev) => Array.from(new Set([...prev, ...validas])));
+          }
+        }
       });
     });
   }
@@ -217,6 +235,13 @@ export function PublishForm() {
   function toggleServicio(key: string) {
     setServicios((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  }
+
+  // Por label, no por key — ver comentario en amenidades.ts.
+  function toggleAmenidad(label: string) {
+    setAmenidades((prev) =>
+      prev.includes(label) ? prev.filter((a) => a !== label) : [...prev, label]
     );
   }
 
@@ -552,7 +577,11 @@ export function PublishForm() {
           m2Terreno: data.m2Terreno || undefined,
           recamaras: data.recamaras || undefined,
           banos: data.banos || undefined,
-          amenidades: [],
+          // Bug real encontrado 2026-08-21: antes era [] fijo — ninguna
+          // propiedad publicada desde este formulario podía tener
+          // amenidades, aunque el campo ya existe en Property y ya se
+          // muestra en la ficha pública (PropertyDetailView.tsx).
+          amenidades,
           servicios: servicios.length > 0 ? servicios : undefined,
           fotos: fotosUrls,
           municipio: data.municipio,
@@ -779,6 +808,37 @@ export function PublishForm() {
             {mostrarCamposConstruccion && (
               <Input label="Baños" type="number" placeholder="0" {...register('banos', { valueAsNumber: true })} />
             )}
+            {/* Amenidades — a diferencia de "Servicios incluidos" (abajo,
+                solo renta: agua/luz/gas incluidos), esto describe la
+                propiedad en sí (alberca, jardín...), aplica igual a venta
+                y renta. Las que la IA detecta en las fotos ya subidas se
+                pre-marcan solas (ver analizarFoto más arriba) — se pueden
+                quitar/agregar a mano igual que cualquier otra. */}
+            <div className="pt-1">
+              <p className="text-sm font-medium text-gray-700 mb-1">Amenidades</p>
+              <p className="text-xs text-gray-400 mb-3">Toca para seleccionar las características de tu propiedad</p>
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                {AMENIDADES_OPTIONS.map(({ key, label, Icon }) => {
+                  const active = amenidades.includes(label);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      title={label}
+                      onClick={() => toggleAmenidad(label)}
+                      className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border-2 transition-all ${
+                        active ? toggleCls.active : toggleCls.inactive
+                      }`}
+                    >
+                      <Icon size={18} />
+                      <span className="text-[9px] font-medium leading-tight text-center line-clamp-2">
+                        {label.split('/')[0].trim()}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             {watch('operacion') === 'renta' && (
               <div className="pt-1">
                 <p className="text-sm font-medium text-gray-700 mb-1">Servicios incluidos</p>
