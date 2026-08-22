@@ -230,7 +230,7 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
                   como un dato aparte de las características de la
                   propiedad, no como un atributo más de la casa (viene de
                   una fuente externa, el Atlas de Riesgos Municipal). */}
-              <div className="px-5 py-5 bg-gray-50 rounded-b-2xl">
+              <div className="px-5 py-5 bg-gray-100 rounded-b-2xl">
                 <h2 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-gray-400 mb-3">
                   <Droplets size={13} className="flex-shrink-0" /> Riesgo de inundación
                 </h2>
