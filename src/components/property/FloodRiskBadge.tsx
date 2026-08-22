@@ -9,11 +9,21 @@ interface FloodRiskBadgeProps {
 // Mismo criterio que src/lib/floodColors.ts: describe el registro
 // histórico (Atlas de Riesgos), no una predicción de la plataforma —
 // "Riesgo Alto/Medio/Bajo" sonaba a que estuviéramos pronosticando algo.
+//
+// `classes` usa bg-white (no bg-{color}-50) — pedido explícito 2026-08-21:
+// "no me gusta el contraste... con los badges". El fondo -50 pálido de
+// cada color quedaba demasiado cerca en luminosidad del bg-gray-100 del
+// footer donde vive este badge en PropertyDetailView.tsx — ambos tonos
+// pálidos y cálidos, se mezclaban en vez de distinguirse. bg-white da
+// contraste real contra ese fondo (y contra el blanco donde también se
+// usa, en PublishForm.tsx, simplemente no hace nada ahí — sigue siendo
+// blanco). El color de riesgo lo siguen llevando el borde, el ícono y el
+// texto, con contraste de sobra para leerse.
 const config = {
   alto: {
     label: 'Históricamente inundable',
     description: 'Esta zona tiene historial de inundaciones severas según el Atlas de Riesgos Municipal.',
-    classes: 'bg-red-50 text-red-700 border-red-200',
+    classes: 'bg-white text-red-700 border-red-200',
     iconClass: 'text-red-500',
     dot: 'bg-red-500',
     compactText: 'text-red-300',
@@ -21,7 +31,7 @@ const config = {
   medio: {
     label: 'Inundaciones menores ocasionales',
     description: 'Zona con anegamiento ocasional en temporada de lluvias según el Atlas de Riesgos Municipal.',
-    classes: 'bg-amber-50 text-amber-700 border-amber-200',
+    classes: 'bg-white text-amber-700 border-amber-200',
     iconClass: 'text-amber-500',
     dot: 'bg-amber-400',
     compactText: 'text-amber-300',
@@ -29,7 +39,7 @@ const config = {
   bajo: {
     label: 'Bajo historial de inundaciones',
     description: 'Zona con bajo historial de inundaciones según el Atlas de Riesgos Municipal.',
-    classes: 'bg-green-50 text-green-700 border-green-200',
+    classes: 'bg-white text-green-700 border-green-200',
     iconClass: 'text-green-500',
     dot: 'bg-emerald-400',
     compactText: 'text-emerald-300',
