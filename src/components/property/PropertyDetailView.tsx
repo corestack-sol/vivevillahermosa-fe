@@ -119,8 +119,12 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
               <PropertyGallery fotos={property.fotos} titulo={property.titulo} tipo={property.tipo} />
             </div>
 
-            {/* Content sections — misma card, divididas con separadores */}
-            <div className="bg-white rounded-b-2xl border border-t-0 border-gray-200 shadow-sm divide-y divide-gray-100">
+            {/* Content sections — misma card, divididas con separadores.
+                overflow-hidden: la sección de riesgo de inundación de abajo
+                tiene su propio fondo — sin esto, si termina siendo la
+                última, su rectángulo se saldría de la esquina redondeada
+                inferior de la card. */}
+            <div className="bg-white rounded-b-2xl border border-t-0 border-gray-200 shadow-sm divide-y divide-gray-100 overflow-hidden">
 
               {/* Mobile: título + precio */}
               <div className="lg:hidden px-5 py-5">
@@ -205,16 +209,12 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
                 )}
               </div>
 
-              {/* Flood risk */}
-              <div className="px-5 pb-5">
-                <h2 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-gray-400 mb-3">
-                  <Droplets size={13} className="flex-shrink-0" /> Riesgo de inundación
-                </h2>
-                <FloodRiskBadge nivel={property.riesgoInundacion} />
-              </div>
-
               {/* Alerta de fraude — solo aparece si el análisis automático al
-                  publicar marcó riesgo "alto" (ver PublishForm.tsx). */}
+                  publicar marcó riesgo "alto" (ver PublishForm.tsx). Va
+                  ANTES de Riesgo de inundación a propósito — esa sección de
+                  abajo asume que es la última de la card (fondo propio +
+                  esquina redondeada, ver comentario ahí), así que esta debe
+                  quedar siempre antes, nunca después. */}
               {property.alertaFraude && (
                 <div className="px-5 pb-5">
                   <h2 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-gray-400 mb-3">
@@ -223,6 +223,19 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
                   <FraudAlertBadge alerta={property.alertaFraude} />
                 </div>
               )}
+
+              {/* Flood risk — SIEMPRE la última sección de la card (ver nota
+                  arriba). Fondo un poco más oscuro que el resto (pedido
+                  explícito 2026-08-21), como el "footer" de la card: se lee
+                  como un dato aparte de las características de la
+                  propiedad, no como un atributo más de la casa (viene de
+                  una fuente externa, el Atlas de Riesgos Municipal). */}
+              <div className="px-5 py-5 bg-gray-50 rounded-b-2xl">
+                <h2 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-gray-400 mb-3">
+                  <Droplets size={13} className="flex-shrink-0" /> Riesgo de inundación
+                </h2>
+                <FloodRiskBadge nivel={property.riesgoInundacion} />
+              </div>
 
             </div>
           </div>
