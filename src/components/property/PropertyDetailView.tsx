@@ -145,20 +145,20 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
 
               {/* Specs */}
               <div className="px-5 py-5">
-                <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400 mb-4">Características</h2>
+                <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500 mb-4">Características</h2>
                 <PropertySpecs property={property} />
               </div>
 
               {/* Description */}
               <div className="px-5 py-5">
-                <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400 mb-3">Descripción</h2>
+                <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500 mb-3">Descripción</h2>
                 <p className="text-gray-600 text-base leading-relaxed whitespace-pre-line">{property.descripcion}</p>
               </div>
 
               {/* Amenidades */}
               {property.amenidades.length > 0 && (
                 <div className="px-5 py-5">
-                  <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400 mb-4">Amenidades</h2>
+                  <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500 mb-4">Amenidades</h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {property.amenidades.map((a) => (
                       <div key={a} className="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 rounded-xl px-3 py-2.5">
@@ -172,7 +172,7 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
 
               {/* Mapa */}
               <div className="px-5 py-5">
-                <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400 mb-4">Ubicación</h2>
+                <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500 mb-4">Ubicación</h2>
                 <div className="h-64 rounded-xl overflow-hidden border border-gray-100">
                   <MapViewDynamic markers={singleMarker} center={[property.latPublico, property.lngPublico]} zoom={14} approximate approximateRadius={350} />
                 </div>
@@ -231,7 +231,7 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
                   propiedad, no como un atributo más de la casa (viene de
                   una fuente externa, el Atlas de Riesgos Municipal). */}
               <div className="px-5 py-5 bg-gray-100 rounded-b-2xl">
-                <h2 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-gray-400 mb-3">
+                <h2 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-gray-500 mb-3">
                   <Droplets size={13} className="flex-shrink-0" /> Riesgo de inundación
                 </h2>
                 <FloodRiskBadge nivel={property.riesgoInundacion} />
