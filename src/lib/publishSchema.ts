@@ -16,8 +16,16 @@ const num = (msg: string) => z.number({ error: msg });
 // un mensaje amigable también a ese primer chequeo de tipo.
 const str = (msg: string) => z.string({ error: msg });
 
+// 'whatsapp' agregado 2026-08-21 — pedido explícito: "telefono/Correo/Ambos
+// es coherente cuando quiere que solo se le contacte por whatsapp?". No lo
+// era — elegir "Teléfono" guardaba el mismo número en `tel` Y `whatsapp`
+// (ver construirAgenteContacto más abajo), y AgentCard.tsx muestra un botón
+// "Llamar" por separado siempre que `tel` existe. No había forma de decir
+// "solo mensajes, no me llames" — esta opción guarda el número SOLO como
+// `whatsapp`, así AgentCard nunca renderiza el botón de llamada.
 export const METODO_CONTACTO_OPTIONS = [
   { value: 'telefono', label: 'Teléfono' },
+  { value: 'whatsapp', label: 'Solo WhatsApp' },
   { value: 'correo', label: 'Correo' },
   { value: 'ambos', label: 'Ambos' },
 ] as const;
@@ -47,7 +55,7 @@ const baseSchema = z.object({
   // llevan `str()` en vez de un `z.string()` pelón: siguen aceptando
   // `undefined` (son opcionales), pero si por lo que sea llegan como
   // `null` en vez de eso, ya no muestran el mensaje genérico de Zod.
-  metodoContacto:   z.enum(['telefono', 'correo', 'ambos'], { error: 'Elige cómo quieres que te contacten' }),
+  metodoContacto:   z.enum(['telefono', 'whatsapp', 'correo', 'ambos'], { error: 'Elige cómo quieres que te contacten' }),
   telefonoContacto: str('Escribe tu número de teléfono').optional(),
   emailContacto:    str('Escribe tu correo electrónico').optional(),
   // Por defecto false: el contacto es instantáneo con sesión iniciada. Ver
@@ -60,7 +68,7 @@ export const publishSchema = baseSchema.superRefine((data, ctx) => {
   const tel = data.telefonoContacto?.trim() ?? '';
   const email = data.emailContacto?.trim() ?? '';
   const necesitaTel = data.metodoContacto !== 'correo';
-  const necesitaEmail = data.metodoContacto !== 'telefono';
+  const necesitaEmail = data.metodoContacto === 'correo' || data.metodoContacto === 'ambos';
 
   if (necesitaTel) {
     if (!tel) {
@@ -88,12 +96,21 @@ export type MetodoContacto = PublishFormData['metodoContacto'];
  * propiedad. Omite (no vacía) el campo que la persona decidió no revelar,
  * en vez de guardarlo como string vacío.
  */
-export function construirAgenteContacto(nombre: string, metodoContacto: MetodoContacto, telefono?: string, email?: string) {
+export function construirAgenteContacto(
+  nombre: string, metodoContacto: MetodoContacto, telefono?: string, email?: string,
+): { nombre: string; tel?: string; whatsapp?: string; email?: string } {
   const necesitaTel = metodoContacto !== 'correo';
-  const necesitaEmail = metodoContacto !== 'telefono';
+  const necesitaEmail = metodoContacto === 'correo' || metodoContacto === 'ambos';
+  // "Solo WhatsApp" guarda el número únicamente en `whatsapp` — nunca en
+  // `tel` — para que AgentCard.tsx (que muestra "Llamar" siempre que `tel`
+  // exista, sin importar el resto) no ofrezca llamar a quien pidió
+  // explícitamente que solo le escriban.
+  const soloWhatsapp = metodoContacto === 'whatsapp';
   return {
     nombre,
-    ...(necesitaTel && telefono ? { tel: telefono, whatsapp: telefono } : {}),
+    ...(necesitaTel && telefono
+      ? soloWhatsapp ? { whatsapp: telefono } : { tel: telefono, whatsapp: telefono }
+      : {}),
     ...(necesitaEmail && email ? { email } : {}),
   };
 }

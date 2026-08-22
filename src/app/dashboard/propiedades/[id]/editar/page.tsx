@@ -33,6 +33,9 @@ const RIESGO_OPTIONS = [
 function inferirMetodoContacto(agente: Property['agente']): MetodoContacto {
   if (agente.tel && agente.email) return 'ambos';
   if (agente.email) return 'correo';
+  // whatsapp sin tel = "Solo WhatsApp" (agregado 2026-08-21) — con tel
+  // presente ya cae en el 'telefono' de abajo, que sigue guardando ambos.
+  if (agente.whatsapp && !agente.tel) return 'whatsapp';
   return 'telefono';
 }
 
@@ -142,8 +145,11 @@ export default function EditarPropiedadPage() {
           // sí hace falta mandar explícitamente `null` para el campo que ya
           // no aplica — si cambiaste de "Ambos" a "Solo correo", omitir la
           // clave (undefined) no la borraría del lado del servidor.
-          agenteTel: data.metodoContacto !== 'correo' ? data.telefonoContacto : null,
-          agenteEmail: data.metodoContacto !== 'telefono' ? data.emailContacto : null,
+          // "Solo WhatsApp" (agregado 2026-08-21) nunca manda agenteTel —
+          // así AgentCard.tsx no ofrece un botón de "Llamar" a quien pidió
+          // explícitamente que solo le escriban.
+          agenteTel: (data.metodoContacto === 'telefono' || data.metodoContacto === 'ambos') ? data.telefonoContacto : null,
+          agenteEmail: (data.metodoContacto === 'correo' || data.metodoContacto === 'ambos') ? data.emailContacto : null,
           agenteWhatsapp: data.metodoContacto !== 'correo' ? data.telefonoContacto : null,
         }),
       });
@@ -274,7 +280,7 @@ export default function EditarPropiedadPage() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">¿Cómo quieres que te contacten?</label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {METODO_CONTACTO_OPTIONS.map((opt) => (
               <label key={opt.value} className="cursor-pointer">
                 <input type="radio" value={opt.value} {...register('metodoContacto')} className="sr-only peer" />
@@ -293,7 +299,7 @@ export default function EditarPropiedadPage() {
           {watch('metodoContacto') !== 'correo' && (
             <Input label="Teléfono / WhatsApp" error={errors.telefonoContacto?.message} {...register('telefonoContacto')} />
           )}
-          {watch('metodoContacto') !== 'telefono' && (
+          {(watch('metodoContacto') === 'correo' || watch('metodoContacto') === 'ambos') && (
             <Input label="Correo electrónico" error={errors.emailContacto?.message} {...register('emailContacto')} />
           )}
         </div>

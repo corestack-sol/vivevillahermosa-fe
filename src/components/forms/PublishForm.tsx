@@ -1131,10 +1131,10 @@ export function PublishForm() {
                   </ul>
                   {fraudCheck.riesgo === 'alto' ? (
                     <p className="text-xs mt-1.5 opacity-70">
-                      Esto no bloquea tu publicación, pero se mostrará con un aviso de &quot;En revisión&quot; en la ficha de la propiedad para que quien la vea verifique con cuidado. Si crees que es un error, revisa que el precio y la descripción sean correctos — el aviso se basa en eso.
+                      Antes de terminar, revisa que el precio y la descripción describan tu propiedad real — si algo no coincide, corrígelo aquí mismo. Si se publica así, la ficha se mostrará con un aviso de &quot;En revisión&quot; para que quien la vea verifique con cuidado.
                     </p>
                   ) : (
-                    <p className="text-xs mt-1.5 opacity-70">Esto no bloquea tu publicación ni la marca — solo revisa que la información sea correcta antes de continuar.</p>
+                    <p className="text-xs mt-1.5 opacity-70">Antes de continuar, revisa que la información sea correcta — no bloquea tu publicación ni la marca, pero vale la pena confirmarlo ahora.</p>
                   )}
                 </div>
               </div>
@@ -1144,7 +1144,7 @@ export function PublishForm() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">¿Cómo quieres que te contacten?</label>
               <p className="text-xs text-gray-400 mb-2">Si no quieres dar tu celular a desconocidos, elige solo correo.</p>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {METODO_CONTACTO_OPTIONS.map((opt) => (
                   <label key={opt.value} className="cursor-pointer">
                     <input type="radio" value={opt.value} {...register('metodoContacto')} className="sr-only peer" />
@@ -1162,7 +1162,7 @@ export function PublishForm() {
             {watch('metodoContacto') !== 'correo' && (
               <Input label="Teléfono / WhatsApp" type="tel" placeholder="993 123 4567" maxLength={12} error={errors.telefonoContacto?.message} {...register('telefonoContacto')} />
             )}
-            {watch('metodoContacto') !== 'telefono' && (
+            {(watch('metodoContacto') === 'correo' || watch('metodoContacto') === 'ambos') && (
               <Input label="Correo electrónico" type="email" placeholder="tu@correo.com" error={errors.emailContacto?.message} {...register('emailContacto')} />
             )}
             <p className="flex items-start gap-1.5 text-xs text-gray-500 bg-gray-50 rounded-xl p-3">
