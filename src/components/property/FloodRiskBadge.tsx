@@ -67,7 +67,14 @@ export function FloodRiskBadge({ nivel, compact = false }: FloodRiskBadgeProps) 
         </div>
       </div>
 
-      <div className="flex gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-3">
+      {/* bg-gray-200 (no gray-50) — este badge ahora también vive dentro
+          del footer de Riesgo de inundación en PropertyDetailView.tsx
+          (bg-gray-100). gray-50 es MÁS claro que ese fondo, así que la caja
+          "hundida" se veía invertida ahí — más clara que su propio
+          contenedor en vez de recedida. gray-200 preserva la misma
+          relación "un paso más oscuro que el padre" que ya tenía sobre
+          blanco, en cualquiera de los dos contextos donde se usa. */}
+      <div className="flex gap-2 bg-gray-200/60 border border-gray-300 rounded-xl px-3 py-3">
         <Info size={15} className="text-gray-400 flex-shrink-0 mt-0.5" />
         <div className="text-sm text-gray-500 leading-relaxed space-y-1.5">
           <p>
