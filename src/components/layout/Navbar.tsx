@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Menu, X, Plus, User, Heart, Bell, LayoutDashboard, LogOut, ChevronDown, Building2, Settings,
-  CalendarDays, Users, TrendingUp, UserPlus, ShieldCheck, Home, type LucideIcon,
+  CalendarDays, Users, TrendingUp, UserPlus, ShieldCheck, Home, Trash2, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { buttonClasses } from '@/components/ui/Button';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { useClickOutside } from '@/hooks/useClickOutside';
+import { EliminarCuentaModal } from '@/components/account/EliminarCuentaModal';
 
 // /blog se queda fuera del menú a propósito — pedido explícito 2026-08-19:
 // las páginas siguen vivas (indexables, ver sitemap.ts) mientras se decide
@@ -100,6 +101,7 @@ export function NavbarFallback() {
 export function Navbar() {
   const [isOpen, setIsOpen]         = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [showEliminarModal, setShowEliminarModal] = useState(false);
   const pathname     = usePathname();
   const searchParams = useSearchParams();
   const router       = useRouter();
@@ -145,9 +147,10 @@ export function Navbar() {
   const isMapa = pathname.startsWith('/mapa');
 
   return (
-    // Header oscuro a propósito — el resto del sitio es blanco/gris claro,
-    // así que un header en brand-dark es lo que da el golpe de marca desde
-    // el primer scroll, en vez de fundirse con el contenido de abajo.
+    <>
+    {/* Header oscuro a propósito — el resto del sitio es blanco/gris claro,
+        así que un header en brand-dark es lo que da el golpe de marca desde
+        el primer scroll, en vez de fundirse con el contenido de abajo. */}
     <header className={`sticky top-0 z-40 bg-brand-dark/97 backdrop-blur-md border-b border-white/10 shadow-lg shadow-black/10 ${
       isMapa ? 'max-lg:landscape:pointer-coarse:hidden' : ''
     }`}>
@@ -274,6 +277,17 @@ export function Navbar() {
                             <LogOut size={14} /> Cerrar sesión
                           </button>
                         </div>
+                        {/* Separada de "Cerrar sesión" con su propio divider
+                            — pedido explícito 2026-08-21: al final de todo,
+                            claramente aparte del resto (acción destructiva,
+                            no una acción de sesión más). Mismo flujo real
+                            que /privacidad (EliminarCuentaModal). */}
+                        <div className="border-t border-gray-50 mt-1 pt-1">
+                          <button onClick={() => { setUserMenuOpen(false); setShowEliminarModal(true); }}
+                            className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+                            <Trash2 size={14} /> Eliminar mi cuenta
+                          </button>
+                        </div>
                       </div>
                   )}
                 </div>
@@ -334,6 +348,14 @@ export function Navbar() {
                     <LogOut size={14} /> Cerrar sesión
                   </button>
                 </div>
+                {/* Mismo criterio que el dropdown de escritorio — divider
+                    propio, al final de todo. */}
+                <div className="border-t border-white/10 mt-2 pt-2">
+                  <button onClick={() => { setIsOpen(false); setShowEliminarModal(true); }}
+                    className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-300/70 hover:bg-red-500/15 hover:text-red-300 rounded-xl">
+                    <Trash2 size={14} /> Eliminar mi cuenta
+                  </button>
+                </div>
               </div>
             ) : (
               <Link href="/auth/login" onClick={() => setIsOpen(false)}
@@ -371,5 +393,7 @@ export function Navbar() {
         )}
       </nav>
     </header>
+    {user && <EliminarCuentaModal isOpen={showEliminarModal} onClose={() => setShowEliminarModal(false)} />}
+    </>
   );
 }
