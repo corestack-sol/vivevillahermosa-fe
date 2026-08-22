@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Heart, Bell, Plus, Eye, TrendingUp, Home, LayoutDashboard, Lightbulb, MessageCircle, Building2, Download, CalendarDays, Users, Loader2, Info } from 'lucide-react';
+import { Heart, Bell, Plus, Eye, TrendingUp, Home, LayoutDashboard, Lightbulb, MessageCircle, Building2, Download, CalendarDays, Users, Loader2, Info, Sparkles, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { backendFetch } from '@/lib/backendApi';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -14,6 +14,8 @@ import { obtenerResumenReporte } from '@/lib/aiClient';
 import { usePerfilInmobiliaria } from '@/hooks/usePerfilInmobiliaria';
 import type { Notificacion } from '@/components/layout/NotificationBell';
 import { formatRelativeDate } from '@/lib/format';
+import { evaluarCartera } from '@/lib/coach';
+import { CoachModal } from '@/components/dashboard/CoachModal';
 
 // "buscador" se queda mapeado a la nueva etiqueta — el backend todavía no
 // migró el valor default (rename acordado 2026-08-20: buscador -> particular),
@@ -43,6 +45,7 @@ export default function DashboardPage() {
   // 2026-08-20 ("no para cualquier usuario").
   const esProfesional = user ? user.rol === 'inmobiliaria' : false;
   const perfil = usePerfilInmobiliaria(!!user && esProfesional);
+  const [showCoachModal, setShowCoachModal] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) { router.push('/auth/login'); return; }
@@ -97,6 +100,10 @@ export default function DashboardPage() {
   // Propietarios/agentes gestionan una cartera de propiedades — les importan
   // sus propias publicaciones, no cuántas vio como comprador. Buscadores ven
   // las 4 métricas originales.
+  // Coach de calidad de anuncio (capa 1, heurística — src/lib/coach.ts),
+  // reusa `misPropiedades` que este panel ya carga, sin fetch extra.
+  const coachPendientes = esProfesional ? evaluarCartera(misPropiedades) : [];
+
   const stats = esProfesional
     ? [
         { icon: Building2, label: 'Propiedades publicadas', value: misPropiedades.length, href: '/dashboard/propiedades', color: 'text-brand', bg: 'bg-brand-pale' },
@@ -185,6 +192,29 @@ export default function DashboardPage() {
           eventos con fecha, estos números reflejarán tu desempeño de verdad.
         </p>
       </div>
+
+      {/* Coach de anuncios — no intrusivo a propósito (pedido explícito
+          2026-08-22): no es un modal automático ni un banner de alarma,
+          solo aparece cuando de verdad hay algo que revisar, y su única
+          acción es abrir el modal cuando el propietario decide verlo. */}
+      {esProfesional && coachPendientes.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowCoachModal(true)}
+          className="w-full flex items-center gap-3 bg-white border border-amber-200 rounded-2xl px-5 py-3.5 mb-6 text-left hover:border-amber-300 hover:shadow-sm transition-all"
+        >
+          <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Sparkles size={16} className="text-amber-500" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-gray-800">
+              {coachPendientes.length} propiedad{coachPendientes.length !== 1 ? 'es' : ''} podría{coachPendientes.length !== 1 ? 'n' : ''} mejorar su anuncio
+            </p>
+            <p className="text-xs text-gray-500">Fotos, descripción o amenidades incompletas — revisa las sugerencias.</p>
+          </div>
+          <AlertTriangle size={15} className="text-amber-400 flex-shrink-0 ml-auto" />
+        </button>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
@@ -314,6 +344,10 @@ export default function DashboardPage() {
             <Bell size={14} /> Crear alerta
           </Link>
         </div>
+      )}
+
+      {esProfesional && (
+        <CoachModal isOpen={showCoachModal} onClose={() => setShowCoachModal(false)} pendientes={coachPendientes} />
       )}
     </div>
   );

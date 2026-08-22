@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Menu, X, Plus, User, Heart, Bell, LayoutDashboard, LogOut, ChevronDown, Building2, Settings,
-  CalendarDays, Users, TrendingUp, UserPlus, ShieldCheck, Home, Trash2, type LucideIcon,
+  CalendarDays, Users, TrendingUp, UserPlus, ShieldCheck, Home, Trash2, Sparkles, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -14,6 +14,8 @@ import { NotificationBell } from '@/components/layout/NotificationBell';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { EliminarCuentaModal } from '@/components/account/EliminarCuentaModal';
 import { loginRedirectUrl } from '@/lib/authRedirect';
+import { useCoach } from '@/hooks/useCoach';
+import { CoachModal } from '@/components/dashboard/CoachModal';
 
 // /blog se queda fuera del menú a propósito — pedido explícito 2026-08-19:
 // las páginas siguen vivas (indexables, ver sitemap.ts) mientras se decide
@@ -113,6 +115,13 @@ export function Navbar() {
   // hoy en pausa) y "agente" quedan fuera hasta que tengan su propia
   // experiencia real, en vez de heredar el panel de una inmobiliaria.
   const esProfesional = !!user && user.rol === 'inmobiliaria';
+  // Coach de calidad de anuncio — pedido explícito 2026-08-22: badge de
+  // notificaciones en el menú, modal al presionar. Gateado por
+  // `esProfesional` como equivalente interino de "premium" (no existe
+  // sistema de pagos real todavía, ver docs/BACKEND-AJUSTES-IA-21082026.md
+  // §2 — "eso es fase 2", confirmado por el usuario).
+  const { pendientes: coachPendientes } = useCoach(esProfesional);
+  const [showCoachModal, setShowCoachModal] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   useClickOutside(userMenuRef, userMenuOpen, () => setUserMenuOpen(false));
   const navRef = useRef<HTMLElement>(null);
@@ -272,6 +281,19 @@ export function Navbar() {
                             ))}
                           </div>
                         ))}
+                        {esProfesional && (
+                          <div className="border-t border-gray-50 mt-1 pt-1">
+                            <button onClick={() => { setUserMenuOpen(false); setShowCoachModal(true); }}
+                              className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand transition-colors">
+                              <Sparkles size={14} /> Coach de anuncios
+                              {coachPendientes.length > 0 && (
+                                <span className="ml-auto flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[10px] font-bold flex items-center justify-center">
+                                  {coachPendientes.length}
+                                </span>
+                              )}
+                            </button>
+                          </div>
+                        )}
                         <div className="border-t border-gray-50 mt-1 pt-1">
                           <button onClick={handleLogout}
                             className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors">
@@ -348,6 +370,19 @@ export function Navbar() {
                     ))}
                   </div>
                 ))}
+                {esProfesional && (
+                  <div className="border-t border-white/10 mt-2 pt-2">
+                    <button onClick={() => { setIsOpen(false); setShowCoachModal(true); }}
+                      className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm rounded-xl text-white hover:bg-white/8">
+                      <Sparkles size={14} /> Coach de anuncios
+                      {coachPendientes.length > 0 && (
+                        <span className="ml-auto flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[10px] font-bold flex items-center justify-center">
+                          {coachPendientes.length}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                )}
                 <div className="border-t border-white/10 mt-2 pt-2">
                   <button onClick={handleLogout}
                     className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-300 hover:bg-red-500/15 rounded-xl">
@@ -400,6 +435,9 @@ export function Navbar() {
       </nav>
     </header>
     {user && <EliminarCuentaModal isOpen={showEliminarModal} onClose={() => setShowEliminarModal(false)} />}
+    {esProfesional && (
+      <CoachModal isOpen={showCoachModal} onClose={() => setShowCoachModal(false)} pendientes={coachPendientes} />
+    )}
     </>
   );
 }
