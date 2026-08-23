@@ -118,7 +118,7 @@ export function AgentCard({ agent, propiedadId, propertyTitle, requiereMensajePr
       ) : requiereMensajePrimero ? (
         <div className="space-y-2">
           {contacto ? (
-            contacto.email && (
+            contacto.email ? (
               <a
                 href={`mailto:${contacto.email}?subject=${encodeURIComponent(`Consulta: ${propertyTitle}`)}`}
                 className={`flex items-center justify-center gap-2 w-full text-sm font-semibold py-2.5 rounded-xl transition-all active:scale-[0.98] border ${
@@ -130,6 +130,15 @@ export function AgentCard({ agent, propiedadId, propertyTitle, requiereMensajePr
                 <Mail size={16} />
                 Correo
               </a>
+            ) : (
+              // Defensivo: propiedades publicadas antes del 2026-08-22 podían
+              // guardar "solo WhatsApp" + "mensaje primero" a la vez — sin
+              // correo que revelar aquí, antes esto se quedaba vacío en
+              // silencio tras un fetch "exitoso". El hint de abajo ya cubre
+              // el único camino real que le queda a quien visita (ContactForm).
+              <p className={`text-xs text-center py-1 ${dark ? 'text-white/50' : 'text-gray-400'}`}>
+                Este propietario prefiere que le escribas primero.
+              </p>
             )
           ) : (
             <div>

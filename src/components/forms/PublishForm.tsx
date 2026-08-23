@@ -12,10 +12,12 @@ import { Button, buttonClasses } from '@/components/ui/Button';
 import {
   CheckCircle, ChevronRight, ChevronLeft, Sparkles, ImagePlus, X, Images, AlertCircle,
   Home, DollarSign, MapPin, FileText, Camera, Phone, Info, ShieldAlert, ShieldX, Droplets,
-  Tag, Key, Lightbulb, ShieldCheck, Loader2, EyeOff, RefreshCw, TrendingUp,
+  Tag, Key, Lightbulb, ShieldCheck, Loader2, EyeOff, RefreshCw, TrendingUp, Star,
 } from 'lucide-react';
 import { SERVICIOS_RENTA } from '@/lib/servicios';
 import { AMENIDADES_OPTIONS, AMENIDADES_MAP } from '@/lib/amenidades';
+import { evaluarCalidadFoto, type CalidadFoto } from '@/lib/calidadFoto';
+import { generarTituloAutomatico } from '@/lib/tituloGenerator';
 import { detectarLenguajeSensible } from '@/lib/contentModeration';
 import { detectarRiesgoInundacion } from '@/lib/zonas-inundacion';
 import type { RiesgoInundacion } from '@/lib/zonas-inundacion';
@@ -27,7 +29,7 @@ import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import posthog from 'posthog-js';
 import { matchColonia, distanciaKm, precargarColoniasDescubiertas } from '@/lib/colonias';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
-import { resizeImageToDataUrl } from '@/lib/imageResize';
+import { resizeImageToDataUrl, MAX_SOURCE_BYTES } from '@/lib/imageResize';
 import {
   publishSchema, type PublishFormData,
   TIPO_OPTIONS, MUNICIPIO_OPTIONS, MUNICIPIO_CENTERS, METODO_CONTACTO_OPTIONS, construirAgenteContacto,
@@ -91,6 +93,12 @@ const STEP_SUBTITLES = [
   '¿Cómo te pueden contactar?',
 ];
 const MAX_FOTOS = 5;
+// Terreno/local/bodega pueden mostrarse legítimamente vacíos (sin
+// construcción, la pura caja sin muebles) — esas fotos dan poca textura y
+// disparan el mismo puntaje de "borrosa" que una foto realmente movida.
+// Pedido explícito 2026-08-22: no bloquear en esos casos, se queda como
+// aviso (igual que oscura/sobreexpuesta), nunca como bloqueo duro.
+const TIPOS_SIN_BLOQUEO_BORROSA = new Set(['terreno', 'local', 'bodega']);
 // Debe coincidir con LIMITE_PROPIEDADES_ACTIVAS en el backend
 // (properties.service.ts) — el servidor es quien de verdad lo hace cumplir
 // (código LIMITE_PROPIEDADES_ALCANZADO), esto solo evita hacer perder el
@@ -145,7 +153,7 @@ export function PublishForm() {
   // puede usar más de una vez.
   const [aiGenerated, setAiGenerated] = useState(false);
   const [coords, setCoords]       = useState<Coords | null>(null);
-  const [fotos, setFotos]         = useState<{ file: File; preview: string; analisis: AnalisisFoto }[]>([]);
+  const [fotos, setFotos]         = useState<{ file: File; preview: string; analisis: AnalisisFoto; calidad: CalidadFoto | null }[]>([]);
   const [dragOver, setDragOver]   = useState(false);
   const [servicios, setServicios] = useState<string[]>([]);
   const [amenidades, setAmenidades] = useState<string[]>([]);
@@ -185,8 +193,23 @@ export function PublishForm() {
     const slots = MAX_FOTOS - fotos.length;
     const porRevisar = candidatos.slice(0, slots);
 
+    // Bug real reportado desde el día anterior ("algunas fotos caen como
+    // rotas, otras sí pasan"): una foto de cámara reciente (>15MB antes,
+    // ahora el límite subió, ver imageResize.ts) pasaba esta validación sin
+    // problema, se veía normal en la grilla, y solo fallaba en silencio
+    // hasta publicar — analizarFoto() trata el rechazo por peso de
+    // resizeImageToDataUrl() como un error de red más (fail-open) y no
+    // avisa nada. Se rechaza aquí mismo, con la razón visible, antes de
+    // intentar nada más.
+    const sinSobrepeso = porRevisar.filter((f) => f.size <= MAX_SOURCE_BYTES);
+    const pesadas = porRevisar.length - sinSobrepeso.length;
+    if (pesadas > 0) {
+      const maxMb = Math.round(MAX_SOURCE_BYTES / (1024 * 1024));
+      toast.error(`${pesadas} foto${pesadas !== 1 ? 's' : ''} ${pesadas !== 1 ? 'pesan' : 'pesa'} demasiado (máx. ${maxMb}MB) y no se ${pesadas !== 1 ? 'agregaron' : 'agregó'}.`);
+    }
+
     const validaciones = await Promise.all(
-      porRevisar.map(async (file) => {
+      sinSobrepeso.map(async (file) => {
         try {
           const bitmap = await createImageBitmap(file);
           bitmap.close();
@@ -202,7 +225,22 @@ export function PublishForm() {
       toast.error(`${rechazados} archivo${rechazados !== 1 ? 's' : ''} no ${rechazados !== 1 ? 'son' : 'es'} una imagen válida y no se agregó.`);
     }
 
-    const toAdd = validos.map((file) => ({ file, preview: URL.createObjectURL(file), analisis: 'pendiente' as AnalisisFoto }));
+    // Chequeo técnico (nitidez/brillo) — 100% local, no espera a la IA del
+    // backend. Borrosa SÍ bloquea (pedido explícito 2026-08-22) — excepto
+    // en tipos que pueden mostrarse legítimamente vacíos/sin textura
+    // (TIPOS_SIN_BLOQUEO_BORROSA), donde se queda solo como aviso, igual
+    // que oscura/sobreexpuesta.
+    const conCalidad = await Promise.all(validos.map(async (file) => ({ file, calidad: await evaluarCalidadFoto(file) })));
+    const bloqueaBorrosa = !TIPOS_SIN_BLOQUEO_BORROSA.has(watch('tipo'));
+    const nitidas = bloqueaBorrosa ? conCalidad.filter((c) => !c.calidad?.borrosa) : conCalidad;
+    const borrosas = bloqueaBorrosa ? conCalidad.length - nitidas.length : 0;
+    if (borrosas > 0) {
+      toast.error(`${borrosas} foto${borrosas !== 1 ? 's' : ''} ${borrosas !== 1 ? 'salieron' : 'salió'} borrosa${borrosas !== 1 ? 's' : ''} y no se ${borrosas !== 1 ? 'agregaron' : 'agregó'} — usa una foto más nítida.`);
+    }
+
+    const toAdd = nitidas.map(({ file, calidad }) => ({
+      file, preview: URL.createObjectURL(file), analisis: 'pendiente' as AnalisisFoto, calidad,
+    }));
     setFotos((prev) => [...prev, ...toAdd]);
 
     // Analiza cada foto en paralelo, sin bloquear la UI mientras se agregan
@@ -231,6 +269,34 @@ export function PublishForm() {
       return prev.filter((_, i) => i !== idx);
     });
   }
+
+  // Mueve una foto al índice 0 ("Principal") — usado por la sugerencia de
+  // portada de abajo, sugerencia nunca automática: el dueño decide.
+  function usarComoPortada(idx: number) {
+    setFotos((prev) => {
+      if (idx <= 0 || idx >= prev.length) return prev;
+      const arr = [...prev];
+      const [item] = arr.splice(idx, 1);
+      arr.unshift(item);
+      return arr;
+    });
+  }
+
+  // Solo sugiere si otra foto está claramente mejor (diferencia >= 15 pts)
+  // que la actual portada — evita sugerir por un empate marginal que no se
+  // notaría en la práctica.
+  const mejorPortadaIdx = useMemo(() => {
+    if (fotos.length < 2) return null;
+    let bestIdx = 0;
+    let bestScore = fotos[0].calidad?.score ?? -1;
+    fotos.forEach((f, i) => {
+      const s = f.calidad?.score ?? -1;
+      if (s > bestScore) { bestScore = s; bestIdx = i; }
+    });
+    if (bestIdx === 0) return null;
+    const actual = fotos[0].calidad?.score ?? -1;
+    return bestScore - actual >= 15 ? bestIdx : null;
+  }, [fotos]);
 
   function toggleServicio(key: string) {
     setServicios((prev) =>
@@ -413,6 +479,36 @@ export function PublishForm() {
     return () => { clearTimeout(timer); unsubscribe(); };
   }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Plantilla determinista, no llamada de red — ver tituloGenerator.ts.
+  function generarTitulo() {
+    const tipoVal = watch('tipo');
+    const operacionVal = watch('operacion');
+    if (!tipoVal || !operacionVal) {
+      toast.error('Elige el tipo de propiedad y si es venta o renta antes de generar el título.');
+      return;
+    }
+    setValue('titulo', generarTituloAutomatico({
+      tipo: tipoVal,
+      operacion: operacionVal,
+      colonia: watch('colonia'),
+      municipio: watch('municipio'),
+      recamaras: watch('recamaras'),
+      m2Construidos: watch('m2Construidos'),
+      m2Terreno: watch('m2Terreno'),
+    }));
+  }
+
+  // Bug real reportado 2026-08-22: "Solo WhatsApp" no guarda correo
+  // (construirAgenteContacto), pero el checkbox de abajo pedía "mensaje
+  // primero" sin importar el método elegido — esa rama de AgentCard.tsx
+  // solo sabe revelar CORREO, así que la combinación dejaba el contacto
+  // roto en silencio (revelar "exitoso" sin nada que mostrar). Se fuerza a
+  // false y se oculta el checkbox cuando no hay correo posible que revelar.
+  const metodoContactoActual = watch('metodoContacto');
+  useEffect(() => {
+    if (metodoContactoActual === 'whatsapp') setValue('requiereMensajePrimero', false);
+  }, [metodoContactoActual, setValue]);
+
   async function generarConIA() {
     // Bug real reportado 2026-08-21: el botón siempre fallaba con "No se
     // pudo generar la descripción", sin importar cuántas veces se
@@ -537,7 +633,15 @@ export function PublishForm() {
     // en el paso de fotos) sin importar cuál termine primero.
     const resultados = await Promise.allSettled(
       fotos.slice(0, MAX_FOTOS).map(async (f) => {
-        const dataUrl = await resizeImageToDataUrl(f.file, 1280, 'image/jpeg', 0.85);
+        // 1280px/0.85 -> 1920px/0.92 — 2026-08-22: confirmado con backend
+        // (docs/BACKEND-FOTOS-CLOUDINARY-22082026.md) que el único límite
+        // real es 8MB por archivo en /propiedades/fotos, sin ninguna
+        // compresión de su lado (Cloudinary guarda el original tal cual).
+        // El ajuste viejo era muy conservador frente a ese margen — una
+        // foto de propiedad a 1920px/calidad 0.92 se queda típicamente en
+        // 1-3MB, muy por debajo del límite, con mejor detalle al hacer
+        // zoom en la ficha.
+        const dataUrl = await resizeImageToDataUrl(f.file, 1920, 'image/jpeg', 0.92);
         const blob = await (await fetch(dataUrl)).blob();
         const body = new FormData();
         body.append('file', blob, f.file.name);
@@ -1021,7 +1125,19 @@ export function PublishForm() {
         {/* Step 3: Descripción */}
         {step === 3 && (
           <>
-            <Input label="Título del anuncio" placeholder="Ej: Casa con alberca en Tabasco 2000" error={errors.titulo?.message} {...register('titulo')} />
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="titulo" className="block text-sm font-medium text-gray-700">Título del anuncio</label>
+                <button
+                  type="button"
+                  onClick={generarTitulo}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-brand hover:text-brand-dark bg-brand-pale hover:bg-brand-pale/70 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <Tag size={12} /> Generar título automático
+                </button>
+              </div>
+              <Input id="titulo" placeholder="Ej: Casa con alberca en Tabasco 2000" error={errors.titulo?.message} {...register('titulo')} />
+            </div>
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-sm font-medium text-gray-700">Descripción</label>
@@ -1101,6 +1217,22 @@ export function PublishForm() {
               </div>
             )}
 
+            {/* Sugerencia de portada — nunca reordena sola, el dueño decide. */}
+            {mejorPortadaIdx !== null && (
+              <div className="flex items-center justify-between gap-2 bg-brand-pale border border-brand/20 rounded-xl px-3.5 py-2.5">
+                <p className="flex items-center gap-1.5 text-xs text-brand-dark">
+                  <Star size={13} className="flex-shrink-0" /> La foto #{mejorPortadaIdx + 1} se ve más nítida y mejor iluminada — ¿la usas como portada?
+                </p>
+                <button
+                  type="button"
+                  onClick={() => usarComoPortada(mejorPortadaIdx)}
+                  className="flex-shrink-0 text-xs font-semibold text-brand hover:text-brand-dark whitespace-nowrap"
+                >
+                  Usar como portada
+                </button>
+              </div>
+            )}
+
             {/* Previews */}
             {fotos.length > 0 && (
               <div className="grid grid-cols-3 gap-2">
@@ -1110,12 +1242,28 @@ export function PublishForm() {
                   const noApta = analisis !== 'pendiente' && !analisis.apta;
                   const advertencia = analisis !== 'pendiente' && analisis.apta
                     && (!analisis.relacionada || analisis.señalesFraude.length > 0);
+                  // "Borrosa" solo llega aquí para tipos exentos del
+                  // bloqueo (TIPOS_SIN_BLOQUEO_BORROSA) — para el resto,
+                  // addFiles() ya la rechazó antes de agregarla al estado.
+                  const calidad = foto.calidad;
+                  const calidadMsg = calidad?.borrosa ? 'Foto borrosa'
+                    : calidad?.oscura ? 'Foto muy oscura'
+                    : calidad?.sobreexpuesta ? 'Foto sobreexpuesta'
+                    : null;
                   return (
                     <div key={i} className={`relative group aspect-square rounded-xl overflow-hidden bg-gray-100 ${noApta ? 'ring-2 ring-red-500' : ''}`}>
                       <img src={foto.preview} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
                       {i === 0 && !noApta && (
                         <div className="absolute top-1.5 left-1.5 bg-accent text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md leading-none">
                           Principal
+                        </div>
+                      )}
+                      {calidadMsg && !noApta && (
+                        <div
+                          className="absolute top-1.5 right-9 w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center"
+                          title={calidadMsg}
+                        >
+                          <AlertCircle size={12} />
                         </div>
                       )}
                       {pendiente && (
@@ -1230,17 +1378,25 @@ export function PublishForm() {
               Tu nombre y forma de contacto quedarán visibles de un clic para cualquier persona con sesión iniciada — así es como ya se acostumbra contactar en este mercado (como una lona de &quot;se renta&quot;). Nadie sin cuenta puede verlos.
             </p>
 
-            <div className="flex items-start gap-2.5">
-              <input
-                type="checkbox"
-                id="requiereMensajePrimero"
-                {...register('requiereMensajePrimero')}
-                className="mt-0.5 w-4 h-4 flex-shrink-0 rounded border-gray-300 text-brand focus:ring-2 focus:ring-brand/40 focus:ring-offset-0 cursor-pointer"
-              />
-              <label htmlFor="requiereMensajePrimero" className="text-xs text-gray-500 leading-relaxed cursor-pointer">
-                Prefiero que me manden un mensaje antes de ver mi teléfono/WhatsApp — decido yo si respondo y comparto mi número.
-              </label>
-            </div>
+            {/* Oculto para "Solo WhatsApp" — esa elección no guarda correo
+                (construirAgenteContacto), y esta casilla depende de tener uno
+                para revelar en su lugar (ver AgentCard.tsx). Bug real
+                encontrado 2026-08-22: la combinación dejaba el contacto roto
+                en silencio. El efecto de arriba ya fuerza el valor a false
+                si cambian a WhatsApp después de marcarla. */}
+            {watch('metodoContacto') !== 'whatsapp' && (
+              <div className="flex items-start gap-2.5">
+                <input
+                  type="checkbox"
+                  id="requiereMensajePrimero"
+                  {...register('requiereMensajePrimero')}
+                  className="mt-0.5 w-4 h-4 flex-shrink-0 rounded border-gray-300 text-brand focus:ring-2 focus:ring-brand/40 focus:ring-offset-0 cursor-pointer"
+                />
+                <label htmlFor="requiereMensajePrimero" className="text-xs text-gray-500 leading-relaxed cursor-pointer">
+                  Prefiero que me manden un mensaje antes de ver mi teléfono/WhatsApp — decido yo si respondo y comparto mi número.
+                </label>
+              </div>
+            )}
 
             <div className="flex items-start gap-2.5 pt-1">
               <input

@@ -1,4 +1,23 @@
-const MAX_SOURCE_BYTES = 8 * 1024 * 1024; // 8MB
+// Subido de 8MB a 20MB — 2026-08-22: bug real reportado desde el día
+// anterior ("algunas fotos caen como rotas, otras sí pasan"). Root cause:
+// un teléfono reciente (ej. iPhone 14/15 Pro, sensores de 48MP) produce
+// fotos de cámara que fácilmente pesan 10-20MB — con el límite viejo de
+// 8MB, esas se rechazaban aquí. El rechazo no se veía al agregar la foto
+// (analizarFoto() en PublishForm.tsx trata cualquier error, incluido este,
+// como neutral — "fail open" pensado para fallas de red, no para este
+// caso), así que la foto se mostraba normal en la grilla y solo fallaba en
+// silencio hasta publicar, sin explicar por qué.
+//
+// Este límite es sobre la memoria del NAVEGADOR de quien publica, nunca
+// sobre almacenamiento — el archivo que de verdad viaja a Cloudinary
+// siempre es el resultado YA redimensionado (1280px, JPEG calidad 0.85,
+// unos cientos de KB), sin importar qué tan pesado era el original.
+// FileReader.readAsDataURL() lee el archivo entero a un string base64
+// (~33% más grande) y luego se decodifica a píxeles crudos en memoria para
+// el canvas — eso es lo que puede colgar un equipo modesto con un archivo
+// absurdamente grande, no el peso final subido. 20MB cubre virtualmente
+// cualquier JPEG/HEIC de cámara de teléfono actual con margen de sobra.
+export const MAX_SOURCE_BYTES = 20 * 1024 * 1024; // 20MB
 
 /**
  * Redimensiona una imagen a un cuadro máximo (por defecto 320px) y la
