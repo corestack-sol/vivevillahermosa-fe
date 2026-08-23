@@ -8,6 +8,7 @@ import { FavoriteButton } from './FavoriteButton';
 import { getPriceContext, type PriceContext } from '@/lib/api';
 import { getPropertyTypeConfig } from '@/lib/propertyTypeConfig';
 import { FLOOD_COLOR, FLOOD_LABEL } from '@/lib/floodColors';
+import { cloudinaryTransform } from '@/lib/cloudinaryUrl';
 import { useCompare } from '@/context/CompareContext';
 
 interface PropertyCardProps {
@@ -72,7 +73,7 @@ export function PropertyCard({ property, landmarkQuery }: PropertyCardProps) {
           // PropertyGallery.tsx para contenido de Cloudinary.
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={foto}
+            src={cloudinaryTransform(foto, 'thumb')}
             alt={property.titulo}
             loading="lazy"
             onError={() => setImgFailed(true)}

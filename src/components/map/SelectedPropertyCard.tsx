@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { X, MapPin, ArrowRight } from 'lucide-react';
 import { formatPriceShort } from '@/lib/format';
 import { getPropertyTypeConfig } from '@/lib/propertyTypeConfig';
+import { cloudinaryTransform } from '@/lib/cloudinaryUrl';
 import { FavoriteButton } from '@/components/property/FavoriteButton';
 import type { MapMarker } from './MapView';
 
@@ -76,7 +77,7 @@ export function SelectedPropertyCard({ marker, onClose }: { marker: MapMarker; o
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {showImg && (
           <img
-            src={marker.foto!}
+            src={cloudinaryTransform(marker.foto!, 'thumb')}
             alt={marker.titulo}
             className="w-full h-full object-cover"
             onError={() => setImgFailed(true)}

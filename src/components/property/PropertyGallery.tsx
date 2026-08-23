@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight, Images } from 'lucide-react';
 import type { PropertyType } from '@/types/property';
 import { getPropertyTypeConfig } from '@/lib/propertyTypeConfig';
+import { cloudinaryTransform } from '@/lib/cloudinaryUrl';
 import { Carousel } from '@/components/ui/Carousel';
 
 interface PropertyGalleryProps {
@@ -24,12 +25,12 @@ function Placeholder({ tipo, className = '' }: { tipo?: PropertyType; className?
   );
 }
 
-function Photo({ src, tipo, alt, className = '' }: { src?: string; tipo?: PropertyType; alt: string; className?: string }) {
+function Photo({ src, tipo, alt, className = '', preset = 'full' }: { src?: string; tipo?: PropertyType; alt: string; className?: string; preset?: 'thumb' | 'full' }) {
   const [failed, setFailed] = useState(false);
   if (src && !failed) {
     return (
       <img
-        src={src}
+        src={cloudinaryTransform(src, preset)}
         alt={alt}
         className={`w-full h-full object-cover ${className}`}
         onError={() => setFailed(true)}
@@ -158,7 +159,7 @@ export function PropertyGallery({ fotos, titulo, tipo }: PropertyGalleryProps) {
                   }`}
                   aria-label={`Foto ${i + 1}`}
                 >
-                  <Photo src={fotos[i]} tipo={tipo} alt={`${titulo} — foto ${i + 1}`} />
+                  <Photo src={fotos[i]} tipo={tipo} alt={`${titulo} — foto ${i + 1}`} preset="thumb" />
                 </button>
               ))}
             </Carousel>
@@ -243,7 +244,7 @@ export function PropertyGallery({ fotos, titulo, tipo }: PropertyGalleryProps) {
                     }`}
                     aria-label={`Foto ${i + 1}`}
                   >
-                    <Photo src={fotos[i]} tipo={tipo} alt={`Miniatura ${i + 1}`} />
+                    <Photo src={fotos[i]} tipo={tipo} alt={`Miniatura ${i + 1}`} preset="thumb" />
                   </button>
                 ))}
               </Carousel>
