@@ -48,7 +48,7 @@ export default function MisPropiedadesPage() {
   // para distinguir cuenta profesional. Pedido explícito 2026-08-19.
   // Panel profesional es solo para inmobiliarias — pedido explícito
   // 2026-08-20 ("no para cualquier usuario").
-  const esProfesional = !!user && user.rol === 'inmobiliaria';
+  const esProfesional = !!user && user.rol === 'agente';
   const toast = useToast();
   // Antes se llamaba con `true` fijo — pegaba a /perfil-inmobiliaria para
   // cualquier cuenta (particular/profesional/agente incluidas) aunque el

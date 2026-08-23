@@ -37,7 +37,7 @@ export default function AnaliticaPage() {
   // profesional, una cuenta buscador no debe verla ni de muestra.
   useEffect(() => {
     if (!authLoading && !user) { router.push('/auth/login'); return; }
-    if (!authLoading && user && user.rol !== 'inmobiliaria') { router.push('/dashboard'); }
+    if (!authLoading && user && user.rol !== 'agente') { router.push('/dashboard'); }
   }, [authLoading, user, router]);
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export default function AnaliticaPage() {
   const totalContactos = porPropiedad.reduce((acc, p) => acc + p.contactos30, 0);
   const cambioTotalVistas = cambioPorcentual(totalVistas, totalVistasAnterior);
 
-  if (authLoading || !user || user.rol !== 'inmobiliaria') {
+  if (authLoading || !user || user.rol !== 'agente') {
     return (
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <Skeleton className="w-48 mb-8" />

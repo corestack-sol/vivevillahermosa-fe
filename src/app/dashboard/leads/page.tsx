@@ -55,7 +55,7 @@ export default function LeadsPage() {
   // profesional, una cuenta buscador no debe verla ni de muestra.
   useEffect(() => {
     if (!authLoading && !user) { router.push('/auth/login'); return; }
-    if (!authLoading && user && user.rol !== 'inmobiliaria') { router.push('/dashboard'); }
+    if (!authLoading && user && user.rol !== 'agente') { router.push('/dashboard'); }
   }, [authLoading, user, router]);
 
   // Los cambios de estado y las columnas ocultas guardadas solo existen en
@@ -108,7 +108,7 @@ export default function LeadsPage() {
   const detalleLead = detalleId ? leads.find((l) => l.id === detalleId) ?? null : null;
   const columnasVisibles = ORDEN_PIPELINE.filter((e) => !ocultas.has(e));
 
-  if (authLoading || !user || user.rol !== 'inmobiliaria') {
+  if (authLoading || !user || user.rol !== 'agente') {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <Skeleton className="w-48 mb-8" />

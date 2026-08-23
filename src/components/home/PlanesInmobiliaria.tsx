@@ -28,7 +28,7 @@ export function PlanesInmobiliaria() {
   // 2026-08-20 ("no para cualquier usuario"). "profesional" (servicios,
   // hoy en pausa) y "agente" quedan fuera hasta que tengan su propia
   // experiencia real, en vez de heredar el panel de una inmobiliaria.
-  const esProfesional = !!user && user.rol === 'inmobiliaria';
+  const esProfesional = !!user && user.rol === 'agente';
 
   return (
     <section className="bg-white border-y border-gray-100 py-16">

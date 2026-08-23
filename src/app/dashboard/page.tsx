@@ -43,7 +43,7 @@ export default function DashboardPage() {
   const [generandoReporte, setGenerandoReporte] = useState(false);
   // Panel profesional es solo para inmobiliarias — pedido explícito
   // 2026-08-20 ("no para cualquier usuario").
-  const esProfesional = user ? user.rol === 'inmobiliaria' : false;
+  const esProfesional = user ? user.rol === 'agente' : false;
   const perfil = usePerfilInmobiliaria(!!user && esProfesional);
   const [showCoachModal, setShowCoachModal] = useState(false);
 

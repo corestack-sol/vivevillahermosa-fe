@@ -40,7 +40,7 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
   // Destacar es feature profesional (inmobiliaria) — pedido explícito
   // 2026-08-21: "los usuarios normales no deben tener esa opción". Mismo
   // criterio ya usado para "Panel profesional" (2026-08-20).
-  const esProfesional = !!user && user.rol === 'inmobiliaria';
+  const esProfesional = !!user && user.rol === 'agente';
 
   const [mine, setMine] = useState<MiaBackend | null>(null);
   const [showArchivar, setShowArchivar] = useState(false);

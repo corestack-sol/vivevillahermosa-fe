@@ -69,7 +69,7 @@ export default function CitasPage() {
   const toast = useToast();
   // Panel profesional es solo para inmobiliarias — pedido explícito
   // 2026-08-20 ("no para cualquier usuario").
-  const esProfesional = !!user && user.rol === 'inmobiliaria';
+  const esProfesional = !!user && user.rol === 'agente';
 
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const [selectedDate, setSelectedDate] = useState(() => new Date());
@@ -96,7 +96,7 @@ export default function CitasPage() {
 
   useEffect(() => {
     if (!authLoading && !user) { router.push('/auth/login'); return; }
-    if (!authLoading && user && user.rol !== 'inmobiliaria') { router.push('/dashboard'); }
+    if (!authLoading && user && user.rol !== 'agente') { router.push('/dashboard'); }
   }, [authLoading, user, router]);
 
   const cargarCitas = useCallback(() => {
@@ -163,7 +163,7 @@ export default function CitasPage() {
     }
   }
 
-  if (authLoading || !user || user.rol !== 'inmobiliaria') {
+  if (authLoading || !user || user.rol !== 'agente') {
     return (
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <Skeleton className="w-48 mb-8" />

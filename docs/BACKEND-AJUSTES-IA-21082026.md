@@ -71,9 +71,16 @@ automático.
 
 **Gate de "premium" confirmado 2026-08-22:** no existe pago real todavía
 ("eso es fase 2", confirmado por el usuario) — se usa `esProfesional`
-(`rol === 'inmobiliaria'`) como equivalente interino, mismo criterio que
+(`rol === 'agente'`) como equivalente interino, mismo criterio que
 "Panel profesional" y "Destacar propiedad". Cuando exista facturación real en
 Fase 2, este gate debe reemplazarse por el estado de suscripción real.
+
+**Corrección 2026-08-22:** esta sección decía `rol === 'inmobiliaria'` —
+terminología vieja de una propuesta de 4 roles (particular/profesional/
+inmobiliaria/agente) que nunca se construyó. El enum real del backend es
+`particular | agente` únicamente. El código YA usaba ese string incorrecto en
+9 archivos (bug real, no solo del doc) — corregido a `rol === 'agente'` en
+todos, verificado contra el login real de producción.
 
 **Capa 2 (IA cualitativa) — todavía NO implementada, sigue siendo propuesta.**
 Solo cosas que la heurística no puede juzgar (¿la descripción es específica o

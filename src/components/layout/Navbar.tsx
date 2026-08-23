@@ -114,7 +114,7 @@ export function Navbar() {
   // 2026-08-20 ("no para cualquier usuario"). "profesional" (servicios,
   // hoy en pausa) y "agente" quedan fuera hasta que tengan su propia
   // experiencia real, en vez de heredar el panel de una inmobiliaria.
-  const esProfesional = !!user && user.rol === 'inmobiliaria';
+  const esProfesional = !!user && user.rol === 'agente';
   // Coach de calidad de anuncio — pedido explícito 2026-08-22: badge de
   // notificaciones en el menú, modal al presionar. Gateado por
   // `esProfesional` como equivalente interino de "premium" (no existe
