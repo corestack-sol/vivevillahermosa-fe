@@ -63,6 +63,16 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // /blog → /guias (2026-08-23, pedido explícito) — la ruta vieja ya
+  // estaba indexada (sitemap.ts la traía desde 2026-08-19), así que un
+  // simple rename hubiera dejado 404 cualquier link/bookmark/resultado de
+  // búsqueda existente. Redirect permanente en vez de dejarlo roto.
+  async redirects() {
+    return [
+      { source: '/blog', destination: '/guias', permanent: true },
+      { source: '/blog/:slug', destination: '/guias/:slug', permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

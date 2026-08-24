@@ -1,51 +1,15 @@
 [
   {
-    "id": "1",
-    "slug": "colonias-villahermosa-que-se-inundan",
-    "titulo": "¿Qué colonias de Villahermosa se inundan en temporada de lluvias?",
-    "resumen": "Tabasco es el estado con mayor precipitación pluvial de México. Antes de rentar o comprar, necesitas saber qué zonas tienen historial de inundaciones.",
-    "contenido": "Tabasco recibe en promedio 2,000 mm de lluvia al año — más que cualquier otro estado de México. Villahermosa ha sufrido inundaciones históricas en 2007 y 2010 que afectaron a más de 70% de la ciudad.\n\nLas zonas con mayor riesgo histórico incluyen colonias cercanas al río Grijalva y al Carrizal: Villa Vicente Guerrero, Gaviotas Sur en ciertas áreas, y zonas bajas de Atasta. En contraste, colonias en zonas elevadas como Tabasco 2000, Prados de Villahermosa y Framboyanes norte tienen riesgo bajo.\n\nEn Vive Villahermosa, cada propiedad muestra su nivel de riesgo de inundación (bajo, medio o alto) basado en el historial de la colonia. Es el dato que ningún otro portal inmobiliario en Tabasco te da.\n\nAntes de firmar un contrato o dar un enganche, pregunta específicamente: ¿se ha inundado esta calle en los últimos 5 años? ¿En qué nivel? La respuesta honesta de un propietario te ahorrará meses de problemas.",
-    "categoria": "Guía",
-    "autor": "Equipo Vive Villahermosa",
-    "fecha": "2026-06-01",
-    "lectura": 4,
-    "imagen": "🌊"
-  },
-  {
     "id": "2",
     "slug": "vivir-cerca-dos-bocas-guia-trabajadores",
     "titulo": "Vivir cerca de Dos Bocas: guía para trabajadores de la refinería",
     "resumen": "La Refinería Olmeca en Paraíso generó una demanda de renta sin precedentes en la zona costera. Aquí todo lo que necesitas saber si trabajas ahí.",
-    "contenido": "La Refinería Olmeca en Dos Bocas, Paraíso, es uno de los proyectos industriales más grandes de México. Con miles de trabajadores — muchos rotando semanalmente — la demanda de renta en Paraíso, Comalcalco y municipios cercanos se disparó.\n\nOpciones de renta según tu turno:\n- Renta mensual: ideal si tu contrato es estable o de largo plazo. Colonias recomendadas: centro de Paraíso, fraccionamientos nuevos.\n- Renta semanal o por semana: existe pero es más cara por m². Busca propietarios que ofrezcan este esquema explícitamente.\n- Compartir departamento: roomies de la refinería es una práctica común. Reduce el costo a la mitad.\n\nLo que debes considerar:\n1. Tiempo de traslado a la entrada principal: algunos trabajadores tardan 45-60 min desde Comalcalco.\n2. Servicios básicos: agua potable irregular en algunas zonas de Paraíso.\n3. Precio justo: la demanda inflò precios. Compara con Vive Villahermosa antes de aceptar el primer precio.\n\nEn Vive Villahermosa puedes filtrar propiedades con la opción '⚡ Cerca de Dos Bocas / PEMEX' para ver solo las más relevantes para tu trabajo.",
+    "contenido": "La Refinería Olmeca en Dos Bocas, Paraíso, es uno de los proyectos industriales más grandes de México. Con miles de trabajadores — muchos rotando semanalmente — la demanda de renta en Paraíso, Comalcalco y municipios cercanos se disparó.\n\nOpciones de renta según tu turno:\n- Renta mensual: ideal si tu contrato es estable o de largo plazo. Colonias recomendadas: centro de Paraíso, fraccionamientos nuevos.\n- Renta semanal o por semana: existe pero es más cara por m². Busca propietarios que ofrezcan este esquema explícitamente.\n- Compartir departamento: roomies de la refinería es una práctica común. Reduce el costo a la mitad.\n\nLo que debes considerar:\n1. Tiempo de traslado a la entrada principal: algunos trabajadores tardan 45-60 min desde Comalcalco.\n2. Servicios básicos: agua potable irregular en algunas zonas de Paraíso.\n3. Precio justo: la demanda inflò precios.\n\nEn Vive Villahermosa puedes filtrar propiedades con la opción '⚡ Cerca de Dos Bocas / PEMEX' para ver solo las más relevantes para tu trabajo.",
     "categoria": "Guía",
     "autor": "Equipo Vive Villahermosa",
     "fecha": "2026-06-08",
     "lectura": 5,
     "imagen": "⛽"
-  },
-  {
-    "id": "3",
-    "slug": "tabasco-2000-vs-gaviotas-donde-rentar",
-    "titulo": "Tabasco 2000 vs Gaviotas Norte: ¿dónde conviene rentar?",
-    "resumen": "Dos colonias de Villahermosa con perfiles completamente distintos. Aquí una comparativa para que elijas según lo que buscas.",
-    "contenido": "Si buscas renta en Villahermosa, tarde o temprano vas a comparar Tabasco 2000 y Gaviotas Norte. Son dos colonias con perfiles muy diferentes.\n\nTabasco 2000:\n- Zona comercial y corporativa de Villahermosa.\n- Alto tráfico vehicular, especialmente en horas pico.\n- Renta de departamento: $7,000–$15,000 MXN/mes.\n- Cerca de oficinas, plazas comerciales y bancos.\n\nGaviotas Norte:\n- Zona residencial con parques y escuelas.\n- Renta de casa: $8,000–$18,000 MXN/mes.\n- Más distancia al centro comercial.\n\nEl riesgo de inundación varía por colonia y por calle — revisa el dato específico de cada propiedad en su ficha antes de decidir. Compara ambas colonias con el filtro de colonia en Vive Villahermosa y elige según lo que más te importe: cercanía al trabajo, tranquilidad o precio.",
-    "categoria": "Comparativa",
-    "autor": "Equipo Vive Villahermosa",
-    "fecha": "2026-06-15",
-    "lectura": 5,
-    "imagen": "🏙️"
-  },
-  {
-    "id": "4",
-    "slug": "publicar-propiedad-tabasco-sin-comisiones",
-    "titulo": "Cómo publicar tu propiedad en Tabasco sin pagar comisiones",
-    "resumen": "Las inmobiliarias cobran entre 5% y 10% de comisión. Publicar solo es posible — y más fácil de lo que crees si usas las herramientas correctas.",
-    "contenido": "En Tabasco, las inmobiliarias tradicionales cobran entre 5% y 10% de comisión sobre el precio de venta, o un mes de renta como honorarios. En una propiedad de $1,500,000 MXN eso son hasta $150,000 que salen de tu bolsillo.\n\nLa alternativa: publicar directamente.\n\nLo que necesitas para publicar solo:\n1. Buenas fotos: natural, con luz, ordenada. No necesitas fotógrafo profesional — un teléfono moderno es suficiente.\n2. Precio competitivo: revisa propiedades similares en Vive Villahermosa para calibrar tu precio. Un precio mal puesto es la razón #1 por la que una propiedad no se renta o vende.\n3. Descripción honesta: incluye el riesgo de inundación, el vecindario real, el acceso a servicios.\n4. Datos de contacto directos: WhatsApp es el canal más efectivo en Tabasco.\n\nEn Vive Villahermosa puedes publicar gratis en menos de 10 minutos. Sin comisiones, sin intermediarios, contacto directo con los interesados. El anuncio incluye tu nivel de riesgo de inundación — un dato clave para quien busca casa en Tabasco.",
-    "categoria": "Consejos",
-    "autor": "Equipo Vive Villahermosa",
-    "fecha": "2026-06-20",
-    "lectura": 4,
-    "imagen": "🏠"
   },
   {
     "id": "5",
@@ -58,5 +22,57 @@
     "fecha": "2026-06-25",
     "lectura": 6,
     "imagen": "🛣️"
+  },
+  {
+    "id": "6",
+    "slug": "como-identificar-anuncios-inmobiliarios-falsos",
+    "titulo": "El gancho del precio bajo: cómo identificar anuncios inmobiliarios falsos en internet",
+    "resumen": "3 de cada 10 anuncios inmobiliarios en internet son falsos, según La Jornada. Aprende a detectar las señales antes de contactar al vendedor.",
+    "contenido": "La búsqueda de vivienda o terreno suele empezar en línea, y esa facilidad también abrió la puerta a prácticas fraudulentas. Según La Jornada, cerca del 70% de las operaciones inmobiliarias en México ya inician por internet, y esa cifra de tráfico digital vino acompañada de un dato preocupante citado por especialistas en el mismo diario: aproximadamente 3 de cada 10 anuncios de inmuebles en línea resultan ser falsos.\n\nUno de los cebos más comunes es publicar un inmueble en zona exclusiva a un precio muy por debajo del promedio de mercado — La Jornada señala que ese desfase de precio debe tomarse de inmediato como señal de alerta.\n\nEn Tabasco, el problema tiene rostro local: AMPI Tabasco reportó 35 fraudes inmobiliarios documentados solo en los primeros meses de 2023, cifra que ya superaba el acumulado del año anterior completo. La asociación señala que estos engaños suelen difundirse por redes sociales, dentro del mercado informal.\n\nRecomendaciones que coinciden AMPI Tabasco y Profeco: visitar físicamente el inmueble (o confirmar su existencia real) antes de cualquier pago; desconfiar si insisten en un depósito urgente sin haber permitido una visita o videollamada en vivo; y hacer una búsqueda inversa de las fotos del anuncio (Google Images, TinEye) para ver si pertenecen a otra propiedad ya rentada o vendida en otro lugar.",
+    "categoria": "Seguridad",
+    "autor": "Equipo Vive Villahermosa",
+    "fecha": "2026-08-24",
+    "lectura": 4,
+    "imagen": "🚩",
+    "herramientas": [
+      { "label": "Buscar imagen en Google Images", "url": "https://images.google.com/" },
+      { "label": "Buscar imagen en TinEye", "url": "https://tineye.com/" }
+    ]
+  },
+  {
+    "id": "7",
+    "slug": "phishing-depositos-estafas-inmobiliarias-digitales",
+    "titulo": "Phishing y depósitos exprés: el peligro de las estafas inmobiliarias digitales",
+    "resumen": "Un enlace, un código, una página falsa: así roban credenciales bancarias a quien busca casa en línea. Lo que debes saber antes de dar un depósito.",
+    "contenido": "Más allá del anuncio engañoso, la digitalización trajo tácticas más sofisticadas. La Jornada reporta una modalidad recurrente: al contactar al supuesto vendedor, este envía un enlace o código al celular de la persona interesada que, al abrirse, lleva a una página falsa diseñada para robar claves bancarias (phishing).\n\nLos estafadores también presionan para que todo se resuelva por mensajería instantánea, evitando el contacto formal — esa informalidad facilita pedir transferencias o depósitos rápidos como \"apartado\", sin contrato ni certeza jurídica de por medio.\n\nEn Tabasco, Fabricio Cadenas Garduza, presidente de AMPI Villahermosa, advirtió de un incremento en fraudes de compra y renta cometidos por personas o empresas sin registro ante la asociación. Según AMPI Villahermosa, las pérdidas van de 20 mil, 30 mil o 50 mil pesos hasta 300 mil pesos en los casos más graves.\n\nProfeco es clara en su recomendación: nunca entregar un adelanto sin contrato formal de compraventa ni sin recibir a cambio un recibo fiscal.",
+    "categoria": "Seguridad",
+    "autor": "Equipo Vive Villahermosa",
+    "fecha": "2026-08-25",
+    "lectura": 4,
+    "imagen": "🚩"
+  },
+  {
+    "id": "8",
+    "slug": "fraude-venta-terrenos-la-ladrillera-tabasco",
+    "titulo": "Fraude en la venta de terrenos: el caso \"La Ladrillera\" y cómo asegurar la propiedad de un lote",
+    "resumen": "El caso \"La Ladrillera\" en Tabasco muestra cómo se venden terrenos que no le pertenecen a quien los ofrece. Cómo proteger tu inversión.",
+    "contenido": "Comprar un lote suele verse como inversión segura, pero es también uno de los nichos con estafas más críticas — se ha documentado la venta informal de terrenos que no pertenecen a quien los ofrece, o que directamente no existen.\n\nCaso real en Tabasco: el Instituto de Vivienda de Tabasco (INVITAB) abrió un proceso legal por denuncias de venta ilegal de predios en la zona conocida como \"La Ladrillera\" — un caso investigado por la propia autoridad estatal de vivienda, no solo entre particulares.\n\nRecomendación central de AMPI Tabasco y Profeco: corroborar la titularidad y situación legal del predio en el Registro Público de la Propiedad correspondiente, antes de cualquier pago — ese paso confirma quién es el dueño real registrado y si el terreno tiene algún gravamen. Profeco insiste además en exigir contrato formal de compraventa y asesoría de notario público antes de mover cualquier dinero.",
+    "categoria": "Seguridad",
+    "autor": "Equipo Vive Villahermosa",
+    "fecha": "2026-08-26",
+    "lectura": 3,
+    "imagen": "🚩"
+  },
+  {
+    "id": "9",
+    "slug": "por-que-fraudes-inmobiliarios-quedan-impunes-tabasco",
+    "titulo": "El obstáculo de la denuncia: por qué muchos fraudes inmobiliarios quedan impunes en Tabasco",
+    "resumen": "Muchas víctimas de fraude inmobiliario en Tabasco nunca denuncian. AMPI Villahermosa explica por qué — y qué hacer si te pasó a ti.",
+    "contenido": "Uno de los mayores retos contra este tipo de fraude es que muchas víctimas nunca denuncian formalmente. Según Fabricio Cadenas Garduza (AMPI Villahermosa), buena parte de los casos nunca llega a las autoridades.\n\nLa razón, explica el mismo presidente de AMPI Villahermosa: muchas víctimas calculan que un abogado les costará más de lo que perdieron, y prefieren asumir la pérdida en vez de iniciar un proceso legal — aunque las pérdidas reportadas van de 20-50 mil pesos hasta 300 mil en los casos más graves. La propia AMPI Villahermosa aclara que esas cifras son solo lo que la asociación tiene documentado — una forma de decir que el problema real probablemente es más grande de lo que cualquier reporte puede capturar, precisamente por todos los casos que nunca se denuncian.\n\nA nivel nacional, Profeco confirma que las quejas por fraude inmobiliario están históricamente entre las más frecuentes que recibe. AMPI Tabasco hace un llamado a denunciar ante la Fiscalía General del Estado de Tabasco, y Profeco mantiene sus canales abiertos — la denuncia es el único camino real para sancionar a los responsables y sanear el mercado local.",
+    "categoria": "Seguridad",
+    "autor": "Equipo Vive Villahermosa",
+    "fecha": "2026-08-27",
+    "lectura": 4,
+    "imagen": "🚩"
   }
 ]

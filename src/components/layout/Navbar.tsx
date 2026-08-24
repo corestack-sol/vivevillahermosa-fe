@@ -17,16 +17,17 @@ import { loginRedirectUrl } from '@/lib/authRedirect';
 import { useCoach } from '@/hooks/useCoach';
 import { CoachModal } from '@/components/dashboard/CoachModal';
 
-// /blog se queda fuera del menú a propósito — pedido explícito 2026-08-19:
-// las páginas siguen vivas (indexables, ver sitemap.ts) mientras se decide
-// el rumbo real de la sección (ver análisis de esa fecha), pero no se le
-// promete al usuario contenido nuevo constante ocupando un lugar en el
-// menú principal.
+// /guias (antes /blog) volvió al menú 2026-08-23 (pedido explícito) — la
+// decisión de 2026-08-19 de sacarlo era porque no había contenido nuevo
+// constante que justificara el lugar; ahora sí lo hay (guías de
+// seguridad/fraude inmobiliario, ver categoriaConfig.ts). Ruta y label
+// renombrados de blog→guías ese mismo día, mismo motivo de honestidad.
 const navLinks = [
   { href: '/propiedades?operacion=venta', base: '/propiedades', operacion: 'venta', label: 'Comprar' },
   { href: '/propiedades?operacion=renta', base: '/propiedades', operacion: 'renta', label: 'Rentar' },
   { href: '/zonas',  base: '/zonas',  label: 'Zonas' },
   { href: '/mapa',   base: '/mapa',   label: 'Mapa' },
+  { href: '/guias',  base: '/guias',  label: 'Guías' },
 ];
 
 interface MenuItem { href: string; icon: LucideIcon; label: string }
