@@ -17,6 +17,7 @@ import { usePerfilInmobiliaria } from '@/hooks/usePerfilInmobiliaria';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { ArchivarPropiedadModal } from '@/components/property/ArchivarPropiedadModal';
 import { EliminarPropiedadModal } from '@/components/property/EliminarPropiedadModal';
+import { PausarPropiedadModal } from '@/components/property/PausarPropiedadModal';
 import { DestacarPropiedadModal } from '@/components/property/DestacarPropiedadModal';
 import { Skeleton } from '@/components/ui/Skeleton';
 
@@ -65,6 +66,7 @@ export default function MisPropiedadesPage() {
   const [cargando, setCargando] = useState(true);
   const [archivando, setArchivando] = useState<string | null>(null);
   const [eliminando, setEliminando] = useState<string | null>(null);
+  const [pausando, setPausando] = useState<string | null>(null);
   const [destacando, setDestacando] = useState<string | null>(null);
   const [generandoReporte, setGenerandoReporte] = useState(false);
 
@@ -114,9 +116,18 @@ export default function MisPropiedadesPage() {
     toast.success('Reporte descargado.');
   }
 
-  async function actualizarEstado(id: string, nextEstado: EstadoPublicacion) {
+  // `extra` — motivo/motivoDetalle (pausar) o encontradoEnPlataforma/
+  // medioAlterno (archivar), ver docs/BACKEND-MOTIVOS-CIERRE-23082026.md.
+  // Van como QUERY PARAMS, nunca en el body — verificado en vivo 2026-08-23:
+  // el backend valida el body de PATCH con whitelist estricta y rechaza
+  // TODO el request (400 "property motivo should not exist") si lleva un
+  // campo que no reconoce. Los query params sí los tolera sin problema
+  // (confirmado igual en vivo) — el backend hoy no los persiste, pero al
+  // menos no rompe la acción real de cambiar `estado`.
+  async function actualizarEstado(id: string, nextEstado: EstadoPublicacion, extra?: Record<string, string>) {
     try {
-      await backendFetch(`/propiedades/${id}`, {
+      const qs = extra ? `?${new URLSearchParams(extra).toString()}` : '';
+      await backendFetch(`/propiedades/${id}${qs}`, {
         method: 'PATCH',
         body: JSON.stringify({ estado: nextEstado }),
       });
@@ -135,25 +146,33 @@ export default function MisPropiedadesPage() {
     }
   }
 
-  // También sirve para "reactivar" desde vendida/rentada por si se archivó
-  // por error — vencida se maneja aparte con "Renovar" (pendiente).
+  // Reactivar (incluye "desde vendida/rentada por si se archivó por error")
+  // se queda directo, sin modal — solo pausar pide motivo. Pedido explícito
+  // 2026-08-23. Vencida se maneja aparte con "Renovar" (pendiente).
   function togglePausa(id: string) {
     const actual = items.find((it) => it.property.id === id);
     if (!actual) return;
-    actualizarEstado(id, actual.estado === 'activa' ? 'pausada' : 'activa');
+    if (actual.estado === 'activa') { setPausando(id); return; }
+    actualizarEstado(id, 'activa');
   }
 
-  function archivar(id: string, operacion: 'venta' | 'renta') {
-    actualizarEstado(id, operacion === 'venta' ? 'vendida' : 'rentada');
+  function archivar(id: string, operacion: 'venta' | 'renta', encontradoEnPlataforma: boolean, medioAlterno?: string, medioAlternoDetalle?: string) {
+    actualizarEstado(id, operacion === 'venta' ? 'vendida' : 'rentada', {
+      encontradoEnPlataforma: String(encontradoEnPlataforma),
+      ...(medioAlterno && { medioAlterno }),
+      ...(medioAlternoDetalle && { medioAlternoDetalle }),
+    });
   }
 
   const propiedadArchivando = archivando ? items.find((i) => i.property.id === archivando) : undefined;
   const propiedadEliminando = eliminando ? items.find((i) => i.property.id === eliminando) : undefined;
+  const propiedadPausando = pausando ? items.find((i) => i.property.id === pausando) : undefined;
   const propiedadDestacando = destacando ? items.find((i) => i.property.id === destacando) : undefined;
 
-  async function confirmarEliminar(id: string) {
+  async function confirmarEliminar(id: string, motivo: string, motivoDetalle?: string) {
     try {
-      await backendFetch(`/propiedades/${id}`, { method: 'DELETE' });
+      const qs = new URLSearchParams({ motivo, ...(motivoDetalle && { motivoDetalle }) });
+      await backendFetch(`/propiedades/${id}?${qs.toString()}`, { method: 'DELETE' });
       setItems((prev) => prev.filter((it) => it.property.id !== id));
       toast.success('Propiedad eliminada.');
     } catch {
@@ -397,7 +416,18 @@ export default function MisPropiedadesPage() {
           onClose={() => setArchivando(null)}
           propertyTitle={propiedadArchivando.property.titulo}
           operacion={propiedadArchivando.property.operacion}
-          onConfirm={() => archivar(propiedadArchivando.property.id, propiedadArchivando.property.operacion)}
+          onConfirm={(encontradoEnPlataforma, medioAlterno, medioAlternoDetalle) =>
+            archivar(propiedadArchivando.property.id, propiedadArchivando.property.operacion, encontradoEnPlataforma, medioAlterno, medioAlternoDetalle)}
+          contactosReales={propiedadArchivando.contactos}
+        />
+      )}
+
+      {propiedadPausando && (
+        <PausarPropiedadModal
+          isOpen
+          onClose={() => setPausando(null)}
+          propertyTitle={propiedadPausando.property.titulo}
+          onConfirm={(motivo, motivoDetalle) => actualizarEstado(propiedadPausando.property.id, 'pausada', { motivo, ...(motivoDetalle && { motivoDetalle }) })}
         />
       )}
 
@@ -406,7 +436,7 @@ export default function MisPropiedadesPage() {
           isOpen
           onClose={() => setEliminando(null)}
           propertyTitle={propiedadEliminando.property.titulo}
-          onConfirm={() => confirmarEliminar(propiedadEliminando.property.id)}
+          onConfirm={(motivo, motivoDetalle) => confirmarEliminar(propiedadEliminando.property.id, motivo, motivoDetalle)}
         />
       )}
 

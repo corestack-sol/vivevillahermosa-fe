@@ -10,6 +10,7 @@ import { ESTADOS_ARCHIVADOS, ESTADO_CFG, type EstadoPublicacion } from '@/lib/mi
 import { Tooltip } from '@/components/ui/Tooltip';
 import { ArchivarPropiedadModal } from '@/components/property/ArchivarPropiedadModal';
 import { EliminarPropiedadModal } from '@/components/property/EliminarPropiedadModal';
+import { PausarPropiedadModal } from '@/components/property/PausarPropiedadModal';
 import { DestacarPropiedadModal } from '@/components/property/DestacarPropiedadModal';
 import { useRouter } from 'next/navigation';
 
@@ -25,6 +26,9 @@ interface MiaBackend {
   operacion: 'venta' | 'renta';
   estado: EstadoPublicacion;
   featured: boolean;
+  // Ver docs/BACKEND-MOTIVOS-CIERRE-23082026.md §5 — el backend todavía no
+  // lo manda, queda undefined hasta entonces (el modal ya maneja ese caso).
+  contactosReales?: number;
 }
 
 /**
@@ -45,6 +49,7 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
   const [mine, setMine] = useState<MiaBackend | null>(null);
   const [showArchivar, setShowArchivar] = useState(false);
   const [showEliminar, setShowEliminar] = useState(false);
+  const [showPausar, setShowPausar] = useState(false);
   const [showDestacar, setShowDestacar] = useState(false);
 
   useEffect(() => {
@@ -67,9 +72,18 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
     toast.info(`"${accion}" estará disponible cuando se conecte el panel real de propiedades (Módulo 2, Fase 2).`);
   }
 
-  async function actualizarEstado(nuevo: EstadoPublicacion) {
+  // `extra` — motivo/motivoDetalle (pausar) o encontradoEnPlataforma/
+  // medioAlterno (archivar), ver docs/BACKEND-MOTIVOS-CIERRE-23082026.md.
+  // Van como QUERY PARAMS, nunca en el body — verificado en vivo 2026-08-23:
+  // el backend valida el body de PATCH con whitelist estricta y rechaza
+  // TODO el request (400 "property motivo should not exist") si lleva un
+  // campo que no reconoce. Los query params sí los tolera sin problema
+  // (confirmado igual en vivo) — el backend hoy no los persiste, pero al
+  // menos no rompe la acción real de cambiar `estado`.
+  async function actualizarEstado(nuevo: EstadoPublicacion, extra?: Record<string, string>) {
     try {
-      await backendFetch(`/propiedades/${propertyId}`, {
+      const qs = extra ? `?${new URLSearchParams(extra).toString()}` : '';
+      await backendFetch(`/propiedades/${propertyId}${qs}`, {
         method: 'PATCH',
         body: JSON.stringify({ estado: nuevo }),
       });
@@ -88,8 +102,11 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
     }
   }
 
+  // Reactivar se queda directo (no necesita explicarse) — solo pausar
+  // pide motivo, vía PausarPropiedadModal. Pedido explícito 2026-08-23.
   function togglePausa() {
-    actualizarEstado(mine!.estado === 'activa' ? 'pausada' : 'activa');
+    if (mine!.estado === 'activa') { setShowPausar(true); return; }
+    actualizarEstado('activa');
   }
 
   // lat/lng aquí son los reales, no los enmascarados — el backend solo los
@@ -107,8 +124,12 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
     }
   }
 
-  function archivar() {
-    actualizarEstado(mine!.operacion === 'venta' ? 'vendida' : 'rentada');
+  function archivar(encontradoEnPlataforma: boolean, medioAlterno?: string, medioAlternoDetalle?: string) {
+    actualizarEstado(mine!.operacion === 'venta' ? 'vendida' : 'rentada', {
+      encontradoEnPlataforma: String(encontradoEnPlataforma),
+      ...(medioAlterno && { medioAlterno }),
+      ...(medioAlternoDetalle && { medioAlternoDetalle }),
+    });
   }
 
   return (
@@ -209,14 +230,22 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
         propertyTitle={mine.titulo}
         operacion={mine.operacion}
         onConfirm={archivar}
+        contactosReales={mine.contactosReales}
+      />
+      <PausarPropiedadModal
+        isOpen={showPausar}
+        onClose={() => setShowPausar(false)}
+        propertyTitle={mine.titulo}
+        onConfirm={(motivo, motivoDetalle) => actualizarEstado('pausada', { motivo, ...(motivoDetalle && { motivoDetalle }) })}
       />
       <EliminarPropiedadModal
         isOpen={showEliminar}
         onClose={() => setShowEliminar(false)}
         propertyTitle={mine.titulo}
-        onConfirm={async () => {
+        onConfirm={async (motivo, motivoDetalle) => {
           try {
-            await backendFetch(`/propiedades/${propertyId}`, { method: 'DELETE' });
+            const qs = new URLSearchParams({ motivo, ...(motivoDetalle && { motivoDetalle }) });
+            await backendFetch(`/propiedades/${propertyId}?${qs.toString()}`, { method: 'DELETE' });
             toast.success('Propiedad eliminada.');
             router.push('/dashboard/propiedades');
           } catch {
