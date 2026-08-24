@@ -106,6 +106,12 @@ export function Navbar() {
   const [isOpen, setIsOpen]         = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showEliminarModal, setShowEliminarModal] = useState(false);
+  // Colapsable en móvil/tablet — pedido explícito 2026-08-24: el grupo
+  // "Perfil" del menú hamburguesa ocupaba mucho espacio siempre expandido.
+  // Cerrado por defecto (ese es justo el espacio que se recupera); el
+  // dropdown de escritorio no cambia, ya vive detrás de su propio toggle
+  // (el botón del avatar).
+  const [perfilAbierto, setPerfilAbierto] = useState(false);
   const pathname     = usePathname();
   const searchParams = useSearchParams();
   const router       = useRouter();
@@ -123,6 +129,13 @@ export function Navbar() {
   // §2 — "eso es fase 2", confirmado por el usuario).
   const { pendientes: coachPendientes } = useCoach(esProfesional);
   const [showCoachModal, setShowCoachModal] = useState(false);
+  // Separados por label (no un .map genérico) para que el menú móvil
+  // pueda tratar "Perfil" distinto (colapsable) de "Herramientas"/
+  // "Administración" (siempre visibles) — ver perfilAbierto arriba.
+  const mobileGroups = user ? buildMenuGroups(esProfesional, !!user.esAdmin) : [];
+  const herramientasGroup = mobileGroups.find((g) => g.label === 'Herramientas');
+  const perfilGroup = mobileGroups.find((g) => g.label === 'Perfil');
+  const administracionGroup = mobileGroups.find((g) => g.label === 'Administración');
   const userMenuRef = useRef<HTMLDivElement>(null);
   useClickOutside(userMenuRef, userMenuOpen, () => setUserMenuOpen(false));
   const navRef = useRef<HTMLElement>(null);
@@ -358,46 +371,82 @@ export function Navbar() {
           <div className="lg:hidden border-t py-3 pb-4 space-y-0.5 border-white/10">
             {user ? (
               <div className="pb-2 mb-2 border-b border-white/10 space-y-0.5">
-                {buildMenuGroups(esProfesional, !!user.esAdmin).map((group, gi) => (
-                  <div key={gi} className={`space-y-0.5 ${gi > 0 ? 'border-t border-white/10 mt-2 pt-2' : ''}`}>
-                    {group.label && (
-                      <p className="px-4 pt-1 pb-1 text-[10px] font-bold text-white uppercase tracking-wide">{group.label}</p>
-                    )}
-                    {group.items.map((item) => (
+                {herramientasGroup && (
+                  <div className="space-y-0.5">
+                    <p className="px-4 pt-1 pb-1 text-[10px] font-bold text-white uppercase tracking-wide">{herramientasGroup.label}</p>
+                    {herramientasGroup.items.map((item) => (
                       <Link key={item.href} href={item.href} onClick={() => setIsOpen(false)}
                         className="flex items-center gap-2.5 px-4 py-2.5 text-sm rounded-xl text-white hover:bg-white/8">
                         <item.icon size={14} /> {item.label}
                       </Link>
                     ))}
                   </div>
-                ))}
-                {esProfesional && (
-                  <div className="border-t border-white/10 mt-2 pt-2">
-                    <button onClick={() => { setIsOpen(false); setShowCoachModal(true); }}
-                      className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm rounded-xl text-white hover:bg-white/8">
-                      <Sparkles size={14} /> Coach de anuncios
-                      {coachPendientes.length > 0 && (
-                        <span className="ml-auto flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[10px] font-bold flex items-center justify-center">
-                          {coachPendientes.length}
-                        </span>
-                      )}
+                )}
+
+                {/* "Perfil" colapsable — agrupa TODAS las opciones de la
+                    cuenta (items del grupo + Coach + Cerrar sesión +
+                    Eliminar mi cuenta) detrás de un solo toggle, cerrado
+                    por defecto. El divider propio antes de "Eliminar mi
+                    cuenta" se conserva (pedido explícito 2026-08-21: esa
+                    acción destructiva queda claramente aparte del resto,
+                    no es "una acción de sesión más"). */}
+                {perfilGroup && (
+                  <div className={herramientasGroup ? 'border-t border-white/10 mt-2 pt-2' : ''}>
+                    <button type="button" onClick={() => setPerfilAbierto((v) => !v)}
+                      aria-expanded={perfilAbierto}
+                      className="flex items-center justify-between w-full px-4 pt-1 pb-1.5 text-[10px] font-bold text-white uppercase tracking-wide">
+                      {perfilGroup.label}
+                      <ChevronDown size={12} className={`transition-transform ${perfilAbierto ? 'rotate-180' : ''}`} />
                     </button>
+                    {perfilAbierto && (
+                      <div className="space-y-0.5">
+                        {perfilGroup.items.map((item) => (
+                          <Link key={item.href} href={item.href} onClick={() => setIsOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 text-sm rounded-xl text-white hover:bg-white/8">
+                            <item.icon size={14} /> {item.label}
+                          </Link>
+                        ))}
+                        {esProfesional && (
+                          <div className="border-t border-white/10 mt-2 pt-2">
+                            <button onClick={() => { setIsOpen(false); setShowCoachModal(true); }}
+                              className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm rounded-xl text-white hover:bg-white/8">
+                              <Sparkles size={14} /> Coach de anuncios
+                              {coachPendientes.length > 0 && (
+                                <span className="ml-auto flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[10px] font-bold flex items-center justify-center">
+                                  {coachPendientes.length}
+                                </span>
+                              )}
+                            </button>
+                          </div>
+                        )}
+                        <div className="border-t border-white/10 mt-2 pt-2">
+                          <button onClick={handleLogout}
+                            className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-300 hover:bg-red-500/15 rounded-xl">
+                            <LogOut size={14} /> Cerrar sesión
+                          </button>
+                        </div>
+                        <div className="border-t border-white/10 mt-2 pt-2">
+                          <button onClick={() => { setIsOpen(false); setShowEliminarModal(true); }}
+                            className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-300/70 hover:bg-red-500/15 hover:text-red-300 rounded-xl">
+                            <Trash2 size={14} /> Eliminar mi cuenta
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
-                <div className="border-t border-white/10 mt-2 pt-2">
-                  <button onClick={handleLogout}
-                    className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-300 hover:bg-red-500/15 rounded-xl">
-                    <LogOut size={14} /> Cerrar sesión
-                  </button>
-                </div>
-                {/* Mismo criterio que el dropdown de escritorio — divider
-                    propio, al final de todo. */}
-                <div className="border-t border-white/10 mt-2 pt-2">
-                  <button onClick={() => { setIsOpen(false); setShowEliminarModal(true); }}
-                    className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-300/70 hover:bg-red-500/15 hover:text-red-300 rounded-xl">
-                    <Trash2 size={14} /> Eliminar mi cuenta
-                  </button>
-                </div>
+
+                {administracionGroup && (
+                  <div className="border-t border-white/10 mt-2 pt-2 space-y-0.5">
+                    <p className="px-4 pt-1 pb-1 text-[10px] font-bold text-white uppercase tracking-wide">{administracionGroup.label}</p>
+                    {administracionGroup.items.map((item) => (
+                      <Link key={item.href} href={item.href} onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm rounded-xl text-white hover:bg-white/8">
+                        <item.icon size={14} /> {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
               <Link href={loginRedirectUrl(pathname)} onClick={() => setIsOpen(false)}
