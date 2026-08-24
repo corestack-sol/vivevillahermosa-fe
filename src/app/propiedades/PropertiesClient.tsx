@@ -474,8 +474,14 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
           normal del DOM y el sidebar de filtros/las cards (hermano
           siguiente, también `static`) la tapaban por encima. Promoverla a
           positioned con z-index saca todo su contenido (dropdown incluido)
-          por encima del resto, sin tocar animate-fade-up. */}
-      <div className="relative z-10 bg-white border-b border-gray-100 shadow-sm animate-fade-up">
+          por encima del resto, sin tocar animate-fade-up.
+          z-20, no z-10 — bug real reportado 2026-08-23: el botón circular
+          de "comparar" de cada card (PropertyCard.tsx) también es z-10,
+          y ninguno de los dos crea su propio contexto de apilamiento
+          (position:relative con z-index:auto no cuenta) — con el mismo
+          z-index, empatan, y gana quien va después en el DOM (la grilla
+          de resultados, no el header). z-20 rompe el empate sin más. */}
+      <div className="relative z-20 bg-white border-b border-gray-100 shadow-sm animate-fade-up">
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
 
           {/* Row 1: title + controls — flex-col en móvil: el título ya no
@@ -569,14 +575,19 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
           </div>
 
           {/* Row 2: Inline search */}
-          {/* z-20 en el <form>, no solo en el <ul> del dropdown (mismo bug
+          {/* z-30 en el <form>, no solo en el <ul> del dropdown (mismo bug
               corregido en SearchBar.tsx) — sin promover este contenedor, el
-              z-30 del <ul> solo gana dentro de su propio contexto de
+              z-40 del <ul> solo gana dentro de su propio contexto de
               apilamiento y "Row 3: Filtros activos" (hermano, después en
-              el DOM) podía pintarse encima del dropdown. */}
+              el DOM) podía pintarse encima del dropdown. Subido de
+              z-20→z-30 junto con el wrapper exterior (z-10→z-20, arriba)
+              y el <ul> (z-30→z-40) — mismo orden relativo entre los tres,
+              solo se corre todo un escalón para no empatar con el z-10
+              del botón "comparar" de PropertyCard.tsx (ver ese comentario
+              arriba). */}
           <form
             ref={searchFormRef}
-            className="relative flex items-center gap-2 z-20 mb-3"
+            className="relative flex items-center gap-2 z-30 mb-3"
             onSubmit={(e) => { e.preventDefault(); setSearchOpen(false); aplicarBusquedaIA(inputValue); }}
           >
             <div className="relative flex-1">
@@ -604,7 +615,7 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
               )}
 
               {(showSuggestions || showRecent) && (
-                <ul className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden z-30">
+                <ul className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden z-40">
                   {showSuggestions && filteredPlaces.map((s) => (
                     <li key={s}>
                       <button type="button" onClick={() => handleSuggestionClick(s)}
