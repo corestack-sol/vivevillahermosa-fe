@@ -379,8 +379,8 @@ export function PublishForm() {
   useEffect(() => { precargarColoniasDescubiertas().then(() => setColoniasReady(true)); }, []);
 
   const coloniaVerificada = useMemo(
-    () => (colonia ? matchColonia(colonia) : undefined),
-    [colonia, coloniasReady], // eslint-disable-line react-hooks/exhaustive-deps
+    () => (colonia ? matchColonia(colonia, municipio) : undefined),
+    [colonia, municipio, coloniasReady], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const distanciaPinColonia = coords && coloniaVerificada
     ? distanciaKm(coords.lat, coords.lng, coloniaVerificada.lat, coloniaVerificada.lng)
@@ -912,37 +912,6 @@ export function PublishForm() {
             {mostrarCamposConstruccion && (
               <Input label="Baños" type="number" placeholder="0" {...register('banos', { valueAsNumber: true })} />
             )}
-            {/* Amenidades — a diferencia de "Servicios incluidos" (abajo,
-                solo renta: agua/luz/gas incluidos), esto describe la
-                propiedad en sí (alberca, jardín...), aplica igual a venta
-                y renta. Las que la IA detecta en las fotos ya subidas se
-                pre-marcan solas (ver analizarFoto más arriba) — se pueden
-                quitar/agregar a mano igual que cualquier otra. */}
-            <div className="pt-1">
-              <p className="text-sm font-medium text-gray-700 mb-1">Amenidades</p>
-              <p className="text-xs text-gray-400 mb-3">Toca para seleccionar las características de tu propiedad</p>
-              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-                {AMENIDADES_OPTIONS.map(({ key, label, Icon }) => {
-                  const active = amenidades.includes(label);
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      title={label}
-                      onClick={() => toggleAmenidad(label)}
-                      className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border-2 transition-all ${
-                        active ? toggleCls.active : toggleCls.inactive
-                      }`}
-                    >
-                      <Icon size={18} />
-                      <span className="text-[9px] font-medium leading-tight text-center line-clamp-2">
-                        {label.split('/')[0].trim()}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
             {watch('operacion') === 'renta' && (
               <div className="pt-1">
                 <p className="text-sm font-medium text-gray-700 mb-1">Servicios incluidos</p>
@@ -1308,6 +1277,40 @@ export function PublishForm() {
                 <Images size={13} /> Límite alcanzado — {MAX_FOTOS} fotos máximo por propiedad
               </p>
             )}
+
+            {/* Amenidades — movido aquí desde el paso "Detalles" (pedido
+                explícito 2026-08-22): antes aparecía ANTES de subir fotos,
+                así que las que la IA detecta en las fotos (ver
+                analizarFoto/addFiles más arriba) casi nunca llegaban a
+                tiempo de pre-marcarse — el usuario ya había pasado ese paso
+                cuando la sugerencia aparecía. Aquí sí ahorra el trabajo que
+                se pensó desde el principio: subes fotos, ves lo que ya se
+                marcó solo, ajustas a mano lo que falte. */}
+            <div className="pt-1">
+              <p className="text-sm font-medium text-gray-700 mb-1">Amenidades</p>
+              <p className="text-xs text-gray-400 mb-3">Se pre-marcan solas según lo que se detecta en tus fotos — ajusta lo que haga falta.</p>
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                {AMENIDADES_OPTIONS.map(({ key, label, Icon }) => {
+                  const active = amenidades.includes(label);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      title={label}
+                      onClick={() => toggleAmenidad(label)}
+                      className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border-2 transition-all ${
+                        active ? toggleCls.active : toggleCls.inactive
+                      }`}
+                    >
+                      <Icon size={18} />
+                      <span className="text-[9px] font-medium leading-tight text-center line-clamp-2">
+                        {label.split('/')[0].trim()}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 

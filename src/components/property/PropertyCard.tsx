@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { Property } from '@/types/property';
-import { MapPin, BedDouble, Maximize, Bath, ArrowUpRight, Scale, Check } from 'lucide-react';
+import { MapPin, BedDouble, Maximize, Bath, ArrowUpRight, Scale, Check, Navigation } from 'lucide-react';
 import { FavoriteButton } from './FavoriteButton';
 import { getPriceContext, type PriceContext } from '@/lib/api';
 import { getPropertyTypeConfig } from '@/lib/propertyTypeConfig';
@@ -20,6 +20,16 @@ interface PropertyCardProps {
    * real está, en vez de dejar la conexión invisible (ver [id]/page.tsx).
    */
   landmarkQuery?: string;
+  /**
+   * "1.2 km de Parque La Choca" — pedido explícito 2026-08-23: solo para
+   * las tarjetas que SÍ vienen de una búsqueda "cerca de X" (landmark o
+   * colonia con coordenada real), calculado por quien arma la lista
+   * (PropertiesClient.tsx) porque ese componente ya resuelve el landmark/
+   * colonia una sola vez para toda la búsqueda, no por tarjeta. Nunca se
+   * pasa para "Todo lo demás" (getResultadosSimilares) — esa sección
+   * explícitamente no promete cumplir el criterio de cercanía pedido.
+   */
+  distanciaLabel?: string;
 }
 
 function formatPrice(precio: number, operacion: 'venta' | 'renta'): string {
@@ -36,7 +46,7 @@ function formatPrice(precio: number, operacion: 'venta' | 'renta'): string {
  * acción, en vez de un cuerpo blanco separado con lista de specs y una
  * barra de botones.
  */
-export function PropertyCard({ property, landmarkQuery }: PropertyCardProps) {
+export function PropertyCard({ property, landmarkQuery, distanciaLabel }: PropertyCardProps) {
   const cfg = getPropertyTypeConfig(property.tipo);
   const [imgFailed, setImgFailed] = useState(false);
   const foto = property.fotos[0];
@@ -50,15 +60,16 @@ export function PropertyCard({ property, landmarkQuery }: PropertyCardProps) {
   const { isSelected, toggle } = useCompare();
   const compared = isSelected(property.id);
 
+  // aspect-[20/21] = 20% más de alto que el aspect-[8/7] anterior, misma proporción de ancho
+  // @container: el ancho real de ESTA tarjeta (no el viewport) es lo que
+  // decide su propio tamaño de texto/padding más abajo — necesario porque
+  // el grid de /propiedades usa auto-fill (PropertiesClient.tsx) con un
+  // mínimo explícito de 2 columnas incluso en móvil (pedido 2026-08-09),
+  // así que la misma tarjeta puede terminar con 140px de ancho en un
+  // teléfono angosto o 300px+ en escritorio — un solo breakpoint de
+  // viewport no puede cubrir ambos casos, pero un container query sí.
   return (
-    // aspect-[20/21] = 20% más de alto que el aspect-[8/7] anterior, misma proporción de ancho
-    // @container: el ancho real de ESTA tarjeta (no el viewport) es lo que
-    // decide su propio tamaño de texto/padding más abajo — necesario porque
-    // el grid de /propiedades usa auto-fill (PropertiesClient.tsx) con un
-    // mínimo explícito de 2 columnas incluso en móvil (pedido 2026-08-09),
-    // así que la misma tarjeta puede terminar con 140px de ancho en un
-    // teléfono angosto o 300px+ en escritorio — un solo breakpoint de
-    // viewport no puede cubrir ambos casos, pero un container query sí.
+    <>
     <div className="group relative rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 ease-out aspect-[20/21] @container">
       <Link
         href={`/propiedades/${property.slug}${landmarkQuery ?? ''}`}
@@ -193,5 +204,12 @@ export function PropertyCard({ property, landmarkQuery }: PropertyCardProps) {
         </button>
       </div>
     </div>
+    {distanciaLabel && (
+      <p className="flex items-center gap-1 mt-2 px-1 text-xs text-gray-500">
+        <Navigation size={11} className="flex-shrink-0 text-brand" />
+        {distanciaLabel}
+      </p>
+    )}
+    </>
   );
 }

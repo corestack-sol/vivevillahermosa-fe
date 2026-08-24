@@ -60,11 +60,11 @@ const PERFIL_ITEMS_BASE: MenuItem[] = [
 
 function buildMenuGroups(esProfesional: boolean, esAdmin: boolean): MenuGroup[] {
   return [
-    { items: [{ href: '/dashboard', icon: LayoutDashboard, label: 'Mi panel' }] },
     ...(esProfesional ? [{ label: 'Herramientas', items: HERRAMIENTAS_ITEMS }] : []),
     {
       label: 'Perfil',
       items: [
+        { href: '/dashboard', icon: LayoutDashboard, label: 'Mi panel' },
         ...(esProfesional ? [{ href: '/dashboard/perfil', icon: Settings, label: 'Perfil de la inmobiliaria' }] : []),
         ...(!esProfesional ? [{ href: '/dashboard/propiedades', icon: Building2, label: 'Mis propiedades' }] : []),
         ...PERFIL_ITEMS_BASE,

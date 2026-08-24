@@ -54,6 +54,17 @@ function EliminarCuentaConfirmBody({ onClose }: { onClose: () => void }) {
     try {
       await backendFetch('/auth/cuenta', { method: 'DELETE' });
       await logout();
+      // logout() solo limpia el estado de React y la sesión del servidor —
+      // nunca tocaba localStorage. Pregunta real 2026-08-23: búsquedas/
+      // vistas recientes, comparador, y datos de funciones demo (equipo,
+      // leads, verificación) se quedaban en el navegador después de
+      // eliminar la cuenta. `equipoDemo.ts` es el caso más serio: guarda
+      // nombres/correos reales bajo una llave GLOBAL, no ligada al userId
+      // — en un equipo compartido, la siguiente cuenta que inicia sesión
+      // en ese mismo navegador los vería. Limpieza completa, no solo las
+      // llaves conocidas hoy — más simple y a prueba de lo que se agregue
+      // después.
+      localStorage.clear();
       onClose();
       toast.success('Tu cuenta fue eliminada. Lamentamos verte ir.');
       router.push('/');

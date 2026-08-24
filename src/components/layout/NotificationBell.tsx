@@ -19,20 +19,26 @@ export interface Notificacion {
 export function NotificationBell() {
   const { user } = useAuth();
   const [items, setItems] = useState<Notificacion[]>([]);
+  // El backend ya devuelve un conteo dedicado (`noLeidas`) junto con la
+  // lista — antes se descartaba y se recalculaba con `items.filter(...)`,
+  // que solo es exacto si la lista trae TODAS las notificaciones no leídas
+  // (si el endpoint algún día pagina, ese cálculo local quedaría corto).
+  // Usar el campo real del servidor evita depender de ese supuesto.
+  const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
-  const unread = items.filter((n) => !n.leida).length;
   const menuRef = useRef<HTMLDivElement>(null);
   useClickOutside(menuRef, open, () => setOpen(false));
 
   useEffect(() => {
     if (!user) return;
-    backendFetch<{ notificaciones: Notificacion[] }>('/notificaciones')
-      .then((d) => setItems(d.notificaciones ?? []))
+    backendFetch<{ notificaciones: Notificacion[]; noLeidas: number }>('/notificaciones')
+      .then((d) => { setItems(d.notificaciones ?? []); setUnread(d.noLeidas ?? 0); })
       .catch(() => {});
   }, [user]);
 
   async function marcarTodasLeidas() {
     setItems((prev) => prev.map((n) => ({ ...n, leida: true })));
+    setUnread(0);
     try {
       await backendFetch('/notificaciones', {
         method: 'PATCH',
@@ -42,7 +48,9 @@ export function NotificationBell() {
   }
 
   async function marcarLeida(id: string) {
+    const era = items.find((n) => n.id === id);
     setItems((prev) => prev.map((n) => (n.id === id ? { ...n, leida: true } : n)));
+    if (era && !era.leida) setUnread((u) => Math.max(0, u - 1));
     try {
       await backendFetch('/notificaciones', {
         method: 'PATCH',
@@ -58,13 +66,15 @@ export function NotificationBell() {
       <button
         onClick={() => setOpen((v) => !v)}
         className="relative p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/8 transition-colors"
-        aria-label="Notificaciones"
+        aria-label={unread > 0 ? `Notificaciones — ${unread} sin leer` : 'Notificaciones'}
         aria-haspopup="true"
         aria-expanded={open}
       >
         <Bell size={18} />
         {unread > 0 && (
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-accent ring-2 ring-brand-dark" />
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-accent ring-2 ring-brand-dark text-white text-[10px] font-bold leading-none flex items-center justify-center">
+            {unread > 10 ? '10+' : unread}
+          </span>
         )}
       </button>
 

@@ -26,10 +26,11 @@ type FormData = z.infer<typeof schema>;
 interface ContactFormProps {
   propertyTitle: string;
   propertyId: string;
+  ownerName: string;
   dark?: boolean;
 }
 
-export function ContactForm({ propertyTitle, propertyId, dark = false }: ContactFormProps) {
+export function ContactForm({ propertyTitle, propertyId, ownerName, dark = false }: ContactFormProps) {
   const { user } = useAuth();
   const pathname = usePathname();
   const [sent, setSent] = useState(false);
@@ -134,7 +135,7 @@ export function ContactForm({ propertyTitle, propertyId, dark = false }: Contact
         <CheckCircle className={`mx-auto mb-3 ${dark ? 'text-white' : 'text-success'}`} size={40} />
         <h3 className={`font-semibold mb-1 ${dark ? 'text-white' : 'text-gray-800'}`}>¡Mensaje enviado!</h3>
         <p className={`text-sm ${dark ? 'text-white/70' : 'text-gray-500'}`}>
-          El agente se comunicará contigo en las próximas horas.
+          {ownerName} se comunicará contigo en las próximas horas.
         </p>
       </div>
     );

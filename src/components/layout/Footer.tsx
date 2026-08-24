@@ -53,7 +53,7 @@ function FooterFull() {
             </div>
             <p className="text-sm text-white/70 leading-relaxed mb-4">
               Encontrar dónde vivir en Tabasco no debería ser difícil. Casas, departamentos,
-              terrenos y habitaciones en los 17 municipios del estado. Gratis para todos.
+              terrenos, locales comerciales y habitaciones en los 17 municipios del estado. Gratis para todos.
             </p>
             <div className="space-y-2">
               <a
@@ -84,11 +84,6 @@ function FooterFull() {
                 </Link>
               </li>
               <li>
-                <Link href="/publicar" className="text-sm text-white/70 hover:text-accent transition-colors">
-                  Publicar propiedad
-                </Link>
-              </li>
-              <li>
                 <Link href="/privacidad" className="text-sm text-white/70 hover:text-accent transition-colors">
                   Aviso de privacidad
                 </Link>
@@ -96,11 +91,6 @@ function FooterFull() {
               <li>
                 <Link href="/terminos" className="text-sm text-white/70 hover:text-accent transition-colors">
                   Términos y condiciones
-                </Link>
-              </li>
-              <li>
-                <Link href="/mapa" className="text-sm text-white/70 hover:text-accent transition-colors">
-                  Mapa de propiedades
                 </Link>
               </li>
             </ul>

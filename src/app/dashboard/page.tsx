@@ -117,7 +117,7 @@ export default function DashboardPage() {
         // Sin backend de analítica todavía (BACKEND.md §12, fuera del MVP) —
         // ceros honestos en vez del mock determinístico que traía GET /api/me/stats.
         { icon: Eye, label: 'Propiedades vistas', value: 0, href: '/propiedades', color: 'text-blue-500', bg: 'bg-blue-50' },
-        { icon: TrendingUp, label: 'Contactos enviados', value: 0, href: '/propiedades', color: 'text-brand', bg: 'bg-brand-pale' },
+        { icon: TrendingUp, label: 'Propiedades contactadas', value: 0, href: '/propiedades', color: 'text-brand', bg: 'bg-brand-pale' },
       ];
 
   async function descargarReporte() {

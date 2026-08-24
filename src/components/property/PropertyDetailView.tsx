@@ -355,7 +355,7 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden scroll-mt-20" id="contacto">
                 <div className="px-5 py-5">
                   <p className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400 mb-4">Enviar mensaje</p>
-                  <ContactForm propertyTitle={property.titulo} propertyId={property.id} />
+                  <ContactForm propertyTitle={property.titulo} propertyId={property.id} ownerName={property.agente.nombre} />
                 </div>
               </div>
 
