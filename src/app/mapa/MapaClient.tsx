@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
-  SlidersHorizontal, X, ChevronLeft, Navigation,
+  SlidersHorizontal, X, ChevronLeft, ChevronDown, Navigation,
   Satellite, Map as MapIcon, Info, MapPin,
   Droplets, Check, RotateCw, List, Maximize2, Minimize2, Heart,
 } from 'lucide-react';
@@ -13,7 +13,7 @@ import { useFilters } from '@/hooks/useFilters';
 import { applyFilters } from '@/lib/filters';
 import { FilterPanel } from '@/components/search/FilterPanel';
 import { MapViewDynamic } from '@/components/map/MapViewDynamic';
-import { getColoniasRankedByPropiedades, getPropertiesInBounds, type ColoniaCard } from '@/lib/api';
+import { getColoniasOrdenadasPorDemanda, getPropertiesInBounds, type ColoniaCard } from '@/lib/api';
 import { matchColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
 import { precargarLandmarks } from '@/lib/landmarks';
 import { useAuth } from '@/context/AuthContext';
@@ -49,11 +49,12 @@ const OP_CHIPS: { value: OperationType | ''; label: string }[] = [
 ];
 
 // "Ir a zona" ya no es una lista fija — se construye a partir de
-// getColoniasRankedByPropiedades() (2026-08-09, pedido explícito), la
-// misma fuente real y en vivo que ya usan /zonas y el Home: las colonias
-// con más propiedades activas, no una selección editorial. ZOOM_ZONA es
-// fijo (nivel razonable para ver una colonia completa) porque no es un
-// dato de la colonia en sí, solo configuración visual del mapa.
+// getColoniasOrdenadasPorDemanda() (2026-08-09, actualizado 2026-08-23 a
+// demanda real en vez de solo oferta), la misma fuente real y en vivo que
+// ya usan /zonas y el Home: las colonias más buscadas, no una selección
+// editorial. ZOOM_ZONA es fijo (nivel razonable para ver una colonia
+// completa) porque no es un dato de la colonia en sí, solo configuración
+// visual del mapa.
 const ZOOM_ZONA = 15;
 const MAX_ZONAS_IR_A = 7; // mismo tope que la lista fija anterior
 
@@ -97,6 +98,13 @@ export function MapaClient({ allProperties }: Props) {
   const [tileType,      setTileType]      = useState<TileType>('street');
   const [mapControls,   setMapControls]   = useState<MapControls | null>(null);
   const [activeZone,    setActiveZone]    = useState<string | null>(null);
+  // Colapsables — pedido explícito 2026-08-23: "Inundación" y "Ir a zona"
+  // ocupan espacio fijo del panel de escritorio incluso cuando a la
+  // persona no le interesan en ese momento, tapando mapa útil. Abiertas
+  // por defecto (mismo comportamiento visual de siempre); colapsar es una
+  // preferencia de sesión, no se persiste entre visitas.
+  const [inundacionOpen, setInundacionOpen] = useState(true);
+  const [irAZonaOpen,    setIrAZonaOpen]    = useState(true);
   const [geoLoading,    setGeoLoading]    = useState(false);
   const [geoError,      setGeoError]      = useState('');
 
@@ -163,22 +171,28 @@ export function MapaClient({ allProperties }: Props) {
     };
   }, [panelOpen]);
 
-  // "Ir a zona" — top colonias reales por cantidad de propiedades activas
-  // (mismo criterio que /zonas y Home, ver getColoniasRankedByPropiedades),
-  // resolviendo cada una contra el catálogo de coordenadas verificadas
-  // (matchColonia) para obtener lat/lng/radio reales. El ranking en sí se
-  // pide una sola vez al montar — igual que /zonas y Home (páginas de
-  // servidor), no reacciona a publicaciones locales de este navegador;
-  // sería inconsistente que el mapa mostrara una colonia "de moda" que
-  // nadie más ve. La resolución a coordenada (abajo) sí se recalcula, ver
-  // comentario de `zonasIrA`. Las colonias rankeadas que no tengan
-  // coordenada verificada (ej. detectadas por texto libre, sin catálogo)
-  // se descartan aquí — no hay a dónde volar sin lat/lng real.
+  // "Ir a zona" — pedido explícito 2026-08-23: antes ordenaba por OFERTA
+  // (getColoniasRankedByPropiedades, cuántas propiedades activas tiene la
+  // colonia); ahora reusa getColoniasOrdenadasPorDemanda(), la misma fuente
+  // real que ya arma la sección de cards "Colonias más buscadas" en el
+  // Home y en /zonas (BACKEND.md §9.1) — sin mantener una selección aparte
+  // sincronizada a mano. Cuando todavía no hay ningún evento de demanda
+  // real registrado, esa misma función cae honestamente a oferta (mismo
+  // comportamiento de antes, no una regresión). Resolviendo cada una
+  // contra el catálogo de coordenadas verificadas (matchColonia) para
+  // obtener lat/lng/radio reales. El ranking en sí se pide una sola vez al
+  // montar — igual que /zonas y Home (páginas de servidor), no reacciona a
+  // publicaciones locales de este navegador; sería inconsistente que el
+  // mapa mostrara una colonia "de moda" que nadie más ve. La resolución a
+  // coordenada (abajo) sí se recalcula, ver comentario de `zonasIrA`. Las
+  // colonias rankeadas que no tengan coordenada verificada (ej. detectadas
+  // por texto libre, sin catálogo) se descartan aquí — no hay a dónde
+  // volar sin lat/lng real.
   const [coloniasRanked, setColoniasRanked] = useState<ColoniaCard[]>([]);
   useEffect(() => {
     let cancelado = false;
-    getColoniasRankedByPropiedades().then((data) => {
-      if (!cancelado) setColoniasRanked(data);
+    getColoniasOrdenadasPorDemanda().then(({ colonias }) => {
+      if (!cancelado) setColoniasRanked(colonias);
     });
     return () => { cancelado = true; };
   }, []);
@@ -438,12 +452,17 @@ export function MapaClient({ allProperties }: Props) {
             </button>
           </div>
 
-          {/* Riesgo de inundación */}
+          {/* Riesgo de inundación — colapsable, ver inundacionOpen arriba. */}
           <div className="bg-brand-dark rounded-xl shadow-xl p-3">
-            <p className="flex items-center gap-1.5 text-xs font-bold text-white/40 uppercase tracking-wider mb-2.5">
+            <button
+              onClick={() => setInundacionOpen((v) => !v)}
+              className="w-full flex items-center gap-1.5 text-xs font-bold text-white/40 uppercase tracking-wider hover:text-white/60 transition-colors"
+            >
               <Droplets size={12} /> Inundación
-            </p>
-            <div className="space-y-0.5">
+              <ChevronDown size={13} className={`ml-auto transition-transform ${inundacionOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {inundacionOpen && (
+            <div className="space-y-0.5 mt-2.5">
               {RIESGO_CFG.map((item) => {
                 const active = riesgoActive.has(item.level);
                 return (
@@ -466,17 +485,23 @@ export function MapaClient({ allProperties }: Props) {
                 );
               })}
             </div>
+            )}
           </div>
 
           {/* Ir a zona — oculta por completo si ninguna colonia rankeada
               resolvió coordenada verificada, en vez de mostrar una
-              tarjeta vacía. */}
+              tarjeta vacía. Colapsable, ver irAZonaOpen arriba. */}
           {zonasIrA.length > 0 && (
           <div className="bg-brand-dark rounded-xl shadow-xl p-3">
-            <p className="flex items-center gap-1.5 text-xs font-bold text-white/40 uppercase tracking-wider mb-2.5">
+            <button
+              onClick={() => setIrAZonaOpen((v) => !v)}
+              className="w-full flex items-center gap-1.5 text-xs font-bold text-white/40 uppercase tracking-wider hover:text-white/60 transition-colors"
+            >
               <MapPin size={12} /> Ir a zona
-            </p>
-            <div className="flex flex-col gap-0.5">
+              <ChevronDown size={13} className={`ml-auto transition-transform ${irAZonaOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {irAZonaOpen && (
+            <div className="flex flex-col gap-0.5 mt-2.5">
               {zonasIrA.map((zone) => {
                 const isActive = activeZone === zone.label;
                 return (
@@ -505,6 +530,7 @@ export function MapaClient({ allProperties }: Props) {
                 );
               })}
             </div>
+            )}
           </div>
           )}
 
