@@ -46,7 +46,7 @@ export function ActiveFilters({ filters, onUpdate, onClear }: ActiveFiltersProps
     const cat = CATEGORIAS_GENERICAS.find((c) => c.value === filters.categoriaLandmark);
     if (cat) chips.push({ label: `Cerca de ${cat.label}`, onRemove: () => onUpdate({ categoriaLandmark: '' }) });
   } else if (filters.colonia) {
-    const coord = matchColonia(filters.colonia);
+    const coord = matchColonia(filters.colonia, filters.municipio);
     chips.push({ label: coord ? `Cerca de ${coord.label}` : filters.colonia, onRemove: () => onUpdate({ colonia: '' }) });
   }
   if (filters.zonaDestacada) {

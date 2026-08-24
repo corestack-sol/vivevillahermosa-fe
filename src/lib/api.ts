@@ -119,6 +119,88 @@ export async function getAllProperties(): Promise<Property[]> {
   return propiedades.map(mapBackendProperty);
 }
 
+/**
+ * Igual que `getAllProperties()`, pero acotado a un área geográfica —
+ * pedido explícito 2026-08-23: `/mapa` traía el catálogo COMPLETO en cada
+ * carga de página (`?all=true`, sin límite), algo que deja de ser viable
+ * cuando haya cientos/miles de propiedades activas. Ver
+ * docs/BACKEND-MAPA-BBOX-23082026.md para el contrato completo.
+ *
+ * Se manda `all=true` A PROPÓSITO junto con los límites del área — el
+ * backend hoy no reconoce estos parámetros nuevos y los ignora (mismo
+ * patrón ya usado para `motivo`/`encontradoEnPlataforma`, ver
+ * docs/BACKEND-MOTIVOS-CIERRE-23082026.md), así que esta llamada hoy
+ * devuelve el catálogo completo — EXACTAMENTE lo mismo que antes, cero
+ * regresión mientras el backend no lo implemente. En cuanto el backend
+ * reconozca los límites, debe darles prioridad sobre `all=true` (ver el
+ * doc) y esta misma llamada, sin ningún cambio de este lado, empieza a
+ * traer solo lo que cabe en pantalla.
+ */
+export async function getPropertiesInBounds(bounds: { north: number; south: number; east: number; west: number }): Promise<Property[]> {
+  const qs = new URLSearchParams({
+    all: 'true',
+    swLat: String(bounds.south),
+    swLng: String(bounds.west),
+    neLat: String(bounds.north),
+    neLng: String(bounds.east),
+  });
+  const { propiedades } = await backendFetch<{
+    propiedades: BackendPublicProperty[];
+  }>(`/propiedades?${qs.toString()}`);
+  return propiedades.map(mapBackendProperty);
+}
+
+/** Ver docs/BACKEND-PROPIEDADES-PAGINACION-23082026.md — mismos nombres de campo. */
+export interface PropertiesSearchParams {
+  page?: number;
+  limit?: number;
+  tipo?: string;
+  operacion?: string;
+  municipio?: string;
+  precioMin?: number;
+  precioMax?: number;
+  recamaras?: number;
+  recamarasMax?: number;
+  banos?: number;
+  m2Min?: number;
+  m2Max?: number;
+  riesgoInundacion?: string;
+  cercaDosoBocas?: boolean;
+  q?: string;
+  sort?: string;
+  /** Proximidad a un punto ya resuelto (colonia/landmark) — nunca un nombre, ver el doc §3. */
+  nearLat?: number;
+  nearLng?: number;
+  nearRadiusKm?: number;
+}
+
+/**
+ * `/propiedades` con paginación y filtros reales — pedido explícito
+ * 2026-08-23, mismo motivo que `getPropertiesInBounds()`: a cientos/miles
+ * de propiedades activas, traer el catálogo completo en cada visita a
+ * `/propiedades` deja de ser viable. Ver
+ * docs/BACKEND-PROPIEDADES-PAGINACION-23082026.md para el contrato
+ * completo (incluye qué filtros quedaron fuera de esta primera pasada a
+ * propósito — zonaDestacada, amenidad, "todo lo demás").
+ *
+ * Mismo criterio de seguridad que `getPropertiesInBounds()`: se manda
+ * `all=true` junto con los parámetros nuevos — el backend hoy los ignora y
+ * devuelve el catálogo completo (`total` ausente, se usa
+ * `propiedades.length` como respaldo), cero regresión mientras no lo
+ * implemente.
+ */
+export async function searchProperties(params: PropertiesSearchParams): Promise<{ properties: Property[]; total: number }> {
+  const qs = new URLSearchParams({ all: 'true' });
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== '') qs.set(key, String(value));
+  }
+  const { propiedades, total } = await backendFetch<{
+    propiedades: BackendPublicProperty[];
+    total?: number;
+  }>(`/propiedades?${qs.toString()}`);
+  return { properties: propiedades.map(mapBackendProperty), total: total ?? propiedades.length };
+}
+
 export async function getFeaturedProperties(): Promise<Property[]> {
   return (await getAllProperties()).filter((p) => p.featured);
 }

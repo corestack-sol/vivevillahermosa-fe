@@ -3,6 +3,20 @@ import type { SearchFilters } from '@/types/search';
 import { getLandmark, distanciaKm, distanciaMinimaACategoria, RADIO_CATEGORIA_KM } from './landmarks';
 import { matchColonia } from './colonias';
 import { estaEnZonaDestacada } from './zonasDestacadas';
+import { MUNICIPIO_CENTERS } from './publishSchema';
+
+// Orden fijo, cero costo (sin geolocalización ni distancia real) — mismo
+// orden de MUNICIPIO_CENTERS (Centro primero, resto por tamaño de mercado)
+// que ya se usa en el selector de publicar. Evita que el orden por defecto
+// de /propiedades muestre los municipios revueltos sin depender de la
+// ubicación del usuario, que sería costoso a miles de usuarios (ver
+// docs/BACKEND-ORDEN-MUNICIPIO-23082026.md).
+const PRIORIDAD_MUNICIPIO: Record<string, number> = Object.fromEntries(
+  Object.keys(MUNICIPIO_CENTERS).map((m, i) => [m, i])
+);
+function prioridadMunicipio(municipio: string): number {
+  return PRIORIDAD_MUNICIPIO[municipio] ?? Object.keys(MUNICIPIO_CENTERS).length;
+}
 
 export function applyFilters(properties: Property[], filters: SearchFilters): Property[] {
   let result = [...properties];
@@ -40,7 +54,7 @@ export function applyFilters(properties: Property[], filters: SearchFilters): Pr
     // "Framboyanes" (caso real reportado). Si no está catalogada, cae al
     // mismo match de texto de siempre — no se pierde cobertura, solo se
     // gana precisión donde ya la verificamos.
-    const coord = matchColonia(filters.colonia);
+    const coord = matchColonia(filters.colonia, filters.municipio);
     if (coord) {
       result = result.filter((p) => {
         if (distanciaKm(p.lat, p.lng, coord.lat, coord.lng) > coord.radioKm) return false;
@@ -54,7 +68,7 @@ export function applyFilters(properties: Property[], filters: SearchFilters): Pr
         // catalogadas están muy juntas entre sí, así que este cruce se
         // repite fácilmente con cualquier par de colonias vecinas — no es
         // un caso aislado de esta sola.
-        const coloniaPropia = matchColonia(p.colonia);
+        const coloniaPropia = matchColonia(p.colonia, p.municipio);
         if (coloniaPropia && coloniaPropia.key !== coord.key) return false;
         return true;
       });
@@ -187,7 +201,11 @@ function sortProperties(properties: Property[], sort: string): Property[] {
     case 'm2-asc':
       return [...properties].sort((a, b) => tamano(a) - tamano(b));
     default:
-      return [...properties].sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+      return [...properties].sort((a, b) => {
+        const porMunicipio = prioridadMunicipio(a.municipio) - prioridadMunicipio(b.municipio);
+        if (porMunicipio !== 0) return porMunicipio;
+        return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
+      });
   }
 }
 
@@ -237,7 +255,7 @@ function cumpleCriterio(p: Property, filters: SearchFilters, criterio: CriterioC
     case 'operacion': return p.operacion === filters.operacion;
     case 'municipio': return p.municipio.toLowerCase() === filters.municipio!.toLowerCase();
     case 'colonia': {
-      const coord = matchColonia(filters.colonia!);
+      const coord = matchColonia(filters.colonia!, filters.municipio);
       if (coord) return distanciaKm(p.lat, p.lng, coord.lat, coord.lng) <= coord.radioKm;
       const q = filters.colonia!.toLowerCase();
       return p.titulo.toLowerCase().includes(q) || p.colonia.toLowerCase().includes(q)

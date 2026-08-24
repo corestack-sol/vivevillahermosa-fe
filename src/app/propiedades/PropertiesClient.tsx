@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
@@ -17,10 +17,10 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { MapViewDynamic } from '@/components/map/MapViewDynamic';
 import { SelectedPropertyCard } from '@/components/map/SelectedPropertyCard';
 import type { MapMarker } from '@/components/map/MapView';
-import { getLandmark, CATEGORIAS_GENERICAS, precargarLandmarks } from '@/lib/landmarks';
+import { getLandmark, distanciaKm, CATEGORIAS_GENERICAS, precargarLandmarks } from '@/lib/landmarks';
 import { matchColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
 import { interpretarBusqueda, esOracionLarga, MAX_QUERY_LENGTH } from '@/lib/interpretarBusqueda';
-import { getResultadosSimilares } from '@/lib/filters';
+import { getColoniasRankedByPropiedades, searchProperties } from '@/lib/api';
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches';
 import { ExploreZonasCta } from '@/components/search/ExploreZonasCta';
 import { BUSQUEDA_SIN_INTERPRETAR_KEY } from '@/components/search/SearchBar';
@@ -30,7 +30,12 @@ import { PROPERTY_GRID_CLASSES } from '@/lib/gridClasses';
 const PER_PAGE = 12;
 
 interface Props {
-  allProperties: Property[];
+  // ⚠️ 2026-08-23: ya no es el catálogo completo — page.tsx ahora pide
+  // solo la primera página (ver searchProperties() en api.ts), acotado
+  // desde el primer render en vez de traer todo. Ver
+  // docs/BACKEND-PROPIEDADES-PAGINACION-23082026.md.
+  initialProperties: Property[];
+  initialTotal: number;
 }
 
 const TIPO_PLURAL: Record<string, string> = {
@@ -76,7 +81,7 @@ function buildTitle(filters: SearchFilters): string {
   const categoria = !landmark && filters.categoriaLandmark
     ? CATEGORIAS_GENERICAS.find((c) => c.value === filters.categoriaLandmark)
     : undefined;
-  const coloniaResuelta = !landmark && !categoria && filters.colonia ? matchColonia(filters.colonia) : undefined;
+  const coloniaResuelta = !landmark && !categoria && filters.colonia ? matchColonia(filters.colonia, filters.municipio) : undefined;
   const lugar = landmark
     ? `cerca de ${landmark.label}`
     : categoria
@@ -111,21 +116,41 @@ function heroLabel(sort: SearchFilters['sort']): string | null {
   }
 }
 
-export function PropertiesClient({ allProperties }: Props) {
+export function PropertiesClient({ initialProperties, initialTotal }: Props) {
   const { filters, updateFilters, clearFilters, activeCount } = useFilters();
   // Para el link "Ver en mapa" de abajo — reenvía los filtros activos tal
   // cual, sin reconstruir el query string a mano: /mapa usa el mismo
   // useFilters(), así que lee estos mismos parámetros de la URL solo.
   const searchParams = useSearchParams();
-  // `allProperties` ya viene fresco del backend (ver propiedades/page.tsx)
-  // — ya no hace falta fusionarlo con ninguna simulación local.
-  const properties = allProperties;
   // Se declaran aquí (antes de useSearch) porque se le pasan como extraDeps
   // — ver el efecto más abajo que los llena, junto a precargarColonias
   // Descubiertas()/precargarLandmarks().
   const [coloniasReady, setColoniasReady] = useState(false);
   const [landmarksReady, setLandmarksReady] = useState(false);
-  const { results, allResults, total, hasMore, loadMore, isLoading } = useSearch(properties, filters, [coloniasReady, landmarksReady]);
+  const { results, allResults, total, hasMore, loadMore, isLoading } = useSearch(
+    filters, [coloniasReady, landmarksReady], { results: initialProperties, total: initialTotal },
+  );
+
+  // Autocompletado del buscador — antes salía del catálogo completo
+  // (`properties`, ya no existe: ver el comentario del `Props` de arriba).
+  // `getColoniasRankedByPropiedades()` es la misma fuente real que ya usan
+  // /mapa y /zonas (colonias con AL MENOS una propiedad activa, nunca
+  // sugiere un lugar sin resultados) — mucho más liviano que traer
+  // propiedades completas solo para sacar nombres.
+  const [places, setPlaces] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelado = false;
+    getColoniasRankedByPropiedades().then((cards) => {
+      if (cancelado) return;
+      const set = new Set<string>();
+      for (const c of cards) {
+        set.add(c.nombre);
+        set.add(c.municipio === 'Centro' ? 'Villahermosa' : c.municipio);
+      }
+      setPlaces(Array.from(set).sort((a, b) => a.localeCompare(b, 'es')));
+    }).catch(() => {});
+    return () => { cancelado = true; };
+  }, []);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [buscandoIA, setBuscandoIA] = useState(false);
@@ -189,14 +214,6 @@ export function PropertiesClient({ allProperties }: Props) {
     }
     sincronizarInput();
   }, [filters.q]);
-  const places = useMemo(() => {
-    const set = new Set<string>();
-    for (const p of properties) {
-      set.add(p.colonia);
-      set.add(p.municipio === 'Centro' ? 'Villahermosa' : p.municipio);
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'));
-  }, [properties]);
   const q = inputValue;
   const filteredPlaces = q.length >= 2 ? places.filter((s) => s.toLowerCase().includes(q.toLowerCase())).slice(0, 6) : [];
   const showSuggestions = searchOpen && filteredPlaces.length > 0;
@@ -345,8 +362,9 @@ export function PropertiesClient({ allProperties }: Props) {
   // una búsqueda "cerca de X" no tenía ninguna forma de ver a qué distancia
   // real está, la conexión quedaba invisible en cuanto se hacía clic.
   const coloniaCercana = !filters.landmark && !filters.categoriaLandmark && filters.colonia
-    ? matchColonia(filters.colonia)
+    ? matchColonia(filters.colonia, filters.municipio)
     : undefined;
+  const landmarkResuelto = filters.landmark ? getLandmark(filters.landmark) : undefined;
   const landmarkQuery = filters.landmark
     ? `?cerca=${filters.landmark}`
     : filters.categoriaLandmark
@@ -354,6 +372,23 @@ export function PropertiesClient({ allProperties }: Props) {
       : coloniaCercana
         ? `?cercaColonia=${coloniaCercana.key}`
         : '';
+
+  // "1.2 km de Parque La Choca" bajo cada tarjeta — pedido explícito
+  // 2026-08-23, SOLO para las tarjetas de "Resultados" (búsqueda real
+  // "cerca de X" con landmark o colonia con coordenada verificada), nunca
+  // para "Todo lo demás" (getResultadosSimilares, más abajo) — esa sección
+  // no promete cumplir el criterio de cercanía pedido, mostrar una
+  // distancia ahí sería engañoso. Reusa el mismo landmark/colonia ya
+  // resueltos arriba en vez de resolverlos de nuevo por cada tarjeta.
+  function distanciaLabel(p: Property): string | undefined {
+    if (landmarkResuelto) {
+      return `${distanciaKm(p.lat, p.lng, landmarkResuelto.lat, landmarkResuelto.lng).toFixed(1)} km de ${landmarkResuelto.label}`;
+    }
+    if (coloniaCercana) {
+      return `${distanciaKm(p.lat, p.lng, coloniaCercana.lat, coloniaCercana.lng).toFixed(1)} km de ${coloniaCercana.label}`;
+    }
+    return undefined;
+  }
 
   const mapMarkers = allResults.map((p) => ({
     id: p.id, slug: p.slug, lat: p.latPublico, lng: p.lngPublico,
@@ -381,21 +416,45 @@ export function PropertiesClient({ allProperties }: Props) {
   // ni con los que sí coinciden mezclados sin explicar por qué salieron —
   // se etiquetan como dos grupos: lo que sí cumple todo lo pedido
   // ("Resultados"), y lo más parecido que no cumplió todo pero sí algo
-  // ("Todo lo demás"), calculado sobre el catálogo completo (`properties`),
-  // no solo sobre la página ya cargada.
+  // ("Todo lo demás").
   // Ninguno de los dos grupos lleva la etiqueta "IA": el filtrado en sí
-  // (esta función, applyFilters) es lógica determinista, no un resultado
-  // de la IA — la IA (interpretarBusqueda) solo interviene, si acaso,
-  // antes de esto, para traducir una frase en filtros. Etiquetar el
-  // resultado del filtro como "encontrado por la IA" era falso incluso
-  // cuando la búsqueda sí pasó por la IA, y directamente engañoso cuando
-  // la búsqueda activa venía solo del panel de filtros manuales.
+  // (applyFilters/el servidor) es lógica determinista, no un resultado de
+  // la IA — la IA (interpretarBusqueda) solo interviene, si acaso, antes
+  // de esto, para traducir una frase en filtros. Etiquetar el resultado
+  // del filtro como "encontrado por la IA" era falso incluso cuando la
+  // búsqueda sí pasó por la IA, y directamente engañoso cuando la búsqueda
+  // activa venía solo del panel de filtros manuales.
   const hayBusquedaActiva = activeCount > 0;
-  const idsExactos = useMemo(() => new Set(allResults.map((p) => p.id)), [allResults]);
-  const resultadosSimilares = useMemo(
-    () => (hayBusquedaActiva && viewMode === 'grid' ? getResultadosSimilares(properties, filters, idsExactos, 6) : []),
-    [hayBusquedaActiva, viewMode, properties, filters, idsExactos]
-  );
+
+  // ⚠️ 2026-08-23: antes `getResultadosSimilares` puntuaba el catálogo
+  // COMPLETO por cuántos criterios suaves cumplía cada propiedad. Ya no se
+  // tiene el catálogo completo en memoria (ver docs/BACKEND-
+  // PROPIEDADES-PAGINACION-23082026.md §4) — simplificado a propósito a
+  // pedir server-side solo lo "duro" (tipo/operación, lo único que
+  // getResultadosSimilares nunca relaja) con un límite chico, en vez de
+  // replicar el puntaje por coincidencias parciales. Menos preciso (no
+  // ordena por cuántos filtros suaves comparte), pero sigue siendo
+  // genuinamente "parecido" (mismo tipo, misma operación) sin traer nada
+  // de más.
+  const [resultadosSimilares, setResultadosSimilares] = useState<Property[]>([]);
+  useEffect(() => {
+    let cancelado = false;
+    function limpiar() {
+      if (!cancelado) setResultadosSimilares([]);
+    }
+    if (!hayBusquedaActiva || viewMode !== 'grid' || !filters.tipo || !filters.operacion) {
+      limpiar();
+      return;
+    }
+    const idsExactos = new Set(allResults.map((p) => p.id));
+    searchProperties({ tipo: filters.tipo, operacion: filters.operacion, page: 1, limit: 12 })
+      .then(({ properties }) => {
+        if (cancelado) return;
+        setResultadosSimilares(properties.filter((p) => !idsExactos.has(p.id)).slice(0, 6));
+      })
+      .catch(limpiar);
+    return () => { cancelado = true; };
+  }, [hayBusquedaActiva, viewMode, filters.tipo, filters.operacion, allResults]);
 
   return (
     <div className="min-h-screen bg-page">
@@ -770,7 +829,14 @@ export function PropertiesClient({ allProperties }: Props) {
             {/* Grid view */}
             {viewMode === 'grid' && (
               <>
-                {isLoading ? (
+                {/* results.length === 0 en la condición — sin esto, la
+                    grilla sembrada por el servidor (SSR, page.tsx) se
+                    reemplazaba por skeletons apenas montaba el efecto de
+                    useSearch, aunque ya hubiera datos reales que mostrar.
+                    Con datos ya en pantalla, un refetch de fondo no debe
+                    vaciar la vista — mismo criterio "no vaciar el mapa por
+                    un fetch en curso" ya usado en MapaClient.tsx. */}
+                {isLoading && results.length === 0 ? (
                   <div className={PROPERTY_GRID_CLASSES}>
                     {Array.from({ length: skeletonCount }).map((_, i) => (
                       <Skeleton key={i} variant="card" />
@@ -827,7 +893,7 @@ export function PropertiesClient({ allProperties }: Props) {
                           {etiquetaHero}
                         </p>
                         <div className="max-w-sm">
-                          <PropertyCard property={heroProperty} landmarkQuery={landmarkQuery} />
+                          <PropertyCard property={heroProperty} landmarkQuery={landmarkQuery} distanciaLabel={distanciaLabel(heroProperty)} />
                         </div>
                         {restoResultados.length > 0 && (
                           <p className="text-xs text-gray-400 font-medium mt-5 mb-2">Resto de los resultados</p>
@@ -836,7 +902,7 @@ export function PropertiesClient({ allProperties }: Props) {
                     )}
                     <div className={PROPERTY_GRID_CLASSES}>
                       {restoResultados.map((p) => (
-                        <PropertyCard key={p.id} property={p} landmarkQuery={landmarkQuery} />
+                        <PropertyCard key={p.id} property={p} landmarkQuery={landmarkQuery} distanciaLabel={distanciaLabel(p)} />
                       ))}
                     </div>
 

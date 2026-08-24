@@ -446,6 +446,10 @@ function distanciaLevenshtein(a: string, b: string): number {
   return dp[a.length][b.length];
 }
 
+function nombreColoniaCoincide(c: ColoniaCoord, n: string): boolean {
+  return normalizarNombreColonia(c.label) === n || (c.aliases ?? []).some((a) => normalizarNombreColonia(a) === n);
+}
+
 /**
  * Busca una colonia por nombre libre (como lo extrae la IA) — undefined si
  * no está catalogada aquí. Match exacto primero; si falla, un fallback de
@@ -453,23 +457,52 @@ function distanciaLevenshtein(a: string, b: string): number {
  * candidato dentro del margen, nunca el más cercano entre varios: adivinar
  * mal la colonia (mandar a alguien a la colonia equivocada) es peor que no
  * encontrar nada.
+ *
+ * `municipioHint` — bug real encontrado 2026-08-23 escribiendo pruebas: 85
+ * nombres de colonia existen en más de un municipio a la vez (ej.
+ * "Magisterial" es un lugar real distinto en Centro, Cunduacán,
+ * Huimanguillo, Macuspana, Paraíso y Tenosique). Sin esta pista, un match
+ * exacto siempre resolvía al PRIMERO del arreglo combinado (casi siempre el
+ * de Centro/Villahermosa, porque `COLONIAS_COORDS` va primero), en
+ * silencio, sin importar el municipio real que la persona quiso decir — y
+ * el fallback de typos ni siquiera resolvía nada (varios candidatos
+ * homónimos rompían la regla de "solo si hay un único candidato"). Quien
+ * llama debe pasar el municipio si ya lo tiene (extraído por la IA, o un
+ * campo del formulario/filtro) — sigue siendo opcional y compatible con
+ * quien no lo tenga, solo que sin la pista el resultado es el mismo de
+ * siempre (ambiguo, gana el primero del arreglo).
  */
-export function matchColonia(nombre: string): ColoniaCoord | undefined {
+export function matchColonia(nombre: string, municipioHint?: string): ColoniaCoord | undefined {
   const n = normalizarNombreColonia(nombre);
   if (!n) return undefined;
+  const municipioNorm = municipioHint ? normalizarBase(municipioHint) : undefined;
 
-  const exacto = todasLasColonias().find(
-    (c) => normalizarNombreColonia(c.label) === n || (c.aliases ?? []).some((a) => normalizarNombreColonia(a) === n)
-  );
+  if (municipioNorm) {
+    const exactoEnMunicipio = todasLasColonias().find(
+      (c) => nombreColoniaCoincide(c, n) && normalizarBase(c.municipio) === municipioNorm
+    );
+    if (exactoEnMunicipio) return exactoEnMunicipio;
+  }
+
+  const exacto = todasLasColonias().find((c) => nombreColoniaCoincide(c, n));
   if (exacto) return exacto;
 
   // Margen conservador: 1 typo cada ~8 caracteres, tope de 3 — nombres
   // cortos (ej. "Reforma") casi no toleran error, nombres largos sí.
   const margen = Math.min(3, Math.max(1, Math.floor(n.length / 8)));
-  const candidatos = todasLasColonias().filter((c) => {
+  const cercanos = (c: ColoniaCoord) => {
     const etiquetas = [c.label, ...(c.aliases ?? [])].map(normalizarNombreColonia);
     return etiquetas.some((e) => distanciaLevenshtein(e, n) <= margen);
-  });
+  };
+
+  if (municipioNorm) {
+    const candidatosEnMunicipio = todasLasColonias().filter(
+      (c) => cercanos(c) && normalizarBase(c.municipio) === municipioNorm
+    );
+    if (candidatosEnMunicipio.length === 1) return candidatosEnMunicipio[0];
+  }
+
+  const candidatos = todasLasColonias().filter(cercanos);
   return candidatos.length === 1 ? candidatos[0] : undefined;
 }
 
@@ -554,9 +587,16 @@ export function jitterCoord(id: string, lat: number, lng: number, radiusMeters =
  * disponibles en el navegador tras precargarlas, así que una propiedad en
  * una colonia descubierta-pero-no-estática cae al jitter de 500m en vez de
  * a su centroide real hasta que ese caso se resuelva server-side también.
+ *
+ * ⚠️ Verificado 2026-08-23: sin llamadores reales hoy — `api.ts` recibe
+ * `latPublico`/`lngPublico` ya calculados por el backend
+ * (`bp.latPublico`/`bp.lngPublico`), no por esta función. Se queda aquí por
+ * si el cálculo alguna vez vuelve al frontend; el parámetro `municipio`
+ * (mismo fix de desambiguación que `matchColonia`) se agrega ahora para que
+ * no quede desalineada si eso pasa.
  */
-export function getPuntoPublico(id: string, lat: number, lng: number, colonia: string): { lat: number; lng: number } {
-  const match = matchColonia(colonia);
+export function getPuntoPublico(id: string, lat: number, lng: number, colonia: string, municipio?: string): { lat: number; lng: number } {
+  const match = matchColonia(colonia, municipio);
   if (match) return { lat: match.lat, lng: match.lng };
   const [jLat, jLng] = jitterCoord(id, lat, lng, 500);
   return { lat: jLat, lng: jLng };

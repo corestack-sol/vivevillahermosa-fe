@@ -307,6 +307,13 @@ export function MapView({
           maxClusterRadius: 55,
           showCoverageOnHover: false,
           spiderfyOnMaxZoom: true,
+          // Procesa los marcadores en lotes (requestAnimationFrame) en vez
+          // de todos de golpe — sin esto, agregar varios cientos/miles de
+          // marcadores de una sola vez puede congelar la pestaña un
+          // instante. Complementa el fetch acotado por área
+          // (MapaClient.tsx) — ayuda incluso mientras el backend no
+          // implemente el filtro por bounds.
+          chunkedLoading: true,
           iconCreateFunction: (cluster: any) => {
             const n = cluster.getChildCount();
             const sz = n > 99 ? 44 : 38;

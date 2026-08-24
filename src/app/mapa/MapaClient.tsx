@@ -13,7 +13,7 @@ import { useFilters } from '@/hooks/useFilters';
 import { applyFilters } from '@/lib/filters';
 import { FilterPanel } from '@/components/search/FilterPanel';
 import { MapViewDynamic } from '@/components/map/MapViewDynamic';
-import { getColoniasRankedByPropiedades, type ColoniaCard } from '@/lib/api';
+import { getColoniasRankedByPropiedades, getPropertiesInBounds, type ColoniaCard } from '@/lib/api';
 import { matchColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
 import { precargarLandmarks } from '@/lib/landmarks';
 import { useAuth } from '@/context/AuthContext';
@@ -73,9 +73,20 @@ export function MapaClient({ allProperties }: Props) {
   const { filters, updateFilters, clearFilters, activeCount } = useFilters();
   const { user } = useAuth();
 
-  // `allProperties` ya viene fresco del backend (ver mapa/page.tsx) — ya no
-  // hace falta fusionarlo con ninguna simulación local.
-  const properties = allProperties;
+  // `allProperties` (SSR, mapa/page.tsx) es solo el primer pintado — pedido
+  // explícito 2026-08-23: a cientos/miles de propiedades activas, traer el
+  // catálogo COMPLETO en cada carga deja de ser viable (payload cada vez
+  // más pesado, sin relación con lo que de verdad se ve en pantalla). En
+  // cuanto el mapa reporta un área real (`handleBoundsChange` de abajo), se
+  // vuelve a pedir SOLO lo que cabe en ese recuadro — ver
+  // getPropertiesInBounds() en api.ts y docs/BACKEND-MAPA-BBOX-23082026.md.
+  // El backend todavía no filtra por área (se lo ignora, ver el comentario
+  // de esa función) — hasta que lo implemente, esto sigue trayendo el
+  // catálogo completo en cada pan/zoom, más llamadas que antes pero cada
+  // una del mismo tamaño de hoy, nunca peor por llamada. `allProperties` se
+  // mantiene como respaldo si el primer fetch por área fallara.
+  const [properties, setProperties] = useState<Property[]>(allProperties);
+  const [cargandoArea, setCargandoArea] = useState(false);
 
   const [panelOpen,     setPanelOpen]     = useState(false);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
@@ -183,7 +194,7 @@ export function MapaClient({ allProperties }: Props) {
     () =>
       coloniasRanked
         .map((c) => {
-          const coord = matchColonia(c.nombre);
+          const coord = matchColonia(c.nombre, c.municipio);
           return coord ? { label: c.nombre, lat: coord.lat, lng: coord.lng, radius: coord.radioKm * 1000 } : null;
         })
         .filter((z): z is { label: string; lat: number; lng: number; radius: number } => z !== null)
@@ -206,17 +217,43 @@ export function MapaClient({ allProperties }: Props) {
   }
 
   // Antes requería tocar "Buscar en esta zona" para aplicar el recuadro
-  // visible como filtro. Ahora se aplica solo al mover/hacer zoom — es
-  // filtrado local instantáneo (sin costo de red), así que no hace falta
-  // el paso manual, y libera ese espacio para la leyenda de privacidad.
-  // Debounce corto: sin esto, cada paso intermedio de un pan/zoom continuo
-  // reconstruye el array completo de marcadores — invisible con el
-  // catálogo actual, pero se nota con más inventario.
+  // visible como filtro. Ahora se aplica solo al mover/hacer zoom — libera
+  // ese espacio para la leyenda de privacidad.
+  // ⚠️ 2026-08-23: dejó de ser "sin costo de red" — cada cambio de área
+  // ahora también pide propiedades acotadas a ese recuadro (ver
+  // cargarPropiedadesDelArea/getPropertiesInBounds), necesario para que el
+  // mapa siga siendo viable con cientos/miles de propiedades activas (antes
+  // se traía el catálogo completo una sola vez y todo el filtrado era
+  // local). Debounce subido de 150ms a 400ms por eso mismo: 150ms bastaba
+  // para filtrado local instantáneo, pero dispararía una llamada de red por
+  // cada paso intermedio de un pan/zoom continuo.
   const boundsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   function handleBoundsChange(bounds: MapBounds) {
-    if (!boundsInitializedRef.current) { boundsInitializedRef.current = true; return; }
     if (boundsDebounceRef.current) clearTimeout(boundsDebounceRef.current);
-    boundsDebounceRef.current = setTimeout(() => setActiveBounds(bounds), 150);
+    boundsDebounceRef.current = setTimeout(() => {
+      // El pedido de datos SÍ corre desde el primer reporte al montar
+      // (a diferencia del filtro visual de abajo, `setActiveBounds`, que
+      // sigue ignorando ese primer evento a propósito) — la primera vista
+      // también se beneficia de traer solo lo que cabe en pantalla, no
+      // solo las vistas después de una interacción real.
+      void cargarPropiedadesDelArea(bounds);
+      if (!boundsInitializedRef.current) { boundsInitializedRef.current = true; return; }
+      setActiveBounds(bounds);
+    }, 400);
+  }
+
+  async function cargarPropiedadesDelArea(bounds: MapBounds) {
+    setCargandoArea(true);
+    try {
+      const data = await getPropertiesInBounds(bounds);
+      setProperties(data);
+    } catch {
+      // Fail-open — se queda con lo que ya había (el SSR inicial o la
+      // última área cargada con éxito), nunca se vacía el mapa por un
+      // fetch fallido.
+    } finally {
+      setCargandoArea(false);
+    }
   }
 
   function handleGeolocate() {
@@ -311,7 +348,8 @@ export function MapaClient({ allProperties }: Props) {
             <ChevronLeft size={16} /> Inicio
           </Link>
           <h1 className="font-heading font-bold text-lg text-white">Mapa de propiedades</h1>
-          <p className="text-sm text-white/45 mt-0.5">
+          <p className="flex items-center gap-1.5 text-sm text-white/45 mt-0.5">
+            {cargandoArea && <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin flex-shrink-0" />}
             {filtered.length} propiedad{filtered.length !== 1 ? 'es' : ''}
             {activeBounds ? ' en esta zona' : ''}
           </p>
