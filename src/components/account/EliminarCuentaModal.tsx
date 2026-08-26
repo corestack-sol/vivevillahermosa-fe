@@ -77,10 +77,16 @@ function EliminarCuentaConfirmBody({ onClose }: { onClose: () => void }) {
 
   return (
     <>
+      {/* "tus propiedades publicadas" agregado 2026-08-30 (pedido explícito
+          — el texto no las mencionaba). Verificado en vivo antes de
+          agregarlo, no es un supuesto: se publicó una propiedad de
+          prueba real, se borró SOLO la cuenta (no la propiedad), y
+          GET /propiedades/:id sobre esa misma propiedad, sin sesión,
+          devolvió 404 — el backend sí las quita junto con la cuenta. */}
       <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
         <AlertTriangle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
         <p className="text-sm text-amber-800 leading-relaxed">
-          Esta acción es <strong>inmediata y no se puede deshacer</strong>. Se eliminan tu cuenta, tus favoritos, tus alertas y tus notificaciones.
+          Esta acción es <strong>inmediata y no se puede deshacer</strong>. Se eliminan tu cuenta, tus propiedades publicadas, tus favoritos, tus alertas y tus notificaciones.
         </p>
       </div>
       <label htmlFor="confirmar-eliminar-correo" className="block text-sm text-gray-600 mb-2">

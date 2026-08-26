@@ -32,7 +32,7 @@ export function EliminarCuentaSection() {
         Sesión actual: <strong>{user.email}</strong>
       </p>
       <p className="text-sm text-gray-600 mb-4">
-        Al eliminar tu cuenta se borran de inmediato tus favoritos, tus alertas guardadas y tus notificaciones. Esta acción no se puede deshacer.
+        Al eliminar tu cuenta se borran de inmediato tus propiedades publicadas, tus favoritos, tus alertas guardadas y tus notificaciones. Esta acción no se puede deshacer.
       </p>
       <Button type="button" variant="danger" onClick={() => setShowModal(true)}>
         <Trash2 size={15} /> Solicitar eliminación de mi cuenta
