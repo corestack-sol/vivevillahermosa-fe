@@ -805,7 +805,7 @@ export function PublishForm() {
     // `estaEnTabasco()`, nunca confiar en que el navegador ya lo hizo.
     if (coords && !estaEnTabasco(coords.lat, coords.lng)) {
       toast.error('El punto marcado en el mapa queda fuera de Tabasco — solo se pueden publicar propiedades dentro del estado.');
-      setStep(2);
+      setStep(4); // el mapa vive en el paso de Fotos ahora, no en Ubicación
       return;
     }
     // Cada foto se sube por separado a POST /propiedades/fotos (multipart) —
@@ -1136,57 +1136,12 @@ export function PublishForm() {
           <>
             <Select label="Municipio" options={MUNICIPIO_OPTIONS} placeholder="Selecciona..." error={errors.municipio?.message} {...register('municipio')} />
             <Input label="Colonia" placeholder="Nombre de la colonia" error={errors.colonia?.message} {...register('colonia')} />
-
-            {/* Selector de pin en mapa */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-gray-700">Ubicación exacta</label>
-                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Opcional</span>
-              </div>
-              <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: 220 }}>
-                <MapPicker
-                  value={coords}
-                  onChange={(c) => { setCoords(c); setPinDesdeFoto(false); }}
-                  center={mapCenter}
-                  onRejected={() => toast.error('Ese punto queda fuera de Tabasco — solo se pueden publicar propiedades dentro del estado.')}
-                />
-              </div>
-              {coords ? (
-                <p className="text-[10px] text-gray-400 mt-1.5 flex items-center gap-1">
-                  <MapPin size={10} className="text-accent flex-shrink-0" />
-                  <span className="font-mono">{coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</span>
-                  {pinDesdeFoto && (
-                    <span className="text-accent-dark bg-accent-pale px-1.5 py-0.5 rounded-full font-sans font-semibold">
-                      Sugerido desde tu foto
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => { setCoords(null); setPinDesdeFoto(false); }}
-                    aria-label="Quitar ubicación seleccionada"
-                    className="ml-auto p-1.5 -m-1.5 text-gray-300 hover:text-red-500 transition-colors"
-                  >
-                    <X size={11} />
-                  </button>
-                </p>
-              ) : (
-                <p className="text-xs text-gray-400 mt-1.5">
-                  Toca el mapa o arrastra el pin para marcar la propiedad exacta
-                </p>
-              )}
-              {pinLejosDeColonia && (
-                <p className="flex items-start gap-1.5 text-[10px] text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-2.5 py-2 mt-2">
-                  <Info size={11} className="flex-shrink-0 mt-0.5" />
-                  El pin que marcaste está a {distanciaPinColonia!.toFixed(1)} km de &quot;{coloniaVerificada!.label}&quot; — revisa que el punto y la colonia coincidan antes de publicar.
-                </p>
-              )}
-              {coords && (
-                <p className="flex items-start gap-1.5 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2 mt-2">
-                  <ShieldAlert size={11} className="flex-shrink-0 mt-0.5" />
-                  Aunque marques el punto exacto, en el anuncio público solo se mostrará la zona aproximada — a los interesados serios les puedes dar la dirección exacta directamente por WhatsApp.
-                </p>
-              )}
-            </div>
+            {/* El selector de pin en mapa vive ahora en el paso de Fotos, no
+                aquí — ver el comentario grande en ese bloque (step === 4)
+                para el motivo: puesto aquí, se llenaba manualmente ANTES de
+                llegar a Fotos, dejando muerta la sugerencia automática por
+                GPS de la foto (pedido explícito 2026-08-26, "el pin se
+                coloca manualmente antes, así que no sirve de nada"). */}
 
             <div>
               <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
@@ -1520,6 +1475,72 @@ export function PublishForm() {
                 <Images size={13} /> Límite alcanzado — {MAX_FOTOS} fotos máximo por propiedad
               </p>
             )}
+
+            {/* Selector de pin en mapa — movido aquí desde el paso
+                "Ubicación" (pedido explícito 2026-08-26: "se implementó
+                colocar el pin automáticamente al subir una foto, pero en el
+                formulario el pin se coloca manualmente antes, así que no
+                sirve de nada esa función"). Tenía razón: sugerirPinDesdeFoto()
+                (ver addFiles más arriba) solo actúa `if (!coords)` — puesto
+                en el paso ANTERIOR a Fotos, casi cualquiera terminaba
+                tocando el mapa ahí antes de llegar a subir fotos, dejando
+                `coords` siempre ya lleno y la sugerencia automática muerta
+                en la práctica. Aquí el orden real coincide con el lógico:
+                primero fotos (se calcula la sugerencia), después el mapa
+                (ya con el pin puesto si hubo GPS válido, editable a mano
+                igual que antes). El guardado anti-fraude no se mueve de
+                lugar: sigue comparando contra `colonia`/`municipio`, que ya
+                se escribieron en el paso anterior y siguen disponibles aquí
+                igual. */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">Ubicación exacta</label>
+                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Opcional</span>
+              </div>
+              <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: 220 }}>
+                <MapPicker
+                  value={coords}
+                  onChange={(c) => { setCoords(c); setPinDesdeFoto(false); }}
+                  center={mapCenter}
+                  onRejected={() => toast.error('Ese punto queda fuera de Tabasco — solo se pueden publicar propiedades dentro del estado.')}
+                />
+              </div>
+              {coords ? (
+                <p className="text-[10px] text-gray-400 mt-1.5 flex items-center gap-1">
+                  <MapPin size={10} className="text-accent flex-shrink-0" />
+                  <span className="font-mono">{coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</span>
+                  {pinDesdeFoto && (
+                    <span className="text-accent-dark bg-accent-pale px-1.5 py-0.5 rounded-full font-sans font-semibold">
+                      Sugerido desde tu foto
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setCoords(null); setPinDesdeFoto(false); }}
+                    aria-label="Quitar ubicación seleccionada"
+                    className="ml-auto p-1.5 -m-1.5 text-gray-300 hover:text-red-500 transition-colors"
+                  >
+                    <X size={11} />
+                  </button>
+                </p>
+              ) : (
+                <p className="text-xs text-gray-400 mt-1.5">
+                  Toca el mapa o arrastra el pin para marcar la propiedad exacta
+                </p>
+              )}
+              {pinLejosDeColonia && (
+                <p className="flex items-start gap-1.5 text-[10px] text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-2.5 py-2 mt-2">
+                  <Info size={11} className="flex-shrink-0 mt-0.5" />
+                  El pin que marcaste está a {distanciaPinColonia!.toFixed(1)} km de &quot;{coloniaVerificada!.label}&quot; — revisa que el punto y la colonia coincidan antes de publicar.
+                </p>
+              )}
+              {coords && (
+                <p className="flex items-start gap-1.5 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2 mt-2">
+                  <ShieldAlert size={11} className="flex-shrink-0 mt-0.5" />
+                  Aunque marques el punto exacto, en el anuncio público solo se mostrará la zona aproximada — a los interesados serios les puedes dar la dirección exacta directamente por WhatsApp.
+                </p>
+              )}
+            </div>
 
             {/* Amenidades — movido aquí desde el paso "Detalles" (pedido
                 explícito 2026-08-22): antes aparecía ANTES de subir fotos,
