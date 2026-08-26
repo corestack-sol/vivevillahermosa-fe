@@ -162,13 +162,22 @@ export function AgentCard({ agent, propiedadId, propertyTitle, requiereMensajePr
               )}
             </div>
           )}
-          {/* El propietario de esta propiedad activó "mensaje primero" al
+          {/* Bug real reportado 2026-08-30: este hint se mostraba SIEMPRE
+              que requiereMensajePrimero era true, sin importar si el
+              propietario en realidad tenía WhatsApp configurado — una
+              propiedad con "solo contacto por correo" igual invitaba a
+              escribir por WhatsApp. `contacto` solo existe después de
+              revelar (botón de arriba), y únicamente entonces se sabe de
+              verdad si hay un `whatsapp` real que ofrecer — antes de eso,
+              no se afirma nada. El propietario activó "mensaje primero" al
               publicar — su WhatsApp no se revela aquí, hay que escribirle
               y es él quien decide si responde y comparte su número. */}
-          <p className={`flex items-center justify-center gap-1.5 text-xs text-center ${dark ? 'text-white/50' : 'text-gray-400'}`}>
-            <MessageCircle size={13} className="flex-shrink-0" />
-            ¿Prefieres WhatsApp? Escríbele un mensaje abajo.
-          </p>
+          {contacto?.whatsapp && (
+            <p className={`flex items-center justify-center gap-1.5 text-xs text-center ${dark ? 'text-white/50' : 'text-gray-400'}`}>
+              <MessageCircle size={13} className="flex-shrink-0" />
+              ¿Prefieres WhatsApp? Escríbele un mensaje abajo.
+            </p>
+          )}
         </div>
       ) : contacto ? (
         <div className="space-y-2">
