@@ -33,6 +33,7 @@ import { resizeImageToDataUrl, MAX_SOURCE_BYTES } from '@/lib/imageResize';
 import {
   publishSchema, type PublishFormData,
   TIPO_OPTIONS, MUNICIPIO_OPTIONS, MUNICIPIO_CENTERS, METODO_CONTACTO_OPTIONS, construirAgenteContacto,
+  MAX_FOTOS,
 } from '@/lib/publishSchema';
 interface ResultadoImagenIA {
   apta: boolean;
@@ -92,7 +93,6 @@ const STEP_SUBTITLES = [
   'Las fotos generan más contactos',
   '¿Cómo te pueden contactar?',
 ];
-const MAX_FOTOS = 5;
 // Terreno/local/bodega pueden mostrarse legítimamente vacíos (sin
 // construcción, la pura caja sin muebles) — esas fotos dan poca textura y
 // disparan el mismo puntaje de "borrosa" que una foto realmente movida.
@@ -153,6 +153,10 @@ export function PublishForm() {
   // puede usar más de una vez.
   const [aiGenerated, setAiGenerated] = useState(false);
   const [coords, setCoords]       = useState<Coords | null>(null);
+  // true cuando `coords` vino de EXIF de una foto (no de un clic manual)
+  // — ver sugerirPinDesdeFoto() más abajo. Solo cambia el texto de ayuda
+  // bajo el mapa, nunca bloquea que la persona lo mueva.
+  const [pinDesdeFoto, setPinDesdeFoto] = useState(false);
   const [fotos, setFotos]         = useState<{ file: File; preview: string; analisis: AnalisisFoto; calidad: CalidadFoto | null }[]>([]);
   const [dragOver, setDragOver]   = useState(false);
   const [servicios, setServicios] = useState<string[]>([]);
@@ -188,6 +192,51 @@ export function PublishForm() {
   // para archivos corruptos/falsos). createImageBitmap() sí valida el
   // contenido real: si no decodifica, se rechaza aquí, antes de llegar al
   // análisis de IA.
+  // Pedido explícito 2026-08-30: si una foto trae coordenadas GPS reales
+  // (EXIF), sugerir el pin automáticamente — pero SOLO si coincide con lo
+  // que la persona ya escribió en Ubicación (colonia/municipio, paso
+  // anterior a Fotos). Sin este candado, una foto reciclada de otro
+  // anuncio (mismo patrón de fraude que ya documentan las guías de
+  // Seguridad) traería el GPS del lugar ORIGINAL, no de esta propiedad —
+  // autocolocar el pin ahí se vería "confiable" siendo justo la mentira
+  // que un estafador querría reforzar. Nunca sobreescribe un pin que la
+  // persona ya puso a mano (ver el `if (coords)` en addFiles).
+  //
+  // La mayoría de fotos NO van a traer este dato — WhatsApp, Instagram y
+  // Facebook borran el EXIF (incluido GPS) al comprimir/reenviar, que es
+  // como llega la mayoría de fotos de propiedad en la práctica. Cuando sí
+  // está, es gratis (se lee 100% en el navegador, sin llamada de red).
+  async function sugerirPinDesdeFoto(file: File): Promise<Coords | null> {
+    let gps: { latitude: number; longitude: number } | undefined;
+    try {
+      const exifr = await import('exifr');
+      gps = await exifr.gps(file);
+    } catch {
+      return null; // sin EXIF, EXIF corrupto, o formato no soportado (ej. HEIC) — silencioso, no es un error real
+    }
+    if (!gps) return null;
+    if (!estaEnTabasco(gps.latitude, gps.longitude)) return null;
+
+    // Mismo umbral de 3km que ya usa pinLejosDeColonia más abajo cuando SÍ
+    // hay una colonia catalogada — una colonia es un área, no un punto.
+    // Sin colonia verificada, se compara contra el centro del municipio
+    // (mucho más grande) con un margen más generoso — 20km cubre un
+    // municipio real sin aceptar "está en otro estado".
+    if (coloniaVerificada) {
+      const d = distanciaKm(gps.latitude, gps.longitude, coloniaVerificada.lat, coloniaVerificada.lng);
+      if (d > 3) return null;
+    } else if (municipio && MUNICIPIO_CENTERS[municipio]) {
+      const [clat, clng] = MUNICIPIO_CENTERS[municipio];
+      const d = distanciaKm(gps.latitude, gps.longitude, clat, clng);
+      if (d > 20) return null;
+    } else {
+      // Sin colonia verificada NI municipio center conocido, no hay nada
+      // real contra qué comparar — no autocolocar a ciegas.
+      return null;
+    }
+    return { lat: gps.latitude, lng: gps.longitude };
+  }
+
   async function addFiles(files: FileList | File[]) {
     const candidatos = Array.from(files).filter((f) => f.type.startsWith('image/'));
     const slots = MAX_FOTOS - fotos.length;
@@ -261,6 +310,27 @@ export function PublishForm() {
         }
       });
     });
+
+    // Sugerencia de pin por EXIF — solo si todavía no hay ninguno puesto
+    // (nunca sobreescribe un pin ya elegido, a mano o de una foto
+    // anterior). `yaSugerido` es local a esta llamada, evita que dos fotos
+    // del mismo lote se pisen entre sí si ambas responden con GPS válido.
+    if (!coords) {
+      let yaSugerido = false;
+      toAdd.forEach((item) => {
+        sugerirPinDesdeFoto(item.file).then((sugerido) => {
+          if (!sugerido || yaSugerido) return;
+          yaSugerido = true;
+          setCoords(sugerido);
+          setPinDesdeFoto(true);
+          // Toast, no solo el estado — la persona está viendo el paso de
+          // Fotos en este momento, no el mapa (eso vive en el paso de
+          // Ubicación, anterior). Sin este aviso, el pin se movería solo
+          // en un paso que ya no está mirando.
+          toast.success('Ubicamos tu propiedad en el mapa usando la ubicación de tu foto — puedes ajustarla en el paso de Ubicación.');
+        });
+      });
+    }
   }
 
   function removePhoto(idx: number) {
@@ -957,7 +1027,7 @@ export function PublishForm() {
               <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: 220 }}>
                 <MapPicker
                   value={coords}
-                  onChange={setCoords}
+                  onChange={(c) => { setCoords(c); setPinDesdeFoto(false); }}
                   center={mapCenter}
                   onRejected={() => toast.error('Ese punto queda fuera de Tabasco — solo se pueden publicar propiedades dentro del estado.')}
                 />
@@ -966,9 +1036,14 @@ export function PublishForm() {
                 <p className="text-[10px] text-gray-400 mt-1.5 flex items-center gap-1">
                   <MapPin size={10} className="text-accent flex-shrink-0" />
                   <span className="font-mono">{coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}</span>
+                  {pinDesdeFoto && (
+                    <span className="text-accent-dark bg-accent-pale px-1.5 py-0.5 rounded-full font-sans font-semibold">
+                      Sugerido desde tu foto
+                    </span>
+                  )}
                   <button
                     type="button"
-                    onClick={() => setCoords(null)}
+                    onClick={() => { setCoords(null); setPinDesdeFoto(false); }}
                     aria-label="Quitar ubicación seleccionada"
                     className="ml-auto p-1.5 -m-1.5 text-gray-300 hover:text-red-500 transition-colors"
                   >
