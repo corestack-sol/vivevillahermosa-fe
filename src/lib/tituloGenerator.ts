@@ -22,10 +22,13 @@ export function generarTituloAutomatico(datos: DatosTitulo): string {
   const tipoLabel = TIPO_OPTIONS.find((t) => t.value === datos.tipo)?.label ?? 'Propiedad';
   const operacionLabel = datos.operacion === 'venta' ? 'en venta' : datos.operacion === 'renta' ? 'en renta' : '';
 
-  const municipioLabel = datos.municipio === 'Centro' ? 'Villahermosa' : datos.municipio;
+  // Pedido explícito 2026-08-30: nada de sustituir "Centro" por
+  // "Villahermosa" — toda la plataforma ya es de Tabasco, repetir el
+  // nombre de la ciudad en cada título es redundante. "Centro" (el
+  // municipio real) se trata igual que cualquier otro.
   const lugar = datos.colonia?.trim()
-    ? `${datos.colonia.trim()}${municipioLabel ? `, ${municipioLabel}` : ''}`
-    : municipioLabel;
+    ? `${datos.colonia.trim()}${datos.municipio ? `, ${datos.municipio}` : ''}`
+    : datos.municipio;
 
   let titulo = [tipoLabel, operacionLabel].filter(Boolean).join(' ');
   if (lugar) titulo += ` en ${lugar}`;

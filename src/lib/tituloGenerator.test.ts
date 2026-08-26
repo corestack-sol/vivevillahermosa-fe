@@ -6,13 +6,13 @@ describe('generarTituloAutomatico', () => {
     const titulo = generarTituloAutomatico({
       tipo: 'casa', operacion: 'venta', colonia: 'Reforma', municipio: 'Centro', recamaras: 3, m2Construidos: 180,
     });
-    expect(titulo).toBe('Casa en venta en Reforma, Villahermosa — 3 rec, 180 m²');
+    expect(titulo).toBe('Casa en venta en Reforma, Centro — 3 rec, 180 m²');
   });
 
-  it('maps municipio "Centro" to the more recognizable "Villahermosa"', () => {
+  it('never renames "Centro" to "Villahermosa" — redundant on a Tabasco-only platform (pedido explícito 2026-08-30)', () => {
     const titulo = generarTituloAutomatico({ tipo: 'casa', operacion: 'renta', municipio: 'Centro' });
-    expect(titulo).toContain('Villahermosa');
-    expect(titulo).not.toContain('en Centro');
+    expect(titulo).not.toContain('Villahermosa');
+    expect(titulo).toContain('Centro');
   });
 
   it('keeps other municipios as-is (no renaming)', () => {
