@@ -123,18 +123,14 @@ export async function getAllProperties(): Promise<Property[]> {
  * Igual que `getAllProperties()`, pero acotado a un área geográfica —
  * pedido explícito 2026-08-23: `/mapa` traía el catálogo COMPLETO en cada
  * carga de página (`?all=true`, sin límite), algo que deja de ser viable
- * cuando haya cientos/miles de propiedades activas. Ver
- * docs/BACKEND-MAPA-BBOX-23082026.md para el contrato completo.
+ * cuando haya cientos/miles de propiedades activas.
  *
- * Se manda `all=true` A PROPÓSITO junto con los límites del área — el
- * backend hoy no reconoce estos parámetros nuevos y los ignora (mismo
- * patrón ya usado para `motivo`/`encontradoEnPlataforma`, ver
- * docs/BACKEND-MOTIVOS-CIERRE-23082026.md), así que esta llamada hoy
- * devuelve el catálogo completo — EXACTAMENTE lo mismo que antes, cero
- * regresión mientras el backend no lo implemente. En cuanto el backend
- * reconozca los límites, debe darles prioridad sobre `all=true` (ver el
- * doc) y esta misma llamada, sin ningún cambio de este lado, empieza a
- * traer solo lo que cabe en pantalla.
+ * Se manda `all=true` junto con los límites del área — ⚠️ verificado en
+ * vivo 2026-08-26: el backend YA filtra de verdad por estos parámetros
+ * (probado con 3 recuadros de distinto tamaño, el conteo bajó de 28 a 7 a
+ * 2 según se cerró el área) a pesar del `all=true` — este comentario antes
+ * decía que el backend los ignoraba, quedó desactualizado, ver
+ * docs/BACKEND-PENDIENTES-30082026.md §3.
  */
 export async function getPropertiesInBounds(bounds: { north: number; south: number; east: number; west: number }): Promise<Property[]> {
   const qs = new URLSearchParams({

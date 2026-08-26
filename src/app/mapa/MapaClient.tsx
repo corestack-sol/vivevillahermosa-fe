@@ -95,6 +95,14 @@ export function MapaClient({ allProperties }: Props) {
   const [riesgoActive,  setRiesgoActive]  = useState<Set<RiesgoLevel>>(new Set(['bajo', 'medio', 'alto']));
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [activeBounds,  setActiveBounds]  = useState<MapBounds | null>(null);
+  // Cierra la tarjeta "Sin propiedades aquí" con la X, sin resetear filtros
+  // ni mover el mapa (pedido explícito 2026-08-26 — antes la única forma de
+  // quitarla era el link "Limpiar filtros y volver a Villahermosa"). Guarda
+  // CUÁL `activeBounds` se cerró (no un booleano) — así "reaparece sola" al
+  // moverse a otra zona sin necesitar un efecto que la reinicie: en cuanto
+  // `activeBounds` cambia a un objeto nuevo, deja de ser === al que se
+  // cerró y la comparación de abajo vuelve a ser true por su cuenta.
+  const [dismissedBounds, setDismissedBounds] = useState<MapBounds | null>(null);
   const [tileType,      setTileType]      = useState<TileType>('street');
   const [mapControls,   setMapControls]   = useState<MapControls | null>(null);
   const [activeZone,    setActiveZone]    = useState<string | null>(null);
@@ -397,10 +405,18 @@ export function MapaClient({ allProperties }: Props) {
         {/* Sin resultados — antes el mapa quedaba en blanco sin ninguna
             guía cuando los filtros (o el recuadro visible) no dejaban
             ninguna propiedad. */}
-        {filtered.length === 0 && (
+        {filtered.length === 0 && activeBounds !== dismissedBounds && (
           <div className="absolute inset-0 z-[1001] flex items-center justify-center pointer-events-none px-4">
-            <div className="pointer-events-auto bg-white rounded-2xl shadow-xl border border-gray-100 px-6 py-5 text-center max-w-xs">
-              <p className="text-sm font-semibold text-gray-800 mb-1">Sin propiedades aquí</p>
+            <div className="relative pointer-events-auto bg-white rounded-2xl shadow-xl border border-gray-100 px-6 py-5 text-center max-w-xs">
+              <button
+                type="button"
+                onClick={() => setDismissedBounds(activeBounds)}
+                aria-label="Cerrar aviso"
+                className="absolute top-2.5 right-2.5 p-1.5 -m-1.5 text-gray-300 hover:text-gray-600 transition-colors"
+              >
+                <X size={14} />
+              </button>
+              <p className="text-sm font-semibold text-gray-800 mb-1 pr-4">Sin propiedades aquí</p>
               <p className="text-xs text-gray-500 mb-3">Ninguna propiedad coincide con tus filtros en esta zona del mapa.</p>
               <button
                 type="button"

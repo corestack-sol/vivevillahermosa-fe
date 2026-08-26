@@ -80,14 +80,24 @@ para el caso de venta/renta.
 
 ---
 
-## 3. Mapa — filtrar propiedades por área visible (bbox)
+## 3. Mapa — filtrar propiedades por área visible (bbox) — ✅ YA IMPLEMENTADO
 
-**Hoy:** `/mapa` manda `swLat/swLng/neLat/neLng` junto con `all=true`
-como respaldo — el backend ignora los primeros y sigue devolviendo el
-catálogo completo, cero regresión, pero cero beneficio de escala
-tampoco.
+**Actualización 2026-08-26:** verificado en vivo — el backend SÍ está
+filtrando por `swLat/swLng/neLat/neLng` a pesar del `all=true` de
+respaldo (probado con 3 recuadros de distinto tamaño sobre el mismo
+catálogo: 28 → 7 → 2 resultados según se cierra el área). El comentario
+de abajo y en `api.ts`/`getPropertiesInBounds()` quedó desactualizado —
+se corrige aquí, código no necesita ningún cambio, ya funciona con lo
+que manda hoy.
 
-**Se necesita:**
+Efecto secundario real encontrado por esto: con solo 28 propiedades de
+muestra repartidas en todo el estado, ahora es normal que acercar el
+zoom a una zona puntual sí muestre "Sin propiedades aquí" — antes casi
+nunca se veía ese estado porque el backend regresaba el catálogo
+completo sin importar el zoom. Se le agregó una X para cerrarlo sin
+tener que resetear filtros (`MapaClient.tsx`).
+
+<details><summary>Contrato original (ya cumplido, se deja como referencia)</summary>
 
 ```
 GET /propiedades?swLat=X&swLng=Y&neLat=Z&neLng=W
@@ -97,9 +107,10 @@ GET /propiedades?swLat=X&swLng=Y&neLat=Z&neLng=W
   del rectángulo.
 - Sin límite de resultados dentro del área — el mapa necesita ver todo
   lo que cae en pantalla, a diferencia de una paginación normal.
-- **Debe tener prioridad sobre `all=true`** cuando ambos vienen en el
-  mismo request — si no, el frontend seguiría recibiendo el catálogo
-  completo para siempre, incluso después de implementar esto.
+- Tiene prioridad sobre `all=true` cuando ambos vienen en el mismo
+  request — confirmado, no se queda pegado al catálogo completo.
+
+</details>
 
 ---
 
