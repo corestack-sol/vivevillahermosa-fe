@@ -3,14 +3,38 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Heart, ArrowLeft } from 'lucide-react';
+import { Heart, ArrowLeft, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { loginRedirectUrl } from '@/lib/authRedirect';
 import { backendFetch } from '@/lib/backendApi';
 import { getAllProperties } from '@/lib/api';
 import { PropertyCard } from '@/components/property/PropertyCard';
+import { FavoriteButton } from '@/components/property/FavoriteButton';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { Property } from '@/types/property';
+
+// Card atenuada para un favorito que ya no resuelve contra el catálogo
+// público (activo). No se puede saber CUÁL de los 4 casos es (pausada,
+// eliminada, vendida o rentada) — GET /propiedades/:id devuelve 404 a
+// cualquiera que no sea el dueño en los 4, sin distinguir (confirmado en
+// src/app/propiedades/[id]/page.tsx, fetchProperty()). Mensaje genérico
+// a propósito, no se inventa cuál es — ver
+// docs/BACKEND-ESTADO-FAVORITOS-23082026.md para el endpoint que
+// resolvería esto de verdad.
+function FavoritoNoDisponible({ id }: { id: string }) {
+  return (
+    <div className="relative rounded-3xl overflow-hidden border border-gray-200 bg-gray-50 aspect-[20/21] flex flex-col items-center justify-center text-center p-5 opacity-70">
+      <div className="absolute top-4 right-4">
+        <FavoriteButton propiedadId={id} size="sm" />
+      </div>
+      <EyeOff size={26} className="text-gray-300 mb-3" strokeWidth={1.5} />
+      <p className="text-sm font-semibold text-gray-500 mb-1">No disponible actualmente</p>
+      <p className="text-xs text-gray-400 max-w-[190px] leading-relaxed">
+        El propietario la pausó, la quitó, o la operación ya se cerró.
+      </p>
+    </div>
+  );
+}
 
 export default function FavoritosPage() {
   return (
@@ -23,7 +47,11 @@ export default function FavoritosPage() {
 function FavoritosContent() {
   const { user, loading } = useAuth();
   const [favorites, setFavorites] = useState<Property[]>([]);
-  const [huerfanos, setHuerfanos] = useState(0);
+  // IDs de favoritos que ya no resuelven contra el catálogo activo — antes
+  // (huerfanos: number) solo se contaban y desaparecían del todo; pedido
+  // explícito 2026-08-30: mostrarlos igual, atenuados, en vez de ocultarlos
+  // en silencio — ver FavoritoNoDisponible arriba.
+  const [huerfanos, setHuerfanos] = useState<string[]>([]);
   const [fetching, setFetching] = useState(true);
   const searchParams = useSearchParams();
   const backHref = searchParams.get('from') === 'mapa' ? '/mapa' : '/dashboard';
@@ -37,10 +65,8 @@ function FavoritosContent() {
       ])
         .then(([{ favoritos: favIds }, allProps]) => {
           const resueltos = favIds.map((id) => allProps.find((p) => p.id === id)).filter(Boolean) as Property[];
-          // Un favorito cuya propiedad ya no resuelve (el dueño la borró o
-          // archivó) antes desaparecía en silencio — el contador simplemente
-          // encogía sin explicación.
-          setHuerfanos(favIds.length - resueltos.length);
+          const resueltosIds = new Set(resueltos.map((p) => p.id));
+          setHuerfanos(favIds.filter((id) => !resueltosIds.has(id)));
           setFavorites(resueltos);
         })
         .finally(() => setFetching(false));
@@ -88,17 +114,14 @@ function FavoritosContent() {
           <h1 className="text-2xl font-heading font-bold text-gray-900 flex items-center gap-2">
             <Heart size={20} className="text-red-500 fill-current" /> Mis favoritos
           </h1>
-          <p className="text-sm text-gray-500">{favorites.length} propiedad{favorites.length !== 1 ? 'es' : ''} guardada{favorites.length !== 1 ? 's' : ''}</p>
+          <p className="text-sm text-gray-500">
+            {favorites.length + huerfanos.length} propiedad{favorites.length + huerfanos.length !== 1 ? 'es' : ''} guardada{favorites.length + huerfanos.length !== 1 ? 's' : ''}
+            {huerfanos.length > 0 && ` (${huerfanos.length} no disponible${huerfanos.length !== 1 ? 's' : ''} ahora)`}
+          </p>
         </div>
       </div>
 
-      {huerfanos > 0 && (
-        <p className="text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-xl px-3.5 py-2.5 mb-6">
-          {huerfanos} favorito{huerfanos !== 1 ? 's' : ''} ya no {huerfanos !== 1 ? 'están' : 'está'} disponible{huerfanos !== 1 ? 's' : ''} — es posible que el dueño haya quitado esa propiedad.
-        </p>
-      )}
-
-      {favorites.length === 0 ? (
+      {favorites.length === 0 && huerfanos.length === 0 ? (
         <div className="text-center py-16">
           <Heart size={48} className="text-gray-200 mx-auto mb-4" />
           <p className="text-gray-500 font-medium mb-2">Aún no tienes favoritos</p>
@@ -112,6 +135,7 @@ function FavoritosContent() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {favorites.map((p) => <PropertyCard key={p.id} property={p} />)}
+          {huerfanos.map((id) => <FavoritoNoDisponible key={id} id={id} />)}
         </div>
       )}
     </div>
