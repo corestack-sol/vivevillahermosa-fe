@@ -8,15 +8,23 @@ import { ArrowLeft, Upload, Download, CheckCircle2, AlertCircle, FileSpreadsheet
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
 import { publishSchema, MUNICIPIO_CENTERS, construirAgenteContacto } from '@/lib/publishSchema';
+import { SERVICIOS_MAP } from '@/lib/servicios';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
 // Mismos nombres que los campos del schema compartido con Publicar/Editar —
 // así el mapeo de cada columna a cada regla de validación es directo, sin
 // tener que mantener una tabla de equivalencias por separado.
+//
+// 'servicios'/'requiereMensajePrimero' agregadas en la auditoría 2026-08-30
+// — antes ni siquiera existían como columnas, así que una propiedad
+// importada por CSV nunca podía traer servicios incluidos ni pedir
+// "mensaje primero" (quedaba fija en el default de siempre: revelado
+// instantáneo, sin servicios). Ambas opcionales, igual que metodoContacto.
 const COLUMNAS = [
   'tipo', 'operacion', 'precio', 'm2Construidos', 'm2Terreno', 'recamaras', 'banos',
   'municipio', 'colonia', 'titulo', 'descripcion', 'riesgoInundacion',
   'nombreContacto', 'metodoContacto', 'telefonoContacto', 'emailContacto',
+  'servicios', 'requiereMensajePrimero',
 ] as const;
 
 /** Forma que espera POST /propiedades (CreatePropertyDto) — id/slug/latPublico/lngPublico los genera el servidor. */
@@ -43,6 +51,8 @@ interface PropiedadPayload {
   agenteTel?: string;
   agenteEmail?: string;
   agenteWhatsapp?: string;
+  servicios?: string[];
+  requiereMensajePrimero?: boolean;
 }
 
 interface FilaParseada {
@@ -66,10 +76,25 @@ function construirPayload(datos: Record<string, string>): FilaParseada['resultad
     } else if (col === 'metodoContacto') {
       // Columna opcional en el CSV — si no la llenan, se asume "ambos" (mismo comportamiento que antes de que existiera esta opción).
       candidato[col] = valor === '' ? 'ambos' : valor.toLowerCase();
+    } else if (col === 'requiereMensajePrimero') {
+      // z.boolean() no convierte texto solo — sin esto, cualquier valor
+      // (incluido "no") pasaba como error de tipo en vez de interpretarse.
+      candidato[col] = ['si', 'sí', 'true', '1', 'yes'].includes(valor.toLowerCase());
+    } else if (col === 'servicios') {
+      // No vive en publishSchema (igual que amenidades) — se lee aparte
+      // más abajo, esta columna no participa del safeParse.
     } else {
       candidato[col] = valor;
     }
   }
+  // Lista separada por "|" (una coma ya delimita columnas del CSV) — solo
+  // se aceptan keys reales de SERVICIOS_RENTA, cualquier otra palabra se
+  // descarta en silencio en vez de rechazar la fila entera por un typo en
+  // un campo opcional.
+  const servicios = (datos.servicios ?? '')
+    .split('|')
+    .map((s) => s.trim().toLowerCase())
+    .filter((s) => SERVICIOS_MAP.has(s));
 
   const parsed = publishSchema.safeParse(candidato);
   if (!parsed.success) {
@@ -107,6 +132,8 @@ function construirPayload(datos: Record<string, string>): FilaParseada['resultad
       agenteTel: agente.tel,
       agenteEmail: agente.email,
       agenteWhatsapp: agente.whatsapp,
+      servicios: servicios.length > 0 ? servicios : undefined,
+      requiereMensajePrimero: data.requiereMensajePrimero || undefined,
     },
   };
 }
@@ -117,6 +144,7 @@ function descargarPlantilla() {
     'casa', 'venta', '2500000', '180', '250', '3', '2',
     'Centro', 'Tabasco 2000', 'Casa con jardín en Tabasco 2000', 'Casa de dos pisos con jardín, cochera para 2 autos y cuarto de servicio.', 'bajo',
     'Ana Pérez', 'ambos', '9931234567', 'ana@ejemplo.com',
+    'wifi|gas', 'no',
   ].map((v) => (v.includes(',') ? `"${v}"` : v)).join(',');
   const csv = `${encabezado}\n${ejemplo}\n`;
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });

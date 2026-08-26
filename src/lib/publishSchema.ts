@@ -16,6 +16,11 @@ const num = (msg: string) => z.number({ error: msg });
 // un mensaje amigable también a ese primer chequeo de tipo.
 const str = (msg: string) => z.string({ error: msg });
 
+// Compartido entre PublishForm.tsx y Editar propiedad (auditoría
+// 2026-08-30, antes vivía solo en PublishForm.tsx sin exportar — Editar
+// no tenía forma de saber el tope real, riesgo de que divergiera).
+export const MAX_FOTOS = 5;
+
 // 'whatsapp' agregado 2026-08-21 — pedido explícito: "telefono/Correo/Ambos
 // es coherente cuando quiere que solo se le contacte por whatsapp?". No lo
 // era — elegir "Teléfono" guardaba el mismo número en `tel` Y `whatsapp`
