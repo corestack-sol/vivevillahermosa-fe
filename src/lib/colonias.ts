@@ -511,6 +511,28 @@ export function getColoniaByKey(key: string): ColoniaCoord | undefined {
   return todasLasColonias().find((c) => c.key === key);
 }
 
+/**
+ * Colonia catalogada más cercana a una coordenada (reverse-lookup) — al
+ * revés de `matchColonia`, que resuelve un NOMBRE ya escrito a coordenada,
+ * esta resuelve una COORDENADA a nombre. Usada para sugerir corregir el
+ * campo "Colonia" cuando el GPS de una foto (ver `sugerirPinDesdeFoto` en
+ * PublishForm.tsx) cae dentro de una colonia catalogada distinta de la que
+ * la persona escribió a mano — nunca la sobreescribe sola, solo ofrece la
+ * corrección. `municipioHint` reduce ambigüedad igual que en `matchColonia`
+ * (mismo problema real: nombres de colonia repetidos en varios municipios).
+ */
+export function coloniaCercana(lat: number, lng: number, radioKm = 2, municipioHint?: string): ColoniaCoord | undefined {
+  const municipioNorm = municipioHint ? normalizarBase(municipioHint) : undefined;
+  let mejor: ColoniaCoord | undefined;
+  let mejorDist = Infinity;
+  for (const c of todasLasColonias()) {
+    if (municipioNorm && normalizarBase(c.municipio) !== municipioNorm) continue;
+    const d = distanciaKm(lat, lng, c.lat, c.lng);
+    if (d <= radioKm && d < mejorDist) { mejor = c; mejorDist = d; }
+  }
+  return mejor;
+}
+
 function escaparRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

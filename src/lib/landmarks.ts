@@ -141,3 +141,21 @@ export function distanciaMinimaACategoria(lat: number, lng: number, categoria: s
 
 /** Radio por defecto de "cerca de un/a [categoría]" cuando no se nombra un lugar específico. */
 export const RADIO_CATEGORIA_KM = 2.5;
+
+/**
+ * Landmarks catalogados dentro de `radioKm` de un punto, ordenados por
+ * cercanía — a diferencia de `landmarksPorCategoria`, no filtra por
+ * categoría, cualquier landmark cuenta. Usado para sugerir, al redactar la
+ * descripción de una propiedad, mencionar lugares reales cercanos: son
+ * exactamente los mismos nombres que ya resuelve la búsqueda por texto y por
+ * IA (`heuristica-busqueda.util.ts` en el backend usa este mismo catálogo),
+ * así que mencionarlos de verdad ayuda a que la propiedad aparezca en esas
+ * búsquedas — no es una sugerencia genérica de redacción.
+ */
+export function landmarksCercanos(lat: number, lng: number, radioKm: number): Landmark[] {
+  return landmarksCache
+    .map((l) => ({ l, d: distanciaKm(lat, lng, l.lat, l.lng) }))
+    .filter(({ d }) => d <= radioKm)
+    .sort((a, b) => a.d - b.d)
+    .map(({ l }) => l);
+}

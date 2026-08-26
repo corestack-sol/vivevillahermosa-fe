@@ -198,6 +198,25 @@ AlertaFoto
 
 ---
 
+## 7. Detección de foto reciclada de OTRO anuncio (cross-usuario)
+
+**Hoy:** `PublishForm.tsx` (`detectarFotoRepetida`, `src/lib/fotoHash.ts`)
+calcula un hash perceptual (dHash) de cada foto nueva y la compara contra
+las de las OTRAS propiedades del MISMO dueño (ya trae sus fotos vía
+`GET /propiedades/mias`) — avisa, no bloquea, si dos son casi idénticas.
+Atrapa "subí la misma foto dos veces por error", nunca "esta foto es de
+otro anuncio ajeno" — comparar contra el catálogo completo de la
+plataforma bajando y hasheando las fotos de cientos de propiedades ajenas
+en el navegador, en cada foto que alguien sube, no es viable ni deseable.
+
+**Se necesita (si se retoma):** un índice de hashes del lado del backend —
+guardar el mismo tipo de hash (o uno equivalente) por foto en
+`POST /propiedades/fotos` (mismo punto donde ya se re-analiza con Gemini,
+ver punto 6 de arriba) y comparar la nueva contra el índice completo ahí,
+donde sí es una sola consulta indexada en vez de N descargas desde el
+navegador. Sin pedido concreto todavía — documentado como el techo real de
+lo que el frontend puede hacer solo.
+
 ## Fuera de este documento (análisis hecho, nada construido ni pedido todavía)
 
 - **Límite de uso de IA por cuenta** — se analizó tierizar por

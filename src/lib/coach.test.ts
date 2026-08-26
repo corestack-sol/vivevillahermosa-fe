@@ -5,10 +5,13 @@ import { evaluarPropiedad, evaluarCartera } from './coach';
 
 function mkProperty(overrides: Partial<Property> = {}): Property {
   return {
-    id: 'prop-1', slug: 'casa-1', titulo: 'Casa', descripcion: 'a'.repeat(150), tipo: 'casa', operacion: 'venta',
+    id: 'prop-1', slug: 'casa-1', titulo: 'Casa en Prados de Villahermosa con alberca', descripcion: 'a'.repeat(150), tipo: 'casa', operacion: 'venta',
     precio: 1_000_000, moneda: 'MXN', m2Construidos: 120, m2Terreno: 150, recamaras: 2, banos: 2, mediosBanos: 0,
     estacionamientos: 1, antiguedad: 5, amenidades: ['Alberca'], servicios: [], fotos: ['a.jpg', 'b.jpg', 'c.jpg'],
-    municipio: 'Centro', colonia: 'Centro', direccion: 'x', lat: 17.98, lng: -92.93, latPublico: 17.98, lngPublico: -92.93,
+    // 'Prados de Villahermosa' está catalogada en zonas-inundacion.ts como
+    // riesgo "bajo" — mismo valor que `riesgoInundacion` de abajo, así que
+    // el fixture "sano" por defecto tampoco dispara `riesgo-inconsistente`.
+    municipio: 'Centro', colonia: 'Prados de Villahermosa', direccion: 'x', lat: 17.98, lng: -92.93, latPublico: 17.98, lngPublico: -92.93,
     riesgoInundacion: 'bajo', zonaEcologica: false, cercaDosoBocas: false, featured: false,
     agente: { nombre: 'x', foto: '' }, fechaPublicacion: new Date().toISOString(), activa: true,
     ...overrides,
@@ -84,6 +87,33 @@ describe('evaluarPropiedad', () => {
   it('can return multiple reasons at once for a genuinely incomplete listing', () => {
     const result = evaluarPropiedad(mkProperty({ fotos: [], descripcion: 'corta', amenidades: [] }), 'activa');
     expect(result.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('flags titulo-generico under 15 characters', () => {
+    const result = evaluarPropiedad(mkProperty({ titulo: 'Casa' }), 'activa');
+    expect(result.some((r) => r.clave === 'titulo-generico')).toBe(true);
+  });
+
+  it('does not flag titulo-generico at 15+ characters', () => {
+    const result = evaluarPropiedad(mkProperty({ titulo: 'Casa en Reforma' }), 'activa');
+    expect(result.some((r) => r.clave === 'titulo-generico')).toBe(false);
+  });
+
+  it('flags riesgo-inconsistente when the saved value is LOWER than the GIS catalog for that colonia', () => {
+    // 'Gaviotas Sur' está catalogada como riesgo "alto" en zonas-inundacion.ts.
+    const result = evaluarPropiedad(mkProperty({ colonia: 'Gaviotas Sur', municipio: 'Centro', riesgoInundacion: 'bajo' }), 'activa');
+    expect(result.some((r) => r.clave === 'riesgo-inconsistente')).toBe(true);
+  });
+
+  it('does NOT flag riesgo-inconsistente when the saved value is higher than or equal to the GIS catalog', () => {
+    // 'Prados de Villahermosa' es "bajo" en el catálogo — marcarla "alto" es más conservador, no un problema.
+    const result = evaluarPropiedad(mkProperty({ colonia: 'Prados de Villahermosa', municipio: 'Centro', riesgoInundacion: 'alto' }), 'activa');
+    expect(result.some((r) => r.clave === 'riesgo-inconsistente')).toBe(false);
+  });
+
+  it('does not flag riesgo-inconsistente for an uncatalogued colonia', () => {
+    const result = evaluarPropiedad(mkProperty({ colonia: 'Una Colonia Que No Existe En El Catálogo', riesgoInundacion: 'bajo' }), 'activa');
+    expect(result.some((r) => r.clave === 'riesgo-inconsistente')).toBe(false);
   });
 });
 

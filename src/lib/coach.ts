@@ -1,5 +1,6 @@
 import type { Property } from '@/types/property';
 import type { EstadoPublicacion, MiPropiedad } from '@/lib/misPropiedades';
+import { detectarRiesgoInundacion } from '@/lib/zonas-inundacion';
 
 /**
  * Capa 1 del "coach de calidad de anuncio" — heurística, sin IA, costo $0.
@@ -18,6 +19,8 @@ export interface RazonAtencion {
 const FOTOS_SUGERIDAS = 3;
 const DESCRIPCION_CORTA = 120;
 const DIAS_SIN_MOVIMIENTO = 60;
+const TITULO_GENERICO = 15;
+const RIESGO_ORDEN: Record<'bajo' | 'medio' | 'alto', number> = { bajo: 0, medio: 1, alto: 2 };
 
 function diasDesde(fechaIso: string): number {
   return Math.floor((Date.now() - new Date(fechaIso).getTime()) / 86_400_000);
@@ -60,6 +63,28 @@ export function evaluarPropiedad(p: Property, estado: EstadoPublicacion): RazonA
     razones.push({
       clave: 'estancada',
       mensaje: `Lleva ${dias} días publicada — considera revisar el precio o actualizar las fotos.`,
+    });
+  }
+
+  if (p.titulo.trim().length < TITULO_GENERICO) {
+    razones.push({
+      clave: 'titulo-generico',
+      mensaje: 'El título es muy corto para destacar — usa "Generar título automático" al editar, o agrega colonia y características.',
+    });
+  }
+
+  // Mismo catálogo (Atlas de Riesgos Municipal) que ya usa PublishForm.tsx
+  // para sugerir el riesgo al publicar — aquí se vuelve a comparar contra lo
+  // que la propiedad tiene GUARDADO, por si cambió de colonia al editar, o
+  // se publicó antes de que esta colonia entrara al catálogo. Solo avisa
+  // cuando el valor guardado es MÁS BAJO que el detectado (subestimar el
+  // riesgo es lo que de verdad puede engañar a un interesado) — nunca al
+  // revés, marcar un riesgo más alto del detectado no es un problema.
+  const gis = detectarRiesgoInundacion(p.colonia, p.municipio);
+  if (gis && RIESGO_ORDEN[p.riesgoInundacion] < RIESGO_ORDEN[gis.riesgo]) {
+    razones.push({
+      clave: 'riesgo-inconsistente',
+      mensaje: `Tu anuncio marca riesgo de inundación "${p.riesgoInundacion}", pero el Atlas de Riesgos Municipal clasifica esta zona como "${gis.riesgo}" — revísalo antes de que alguien más lo note.`,
     });
   }
 

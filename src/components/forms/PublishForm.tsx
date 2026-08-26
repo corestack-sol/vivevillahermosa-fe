@@ -27,7 +27,9 @@ import { TermsModal } from './TermsModal';
 import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import posthog from 'posthog-js';
-import { matchColonia, distanciaKm, precargarColoniasDescubiertas } from '@/lib/colonias';
+import { matchColonia, distanciaKm, precargarColoniasDescubiertas, coloniaCercana, type ColoniaCoord } from '@/lib/colonias';
+import { landmarksCercanos, precargarLandmarks } from '@/lib/landmarks';
+import { hashImagenDesdeFile, hashImagenDesdeUrl, distanciaHamming, UMBRAL_HASH_SIMILAR } from '@/lib/fotoHash';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { resizeImageToDataUrl, MAX_SOURCE_BYTES } from '@/lib/imageResize';
 import {
@@ -157,6 +159,10 @@ export function PublishForm() {
   // — ver sugerirPinDesdeFoto() más abajo. Solo cambia el texto de ayuda
   // bajo el mapa, nunca bloquea que la persona lo mueva.
   const [pinDesdeFoto, setPinDesdeFoto] = useState(false);
+  // Colonia catalogada más cercana al GPS de una foto, cuando difiere de lo
+  // que la persona ya escribió — ver sugerirPinDesdeFoto() más abajo. Nunca
+  // se aplica sola, solo se ofrece un botón para corregir.
+  const [coloniaSugerida, setColoniaSugerida] = useState<ColoniaCoord | null>(null);
   const [fotos, setFotos]         = useState<{ file: File; preview: string; analisis: AnalisisFoto; calidad: CalidadFoto | null }[]>([]);
   const [dragOver, setDragOver]   = useState(false);
   const [servicios, setServicios] = useState<string[]>([]);
@@ -173,17 +179,58 @@ export function PublishForm() {
   // primer render; si de verdad está en el límite, el gate de abajo
   // reemplaza el formulario en cuanto el efecto corre.
   const [limiteAlcanzado, setLimiteAlcanzado] = useState(false);
+  // Fotos de las OTRAS propiedades del mismo dueño — reusa esta misma
+  // llamada (ya se hacía para el límite gratuito) para además alimentar la
+  // detección de "ya subiste esta foto antes" (ver detectarFotoRepetida()
+  // más abajo, fotoHash.ts). Sin llamada extra al backend.
+  const [propiasFotos, setPropiasFotos] = useState<{ id: string; titulo: string; fotos: string[] }[]>([]);
+  const hashesPropiosRef = useRef<Map<string, string>>(new Map());
   useEffect(() => {
     let cancelado = false;
-    backendFetch<{ propiedades: { estado: string }[] }>('/propiedades/mias')
+    backendFetch<{ propiedades: { id: string; estado: string; titulo: string; fotos: string[] }[] }>('/propiedades/mias')
       .then(({ propiedades }) => {
         if (cancelado) return;
         const activas = propiedades.filter((p) => p.estado === 'activa').length;
         setLimiteAlcanzado(activas >= LIMITE_PROPIEDADES);
+        setPropiasFotos(propiedades.filter((p) => p.fotos.length > 0));
       })
       .catch(() => {});
     return () => { cancelado = true; };
   }, []);
+
+  // Igual que precargarColoniasDescubiertas()/coloniasReady más abajo —
+  // fire-and-forget, alimenta las sugerencias de "menciona este lugar
+  // cercano" del paso de Fotos (ver landmarksSugeridos). El estado
+  // `landmarksReady` existe solo para disparar un recálculo cuando el
+  // catálogo (variable de módulo, no estado de React) termina de llegar.
+  const [landmarksReady, setLandmarksReady] = useState(false);
+  useEffect(() => { precargarLandmarks().then(() => setLandmarksReady(true)); }, []);
+
+  // Compara una foto recién agregada contra las de las OTRAS propiedades de
+  // este mismo dueño (nunca contra las de otros usuarios — ver el
+  // comentario de alcance en fotoHash.ts). Solo avisa, nunca bloquea: puede
+  // ser perfectamente intencional (la misma fachada en dos anuncios del
+  // mismo edificio, por ejemplo).
+  async function detectarFotoRepetida(file: File) {
+    if (propiasFotos.length === 0) return;
+    const hashNueva = await hashImagenDesdeFile(file);
+    if (!hashNueva) return;
+    for (const prop of propiasFotos) {
+      for (const url of prop.fotos) {
+        let hashExistente = hashesPropiosRef.current.get(url);
+        if (hashExistente === undefined) {
+          const h = await hashImagenDesdeUrl(url);
+          if (h === null) continue;
+          hashExistente = h;
+          hashesPropiosRef.current.set(url, h);
+        }
+        if (distanciaHamming(hashNueva, hashExistente) <= UMBRAL_HASH_SIMILAR) {
+          toast.info(`Esta foto se parece a una que ya usaste en "${prop.titulo}" — revisa que no la hayas subido por error.`);
+          return;
+        }
+      }
+    }
+  }
 
   // f.type viene del navegador (a veces solo la extensión, no el contenido
   // real) — un archivo no-imagen renombrado podía pasar este filtro y
@@ -206,7 +253,7 @@ export function PublishForm() {
   // Facebook borran el EXIF (incluido GPS) al comprimir/reenviar, que es
   // como llega la mayoría de fotos de propiedad en la práctica. Cuando sí
   // está, es gratis (se lee 100% en el navegador, sin llamada de red).
-  async function sugerirPinDesdeFoto(file: File): Promise<Coords | null> {
+  async function sugerirPinDesdeFoto(file: File): Promise<{ coords: Coords; coloniaSugerida?: ColoniaCoord } | null> {
     let gps: { latitude: number; longitude: number } | undefined;
     try {
       const exifr = await import('exifr');
@@ -225,6 +272,8 @@ export function PublishForm() {
     if (coloniaVerificada) {
       const d = distanciaKm(gps.latitude, gps.longitude, coloniaVerificada.lat, coloniaVerificada.lng);
       if (d > 3) return null;
+      // La colonia escrita ya coincide con el GPS — nada que corregir.
+      return { coords: { lat: gps.latitude, lng: gps.longitude } };
     } else if (municipio && MUNICIPIO_CENTERS[municipio]) {
       const [clat, clng] = MUNICIPIO_CENTERS[municipio];
       const d = distanciaKm(gps.latitude, gps.longitude, clat, clng);
@@ -234,7 +283,13 @@ export function PublishForm() {
       // real contra qué comparar — no autocolocar a ciegas.
       return null;
     }
-    return { lat: gps.latitude, lng: gps.longitude };
+    const coords = { lat: gps.latitude, lng: gps.longitude };
+    // La colonia escrita NO resolvió contra el catálogo (typo grande, o
+    // simplemente no está catalogada) — pero el GPS sí cae dentro de una
+    // colonia catalogada real. Se ofrece la corrección, nunca se aplica
+    // sola (ver el botón "Corregir" en el paso de Fotos).
+    const cercana = coloniaCercana(gps.latitude, gps.longitude, 2, municipio);
+    return cercana ? { coords, coloniaSugerida: cercana } : { coords };
   }
 
   async function addFiles(files: FileList | File[]) {
@@ -292,6 +347,10 @@ export function PublishForm() {
     }));
     setFotos((prev) => [...prev, ...toAdd]);
 
+    // Compara cada foto nueva contra las de las OTRAS propiedades de este
+    // dueño — solo aviso, nunca bloquea (ver detectarFotoRepetida arriba).
+    toAdd.forEach((item) => { detectarFotoRepetida(item.file); });
+
     // Analiza cada foto en paralelo, sin bloquear la UI mientras se agregan
     // — si el usuario ya quitó la foto para cuando responde, el .map() de
     // abajo simplemente no encuentra coincidencia y no hace nada.
@@ -318,16 +377,17 @@ export function PublishForm() {
     if (!coords) {
       let yaSugerido = false;
       toAdd.forEach((item) => {
-        sugerirPinDesdeFoto(item.file).then((sugerido) => {
-          if (!sugerido || yaSugerido) return;
+        sugerirPinDesdeFoto(item.file).then((resultado) => {
+          if (!resultado || yaSugerido) return;
           yaSugerido = true;
-          setCoords(sugerido);
+          setCoords(resultado.coords);
           setPinDesdeFoto(true);
           // Toast, no solo el estado — la persona está viendo el paso de
           // Fotos en este momento, no el mapa (eso vive en el paso de
           // Ubicación, anterior). Sin este aviso, el pin se movería solo
           // en un paso que ya no está mirando.
           toast.success('Ubicamos tu propiedad en el mapa usando la ubicación de tu foto — puedes ajustarla en el paso de Ubicación.');
+          if (resultado.coloniaSugerida) setColoniaSugerida(resultado.coloniaSugerida);
         });
       });
     }
@@ -457,12 +517,54 @@ export function PublishForm() {
     : null;
   const pinLejosDeColonia = distanciaPinColonia !== null && distanciaPinColonia > 3;
 
+  // Lugares reales catalogados cerca de la propiedad, que TODAVÍA no se
+  // mencionan en la descripción — son los mismos nombres que ya resuelve la
+  // búsqueda por texto/IA (landmarks.ts), así que mencionarlos de verdad
+  // ayuda a aparecer en esas búsquedas. Se calcula sobre `coords` si ya hay
+  // pin puesto, o sobre el centroide de la colonia verificada si no —
+  // ninguno de los dos requiere que la persona haya llegado al paso de
+  // Fotos todavía.
+  // Consts simples, no useMemo — la lista de candidatos es pequeña (~120
+  // landmarks máximo, unas pocas amenidades) y `descripcion` ya cambia en
+  // cada tecleo de todos modos, así que memoizar no ahorra nada real y sí
+  // encadena con el `eslint-disable-line` de `coloniaVerificada` de arriba
+  // (React Compiler no puede preservar memoización que depende de un valor
+  // cuya propia memoización ya está marcada como no verificable).
+  void landmarksReady; // fuerza reevaluar cuando el catálogo de landmarks termina de cargar (variable de módulo, no estado)
+  const puntoParaSugerencias = coords ?? (coloniaVerificada ? { lat: coloniaVerificada.lat, lng: coloniaVerificada.lng } : null);
+  const textoDescripcion = (descripcion ?? '').toLowerCase();
+  const landmarksSugeridos = puntoParaSugerencias
+    ? landmarksCercanos(puntoParaSugerencias.lat, puntoParaSugerencias.lng, 2)
+        .filter((l) => ![l.label, ...(l.aliases ?? [])].some((n) => textoDescripcion.includes(n.toLowerCase())))
+        .slice(0, 3)
+    : [];
+
+  // Mismo criterio para amenidades ya marcadas (paso de Fotos) que todavía
+  // no aparecen literalmente en el texto — la búsqueda por palabra clave sí
+  // usa coincidencia literal como respaldo cuando la IA no está disponible.
+  const amenidadesSugeridas = amenidades.filter((a) => !textoDescripcion.includes(a.toLowerCase())).slice(0, 3);
+
+  function agregarMencionADescripcion(texto: string) {
+    const actual = (getValues('descripcion') || '').trim();
+    const separador = actual.length === 0 ? '' : /[.!?]$/.test(actual) ? ' ' : '. ';
+    setValue('descripcion', `${actual}${separador}${texto}`, { shouldValidate: true, shouldDirty: true });
+  }
+
   // ── Detección automática de riesgo de inundación ───────────────────────────
   const [deteccion, setDeteccion] = useState<DeteccionUI | null>(null);
   const [autoRiesgo, setAutoRiesgo] = useState<string | null>(null);
+  // Checkbox obligatorio solo cuando la persona BAJA el riesgo respecto al
+  // detectado por el Atlas de Riesgos (ver esDowngrade más abajo) — subirlo
+  // (marcar "alto" cuando el Atlas dice "medio") nunca requiere esto, ser
+  // más conservador no es un problema a confirmar.
+  const [confirmaRiesgoBajo, setConfirmaRiesgoBajo] = useState(false);
 
   function applyDeteccion(d: DeteccionUI | null) {
     setDeteccion(d);
+    // Cambió la colonia/municipio => cambió (o desapareció) la detección
+    // — cualquier confirmación de "bajé el riesgo a propósito" que se
+    // hubiera dado para la detección ANTERIOR ya no aplica a esta.
+    setConfirmaRiesgoBajo(false);
     if (d) {
       setAutoRiesgo(d.riesgo);
       setValue('riesgoInundacion', d.riesgo);
@@ -496,6 +598,14 @@ export function PublishForm() {
 
   const riesgoActual  = watch('riesgoInundacion');
   const fueModificado = autoRiesgo !== null && riesgoActual !== autoRiesgo;
+  // true solo si el valor elegido a mano es MENOS severo que el detectado
+  // por el Atlas — subestimar el riesgo es lo que de verdad puede engañar a
+  // un interesado, por eso es el único caso que pide confirmación explícita
+  // (mismo catálogo que ya usa el coach para propiedades ya publicadas, ver
+  // coach.ts "riesgo-inconsistente").
+  const RIESGO_ORDEN: Record<'bajo' | 'medio' | 'alto', number> = { bajo: 0, medio: 1, alto: 2 };
+  const esDowngrade = fueModificado && autoRiesgo !== null && riesgoActual in RIESGO_ORDEN
+    && RIESGO_ORDEN[riesgoActual as 'bajo' | 'medio' | 'alto'] < RIESGO_ORDEN[autoRiesgo as 'bajo' | 'medio' | 'alto'];
 
   // Ocultar banner de error en cuanto el usuario corrige algo
   useEffect(() => {
@@ -657,6 +767,10 @@ export function PublishForm() {
       toast.error('Quita la foto marcada como inapropiada antes de continuar.');
       return;
     }
+    if (step === 2 && esDowngrade && !confirmaRiesgoBajo) {
+      toast.error('Confirma el aviso sobre el riesgo de inundación antes de continuar.');
+      return;
+    }
     const valid = await trigger(stepFields[step]);
     if (valid) {
       setStepError(false);
@@ -674,6 +788,11 @@ export function PublishForm() {
     }
     if (publicacionBloqueada) {
       toast.error('No podemos publicar este anuncio — corrige el título y la descripción antes de continuar.');
+      return;
+    }
+    if (esDowngrade && !confirmaRiesgoBajo) {
+      toast.error('Confirma el aviso sobre el riesgo de inundación antes de publicar.');
+      setStep(2);
       return;
     }
     // Última validación antes de persistir — MapPicker ya rechaza clics/
@@ -1148,6 +1267,26 @@ export function PublishForm() {
               <p className="mt-2 text-[10px] text-gray-400 leading-relaxed lg:hidden">
                 Este dato es público y visible en tu anuncio. La plataforma puede mostrar alertas si el valor difiere de registros oficiales.
               </p>
+
+              {/* Confirmación obligatoria SOLO al bajar el riesgo respecto
+                  al detectado (ver esDowngrade arriba) — subir el nivel no
+                  la necesita, ser más conservador no es un problema. Más
+                  fuerte que el aviso ámbar de arriba (que se queda para
+                  cualquier cambio, incluido subir el nivel): esto bloquea
+                  avanzar/publicar hasta que se marque, ver goNext()/onSubmit. */}
+              {esDowngrade && (
+                <label className="flex items-start gap-2.5 mt-2 bg-red-50 border-2 border-red-200 rounded-xl px-3.5 py-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={confirmaRiesgoBajo}
+                    onChange={(e) => setConfirmaRiesgoBajo(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 flex-shrink-0 rounded border-red-300 text-red-600 focus:ring-2 focus:ring-red-300"
+                  />
+                  <span className="text-xs text-red-700 leading-relaxed">
+                    Entiendo que el Atlas de Riesgos Municipal clasifica esta zona como <strong className="uppercase">{autoRiesgo}</strong>, y aun así estoy marcando <strong className="uppercase">{riesgoActual}</strong> porque conozco la zona de primera mano.
+                  </span>
+                </label>
+              )}
             </div>
 
             {camposConError.length > 0 && (
@@ -1258,6 +1397,35 @@ export function PublishForm() {
                 <p className="text-sm font-medium text-gray-600">Arrastra fotos aquí</p>
                 <p className="text-xs text-gray-400 mt-1">o <span className="text-brand font-semibold">haz clic para seleccionar</span></p>
                 <p className="text-xs text-gray-300 mt-2">JPG, PNG · Máximo {MAX_FOTOS - fotos.length} foto{MAX_FOTOS - fotos.length !== 1 ? 's' : ''} más</p>
+              </div>
+            )}
+
+            {/* Colonia sugerida por el GPS de una foto — nunca se aplica
+                sola, ver sugerirPinDesdeFoto()/coloniaCercana() arriba. */}
+            {coloniaSugerida && (
+              <div className="flex items-center justify-between gap-2 bg-accent-pale border border-accent/20 rounded-xl px-3.5 py-2.5">
+                <p className="flex items-center gap-1.5 text-xs text-accent-dark">
+                  <MapPin size={13} className="flex-shrink-0" /> La ubicación de tu foto coincide con la colonia &quot;{coloniaSugerida.label}&quot; — ¿corregimos el campo Colonia?
+                </p>
+                <div className="flex-shrink-0 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setValue('colonia', coloniaSugerida.label, { shouldValidate: true, shouldDirty: true });
+                      setColoniaSugerida(null);
+                    }}
+                    className="text-xs font-semibold text-accent-dark hover:text-brand-dark whitespace-nowrap"
+                  >
+                    Corregir
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setColoniaSugerida(null)}
+                    className="text-xs text-gray-400 hover:text-gray-600 whitespace-nowrap"
+                  >
+                    Descartar
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1386,6 +1554,40 @@ export function PublishForm() {
                 })}
               </div>
             </div>
+
+            {/* Sugerencias para la descripción — lugares cercanos y
+                amenidades marcadas que todavía no se mencionan en el texto
+                (ver landmarksSugeridos/amenidadesSugeridas arriba). Un clic
+                las agrega, nunca automático. */}
+            {(landmarksSugeridos.length > 0 || amenidadesSugeridas.length > 0) && (
+              <div className="rounded-xl border border-brand/20 bg-brand-pale/40 px-3.5 py-3">
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-brand-dark mb-2">
+                  <Lightbulb size={13} className="flex-shrink-0" /> Menciona esto en tu descripción — así aparece cuando alguien lo busca
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {landmarksSugeridos.map((l) => (
+                    <button
+                      key={l.key}
+                      type="button"
+                      onClick={() => agregarMencionADescripcion(`Cerca de ${l.label}.`)}
+                      className="text-[11px] font-medium text-brand-dark bg-white border border-brand/30 hover:bg-brand-pale rounded-full px-2.5 py-1 transition-colors"
+                    >
+                      + Cerca de {l.label}
+                    </button>
+                  ))}
+                  {amenidadesSugeridas.map((a) => (
+                    <button
+                      key={a}
+                      type="button"
+                      onClick={() => agregarMencionADescripcion(`Cuenta con ${a}.`)}
+                      className="text-[11px] font-medium text-brand-dark bg-white border border-brand/30 hover:bg-brand-pale rounded-full px-2.5 py-1 transition-colors"
+                    >
+                      + {a}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
