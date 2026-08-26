@@ -195,6 +195,30 @@
   z-index: 1;
 }
 
+/* Aclara el basemap de calles (Esri World_Street_Map, ver MapView.tsx) —
+   ese proveedor trae un fondo beige/amarillo de fábrica.
+   Ajustado dos veces 2026-08-26, ambas verificadas localmente con `sharp`
+   (misma fórmula que `filter:` del navegador) sobre tiles reales de
+   Villahermosa antes de subir el número:
+   1ª versión (saturate+brightness) dejaba las vías principales bien pero
+   las calles de colonia (líneas delgadas y pálidas de por sí) casi
+   invisibles contra el fondo ya blanqueado.
+   2ª versión (saturate+brightness+contrast alto) empeoró justo eso: subir
+   el contraste empuja lo que ya está cerca del blanco TODAVÍA más al
+   blanco — las vías principales (con color propio, naranja/rojo) se
+   veían mejor, pero las calles de colonia (casi del mismo tono que el
+   fondo) se perdían por completo. Pedido explícito: "me refiero a las
+   calles de las colonias... no las vías principales (esas se ven bien)".
+   Esta versión BAJA el brillo en vez de subirlo — dejando el fondo claro
+   pero no blanco puro, con margen suficiente para que las líneas pálidas
+   de colonia sigan siendo visibles como gris sobre el fondo, sin perder
+   el naranja/rojo de las vías principales. Solo se aplica a la capa
+   'street' (via className en L.tileLayer) — nunca a 'satellite', que
+   debe verse a color real. */
+.map-tiles-light {
+  filter: saturate(0.25) brightness(0.95) contrast(1.2);
+}
+
 /* Price display font */
 .font-price {
   font-family: var(--font-heading);

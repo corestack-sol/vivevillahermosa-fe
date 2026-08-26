@@ -84,10 +84,31 @@ interface MapViewProps {
 const FLOOD_COLORS = { alto: '#EF4444', medio: '#F59E0B', bajo: '#10B981' } as const;
 const FLOOD_DARK   = { alto: '#B91C1C', medio: '#D97706', bajo: '#059669' } as const;
 
+// 'street' migrado de CARTO (basemaps.cartocdn.com/rastertiles/voyager) a
+// Esri 2026-08-26: CARTO cambió su política y ahora exige API key incluso
+// para uso básico — confirmado en vivo bajando un tile real, el servidor
+// respondía 200 OK pero la imagen era un mosaico con el texto "API KEY
+// REQUIRED" repetido en vez del mapa (así se veía en producción). El plan
+// gratuito de CARTO además es explícitamente "solo uso no comercial", así
+// que no aplicaba de todos modos. Esri (ver Light_Gray_Base abajo) es
+// gratis, sin llave, y ya es el mismo proveedor que 'satellite'
+// (World_Imagery) usa desde antes — un solo proveedor para las dos capas,
+// sin agregar una cuenta/llave nueva a mantener.
 const TILES = {
+  // World_Street_Map tiene un fondo beige/amarillo predominante que no
+  // encajaba con el resto de la plataforma (pedido explícito 2026-08-26:
+  // "fondo blanco"). Se intentó primero Canvas/World_Light_Gray_Base (el
+  // estilo "canvas" de Esri, fondo casi blanco) pero NO tiene cobertura
+  // completa sobre Tabasco a partir de zoom 17 — confirmado en vivo, la
+  // respuesta es 200 OK pero la imagen es el placeholder de Esri "Map data
+  // not yet available" (mismo problema de fondo que CARTO, un proveedor
+  // fallando en silencio con HTTP 200). Se queda World_Street_Map (sí
+  // cubre Tabasco hasta zoom 19, confirmado) y el color se corrige con un
+  // filtro CSS (`.map-tiles-light`, ver globals.css) aplicado solo a esta
+  // capa vía `className` — nunca a 'satellite', que debe verse a color real.
   street: {
-    url:  'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attr: '© <a href="https://openstreetmap.org">OpenStreetMap</a> © <a href="https://carto.com">CARTO</a>',
+    url:  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    attr: '© Esri, HERE, Garmin, USGS, © OpenStreetMap contributors',
   },
   satellite: {
     url:  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -179,6 +200,7 @@ export function MapView({
       tileRef.current = L.tileLayer(TILES.street.url, {
         attribution: TILES.street.attr,
         maxZoom: 19,
+        className: 'map-tiles-light',
       }).addTo(map);
 
       map.on('moveend zoomend', () => {
@@ -233,7 +255,13 @@ export function MapView({
       const L = (await import('leaflet')).default;
       tileRef.current?.remove();
       const t = TILES[tileType];
-      tileRef.current = L.tileLayer(t.url, { attribution: t.attr, maxZoom: 19 }).addTo(mapRef.current);
+      tileRef.current = L.tileLayer(t.url, {
+        attribution: t.attr,
+        maxZoom: 19,
+        // El filtro de color solo aplica a 'street' — 'satellite' debe
+        // verse a color real, nunca desaturado.
+        className: tileType === 'street' ? 'map-tiles-light' : '',
+      }).addTo(mapRef.current);
     })();
   }, [tileType, ready]);
 
