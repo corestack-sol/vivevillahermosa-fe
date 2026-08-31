@@ -49,7 +49,7 @@ export function resizeImageToDataUrl(
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     if (file.size > MAX_SOURCE_BYTES) {
-      reject(new Error('La imagen pesa demasiado (máximo 8MB). Elige un archivo más ligero.'));
+      reject(new Error('La imagen pesa demasiado (máximo 20MB). Elige un archivo más ligero.'));
       return;
     }
     const reader = new FileReader();

@@ -57,7 +57,21 @@ async function analizarFoto(file: File): Promise<ResultadoImagenIA> {
   try {
     // 512px basta para que el modelo juzgue contenido/relevancia — no hace
     // falta mandar la foto a resolución completa solo para esto.
-    const dataUrl = await resizeImageToDataUrl(file, 512);
+    // Bug real encontrado y verificado en vivo 2026-08-31 (reporte:
+    // "aparece como rota" al subir una foto de ~5MB): sin especificar
+    // formato, resizeImageToDataUrl() cae al default 'image/png' —
+    // PNG SIN PÉRDIDA de una foto real (textura, ruido de sensor) a 512px
+    // pesa fácilmente 600KB+, por encima del límite de tamaño del backend.
+    // POST /ia/analizar-imagen respondía 413 "request entity too large" en
+    // silencio (analizarFoto() atrapa el error y sigue con NEUTRAL,
+    // fail-open) — la miniatura en sí nunca se rompe (usa el archivo
+    // original vía URL.createObjectURL, ver addFiles más abajo, ajeno a
+    // esta llamada), pero la detección de amenidades/señales de fraude por
+    // foto se perdía sin aviso para cualquier foto con suficiente detalle.
+    // Mismo patrón ya usado en el resto del archivo (línea ~833) y en
+    // portafolio de servicios para foto de contenido real: JPEG con
+    // pérdida, no PNG.
+    const dataUrl = await resizeImageToDataUrl(file, 512, 'image/jpeg', 0.82);
     return await backendFetch<ResultadoImagenIA>('/ia/analizar-imagen', {
       method: 'POST',
       body: JSON.stringify({ imagen: dataUrl }),
