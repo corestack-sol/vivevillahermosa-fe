@@ -26,6 +26,7 @@ import { FloodRiskBadge } from '@/components/property/FloodRiskBadge';
 import { TermsModal } from './TermsModal';
 import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
+import { getAllProperties } from '@/lib/api';
 import posthog from 'posthog-js';
 import { matchColonia, distanciaKm, precargarColoniasDescubiertas, coloniaCercana, type ColoniaCoord } from '@/lib/colonias';
 import { landmarksCercanos, precargarLandmarks } from '@/lib/landmarks';
@@ -177,6 +178,31 @@ export function PublishForm() {
   // que la persona ya escribió — ver sugerirPinDesdeFoto() más abajo. Nunca
   // se aplica sola, solo se ofrece un botón para corregir.
   const [coloniaSugerida, setColoniaSugerida] = useState<ColoniaCoord | null>(null);
+  // Señal de fraude nivel-3 (pedido explícito 2026-08-31): el GPS de una
+  // foto que NO coincide con la colonia/municipio declarados — dirección
+  // opuesta a coloniaSugerida (que solo actúa cuando SÍ coincide). Se
+  // guarda tanto en estado (para el aviso visible) como en un ref (para
+  // que evaluar(), definida en un efecto separado que no depende de este
+  // valor, siempre lea la versión más reciente sin quedar en un closure
+  // viejo). Ver analizarGPSFoto() más abajo.
+  const [gpsContradiccion, setGpsContradiccion] = useState<number | null>(null);
+  const gpsContradiccionRef = useRef<number | null>(null);
+  // Cuántas OTRAS propiedades activas ya usan el mismo teléfono/WhatsApp
+  // que se está por publicar — un número real de agente/casero con varias
+  // propiedades es normal, pero es una señal más para el backend, nunca
+  // suficiente sola (ver ContactoReuso más abajo).
+  const [contactoReutilizado, setContactoReutilizado] = useState(0);
+  const contactoReutilizadoRef = useRef(0);
+  // Pista de precio vs. promedio de la zona (pedido explícito 2026-08-31,
+  // punto 6 de la propuesta) — a propósito NUNCA se manda al backend ni
+  // se usa como señal de fraude, solo se le muestra al propio vendedor
+  // como sugerencia. El miedo real que motivó esto: un dueño honesto con
+  // un precio bajo legítimo (venta urgente, remodelación pendiente) no
+  // debe arriesgarse a que un número por sí solo lo marque — así que este
+  // dato ni siquiera llega a formar parte de la evaluación de riesgo, es
+  // pura ayuda para que el vendedor mismo decida si vale la pena explicar
+  // el precio en su descripción.
+  const [precioContexto, setPrecioContexto] = useState<{ precioPorM2: number; promedioZona: number } | null>(null);
   const [fotos, setFotos]         = useState<{ file: File; preview: string; analisis: AnalisisFoto; calidad: CalidadFoto | null }[]>([]);
   const [dragOver, setDragOver]   = useState(false);
   const [servicios, setServicios] = useState<string[]>([]);
@@ -267,7 +293,14 @@ export function PublishForm() {
   // Facebook borran el EXIF (incluido GPS) al comprimir/reenviar, que es
   // como llega la mayoría de fotos de propiedad en la práctica. Cuando sí
   // está, es gratis (se lee 100% en el navegador, sin llamada de red).
-  async function sugerirPinDesdeFoto(file: File): Promise<{ coords: Coords; coloniaSugerida?: ColoniaCoord } | null> {
+  // Unifica la sugerencia de pin (GPS coincide con lo declarado) y la
+  // contradicción (GPS NO coincide — señal de posible fraude) en una sola
+  // lectura de EXIF por foto, en vez de parsear el archivo dos veces.
+  type ResultadoGPSFoto =
+    | { tipo: 'sugerencia'; coords: Coords; coloniaSugerida?: ColoniaCoord }
+    | { tipo: 'contradiccion'; distanciaKm: number };
+
+  async function analizarGPSFoto(file: File): Promise<ResultadoGPSFoto | null> {
     let gps: { latitude: number; longitude: number } | undefined;
     try {
       const exifr = await import('exifr');
@@ -285,16 +318,21 @@ export function PublishForm() {
     // municipio real sin aceptar "está en otro estado".
     if (coloniaVerificada) {
       const d = distanciaKm(gps.latitude, gps.longitude, coloniaVerificada.lat, coloniaVerificada.lng);
-      if (d > 3) return null;
-      // La colonia escrita ya coincide con el GPS — nada que corregir.
-      return { coords: { lat: gps.latitude, lng: gps.longitude } };
+      // Foto reciclada de otro anuncio/lugar trae el GPS real de donde se
+      // tomó, no de esta propiedad — si ese punto queda lejos de la
+      // colonia que la persona escribió, es evidencia real (pedido
+      // explícito 2026-08-31: nivel-3 no debe depender solo de reescribir
+      // el texto — esto es una señal que NO se esquiva cambiando palabras).
+      // También ayuda al dueño honesto que typeó mal la colonia sin querer.
+      if (d > 3) return { tipo: 'contradiccion', distanciaKm: d };
+      return { tipo: 'sugerencia', coords: { lat: gps.latitude, lng: gps.longitude } };
     } else if (municipio && MUNICIPIO_CENTERS[municipio]) {
       const [clat, clng] = MUNICIPIO_CENTERS[municipio];
       const d = distanciaKm(gps.latitude, gps.longitude, clat, clng);
-      if (d > 20) return null;
+      if (d > 20) return { tipo: 'contradiccion', distanciaKm: d };
     } else {
       // Sin colonia verificada NI municipio center conocido, no hay nada
-      // real contra qué comparar — no autocolocar a ciegas.
+      // real contra qué comparar — ni sugerir ni marcar contradicción.
       return null;
     }
     const coords = { lat: gps.latitude, lng: gps.longitude };
@@ -303,7 +341,7 @@ export function PublishForm() {
     // colonia catalogada real. Se ofrece la corrección, nunca se aplica
     // sola (ver el botón "Corregir" en el paso de Fotos).
     const cercana = coloniaCercana(gps.latitude, gps.longitude, 2, municipio);
-    return cercana ? { coords, coloniaSugerida: cercana } : { coords };
+    return cercana ? { tipo: 'sugerencia', coords, coloniaSugerida: cercana } : { tipo: 'sugerencia', coords };
   }
 
   async function addFiles(files: FileList | File[]) {
@@ -384,27 +422,33 @@ export function PublishForm() {
       });
     });
 
-    // Sugerencia de pin por EXIF — solo si todavía no hay ninguno puesto
-    // (nunca sobreescribe un pin ya elegido, a mano o de una foto
-    // anterior). `yaSugerido` es local a esta llamada, evita que dos fotos
-    // del mismo lote se pisen entre sí si ambas responden con GPS válido.
-    if (!coords) {
-      let yaSugerido = false;
-      toAdd.forEach((item) => {
-        sugerirPinDesdeFoto(item.file).then((resultado) => {
-          if (!resultado || yaSugerido) return;
-          yaSugerido = true;
-          setCoords(resultado.coords);
-          setPinDesdeFoto(true);
-          // Toast, no solo el estado — la persona está viendo el paso de
-          // Fotos en este momento, no el mapa (eso vive en el paso de
-          // Ubicación, anterior). Sin este aviso, el pin se movería solo
-          // en un paso que ya no está mirando.
-          toast.success('Ubicamos tu propiedad en el mapa usando la ubicación de tu foto — puedes ajustarla en el paso de Ubicación.');
-          if (resultado.coloniaSugerida) setColoniaSugerida(resultado.coloniaSugerida);
-        });
+    // Sugerencia de pin por EXIF (solo si todavía no hay ninguno puesto,
+    // nunca sobreescribe uno ya elegido) y detección de contradicción
+    // (corre SIEMPRE, sin importar si ya hay pin — es una señal de fraude,
+    // no una conveniencia). `habiaCoordsAlInicio`/`yaSugerido` evitan que
+    // dos fotos del mismo lote se pisen entre sí.
+    const habiaCoordsAlInicio = !!coords;
+    let yaSugerido = false;
+    toAdd.forEach((item) => {
+      analizarGPSFoto(item.file).then((resultado) => {
+        if (!resultado) return;
+        if (resultado.tipo === 'contradiccion') {
+          setGpsContradiccion(resultado.distanciaKm);
+          gpsContradiccionRef.current = resultado.distanciaKm;
+          return;
+        }
+        if (habiaCoordsAlInicio || yaSugerido) return;
+        yaSugerido = true;
+        setCoords(resultado.coords);
+        setPinDesdeFoto(true);
+        // Toast, no solo el estado — la persona está viendo el paso de
+        // Fotos en este momento, no el mapa (eso vive en el paso de
+        // Ubicación, anterior). Sin este aviso, el pin se movería solo
+        // en un paso que ya no está mirando.
+        toast.success('Ubicamos tu propiedad en el mapa usando la ubicación de tu foto — puedes ajustarla en el paso de Ubicación.');
+        if (resultado.coloniaSugerida) setColoniaSugerida(resultado.coloniaSugerida);
       });
-    }
+    });
   }
 
   function removePhoto(idx: number) {
@@ -648,7 +692,18 @@ export function PublishForm() {
       const titulo = values.titulo || '';
       const descripcion = values.descripcion || '';
       if (!titulo.trim() && !descripcion.trim()) return;
-      backendFetch<{ riesgo: string; señales: string[]; bloqueado?: boolean; motivoBloqueo?: string }>('/ia/analizar-fraude', {
+      // Señales que el texto por sí solo no puede evadir reescribiéndose
+      // (pedido explícito 2026-08-31) — se mandan como query params, no en
+      // el body: el backend hoy los ignora sin romper la llamada
+      // (confirmado en vivo, ver docs/BACKEND-FRAUDE-NIVELES-31082026.md),
+      // así que esto no cambia nada todavía del lado del servidor, pero
+      // deja el frontend listo en cuanto lo adopte. Nunca se usan para
+      // bloquear del lado del cliente — eso lo decide el backend.
+      const qs = new URLSearchParams();
+      if (gpsContradiccionRef.current !== null) qs.set('exifDistanciaKm', String(Math.round(gpsContradiccionRef.current)));
+      if (contactoReutilizadoRef.current > 0) qs.set('contactoReutilizado', String(contactoReutilizadoRef.current));
+      const query = qs.toString();
+      backendFetch<{ riesgo: string; señales: string[]; bloqueado?: boolean; motivoBloqueo?: string }>(`/ia/analizar-fraude${query ? `?${query}` : ''}`, {
         method: 'POST',
         body: JSON.stringify({
           titulo,
@@ -671,6 +726,81 @@ export function PublishForm() {
       timer = setTimeout(() => evaluar(values), 1_500);
     });
     return () => { clearTimeout(timer); unsubscribe(); };
+  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reutilización de contacto (pedido explícito 2026-08-31) — cuenta
+  // cuántas OTRAS propiedades activas ya usan el mismo teléfono/WhatsApp
+  // que se está por publicar. Un agente/casero real con varias propiedades
+  // también da un número >0 aquí — por diseño NUNCA bloquea ni se muestra
+  // como acusación, solo se manda como señal adicional al backend (ver
+  // evaluar() arriba) para que la combine con otras, nunca sola. Corre
+  // solo en el paso de Contacto (5), con debounce — trae el catálogo
+  // completo (getAllProperties, ya cacheado por el navegador en visitas
+  // recientes) así que no tiene sentido repetirlo en cada tecleo de los
+  // pasos anteriores.
+  useEffect(() => {
+    if (step < 5) return;
+    let cancelado = false;
+
+    async function evaluarContacto(tel: string) {
+      if (!tel) { setContactoReutilizado(0); contactoReutilizadoRef.current = 0; return; }
+      try {
+        const propiedades = await getAllProperties();
+        if (cancelado) return;
+        const veces = propiedades.filter((p) => p.agente.tel === tel || p.agente.whatsapp === tel).length;
+        setContactoReutilizado(veces);
+        contactoReutilizadoRef.current = veces;
+      } catch {
+        // Fail-open — mismo criterio que el resto de las señales de esta
+        // sesión, un fallo de red no debe bloquear ni ensuciar el estado.
+      }
+    }
+
+    evaluarContacto((watch('telefonoContacto') || '').trim());
+
+    let timer: ReturnType<typeof setTimeout>;
+    const { unsubscribe } = watch((values) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => evaluarContacto((values.telefonoContacto || '').trim()), 800);
+    });
+    return () => { cancelado = true; clearTimeout(timer); unsubscribe(); };
+  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Precio vs. promedio de la zona — corre desde el paso de Ubicación (2)
+  // en adelante, cuando ya se conoce tipo/operación/precio/m² (paso 1) Y
+  // municipio (este paso). Menos de 3 comparables no dice nada confiable,
+  // se oculta la pista en vez de mostrar un promedio de muestra chica.
+  useEffect(() => {
+    if (step < 2) return;
+    let cancelado = false;
+
+    async function evaluarPrecio(values: Partial<FormData>) {
+      const { tipo: tipoVal, operacion: operacionVal, municipio: municipioVal, precio: precioVal, m2Construidos, m2Terreno } = values;
+      const m2 = tipoVal === 'terreno' ? (m2Terreno || 0) : (m2Construidos || 0);
+      if (!tipoVal || !operacionVal || !municipioVal || !precioVal || m2 <= 0) { setPrecioContexto(null); return; }
+      try {
+        const propiedades = await getAllProperties();
+        if (cancelado) return;
+        const comparables = propiedades.filter((p) =>
+          p.tipo === tipoVal && p.operacion === operacionVal && p.municipio === municipioVal &&
+          (tipoVal === 'terreno' ? p.m2Terreno > 0 : p.m2Construidos > 0)
+        );
+        if (comparables.length < 3) { setPrecioContexto(null); return; }
+        const suma = comparables.reduce((acc, p) => acc + p.precio / (tipoVal === 'terreno' ? p.m2Terreno : p.m2Construidos), 0);
+        setPrecioContexto({ precioPorM2: Math.round(precioVal / m2), promedioZona: Math.round(suma / comparables.length) });
+      } catch {
+        setPrecioContexto(null);
+      }
+    }
+
+    evaluarPrecio(getValues());
+
+    let timer: ReturnType<typeof setTimeout>;
+    const { unsubscribe } = watch((values) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => evaluarPrecio(values), 800);
+    });
+    return () => { cancelado = true; clearTimeout(timer); unsubscribe(); };
   }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Plantilla determinista, no llamada de red — ver tituloGenerator.ts.
@@ -774,11 +904,40 @@ export function PublishForm() {
   // solo advierten, no bloquean — la única excepción es un texto tan
   // incoherente que no describe ninguna propiedad real (ver ai.ts).
   const fotoNoApta = fotos.find((f) => f.analisis !== 'pendiente' && !f.analisis.apta);
-  const publicacionBloqueada = fraudCheck?.bloqueado === true;
+  // Sistema de 3 niveles (pedido explícito 2026-08-31) — bajo: no bloquea.
+  // medio: se marca (banner ámbar, no bloquea). alto: ahora SÍ bloquea —
+  // antes solo se mostraba como advertencia y la publicación seguía
+  // adelante ("se mostrará con un aviso de En revisión"), que es
+  // exactamente lo que el pedido señala como el hueco real
+  // ("actualmente no se bloquean"). `bloqueado` es un flag aparte, más
+  // extremo (texto que ni siquiera describe una propiedad real, ver
+  // ai.ts) — se mantiene con su propio mensaje.
+  //
+  // ⚠️ Este bloqueo es SOLO del lado del cliente — alguien que llame a
+  // POST /propiedades directo, sin pasar por este formulario, no lo ve.
+  // El backend YA hace un rechazo duro independiente en casos extremos
+  // (confirmado en vivo esta sesión: un texto tipo "registro técnico/
+  // verificación" fue rechazado directo por el servidor), pero no hay
+  // confirmación de que el backend rechace TODO lo que este formulario
+  // clasifica como 'alto' — hace falta que el mismo criterio de
+  // riesgo/bloqueo se aplique server-side para que esto sea una barrera
+  // real y no solo cosmética. Ver docs/BACKEND-PENDIENTES-30082026.md.
+  const publicacionBloqueada = fraudCheck?.bloqueado === true || fraudCheck?.riesgo === 'alto';
+  // Pedido explícito 2026-08-31: "el formulario permite publicar una
+  // propiedad sin fotos, eso está mal. Nunca debe de haber propiedades sin
+  // fotos reales" — antes stepFields[4] estaba vacío a propósito ("fotos —
+  // opcional"), ahora exige al menos 1. Mismo patrón imperativo que
+  // fotoNoApta (no es un campo de react-hook-form, no se puede validar con
+  // trigger()).
+  const sinFotos = fotos.length === 0;
 
   const goNext = async () => {
     if (step === 4 && fotoNoApta) {
       toast.error('Quita la foto marcada como inapropiada antes de continuar.');
+      return;
+    }
+    if (step === 4 && sinFotos) {
+      toast.error('Agrega al menos una foto real de la propiedad antes de continuar.');
       return;
     }
     if (step === 2 && esDowngrade && !confirmaRiesgoBajo) {
@@ -797,6 +956,11 @@ export function PublishForm() {
   const onSubmit = async (data: FormData) => {
     if (fotoNoApta) {
       toast.error('Quita la foto marcada como inapropiada antes de publicar.');
+      setStep(4);
+      return;
+    }
+    if (sinFotos) {
+      toast.error('Agrega al menos una foto real de la propiedad antes de publicar.');
       setStep(4);
       return;
     }
@@ -1150,6 +1314,19 @@ export function PublishForm() {
           <>
             <Select label="Municipio" options={MUNICIPIO_OPTIONS} placeholder="Selecciona..." error={errors.municipio?.message} {...register('municipio')} />
             <Input label="Colonia" placeholder="Nombre de la colonia" error={errors.colonia?.message} {...register('colonia')} />
+
+            {/* Pista de precio — SOLO para el propio vendedor, nunca se
+                manda al backend ni cuenta como señal de fraude (ver el
+                comentario grande en la declaración de precioContexto). Umbral
+                generoso (40% por debajo) a propósito: variación normal de
+                precio entre propiedades similares no debe generar ruido. */}
+            {precioContexto && precioContexto.precioPorM2 < precioContexto.promedioZona * 0.6 && (
+              <p className="flex items-start gap-1.5 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5">
+                <Info size={13} className="flex-shrink-0 mt-0.5" />
+                Tu precio (${precioContexto.precioPorM2.toLocaleString()}/m²) está bastante por debajo del promedio en tu municipio (${precioContexto.promedioZona.toLocaleString()}/m²). Si es por una razón real — venta urgente, necesita reparaciones, etc. — cuéntalo en la descripción: ayuda a que los interesados confíen en el precio.
+              </p>
+            )}
+
             {/* El selector de pin en mapa vive ahora en el paso de Fotos, no
                 aquí — ver el comentario grande en ese bloque (step === 4)
                 para el motivo: puesto aquí, se llenaba manualmente ANTES de
@@ -1329,7 +1506,7 @@ export function PublishForm() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-gray-700">Fotos de la propiedad</p>
-                <p className="text-xs text-gray-400 mt-0.5">Máximo {MAX_FOTOS} imágenes · Opcional</p>
+                <p className="text-xs text-gray-400 mt-0.5">Mínimo 1, máximo {MAX_FOTOS} imágenes reales de la propiedad</p>
               </div>
               <span className={`text-sm font-bold px-3 py-1 rounded-full ${fotos.length >= MAX_FOTOS ? 'bg-accent-pale text-accent-dark' : 'bg-gray-100 text-gray-500'}`}>
                 {fotos.length} / {MAX_FOTOS}
@@ -1395,6 +1572,26 @@ export function PublishForm() {
                     Descartar
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* Contradicción GPS — la foto trae ubicación real distinta a
+                la declarada. Nunca bloquea aquí (eso lo decide el
+                backend combinando señales, ver evaluar() arriba); esto
+                solo avisa — puede ser un error de tecleo honesto o una
+                foto que no es de esta propiedad. */}
+            {gpsContradiccion !== null && (
+              <div className="flex items-center justify-between gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-2.5">
+                <p className="flex items-center gap-1.5 text-xs text-amber-700">
+                  <ShieldAlert size={13} className="flex-shrink-0" /> La ubicación de una de tus fotos está a {gpsContradiccion.toFixed(0)} km de la colonia que escribiste — revisa que la foto sea de esta propiedad, o que la colonia esté bien escrita.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setGpsContradiccion(null); gpsContradiccionRef.current = null; }}
+                  className="flex-shrink-0 text-xs text-gray-400 hover:text-gray-600 whitespace-nowrap"
+                >
+                  Descartar
+                </button>
               </div>
             )}
 
@@ -1478,9 +1675,9 @@ export function PublishForm() {
               </div>
             )}
 
-            {fotos.length === 0 && (
-              <p className="flex items-center justify-center gap-1.5 text-xs text-accent-dark text-center bg-accent-pale rounded-xl py-3">
-                <Lightbulb size={13} className="flex-shrink-0" /> Las propiedades con fotos reciben más contactos
+            {sinFotos && (
+              <p className="flex items-center justify-center gap-1.5 text-xs text-red-700 text-center bg-red-50 border border-red-200 rounded-xl py-3">
+                <AlertCircle size={13} className="flex-shrink-0" /> Agrega al menos 1 foto real de la propiedad para poder publicar
               </p>
             )}
 
@@ -1635,30 +1832,30 @@ export function PublishForm() {
                 <div>
                   <p className="text-sm font-bold">No podemos publicar este anuncio</p>
                   <p className="text-xs mt-1">
-                    {fraudCheck?.motivoBloqueo || 'El título y la descripción no parecen describir una propiedad real.'}
+                    {fraudCheck?.motivoBloqueo || 'El título y la descripción tienen varias señales que suelen asociarse con publicaciones fraudulentas.'}
                   </p>
-                  <p className="text-xs mt-1.5 opacity-80">Corrige el título y la descripción en el paso &quot;Información básica&quot; para poder continuar.</p>
+                  {/* Deliberadamente NO se listan las señales detectadas aquí
+                      (a diferencia del banner ámbar de 'medio' más abajo) —
+                      mostrarle a quien publica exactamente qué frase disparó
+                      el bloqueo es un mapa de ruta para reescribirla y
+                      evadir la misma detección la próxima vez, sin dejar de
+                      ser fraudulento. Un mensaje genérico sigue siendo
+                      honesto y accionable sin enseñar a esquivar el filtro. */}
+                  <p className="text-xs mt-1.5 opacity-80">Revisa que el título y la descripción describan honestamente la propiedad real que estás publicando.</p>
                 </div>
               </div>
-            ) : fraudCheck && fraudCheck.riesgo !== 'bajo' && (
-              <div className={`flex items-start gap-2.5 rounded-xl px-4 py-3 border ${
-                fraudCheck.riesgo === 'alto'
-                  ? 'bg-red-50 border-red-200 text-red-700'
-                  : 'bg-amber-50 border-amber-200 text-amber-700'
-              }`}>
+            ) : fraudCheck && fraudCheck.riesgo === 'medio' && (
+              // Nivel 2 del sistema de 3 niveles — se marca, no bloquea.
+              // 'alto' ya no llega aquí (lo atrapa publicacionBloqueada
+              // arriba); 'bajo' nunca entra (excluido desde antes).
+              <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 border bg-amber-50 border-amber-200 text-amber-700">
                 <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-semibold">Tu anuncio tiene señales que suelen asociarse con publicaciones fraudulentas</p>
                   <ul className="text-xs mt-1 opacity-80 list-disc list-inside space-y-0.5">
                     {fraudCheck.señales.map((s) => <li key={s}>{s}</li>)}
                   </ul>
-                  {fraudCheck.riesgo === 'alto' ? (
-                    <p className="text-xs mt-1.5 opacity-70">
-                      Antes de terminar, revisa que el precio y la descripción describan tu propiedad real — si algo no coincide, corrígelo aquí mismo. Si se publica así, la ficha se mostrará con un aviso de &quot;En revisión&quot; para que quien la vea verifique con cuidado.
-                    </p>
-                  ) : (
-                    <p className="text-xs mt-1.5 opacity-70">Antes de continuar, revisa que la información sea correcta — no bloquea tu publicación ni la marca, pero vale la pena confirmarlo ahora.</p>
-                  )}
+                  <p className="text-xs mt-1.5 opacity-70">Antes de continuar, revisa que la información sea correcta — no bloquea tu publicación, pero la ficha se mostrará con un aviso de &quot;En revisión&quot; para que quien la vea verifique con cuidado.</p>
                 </div>
               </div>
             )}
@@ -1684,6 +1881,15 @@ export function PublishForm() {
 
             {watch('metodoContacto') !== 'correo' && (
               <Input label="Teléfono / WhatsApp" type="tel" placeholder="993 123 4567" maxLength={12} error={errors.telefonoContacto?.message} {...register('telefonoContacto')} />
+            )}
+            {/* Informativo, nunca acusatorio — un agente/casero real con
+                varias propiedades activas también da un número aquí. Solo
+                avisa que este dato se comparte con otras publicaciones. */}
+            {contactoReutilizado > 0 && (
+              <p className="flex items-start gap-1.5 text-xs text-gray-500 bg-gray-50 rounded-xl px-3 py-2.5">
+                <Info size={13} className="flex-shrink-0 mt-0.5" />
+                Ya usas este número en {contactoReutilizado} propiedad{contactoReutilizado !== 1 ? 'es' : ''} más — normal si manejas varias, solo confirma que sea correcto.
+              </p>
             )}
             {(watch('metodoContacto') === 'correo' || watch('metodoContacto') === 'ambos') && (
               <Input label="Correo electrónico" type="email" placeholder="tu@correo.com" error={errors.emailContacto?.message} {...register('emailContacto')} />

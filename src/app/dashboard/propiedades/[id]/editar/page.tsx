@@ -172,7 +172,15 @@ export default function EditarPropiedadPage() {
     if (property) setFotos(property.fotos);
   }, [property]);
 
+  // Pedido explícito 2026-08-31: "nunca debe haber propiedades sin fotos
+  // reales" — sin este candado, alguien podía publicar con 1 foto (ya
+  // exigida en PublishForm.tsx) y después borrarla aquí, dejando la
+  // propiedad publicada sin ninguna.
   function quitarFoto(url: string) {
+    if (fotos.length <= 1) {
+      toast.error('Tu propiedad necesita al menos 1 foto — agrega otra antes de quitar esta.');
+      return;
+    }
     setFotos((prev) => prev.filter((f) => f !== url));
   }
 
@@ -331,6 +339,13 @@ export default function EditarPropiedadPage() {
     // comprobación real, nunca confiar en que el navegador ya lo hizo.
     if (coords && !estaEnTabasco(coords.lat, coords.lng)) {
       toast.error('El punto marcado en el mapa queda fuera de Tabasco.');
+      return;
+    }
+    // Defensa en profundidad — quitarFoto() ya no deja bajar de 1, pero
+    // esta es la comprobación real antes de guardar, mismo criterio que el
+    // resto de este archivo.
+    if (fotos.length === 0) {
+      toast.error('Tu propiedad necesita al menos 1 foto real antes de guardar.');
       return;
     }
     try {

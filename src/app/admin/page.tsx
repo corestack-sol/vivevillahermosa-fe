@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Users, FileWarning, FlagTriangleRight, Heart, Bell, CalendarDays, Wrench, Ban, Mail, Cpu, Eye, Home } from 'lucide-react';
+import { Users, FileWarning, FlagTriangleRight, Heart, Bell, CalendarDays, Wrench, Ban, Mail, Cpu, Eye, Home, ShieldX } from 'lucide-react';
 import { getSession } from '@/lib/auth';
 import { backendFetchServer } from '@/lib/backendApiServer';
 
@@ -10,6 +10,10 @@ interface MetricasBackend {
   solicitudesRevision: { total: number; pendientes: number };
   reportes: { total: number; pendientes: number };
   intentosSospechosos: number;
+  // Pendiente del backend (docs/BACKEND-FRAUDE-NIVELES-31082026.md) —
+  // opcional a propósito: la tarjeta de abajo se oculta sola mientras no
+  // exista, en vez de mostrar un 0 falso.
+  intentosFraude?: number;
   favoritos: number;
   alertas: number;
   citas: number;
@@ -50,6 +54,9 @@ export default async function AdminPage() {
     { icon: FileWarning, label: 'Solicitudes de revisión pendientes', value: m.solicitudesRevision.pendientes, color: 'text-amber-500', bg: 'bg-amber-50', href: '/admin/solicitudes' },
     { icon: FlagTriangleRight, label: 'Reportes pendientes', value: m.reportes.pendientes, color: 'text-amber-500', bg: 'bg-amber-50', href: '/admin/reportes' },
     { icon: Eye, label: 'Intentos sospechosos', value: m.intentosSospechosos, color: 'text-purple-500', bg: 'bg-purple-50', href: '/admin/intentos-sospechosos' },
+    ...(m.intentosFraude !== undefined
+      ? [{ icon: ShieldX, label: 'Posibles fraudes', value: m.intentosFraude, color: 'text-red-500', bg: 'bg-red-50', href: '/admin/fraude' }]
+      : []),
     { icon: Heart, label: 'Favoritos guardados', value: m.favoritos, color: 'text-pink-500', bg: 'bg-pink-50' },
     { icon: Bell, label: 'Alertas activas', value: m.alertas, color: 'text-orange-500', bg: 'bg-orange-50' },
     { icon: CalendarDays, label: 'Citas agendadas', value: m.citas, color: 'text-sky-500', bg: 'bg-sky-50' },
