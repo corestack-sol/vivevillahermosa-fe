@@ -1169,7 +1169,7 @@ export function PublishForm() {
                         <div className="flex items-start gap-1 mt-1.5 text-orange-600">
                           <ShieldAlert size={11} className="flex-shrink-0 mt-0.5" />
                           <span className="font-semibold">
-                            Cambiaste el valor detectado — los compradores pueden ver esta diferencia.
+                            Cambiaste el valor detectado — los interesados pueden ver esta diferencia.
                           </span>
                         </div>
                       )}
@@ -1786,7 +1786,7 @@ export function PublishForm() {
               <div className="flex items-start gap-2 text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5">
                 <ShieldAlert size={12} className="flex-shrink-0 mt-0.5" />
                 <span className="font-semibold">
-                  Cambiaste el valor detectado — los compradores pueden ver esta diferencia.
+                  Cambiaste el valor detectado — los interesados pueden ver esta diferencia.
                 </span>
               </div>
             )}
