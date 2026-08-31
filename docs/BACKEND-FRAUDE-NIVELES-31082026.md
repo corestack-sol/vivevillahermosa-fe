@@ -178,24 +178,23 @@ mismo, no hace falta una tabla nueva.
 
 ---
 
-## 5. Regla explícita sobre precio — 🟡 leer con cuidado, decisión de producto
+## 5. Precio — descartado por completo, no solo excluido del backend
 
-**Se decidió NO implementar precio-vs-promedio-de-zona como señal enviada
-al backend por ahora** — el dueño del producto planteó directamente el
-riesgo real: un propietario honesto con un precio bajo legítimo (venta
-urgente, remodelación pendiente, herencia que se quiere liquidar rápido) no
-debe arriesgarse a que un solo número lo marque como fraude.
+**Actualización 2026-08-31:** la primera versión de esta propuesta incluía
+un cálculo de precio-vs-promedio-de-zona mostrado solo al propio vendedor
+como sugerencia (nunca enviado al backend). Se quitó del todo — pedido
+explícito: una casa puede valer más o menos por construcción, acabados,
+estado, ubicación exacta dentro de la colonia, etc., y la plataforma **no
+debe posicionarse como juez de qué precio es "correcto"**, ni siquiera en
+forma de sugerencia bien intencionada. Ya no existe ningún código de precio
+vs. zona en el flujo de publicar — no es un feature oculto ni pausado, se
+eliminó.
 
-El frontend sí calcula el precio vs. promedio de la zona (mismo cálculo que
-ya usa `getPriceContext()` en fichas públicas), pero **se le muestra solo
-al propio vendedor como sugerencia** ("cuéntalo en la descripción") — nunca
-se manda al backend, nunca cuenta para ninguna clasificación de riesgo. Si
-en el futuro se quiere incorporar precio como señal real, la regla no
-negociable debe ser: **precio bajo nunca es suficiente por sí solo para
-subir de nivel** — solo cuenta si se combina con al menos una señal
-independiente de las de arriba (GPS, contacto, reincidencia, foto
-duplicada). Documentado aquí para que quien lo implemente no repita el
-error de tratarlo como señal única.
+**Para quien construya el backend:** esto significa que **precio nunca
+debe ser una señal de fraude, en ninguna forma, ni sola ni combinada con
+otras.** Las señales independientes reales para nivel alto son las del
+punto 4 (GPS, contacto reutilizado, reincidencia, foto duplicada) —
+ninguna de ellas depende del precio declarado.
 
 ---
 

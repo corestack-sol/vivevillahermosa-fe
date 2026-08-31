@@ -193,16 +193,6 @@ export function PublishForm() {
   // suficiente sola (ver ContactoReuso más abajo).
   const [contactoReutilizado, setContactoReutilizado] = useState(0);
   const contactoReutilizadoRef = useRef(0);
-  // Pista de precio vs. promedio de la zona (pedido explícito 2026-08-31,
-  // punto 6 de la propuesta) — a propósito NUNCA se manda al backend ni
-  // se usa como señal de fraude, solo se le muestra al propio vendedor
-  // como sugerencia. El miedo real que motivó esto: un dueño honesto con
-  // un precio bajo legítimo (venta urgente, remodelación pendiente) no
-  // debe arriesgarse a que un número por sí solo lo marque — así que este
-  // dato ni siquiera llega a formar parte de la evaluación de riesgo, es
-  // pura ayuda para que el vendedor mismo decida si vale la pena explicar
-  // el precio en su descripción.
-  const [precioContexto, setPrecioContexto] = useState<{ precioPorM2: number; promedioZona: number } | null>(null);
   const [fotos, setFotos]         = useState<{ file: File; preview: string; analisis: AnalisisFoto; calidad: CalidadFoto | null }[]>([]);
   const [dragOver, setDragOver]   = useState(false);
   const [servicios, setServicios] = useState<string[]>([]);
@@ -782,43 +772,6 @@ export function PublishForm() {
     return () => { cancelado = true; clearTimeout(timer); unsubscribe(); };
   }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Precio vs. promedio de la zona — corre desde el paso de Ubicación (2)
-  // en adelante, cuando ya se conoce tipo/operación/precio/m² (paso 1) Y
-  // municipio (este paso). Menos de 3 comparables no dice nada confiable,
-  // se oculta la pista en vez de mostrar un promedio de muestra chica.
-  useEffect(() => {
-    if (step < 2) return;
-    let cancelado = false;
-
-    async function evaluarPrecio(values: Partial<FormData>) {
-      const { tipo: tipoVal, operacion: operacionVal, municipio: municipioVal, precio: precioVal, m2Construidos, m2Terreno } = values;
-      const m2 = tipoVal === 'terreno' ? (m2Terreno || 0) : (m2Construidos || 0);
-      if (!tipoVal || !operacionVal || !municipioVal || !precioVal || m2 <= 0) { setPrecioContexto(null); return; }
-      try {
-        const propiedades = await getAllProperties();
-        if (cancelado) return;
-        const comparables = propiedades.filter((p) =>
-          p.tipo === tipoVal && p.operacion === operacionVal && p.municipio === municipioVal &&
-          (tipoVal === 'terreno' ? p.m2Terreno > 0 : p.m2Construidos > 0)
-        );
-        if (comparables.length < 3) { setPrecioContexto(null); return; }
-        const suma = comparables.reduce((acc, p) => acc + p.precio / (tipoVal === 'terreno' ? p.m2Terreno : p.m2Construidos), 0);
-        setPrecioContexto({ precioPorM2: Math.round(precioVal / m2), promedioZona: Math.round(suma / comparables.length) });
-      } catch {
-        setPrecioContexto(null);
-      }
-    }
-
-    evaluarPrecio(getValues());
-
-    let timer: ReturnType<typeof setTimeout>;
-    const { unsubscribe } = watch((values) => {
-      clearTimeout(timer);
-      timer = setTimeout(() => evaluarPrecio(values), 800);
-    });
-    return () => { cancelado = true; clearTimeout(timer); unsubscribe(); };
-  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // Plantilla determinista, no llamada de red — ver tituloGenerator.ts.
   function generarTitulo() {
     const tipoVal = watch('tipo');
@@ -1330,18 +1283,6 @@ export function PublishForm() {
           <>
             <Select label="Municipio" options={MUNICIPIO_OPTIONS} placeholder="Selecciona..." error={errors.municipio?.message} {...register('municipio')} />
             <Input label="Colonia" placeholder="Nombre de la colonia" error={errors.colonia?.message} {...register('colonia')} />
-
-            {/* Pista de precio — SOLO para el propio vendedor, nunca se
-                manda al backend ni cuenta como señal de fraude (ver el
-                comentario grande en la declaración de precioContexto). Umbral
-                generoso (40% por debajo) a propósito: variación normal de
-                precio entre propiedades similares no debe generar ruido. */}
-            {precioContexto && precioContexto.precioPorM2 < precioContexto.promedioZona * 0.6 && (
-              <p className="flex items-start gap-1.5 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5">
-                <Info size={13} className="flex-shrink-0 mt-0.5" />
-                Tu precio (${precioContexto.precioPorM2.toLocaleString()}/m²) está bastante por debajo del promedio en tu municipio (${precioContexto.promedioZona.toLocaleString()}/m²). Si es por una razón real — venta urgente, necesita reparaciones, etc. — cuéntalo en la descripción: ayuda a que los interesados confíen en el precio.
-              </p>
-            )}
 
             {/* El selector de pin en mapa vive ahora en el paso de Fotos, no
                 aquí — ver el comentario grande en ese bloque (step === 4)
