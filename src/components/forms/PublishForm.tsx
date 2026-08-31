@@ -721,7 +721,23 @@ export function PublishForm() {
     evaluar(getValues());
 
     let timer: ReturnType<typeof setTimeout>;
-    const { unsubscribe } = watch((values) => {
+    // ⚠️ Bug real encontrado y reproducido en vivo 2026-08-31: sin el
+    // filtro por `name`, watch() sin argumento re-dispara con CUALQUIER
+    // cambio en CUALQUIER campo del formulario — llenar nombre/teléfono/
+    // correo en el paso de Contacto también re-evaluaba título/
+    // descripción sin que ese texto cambiara. Combinado con que el modelo
+    // de IA no es determinista (confirmado: la misma descripción dio
+    // señales distintas en dos llamadas seguidas durante la verificación
+    // de esta sesión), esto dejó pasar una publicación con texto
+    // claramente fraudulento — el bloqueo de "alto" se había marcado
+    // correctamente, pero para cuando se dio clic en "Publicar" ya se
+    // había vuelto a evaluar (disparado por llenar el teléfono) y esa
+    // vez NO salió "alto". El backend sí la marcó `requiereModeracion`
+    // de todos modos (su propio chequeo, independiente) pero el bloqueo
+    // del formulario, que es la barrera principal, no debe depender de
+    // la suerte de qué tan seguido vuelve a preguntarle a la IA lo mismo.
+    const { unsubscribe } = watch((values, { name }) => {
+      if (name !== undefined && name !== 'titulo' && name !== 'descripcion') return;
       clearTimeout(timer);
       timer = setTimeout(() => evaluar(values), 1_500);
     });
