@@ -28,8 +28,12 @@ import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { getAllProperties } from '@/lib/api';
 import posthog from 'posthog-js';
-import { matchColonia, distanciaKm, precargarColoniasDescubiertas, coloniaCercana, type ColoniaCoord } from '@/lib/colonias';
+import { matchColonia, distanciaKm, precargarColoniasDescubiertas, type ColoniaCoord } from '@/lib/colonias';
 import { landmarksCercanos, precargarLandmarks } from '@/lib/landmarks';
+import {
+  clasificarGPSFoto, esPublicacionBloqueada, debeReevaluarFraude, contarContactoReutilizado,
+  type ResultadoGPSFoto,
+} from '@/lib/publishFraudGuard';
 import { hashImagenDesdeFile, hashImagenDesdeUrl, distanciaHamming, UMBRAL_HASH_SIMILAR } from '@/lib/fotoHash';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { resizeImageToDataUrl, MAX_SOURCE_BYTES } from '@/lib/imageResize';
@@ -283,13 +287,11 @@ export function PublishForm() {
   // Facebook borran el EXIF (incluido GPS) al comprimir/reenviar, que es
   // como llega la mayoría de fotos de propiedad en la práctica. Cuando sí
   // está, es gratis (se lee 100% en el navegador, sin llamada de red).
-  // Unifica la sugerencia de pin (GPS coincide con lo declarado) y la
-  // contradicción (GPS NO coincide — señal de posible fraude) en una sola
+  // Lee el EXIF (I/O) y delega la clasificación matemática a
+  // clasificarGPSFoto() (src/lib/publishFraudGuard.ts, con pruebas propias)
+  // — unifica la sugerencia de pin (GPS coincide con lo declarado) y la
+  // contradicción (GPS NO coincide, señal de posible fraude) en una sola
   // lectura de EXIF por foto, en vez de parsear el archivo dos veces.
-  type ResultadoGPSFoto =
-    | { tipo: 'sugerencia'; coords: Coords; coloniaSugerida?: ColoniaCoord }
-    | { tipo: 'contradiccion'; distanciaKm: number };
-
   async function analizarGPSFoto(file: File): Promise<ResultadoGPSFoto | null> {
     let gps: { latitude: number; longitude: number } | undefined;
     try {
@@ -301,37 +303,11 @@ export function PublishForm() {
     if (!gps) return null;
     if (!estaEnTabasco(gps.latitude, gps.longitude)) return null;
 
-    // Mismo umbral de 3km que ya usa pinLejosDeColonia más abajo cuando SÍ
-    // hay una colonia catalogada — una colonia es un área, no un punto.
-    // Sin colonia verificada, se compara contra el centro del municipio
-    // (mucho más grande) con un margen más generoso — 20km cubre un
-    // municipio real sin aceptar "está en otro estado".
-    if (coloniaVerificada) {
-      const d = distanciaKm(gps.latitude, gps.longitude, coloniaVerificada.lat, coloniaVerificada.lng);
-      // Foto reciclada de otro anuncio/lugar trae el GPS real de donde se
-      // tomó, no de esta propiedad — si ese punto queda lejos de la
-      // colonia que la persona escribió, es evidencia real (pedido
-      // explícito 2026-08-31: nivel-3 no debe depender solo de reescribir
-      // el texto — esto es una señal que NO se esquiva cambiando palabras).
-      // También ayuda al dueño honesto que typeó mal la colonia sin querer.
-      if (d > 3) return { tipo: 'contradiccion', distanciaKm: d };
-      return { tipo: 'sugerencia', coords: { lat: gps.latitude, lng: gps.longitude } };
-    } else if (municipio && MUNICIPIO_CENTERS[municipio]) {
-      const [clat, clng] = MUNICIPIO_CENTERS[municipio];
-      const d = distanciaKm(gps.latitude, gps.longitude, clat, clng);
-      if (d > 20) return { tipo: 'contradiccion', distanciaKm: d };
-    } else {
-      // Sin colonia verificada NI municipio center conocido, no hay nada
-      // real contra qué comparar — ni sugerir ni marcar contradicción.
-      return null;
-    }
-    const coords = { lat: gps.latitude, lng: gps.longitude };
-    // La colonia escrita NO resolvió contra el catálogo (typo grande, o
-    // simplemente no está catalogada) — pero el GPS sí cae dentro de una
-    // colonia catalogada real. Se ofrece la corrección, nunca se aplica
-    // sola (ver el botón "Corregir" en el paso de Fotos).
-    const cercana = coloniaCercana(gps.latitude, gps.longitude, 2, municipio);
-    return cercana ? { tipo: 'sugerencia', coords, coloniaSugerida: cercana } : { tipo: 'sugerencia', coords };
+    return clasificarGPSFoto(gps, {
+      coloniaVerificada,
+      municipio,
+      municipioCenter: municipio ? MUNICIPIO_CENTERS[municipio] : undefined,
+    });
   }
 
   async function addFiles(files: FileList | File[]) {
@@ -727,7 +703,7 @@ export function PublishForm() {
     // del formulario, que es la barrera principal, no debe depender de
     // la suerte de qué tan seguido vuelve a preguntarle a la IA lo mismo.
     const { unsubscribe } = watch((values, { name }) => {
-      if (name !== undefined && name !== 'titulo' && name !== 'descripcion') return;
+      if (!debeReevaluarFraude(name)) return;
       clearTimeout(timer);
       timer = setTimeout(() => evaluar(values), 1_500);
     });
@@ -744,6 +720,14 @@ export function PublishForm() {
   // completo (getAllProperties, ya cacheado por el navegador en visitas
   // recientes) así que no tiene sentido repetirlo en cada tecleo de los
   // pasos anteriores.
+  //
+  // ⚠️ Auditoría 2026-08-31: igual que el chequeo de fraude de arriba, el
+  // watch() sin filtrar por campo re-disparaba esto con CUALQUIER cambio
+  // en el paso de Contacto (nombre, correo, checkbox), no solo el
+  // teléfono — a diferencia del chequeo de fraude esto nunca daba un
+  // resultado distinto (getAllProperties() es determinista, no un modelo
+  // de IA), así que no era un bug de seguridad, pero sí pedía el catálogo
+  // completo sin necesidad en cada tecleo ajeno. Mismo filtro por `name`.
   useEffect(() => {
     if (step < 5) return;
     let cancelado = false;
@@ -753,7 +737,7 @@ export function PublishForm() {
       try {
         const propiedades = await getAllProperties();
         if (cancelado) return;
-        const veces = propiedades.filter((p) => p.agente.tel === tel || p.agente.whatsapp === tel).length;
+        const veces = contarContactoReutilizado(propiedades, tel);
         setContactoReutilizado(veces);
         contactoReutilizadoRef.current = veces;
       } catch {
@@ -765,7 +749,8 @@ export function PublishForm() {
     evaluarContacto((watch('telefonoContacto') || '').trim());
 
     let timer: ReturnType<typeof setTimeout>;
-    const { unsubscribe } = watch((values) => {
+    const { unsubscribe } = watch((values, { name }) => {
+      if (name !== undefined && name !== 'telefonoContacto') return;
       clearTimeout(timer);
       timer = setTimeout(() => evaluarContacto((values.telefonoContacto || '').trim()), 800);
     });
@@ -891,7 +876,7 @@ export function PublishForm() {
   // clasifica como 'alto' — hace falta que el mismo criterio de
   // riesgo/bloqueo se aplique server-side para que esto sea una barrera
   // real y no solo cosmética. Ver docs/BACKEND-PENDIENTES-30082026.md.
-  const publicacionBloqueada = fraudCheck?.bloqueado === true || fraudCheck?.riesgo === 'alto';
+  const publicacionBloqueada = esPublicacionBloqueada(fraudCheck);
   // Pedido explícito 2026-08-31: "el formulario permite publicar una
   // propiedad sin fotos, eso está mal. Nunca debe de haber propiedades sin
   // fotos reales" — antes stepFields[4] estaba vacío a propósito ("fotos —

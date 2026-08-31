@@ -79,12 +79,18 @@ export default function AdminFraudePage() {
       setPerPage(data.perPage ?? 30);
     } catch (err) {
       // 404 = el endpoint todavía no existe del lado del backend — estado
-      // honesto, no un error real de la persona usando el panel.
+      // honesto, no un error real de la persona usando el panel. Cualquier
+      // otro código (401/403/500) SÍ es un error real y debe propagarse
+      // igual que en el resto del panel admin (ver admin/usuarios/page.tsx)
+      // — antes este catch los tragaba a todos por igual y los mostraba
+      // como "Sin anuncios marcados", ocultando un fallo real del backend.
       if (err instanceof BackendApiError && err.status === 404) {
         setNoImplementado(true);
+        setIntentos([]);
+        setTotal(0);
+        return;
       }
-      setIntentos([]);
-      setTotal(0);
+      throw err;
     } finally {
       setLoading(false);
     }

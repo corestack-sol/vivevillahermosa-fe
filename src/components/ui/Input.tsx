@@ -1,5 +1,6 @@
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { forwardRef } from 'react';
+import { calcularScrollPorRueda } from '@/lib/wheelScroll';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -58,9 +59,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             // eso.
             onWheel={(e) => {
               const el = e.currentTarget;
-              if (el.scrollWidth > el.clientWidth) {
-                el.scrollLeft += e.deltaY !== 0 ? e.deltaY : e.deltaX;
-              }
+              el.scrollLeft = calcularScrollPorRueda(el, e.deltaY, e.deltaX);
               props.onWheel?.(e);
             }}
             {...props}
