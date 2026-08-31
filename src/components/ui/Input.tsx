@@ -40,6 +40,29 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               }
               props.onFocus?.(e);
             }}
+            // Un <input> de una sola línea NUNCA responde a la rueda del
+            // mouse/trackpad de forma nativa — solo mover el cursor
+            // (flechas, Home/End, clic) lo desplaza. Verificado en vivo
+            // 2026-08-31 (reporte real sobre "Título del anuncio"): con
+            // teclado sí se ve el final del texto, con rueda del mouse no
+            // se movía nada — no es un bug de este componente, es el
+            // límite real de cualquier input de texto en cualquier
+            // navegador. Se agrega este soporte manual (solo cuando el
+            // texto de verdad desborda) para que la rueda también funcione,
+            // en vez de dejar que solo el teclado pueda revisar un valor
+            // largo. Sin preventDefault a propósito: React marca los
+            // listeners de wheel como passive por defecto (desde React 17),
+            // llamar preventDefault ahí no funciona y solo genera un
+            // warning en consola — el pequeño scroll de página de sobra al
+            // usar la rueda encima del input es un costo aceptable frente a
+            // eso.
+            onWheel={(e) => {
+              const el = e.currentTarget;
+              if (el.scrollWidth > el.clientWidth) {
+                el.scrollLeft += e.deltaY !== 0 ? e.deltaY : e.deltaX;
+              }
+              props.onWheel?.(e);
+            }}
             {...props}
           />
         </div>
