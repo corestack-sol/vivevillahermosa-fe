@@ -70,8 +70,15 @@ export function PropertyCard({ property, landmarkQuery, distanciaLabel }: Proper
   // así que la misma tarjeta puede terminar con 140px de ancho en un
   // teléfono angosto o 300px+ en escritorio — un solo breakpoint de
   // viewport no puede cubrir ambos casos, pero un container query sí.
+  // Envuelve card + distanciaLabel en un solo <div> (no un Fragment) — con
+  // Fragment, cada uno terminaba como un hijo directo independiente del
+  // grid de la persona que llama (PropertiesClient.tsx), y CSS Grid coloca
+  // hijos directos en su propia celda: la etiqueta de distancia aparecía
+  // en la columna de al lado en vez de debajo de su propia tarjeta (bug
+  // real reportado 2026-09-02, solo visible en resultados "cerca de X" con
+  // 2+ columnas).
   return (
-    <>
+    <div>
     <div className="group relative rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 ease-out aspect-[9/10] @container">
       <Link
         href={`/propiedades/${property.slug}${landmarkQuery ?? ''}`}
@@ -212,6 +219,6 @@ export function PropertyCard({ property, landmarkQuery, distanciaLabel }: Proper
         {distanciaLabel}
       </p>
     )}
-    </>
+    </div>
   );
 }

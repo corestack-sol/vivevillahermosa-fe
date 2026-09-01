@@ -16,9 +16,11 @@ import type { EstadoPublicacion } from '@/lib/misPropiedades';
  * Empieza en null y se resuelve en un efecto — así el render en servidor
  * nunca difiere del primer render en cliente.
  */
-export function usePropiedadEstado(propertyId: string): EstadoPublicacion | null {
+type EstadoNoActiva = Exclude<EstadoPublicacion, 'activa'>;
+
+export function usePropiedadEstado(propertyId: string): EstadoNoActiva | null {
   const { user } = useAuth();
-  const [estado, setEstado] = useState<EstadoPublicacion | null>(null);
+  const [estado, setEstado] = useState<EstadoNoActiva | null>(null);
 
   useEffect(() => {
     // Sin sesión no hay nada que resolver — se queda en el `null` inicial

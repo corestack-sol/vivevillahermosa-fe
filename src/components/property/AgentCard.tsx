@@ -4,8 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { PropertyAgent } from '@/types/property';
-import { Mail, BadgeCheck, Eye, Loader2, PauseCircle, Archive, MessageCircle, Phone, LogIn, ShieldAlert } from 'lucide-react';
+import { Mail, BadgeCheck, Eye, Loader2, MessageCircle, Phone, LogIn, ShieldAlert } from 'lucide-react';
 import { usePropiedadEstado } from '@/hooks/usePropiedadEstado';
+import { estadoNoDisponibleInfo } from '@/lib/misPropiedades';
 import { useAuth } from '@/context/AuthContext';
 import { loginRedirectUrl } from '@/lib/authRedirect';
 import { backendFetch } from '@/lib/backendApi';
@@ -44,7 +45,7 @@ export function AgentCard({ agent, propiedadId, propertyTitle, requiereMensajePr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const estadoNoDisponible = usePropiedadEstado(propiedadId);
-  const archivada = estadoNoDisponible === 'vendida' || estadoNoDisponible === 'rentada';
+  const infoNoDisponible = estadoNoDisponible ? estadoNoDisponibleInfo(estadoNoDisponible) : null;
 
   async function revelar() {
     setLoading(true);
@@ -92,14 +93,12 @@ export function AgentCard({ agent, propiedadId, propertyTitle, requiereMensajePr
         </div>
       </div>
 
-      {estadoNoDisponible ? (
+      {infoNoDisponible ? (
         <p className={`flex items-center justify-center gap-1.5 text-xs text-center rounded-xl px-3 py-2.5 ${
           dark ? 'text-white/50 bg-white/5 border border-white/10' : 'text-gray-400 bg-gray-50 border border-gray-100'
         }`}>
-          {archivada ? <Archive size={14} className="flex-shrink-0" /> : <PauseCircle size={14} className="flex-shrink-0" />}
-          {estadoNoDisponible === 'vendida' ? 'Propiedad vendida — sin contacto disponible'
-            : estadoNoDisponible === 'rentada' ? 'Propiedad rentada — sin contacto disponible'
-            : 'Publicación pausada — sin contacto disponible'}
+          <infoNoDisponible.Icon size={14} className="flex-shrink-0" />
+          {infoNoDisponible.titulo} — sin contacto disponible
         </p>
       ) : !user ? (
         // Sin sesión no hay ningún camino para ver tel/whatsapp/correo —

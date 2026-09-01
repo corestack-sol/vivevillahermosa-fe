@@ -8,10 +8,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { CheckCircle, ShieldAlert, LogIn, ArrowRight, PauseCircle, Archive } from 'lucide-react';
+import { CheckCircle, ShieldAlert, LogIn, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { loginRedirectUrl } from '@/lib/authRedirect';
 import { usePropiedadEstado } from '@/hooks/usePropiedadEstado';
+import { estadoNoDisponibleInfo } from '@/lib/misPropiedades';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
 const schema = z.object({
@@ -36,7 +37,6 @@ export function ContactForm({ propertyTitle, propertyId, ownerName, dark = false
   const [sent, setSent] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const estadoNoDisponible = usePropiedadEstado(propertyId);
-  const archivada = estadoNoDisponible === 'vendida' || estadoNoDisponible === 'rentada';
 
   const {
     register,
@@ -78,23 +78,22 @@ export function ContactForm({ propertyTitle, propertyId, ownerName, dark = false
       ? 'border-danger'
       : 'border-gray-200 focus:border-brand focus:ring-brand/40';
 
-  // Una publicación pausada o ya archivada (vendida/rentada) no debe recibir
-  // mensajes nuevos: en el primer caso el propietario la quitó temporalmente
-  // de circulación, en el segundo la operación ya se cerró — mostrar el
-  // formulario (o los datos de contacto) sería contradecir esa decisión.
+  // Una publicación pausada, vencida o ya archivada (vendida/rentada) no
+  // debe recibir mensajes nuevos — mostrar el formulario (o los datos de
+  // contacto) sería contradecir esa decisión. Copy exacto por estado en
+  // estadoNoDisponibleInfo() (misPropiedades.ts).
   if (estadoNoDisponible) {
+    const info = estadoNoDisponibleInfo(estadoNoDisponible);
     return (
       <div className="text-center py-6">
         <div className={`inline-flex items-center justify-center w-12 h-12 rounded-2xl mb-3 ${dark ? 'bg-white/10 text-white/60' : 'bg-gray-100 text-gray-400'}`}>
-          {archivada ? <Archive size={20} strokeWidth={1.75} /> : <PauseCircle size={20} strokeWidth={1.75} />}
+          <info.Icon size={20} strokeWidth={1.75} />
         </div>
         <h3 className={`font-semibold mb-1 ${dark ? 'text-white' : 'text-gray-800'}`}>
-          {estadoNoDisponible === 'vendida' ? 'Propiedad vendida' : estadoNoDisponible === 'rentada' ? 'Propiedad rentada' : 'Publicación pausada'}
+          {info.titulo}
         </h3>
         <p className={`text-sm leading-relaxed ${dark ? 'text-white/60' : 'text-gray-500'}`}>
-          {archivada
-            ? 'Esta operación ya se cerró — el anuncio se conserva como registro, pero no está recibiendo mensajes nuevos.'
-            : 'El propietario pausó temporalmente este anuncio — no está recibiendo mensajes por ahora.'}
+          {info.mensaje}
         </p>
       </div>
     );

@@ -1,18 +1,19 @@
 'use client';
 
-import { MessageCircle, PauseCircle, Archive } from 'lucide-react';
+import { MessageCircle } from 'lucide-react';
 import { usePropiedadEstado } from '@/hooks/usePropiedadEstado';
+import { estadoNoDisponibleInfo } from '@/lib/misPropiedades';
 
-/** Botón "Contactar" de la barra fija móvil — se apaga si la propiedad está pausada o archivada (vendida/rentada). */
+/** Botón "Contactar" de la barra fija móvil — se apaga si la propiedad no está activa (pausada/vencida/vendida/rentada). */
 export function MobileContactCta({ propertyId }: { propertyId: string }) {
   const estadoNoDisponible = usePropiedadEstado(propertyId);
 
   if (estadoNoDisponible) {
-    const archivada = estadoNoDisponible === 'vendida' || estadoNoDisponible === 'rentada';
+    const info = estadoNoDisponibleInfo(estadoNoDisponible);
     return (
       <span className="flex-1 flex items-center justify-center gap-2 bg-gray-100 text-gray-400 font-bold text-sm py-3 rounded-xl">
-        {archivada ? <Archive size={16} /> : <PauseCircle size={16} />}
-        {estadoNoDisponible === 'vendida' ? 'Vendida' : estadoNoDisponible === 'rentada' ? 'Rentada' : 'Pausada'}
+        <info.Icon size={16} />
+        {info.label}
       </span>
     );
   }
