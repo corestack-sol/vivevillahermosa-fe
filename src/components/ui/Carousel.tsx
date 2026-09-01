@@ -48,8 +48,25 @@ export function Carousel({
   const updateArrows = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    setCanLeft(el.scrollLeft > 8);
-    setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 8);
+    // El track siempre trae `snap-start` en sus hijos (ver return() más
+    // abajo) — con eso, un `trackClassName` que además le da padding
+    // horizontal al propio contenedor scrolleable (ej. "px-3", el patrón
+    // que ya usan RecentlyViewedSection/SimilarCarousel para el efecto de
+    // "sangrado") hace que el navegador NUNCA deje descansar `scrollLeft`
+    // en 0 — el punto de snap real del primer elemento cae en scrollLeft
+    // = ese padding (confirmado en vivo: con `px-3`, scrollLeft mínimo
+    // alcanzable es 12, no 0; forzarlo a 0 con JS se revierte solo a 12).
+    // Sin restar el padding aquí, `scrollLeft > 8` quedaba en `true` en
+    // reposo con cualquier padding >8px, mostrando el degradado/flecha
+    // izquierdos como si hubiera más contenido a la izquierda cuando ya
+    // se estaba en el límite real (reporte real 2026-09-01). El lado
+    // derecho no tiene este problema porque no hay `snap-end` — ahí el
+    // navegador sí llega a su tope natural (scrollWidth - clientWidth).
+    const style = getComputedStyle(el);
+    const padLeft = parseFloat(style.paddingLeft) || 0;
+    const padRight = parseFloat(style.paddingRight) || 0;
+    setCanLeft(el.scrollLeft > padLeft + 8);
+    setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - padRight - 8);
   }, []);
 
   useEffect(() => {
