@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { PublicarCTA } from '@/components/forms/PublicarCTA';
 import { Shield, Map, Zap, Users, ChevronRight, MapPin } from 'lucide-react';
 import { getStats } from '@/lib/api';
 
@@ -128,12 +129,11 @@ export default async function NosotrosPage() {
           Publica gratis y empieza a recibir mensajes de personas interesadas. Contacto directo, sin comisiones, sin intermediarios.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link
-            href="/publicar"
+          <PublicarCTA
             className="inline-flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark text-white font-semibold px-6 py-3 rounded-xl transition-colors"
           >
             Publicar gratis <ChevronRight size={18} />
-          </Link>
+          </PublicarCTA>
           <Link
             href="/propiedades"
             className="inline-flex items-center justify-center gap-2 border-2 border-gray-300 text-gray-700 font-semibold px-6 py-3 rounded-xl hover:border-brand hover:text-brand transition-colors"

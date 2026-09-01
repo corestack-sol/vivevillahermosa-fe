@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Papa from 'papaparse';
@@ -10,6 +10,7 @@ import { useToast } from '@/context/ToastContext';
 import { publishSchema, MUNICIPIO_CENTERS, construirAgenteContacto } from '@/lib/publishSchema';
 import { SERVICIOS_MAP } from '@/lib/servicios';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
+import { LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
 
 // Mismos nombres que los campos del schema compartido con Publicar/Editar —
 // así el mapeo de cada columna a cada regla de validación es directo, sin
@@ -162,6 +163,23 @@ export default function ImportarPropiedadesPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [filas, setFilas] = useState<FilaParseada[] | null>(null);
   const [importando, setImportando] = useState(false);
+  // Cuántos espacios libres quedan contra el límite gratuito — sin esto la
+  // persona podía armar y subir un CSV completo sin saber que, si ya está
+  // en el tope (o cerca), la mayoría de las filas se van a rechazar una por
+  // una (reporte real 2026-09-01, mismo patrón que el botón "Publicar").
+  // `null` mientras carga — no bloquea de entrada por un fetch lento.
+  const [remanente, setRemanente] = useState<number | null>(null);
+  useEffect(() => {
+    let cancelado = false;
+    backendFetch<{ propiedades: { estado: string }[] }>('/propiedades/mias')
+      .then(({ propiedades }) => {
+        if (cancelado) return;
+        const activas = propiedades.filter((p) => p.estado === 'activa').length;
+        setRemanente(Math.max(0, LIMITE_PROPIEDADES - activas));
+      })
+      .catch(() => {});
+    return () => { cancelado = true; };
+  }, []);
 
   function handleFile(file: File) {
     Papa.parse<Record<string, string>>(file, {
@@ -229,16 +247,35 @@ export default function ImportarPropiedadesPage() {
         </div>
       </div>
 
-      <div className="flex items-start gap-2.5 bg-brand-pale border border-brand/20 rounded-xl px-4 py-3 mb-6">
-        <AlertCircle size={15} className="text-brand flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-brand-dark leading-relaxed">
-          Cada fila se publica igual que el formulario de Publicar, una por una — si tienes muchas,
-          puede que topes el límite de publicaciones por día de tu cuenta a la mitad del archivo; las que
-          ya se importaron quedan bien, solo repite el CSV restante otro día.
-        </p>
-      </div>
+      {remanente === 0 ? (
+        <div className="max-w-lg mx-auto text-center bg-white border border-gray-100 rounded-3xl shadow-xl shadow-gray-200/60 p-8 md:p-10">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-5">
+            <AlertCircle size={26} className="text-amber-500" />
+          </div>
+          <h2 className="text-xl font-heading font-bold text-gray-900 mb-2">Llegaste al límite gratuito</h2>
+          <p className="text-sm text-gray-500 leading-relaxed mb-6">
+            Ya tienes {LIMITE_PROPIEDADES} propiedades activas — el máximo gratuito por cuenta. Ninguna fila
+            del CSV podría publicarse hoy. Pausa o elimina alguna para liberar espacio antes de importar.
+          </p>
+          <Link href="/dashboard/propiedades" className="inline-flex items-center gap-2 bg-brand text-white font-semibold px-5 py-2.5 rounded-xl text-sm hover:bg-brand-dark transition-colors">
+            Ver mis propiedades
+          </Link>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-start gap-2.5 bg-brand-pale border border-brand/20 rounded-xl px-4 py-3 mb-6">
+            <AlertCircle size={15} className="text-brand flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-brand-dark leading-relaxed">
+              Cada fila se publica igual que el formulario de Publicar, una por una — si tienes muchas,
+              puede que topes el límite de publicaciones por día de tu cuenta a la mitad del archivo; las que
+              ya se importaron quedan bien, solo repite el CSV restante otro día.
+              {remanente !== null && (
+                <> Te quedan <strong>{remanente}</strong> espacio{remanente !== 1 ? 's' : ''} libre{remanente !== 1 ? 's' : ''} del límite gratuito.</>
+              )}
+            </p>
+          </div>
 
-      {!filas ? (
+          {!filas ? (
         <div className="bg-white border border-gray-100 rounded-3xl shadow-sm p-8">
           <button
             type="button"
@@ -324,6 +361,8 @@ export default function ImportarPropiedadesPage() {
             <Upload size={16} /> Importar {validas.length} propiedad{validas.length !== 1 ? 'es' : ''}
           </Button>
         </div>
+          )}
+        </>
       )}
     </div>
   );

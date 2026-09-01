@@ -16,6 +16,7 @@ import { EliminarCuentaModal } from '@/components/account/EliminarCuentaModal';
 import { loginRedirectUrl } from '@/lib/authRedirect';
 import { useCoach } from '@/hooks/useCoach';
 import { CoachModal } from '@/components/dashboard/CoachModal';
+import { useLimitePropiedades, MENSAJE_LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
 
 // /guias (antes /blog) volvió al menú 2026-08-23 (pedido explícito) — la
 // decisión de 2026-08-19 de sacarlo era porque no había contenido nuevo
@@ -122,6 +123,10 @@ export function Navbar() {
   // hoy en pausa) y "agente" quedan fuera hasta que tengan su propia
   // experiencia real, en vez de heredar el panel de una inmobiliaria.
   const esProfesional = !!user && user.rol === 'agente';
+  // Pre-chequeo del límite gratuito — atenúa "Publicar gratis" en vez de
+  // dejar que la persona entre al formulario de 6 pasos para recién
+  // toparse con el gate hasta el final (reporte real 2026-09-01).
+  const limitePropiedades = useLimitePropiedades(!!user && !esProfesional);
   // Coach de calidad de anuncio — pedido explícito 2026-08-22: badge de
   // notificaciones en el menú, modal al presionar. Gateado por
   // `esProfesional` como equivalente interino de "premium" (no existe
@@ -254,9 +259,19 @@ export function Navbar() {
               </Link>
             )}
             {!esProfesional && (
-              <Link href="/publicar" className={buttonClasses('primary', 'md')}>
-                <Plus size={15} strokeWidth={2.5} /> Publicar gratis
-              </Link>
+              limitePropiedades ? (
+                <button
+                  type="button"
+                  onClick={() => toast.error(MENSAJE_LIMITE_PROPIEDADES)}
+                  className={`${buttonClasses('primary', 'md')} opacity-40 cursor-not-allowed`}
+                >
+                  <Plus size={15} strokeWidth={2.5} /> Publicar gratis
+                </button>
+              ) : (
+                <Link href="/publicar" className={buttonClasses('primary', 'md')}>
+                  <Plus size={15} strokeWidth={2.5} /> Publicar gratis
+                </Link>
+              )
             )}
 
             {!loading && user && <NotificationBell />}
@@ -474,10 +489,20 @@ export function Navbar() {
 
             {!esProfesional && (
               <div className="pt-2 px-4">
-                <Link href="/publicar" onClick={() => setIsOpen(false)}
-                  className={buttonClasses('primary', 'lg', 'w-full')}>
-                  <Plus size={15} strokeWidth={2.5} /> Publicar gratis
-                </Link>
+                {limitePropiedades ? (
+                  <button
+                    type="button"
+                    onClick={() => toast.error(MENSAJE_LIMITE_PROPIEDADES)}
+                    className={`${buttonClasses('primary', 'lg', 'w-full')} opacity-40 cursor-not-allowed`}
+                  >
+                    <Plus size={15} strokeWidth={2.5} /> Publicar gratis
+                  </button>
+                ) : (
+                  <Link href="/publicar" onClick={() => setIsOpen(false)}
+                    className={buttonClasses('primary', 'lg', 'w-full')}>
+                    <Plus size={15} strokeWidth={2.5} /> Publicar gratis
+                  </Link>
+                )}
               </div>
             )}
           </div>

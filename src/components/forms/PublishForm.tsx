@@ -1090,15 +1090,9 @@ export function PublishForm() {
         </div>
         <h2 className="text-xl font-heading font-bold text-gray-900 mb-2">Llegaste al límite gratuito</h2>
         <p className="text-sm text-gray-500 leading-relaxed mb-6">
-          Ya tienes {LIMITE_PROPIEDADES} propiedades activas — el máximo gratuito por cuenta. Si manejas más propiedades (agente independiente o inmobiliaria), contáctanos para un plan profesional.
+          Ya tienes {LIMITE_PROPIEDADES} propiedades activas — el máximo gratuito por cuenta. Pausa o elimina alguna para publicar una nueva.
         </p>
-        <a
-          href="mailto:hola@vivevillahermosa.mx?subject=Quiero%20un%20plan%20profesional"
-          className={buttonClasses('primary', 'lg', 'w-full')}
-        >
-          Contactar para un plan
-        </a>
-        <Link href="/dashboard/propiedades" className="block mt-3 text-sm text-gray-400 hover:text-gray-600 transition-colors">
+        <Link href="/dashboard/propiedades" className={buttonClasses('primary', 'lg', 'w-full')}>
           Ver mis propiedades
         </Link>
       </div>

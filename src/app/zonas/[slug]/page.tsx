@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { PublicarCTA } from '@/components/forms/PublicarCTA';
 import Image from 'next/image';
 import { ChevronRight, MapPin, Zap, TrendingUp, Map as MapIcon, Building2 } from 'lucide-react';
 import { getAllZones, getAllMunicipalities, getAllProperties, getZonesWithLiveStats, getMunicipalitiesWithLiveStats } from '@/lib/api';
@@ -363,12 +364,11 @@ export default async function ZonaDetailPage({ params }: Props) {
           <p className="text-gray-500 text-sm mb-4">
             Aún no hay propiedades publicadas en esta zona. ¿Tienes una? Publícala gratis.
           </p>
-          <Link
-            href="/publicar"
+          <PublicarCTA
             className="inline-flex items-center gap-2 bg-brand text-white font-semibold px-6 py-2.5 rounded-xl text-sm hover:bg-brand-dark transition-colors"
           >
             Publicar propiedad <ChevronRight size={16} />
-          </Link>
+          </PublicarCTA>
         </div>
       )}
     </div>

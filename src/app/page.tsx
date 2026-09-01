@@ -10,6 +10,7 @@ import { ClickableMap } from '@/components/map/ClickableMap';
 import { getFeaturedProperties, getAllProperties, getColoniasOrdenadasPorDemanda, getStats } from '@/lib/api';
 import { formatPropertyCount } from '@/lib/format';
 import { buttonClasses } from '@/components/ui/Button';
+import { PublicarCTA } from '@/components/forms/PublicarCTA';
 import { RecentlyViewedSection } from '@/components/property/RecentlyViewedSection';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { Carousel } from '@/components/ui/Carousel';
@@ -485,12 +486,12 @@ export default async function HomePage() {
                 <p className="text-white/50 text-sm leading-relaxed max-w-sm mb-6">
                   Sin trámites. Sin intermediarios. Tú eliges si el interesado te escribe por WhatsApp, correo, o ambos.
                 </p>
-                <Link href="/publicar"
+                <PublicarCTA
                   className={buttonClasses('primary', 'xl', 'group shadow-lg')}
                   style={{ boxShadow: '0 8px 30px rgba(196,52,74,0.35)' }}>
                   Publicar gratis ahora
                   <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                </Link>
+                </PublicarCTA>
               </div>
 
               {/* Right: steps */}

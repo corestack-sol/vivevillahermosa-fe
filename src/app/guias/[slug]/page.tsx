@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { PublicarCTA } from '@/components/forms/PublicarCTA';
 import { Clock, ArrowLeft, ArrowRight, ChevronRight, Home, Sparkles, ExternalLink, SearchCheck } from 'lucide-react';
 import guiasData from '@/data/guias.json';
 import { getCategoriaVisual } from '../categoriaConfig';
@@ -129,10 +130,10 @@ export default async function GuiaPostPage({ params }: Props) {
                 className="inline-flex items-center gap-1.5 bg-white text-brand-dark text-sm font-bold px-4 py-2.5 rounded-xl hover:bg-white/90 transition-colors">
                 Ver propiedades <ArrowRight size={14} />
               </Link>
-              <Link href="/publicar"
+              <PublicarCTA
                 className="inline-flex items-center gap-2 border border-white/25 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-white/10 transition-colors">
                 Publicar gratis
-              </Link>
+              </PublicarCTA>
             </div>
           </div>
 

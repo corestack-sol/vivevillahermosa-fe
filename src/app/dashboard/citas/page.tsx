@@ -346,6 +346,7 @@ export default function CitasPage() {
         fechaInicial={selectedDate}
         duracionDefault={config?.duracionCitaMin ?? 30}
         onCreated={cargarCitas}
+        citasCargadas={citas}
       />
       <ConfiguracionAgendaModal
         isOpen={showConfig}

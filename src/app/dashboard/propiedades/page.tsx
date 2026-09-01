@@ -20,6 +20,7 @@ import { EliminarPropiedadModal } from '@/components/property/EliminarPropiedadM
 import { PausarPropiedadModal } from '@/components/property/PausarPropiedadModal';
 import { DestacarPropiedadModal } from '@/components/property/DestacarPropiedadModal';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { MENSAJE_LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
 
 // Debe coincidir con LIMITE_PROPIEDADES_ACTIVAS en el backend
 // (properties.service.ts) — solo para el mensaje, el servidor lo hace
@@ -97,6 +98,11 @@ export default function MisPropiedadesPage() {
     rentada: items.filter((i) => i.estado === 'rentada').length,
     archivada: items.filter((i) => ESTADOS_ARCHIVADOS.includes(i.estado)).length,
   };
+  // Pre-chequeo del límite gratuito — atenúa "Publicar nueva" en vez de
+  // dejar que la persona entre al formulario de 6 pasos para recién
+  // toparse con el gate hasta el final (reporte real 2026-09-01). Reusa
+  // `items`, ya cargado — sin llamada extra al backend.
+  const limitePropiedades = counts.activa >= LIMITE_PROPIEDADES;
 
   function pendiente(accion: string) {
     toast.info(`"${accion}" estará disponible cuando se conecte el panel real de propiedades (Módulo 2, Fase 2).`);
@@ -231,16 +237,36 @@ export default function MisPropiedadesPage() {
                 {generandoReporte ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
                 {generandoReporte ? 'Generando...' : 'Descargar reporte'}
               </button>
-              <Link href="/dashboard/propiedades/importar"
-                className="flex items-center gap-2 bg-white border-2 border-gray-200 hover:border-brand/40 text-gray-700 hover:text-brand text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
-                <Upload size={15} /> Importar CSV
-              </Link>
+              {limitePropiedades ? (
+                <button
+                  type="button"
+                  onClick={() => toast.error(MENSAJE_LIMITE_PROPIEDADES)}
+                  className="flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 text-sm font-semibold px-4 py-2.5 rounded-xl opacity-40 cursor-not-allowed"
+                >
+                  <Upload size={15} /> Importar CSV
+                </button>
+              ) : (
+                <Link href="/dashboard/propiedades/importar"
+                  className="flex items-center gap-2 bg-white border-2 border-gray-200 hover:border-brand/40 text-gray-700 hover:text-brand text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+                  <Upload size={15} /> Importar CSV
+                </Link>
+              )}
             </>
           )}
-          <Link href="/publicar"
-            className="flex items-center gap-2 bg-brand hover:bg-brand-dark text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
-            <Plus size={15} /> Publicar nueva
-          </Link>
+          {limitePropiedades ? (
+            <button
+              type="button"
+              onClick={() => toast.error(MENSAJE_LIMITE_PROPIEDADES)}
+              className="flex items-center gap-2 bg-brand text-white text-sm font-semibold px-4 py-2.5 rounded-xl opacity-40 cursor-not-allowed"
+            >
+              <Plus size={15} /> Publicar nueva
+            </button>
+          ) : (
+            <Link href="/publicar"
+              className="flex items-center gap-2 bg-brand hover:bg-brand-dark text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+              <Plus size={15} /> Publicar nueva
+            </Link>
+          )}
         </div>
       </div>
 
@@ -292,10 +318,20 @@ export default function MisPropiedadesPage() {
               ? 'Publica tu primera propiedad para empezar a gestionar tu cartera.'
               : 'Cambia el filtro para ver tus otras publicaciones, o publica una nueva.'}
           </p>
-          <Link href="/publicar"
-            className="inline-flex items-center gap-2 bg-brand text-white font-semibold px-5 py-2.5 rounded-xl text-sm hover:bg-brand-dark transition-colors">
-            <Plus size={15} /> Publicar propiedad
-          </Link>
+          {limitePropiedades ? (
+            <button
+              type="button"
+              onClick={() => toast.error(MENSAJE_LIMITE_PROPIEDADES)}
+              className="inline-flex items-center gap-2 bg-brand text-white font-semibold px-5 py-2.5 rounded-xl text-sm opacity-40 cursor-not-allowed"
+            >
+              <Plus size={15} /> Publicar propiedad
+            </button>
+          ) : (
+            <Link href="/publicar"
+              className="inline-flex items-center gap-2 bg-brand text-white font-semibold px-5 py-2.5 rounded-xl text-sm hover:bg-brand-dark transition-colors">
+              <Plus size={15} /> Publicar propiedad
+            </Link>
+          )}
         </div>
       ) : (
         <div className="space-y-3">

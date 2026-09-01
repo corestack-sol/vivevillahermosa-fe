@@ -16,6 +16,8 @@ import type { Notificacion } from '@/components/layout/NotificationBell';
 import { formatRelativeDate } from '@/lib/format';
 import { evaluarCartera } from '@/lib/coach';
 import { CoachModal } from '@/components/dashboard/CoachModal';
+import { useLimitePropiedades, MENSAJE_LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
+import { useToast } from '@/context/ToastContext';
 
 // "buscador" se queda mapeado a la nueva etiqueta — el backend todavía no
 // migró el valor default (rename acordado 2026-08-20: buscador -> particular),
@@ -46,6 +48,11 @@ export default function DashboardPage() {
   const esProfesional = user ? user.rol === 'agente' : false;
   const perfil = usePerfilInmobiliaria(!!user && esProfesional);
   const [showCoachModal, setShowCoachModal] = useState(false);
+  // Pre-chequeo del límite gratuito — atenúa "Publicar propiedad" en vez
+  // de dejar que la persona entre al formulario de 6 pasos para recién
+  // toparse con el gate hasta el final (reporte real 2026-09-01).
+  const limitePropiedades = useLimitePropiedades(!!user && !esProfesional);
+  const toast = useToast();
 
   useEffect(() => {
     if (!loading && !user) { router.push('/auth/login'); return; }
@@ -148,10 +155,20 @@ export default function DashboardPage() {
             <span className="text-brand">{ROL_LABEL[user.rol]}</span>
           </p>
         </div>
-        <Link href="/publicar"
-          className="flex items-center gap-2 bg-brand hover:bg-brand-dark text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
-          <Plus size={15} /> Publicar propiedad
-        </Link>
+        {limitePropiedades ? (
+          <button
+            type="button"
+            onClick={() => toast.error(MENSAJE_LIMITE_PROPIEDADES)}
+            className="flex items-center gap-2 bg-brand text-white text-sm font-semibold px-4 py-2.5 rounded-xl opacity-40 cursor-not-allowed"
+          >
+            <Plus size={15} /> Publicar propiedad
+          </button>
+        ) : (
+          <Link href="/publicar"
+            className="flex items-center gap-2 bg-brand hover:bg-brand-dark text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+            <Plus size={15} /> Publicar propiedad
+          </Link>
+        )}
       </div>
 
       {/* Notificaciones recientes */}

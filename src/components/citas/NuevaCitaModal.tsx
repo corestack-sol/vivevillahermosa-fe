@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { getAllProperties } from '@/lib/api';
+import { citaSolapada, type CitaExistente } from '@/lib/citasOverlap';
+import { AlertTriangle } from 'lucide-react';
 
 const DURACION_OPTIONS = [15, 30, 45, 60, 90, 120].map((m) => ({ value: String(m), label: `${m} min` }));
 
@@ -34,9 +36,16 @@ interface NuevaCitaModalProps {
   fechaInicial: Date;
   duracionDefault: number;
   onCreated: () => void;
+  // Citas del mes visible que el panel ya tiene cargadas (dashboard/citas/
+  // page.tsx) — se reusan tal cual, sin fetch extra, para avisar de un
+  // traslape MIENTRAS se elige fecha/hora en vez de hasta enviar (reporte
+  // real 2026-09-01). El backend sigue siendo quien de verdad lo valida —
+  // esto es solo el aviso adelantado, puede no cubrir una fecha fuera del
+  // mes visible.
+  citasCargadas: CitaExistente[];
 }
 
-export function NuevaCitaModal({ isOpen, onClose, fechaInicial, duracionDefault, onCreated }: NuevaCitaModalProps) {
+export function NuevaCitaModal({ isOpen, onClose, fechaInicial, duracionDefault, onCreated, citasCargadas }: NuevaCitaModalProps) {
   const toast = useToast();
   const [propiedadOptions, setPropiedadOptions] = useState<{ value: string; label: string }[]>([]);
   useEffect(() => {
@@ -47,7 +56,7 @@ export function NuevaCitaModal({ isOpen, onClose, fechaInicial, duracionDefault,
     return () => { cancelado = true; };
   }, []);
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, reset, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       fecha: format(fechaInicial, 'yyyy-MM-dd'),
@@ -55,6 +64,13 @@ export function NuevaCitaModal({ isOpen, onClose, fechaInicial, duracionDefault,
       duracionMin: String(duracionDefault),
     },
   });
+
+  const fechaSel = watch('fecha');
+  const horaSel = watch('hora');
+  const duracionSel = watch('duracionMin');
+  const traslape = (fechaSel && horaSel && duracionSel)
+    ? citaSolapada({ fecha: `${fechaSel}T${horaSel}:00`, duracionMin: Number(duracionSel) }, citasCargadas)
+    : null;
 
   useEffect(() => {
     if (isOpen) {
@@ -123,6 +139,13 @@ export function NuevaCitaModal({ isOpen, onClose, fechaInicial, duracionDefault,
         </div>
 
         <Select label="Duración" options={DURACION_OPTIONS} error={errors.duracionMin?.message} {...register('duracionMin')} />
+
+        {traslape && (
+          <p className="flex items-start gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2">
+            <AlertTriangle size={13} className="flex-shrink-0 mt-0.5" />
+            Ya tienes &quot;{traslape.titulo}&quot; con {traslape.nombreCliente} ese horario — cambia la fecha, hora o duración para evitar el traslape.
+          </p>
+        )}
 
         <Select label="Propiedad (opcional)" options={propiedadOptions} placeholder="Sin propiedad asociada" {...register('propiedadId')} />
 
