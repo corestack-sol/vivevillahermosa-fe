@@ -23,14 +23,20 @@ export function CompareBar() {
     // Tailwind pueda seguir pisándola en escritorio, donde nunca hay nada
     // que evitar abajo.
     <div className="fixed inset-x-0 bottom-[calc(var(--compare-bar-bottom-offset,0px)+1rem)] lg:bottom-4 z-40 flex justify-center px-5 pointer-events-none">
-      <div className="pointer-events-auto flex items-center gap-3 bg-brand-dark text-white rounded-2xl shadow-2xl pl-4 pr-2 py-2 animate-toast-in">
+      <div className="pointer-events-auto flex items-center gap-2 sm:gap-3 bg-brand-dark text-white rounded-2xl shadow-2xl pl-3 sm:pl-4 pr-2 py-2 animate-toast-in max-w-full">
         <Scale size={16} className="text-accent flex-shrink-0" />
+        {/* "para comparar" se recorta en pantallas angostas (<640px) — con
+            3 propiedades ("3 propiedades para comparar") el texto completo
+            no cabía en un viewport de 390px y desbordaba la barra por
+            ambos lados, perdiendo las esquinas redondeadas (reporte real
+            2026-09-02). */}
         <span className="text-sm font-medium whitespace-nowrap">
-          {ids.length} propiedad{ids.length !== 1 ? 'es' : ''} para comparar
+          {ids.length} propiedad{ids.length !== 1 ? 'es' : ''}
+          <span className="hidden sm:inline"> para comparar</span>
         </span>
         <Link
           href="/comparar"
-          className="bg-white hover:bg-white/90 text-brand-dark text-sm font-bold px-4 py-2 rounded-xl transition-colors whitespace-nowrap"
+          className="bg-white hover:bg-white/90 text-brand-dark text-sm font-bold px-3 sm:px-4 py-2 rounded-xl transition-colors whitespace-nowrap flex-shrink-0"
         >
           Comparar
         </Link>
