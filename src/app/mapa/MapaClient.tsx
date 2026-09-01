@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   SlidersHorizontal, X, ChevronLeft, ChevronDown, Navigation,
-  Satellite, Map as MapIcon, Info, MapPin,
+  Info, MapPin,
   Droplets, Check, RotateCw, List, Maximize2, Minimize2, Heart,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -19,6 +19,7 @@ import { precargarLandmarks } from '@/lib/landmarks';
 import { useAuth } from '@/context/AuthContext';
 import { SelectedPropertyCard } from '@/components/map/SelectedPropertyCard';
 import type { MapMarker, MapControls, MapBounds } from '@/components/map/MapView';
+import { estaEnBounds } from '@/lib/mapGeo';
 
 // ── Config ──────────────────────────────────────────────────────────────
 
@@ -58,14 +59,6 @@ const OP_CHIPS: { value: OperationType | ''; label: string }[] = [
 const ZOOM_ZONA = 15;
 const MAX_ZONAS_IR_A = 7; // mismo tope que la lista fija anterior
 
-// Filtra con las MISMAS coordenadas que se dibujan (latPublico/lngPublico,
-// enmascaradas por privacidad) — antes filtraba con lat/lng reales mientras
-// los pines se dibujaban con las públicas, así que el conteo "N propiedades
-// en esta zona" y los pines visibles podían no coincidir tras un pan/zoom.
-function isInBounds(p: Property, b: MapBounds): boolean {
-  return p.latPublico >= b.south && p.latPublico <= b.north && p.lngPublico >= b.west && p.lngPublico <= b.east;
-}
-
 // ── Main Component ───────────────────────────────────────────────────────
 
 interface Props { allProperties: Property[] }
@@ -103,7 +96,10 @@ export function MapaClient({ allProperties }: Props) {
   // `activeBounds` cambia a un objeto nuevo, deja de ser === al que se
   // cerró y la comparación de abajo vuelve a ser true por su cuenta.
   const [dismissedBounds, setDismissedBounds] = useState<MapBounds | null>(null);
-  const [tileType,      setTileType]      = useState<TileType>('street');
+  // `setTileType` no se usa por ahora — el selector Mapa/Satélite se
+  // retiró junto con la vista satelital (ver comentarios más abajo), pero
+  // el estado se deja listo para cuando se reconstruya.
+  const [tileType] = useState<TileType>('street');
   const [mapControls,   setMapControls]   = useState<MapControls | null>(null);
   const [activeZone,    setActiveZone]    = useState<string | null>(null);
   // Colapsables — pedido explícito 2026-08-23: "Inundación" y "Ir a zona"
@@ -306,7 +302,7 @@ export function MapaClient({ allProperties }: Props) {
   const filtered = useMemo(() => {
     let result = applyFilters(properties, filters)
       .filter((p) => riesgoActive.has((p.riesgoInundacion ?? 'bajo') as RiesgoLevel));
-    if (activeBounds) result = result.filter((p) => isInBounds(p, activeBounds));
+    if (activeBounds) result = result.filter((p) => estaEnBounds(p, activeBounds));
     return result;
   }, [properties, filters, riesgoActive, activeBounds, landmarksReady, coloniasReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -449,30 +445,14 @@ export function MapaClient({ allProperties }: Props) {
             quita esa función en tablet/móvil. */}
         <div className="absolute top-3 right-3 z-[1001] hidden lg:pointer-fine:flex flex-col gap-2 w-56">
 
-          {/* Mapa / Satélite */}
-          <div className="bg-brand-dark rounded-xl shadow-xl overflow-hidden flex">
-            <button
-              onClick={() => setTileType('street')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold transition-all ${
-                tileType === 'street'
-                  ? 'bg-white text-brand-dark'
-                  : 'text-white/60 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              <MapIcon size={14} /> Mapa
-            </button>
-            <div className="w-px bg-white/15 flex-shrink-0" />
-            <button
-              onClick={() => setTileType('satellite')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-semibold transition-all ${
-                tileType === 'satellite'
-                  ? 'bg-white text-brand-dark'
-                  : 'text-white/60 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              <Satellite size={14} /> Satélite
-            </button>
-          </div>
+          {/* Selector Mapa/Satélite retirado 2026-09-02 — la vista
+              satelital quedó pendiente de reconstruir en la migración a
+              MapLibre GL/OpenFreeMap (pedido explícito: "no implementes la
+              vista satelital de momento"). `tileType` sigue en el estado
+              del componente (MapView.tsx lo acepta e ignora 'satellite'
+              por ahora) para no romper nada mientras tanto — solo se quitó
+              el botón, no la lógica, cuando se reconstruya solo hay que
+              regresar este bloque. */}
 
           {/* Riesgo de inundación — colapsable, ver inundacionOpen arriba. */}
           <div className="bg-brand-dark rounded-xl shadow-xl p-3">
@@ -706,24 +686,11 @@ export function MapaClient({ allProperties }: Props) {
             </Link>
           )}
 
-          {/* Satellite toggle — equivalente táctil del toggle Mapa/Satélite
-              del panel de escritorio (hidden lg:pointer-fine:flex más
-              arriba). Antes decía "mobile only" pero estaba gateado por
-              lg:hidden (ancho), no por tipo de entrada — un tablet táctil
-              en horizontal a 1024px+ no obtenía ni el panel de escritorio
-              (excluido a propósito, es solo para mouse) ni este botón
-              (excluido por ancho): el control desaparecía por completo.
-              pointer-coarse: lo muestra para cualquier dispositivo táctil
-              sin importar el ancho, cerrando ese hueco. */}
-          <button
-            onClick={() => setTileType((t) => (t === 'street' ? 'satellite' : 'street'))}
-            title={tileType === 'street' ? 'Ver satélite' : 'Ver mapa'}
-            aria-label={tileType === 'street' ? 'Ver satélite' : 'Ver mapa'}
-            className="hidden pointer-coarse:flex w-11 h-11 bg-white shadow-lg border border-gray-200 rounded-xl
-                       items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            {tileType === 'street' ? <Satellite size={16} /> : <MapIcon size={16} />}
-          </button>
+          {/* Botón táctil de Mapa/Satélite retirado 2026-09-02 junto con su
+              equivalente de escritorio (ver comentario arriba, panel
+              Mapa/Satélite) — misma razón: vista satelital pendiente de
+              reconstruir sobre MapLibre GL, pedido explícito de no
+              implementarla todavía. */}
 
           {/* Mi ubicación — mismo criterio que la leyenda de privacidad de
               arriba: fondo sólido de marca en vez de blanco, para que no

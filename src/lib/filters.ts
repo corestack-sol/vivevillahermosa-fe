@@ -20,6 +20,16 @@ function prioridadMunicipio(municipio: string): number {
 
 export function applyFilters(properties: Property[], filters: SearchFilters): Property[] {
   let result = [...properties];
+  // Distancia real contra la que se mide "qué tan cerca" — se rellena en
+  // los bloques de colonia/landmark/categoría de abajo (reusando la misma
+  // resolución que ya hacen para filtrar, sin buscarla dos veces) y se usa
+  // después para ordenar cuando la persona no pidió explícitamente otro
+  // orden (ver `sortProperties` más abajo). Bug real reportado 2026-09-02:
+  // "cerca de X" sí filtraba bien por radio, pero el orden final
+  // (relevancia = municipio + destacado) no sabía nada de distancia — la
+  // lista salía con las etiquetas "1.4km", "0.5km", "0.6km" revueltas en
+  // vez de de menor a mayor.
+  let distanciaOrden: ((p: Property) => number) | undefined;
 
   if (filters.q) {
     const q = filters.q.toLowerCase();
@@ -56,6 +66,7 @@ export function applyFilters(properties: Property[], filters: SearchFilters): Pr
     // gana precisión donde ya la verificamos.
     const coord = matchColonia(filters.colonia, filters.municipio);
     if (coord) {
+      distanciaOrden = (p) => distanciaKm(p.lat, p.lng, coord.lat, coord.lng);
       result = result.filter((p) => {
         if (distanciaKm(p.lat, p.lng, coord.lat, coord.lng) > coord.radioKm) return false;
         // Que el radio se traslape no basta: si la propiedad ya tiene su
@@ -134,6 +145,7 @@ export function applyFilters(properties: Property[], filters: SearchFilters): Pr
     // colonia, así que buscarlo como texto siempre daría cero resultados
     // aunque la propiedad esté literalmente enfrente.
     const landmark = getLandmark(filters.landmark);
+    if (landmark) distanciaOrden = (p) => distanciaKm(p.lat, p.lng, landmark.lat, landmark.lng);
     // Bug real reportado 2026-08-20: "cerca del hospital rovirosa" devolvía
     // una propiedad a 48km — el catálogo de landmarks se carga async
     // (precargarLandmarks, fire-and-forget) y si la búsqueda corre antes de
@@ -152,6 +164,7 @@ export function applyFilters(properties: Property[], filters: SearchFilters): Pr
     // un landmark específico (arriba): un lugar nombrado es más preciso que
     // una categoría genérica, no tiene sentido aplicar ambos a la vez.
     const cat = filters.categoriaLandmark;
+    distanciaOrden = (p) => distanciaMinimaACategoria(p.lat, p.lng, cat) ?? Infinity;
     result = result.filter((p) => {
       const d = distanciaMinimaACategoria(p.lat, p.lng, cat);
       return d !== null && d <= RADIO_CATEGORIA_KM;
@@ -167,7 +180,17 @@ export function applyFilters(properties: Property[], filters: SearchFilters): Pr
     result = result.filter((p) => estaEnZonaDestacada(zona, p.lat, p.lng));
   }
 
-  const ordenado = sortProperties(result, filters.sort ?? 'relevancia');
+  // Con un punto de referencia real (colonia/landmark/categoría) y sin que
+  // la persona haya pedido explícitamente otro orden, "más cerca primero"
+  // es más útil que el orden por defecto — ese default no sabía nada de
+  // distancia, por eso las tarjetas salían con las etiquetas de km
+  // revueltas (reporte real 2026-09-02). `comparadorCalidad` desempata
+  // distancias iguales con las mismas señales que ya usa el orden general
+  // (ver más abajo) en vez de dejarlo en un orden arbitrario.
+  const sinOrdenExplicito = !filters.sort || filters.sort === 'relevancia';
+  const ordenado = distanciaOrden && sinOrdenExplicito
+    ? [...result].sort((a, b) => distanciaOrden!(a) - distanciaOrden!(b) || comparadorCalidad(a, b))
+    : sortProperties(result, filters.sort ?? 'relevancia');
 
   // "limite" es un tope explícito pedido por la persona ("muéstrame 5
   // propiedades", "las 3 más baratas", "top 10") — se aplica DESPUÉS de
@@ -201,12 +224,33 @@ function sortProperties(properties: Property[], sort: string): Property[] {
     case 'm2-asc':
       return [...properties].sort((a, b) => tamano(a) - tamano(b));
     default:
-      return [...properties].sort((a, b) => {
-        const porMunicipio = prioridadMunicipio(a.municipio) - prioridadMunicipio(b.municipio);
-        if (porMunicipio !== 0) return porMunicipio;
-        return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
-      });
+      // Antes era solo municipio→destacado — un fallback "cero costo, sin
+      // geolocalización" que no usaba ninguna señal real de calidad del
+      // anuncio. Pedido explícito 2026-09-02: ordenar "como lo hacen las
+      // grandes empresas" — destacado (visibilidad paga) primero, luego
+      // completeness real (con fotos, nunca inventado — mismo criterio que
+      // ya exige PublishForm.tsx desde el 2026-08-31), luego más reciente,
+      // y recién al final el agrupado por municipio como desempate cuando
+      // nada más distingue a dos propiedades — ya no es el criterio
+      // principal, solo evita que el orden se vea aleatorio en un empate
+      // total.
+      return [...properties].sort(
+        (a, b) => comparadorCalidad(a, b) || prioridadMunicipio(a.municipio) - prioridadMunicipio(b.municipio)
+      );
   }
+}
+
+// Señales reales (nunca inventadas — ver docs/BACKEND-PENDIENTES: vistas/
+// contactos siguen en 0 hasta que exista analítica real, así que nunca se
+// usan aquí) compartidas por el orden por defecto y por el desempate del
+// orden por distancia — así "destacado"/"con fotos"/"reciente" pesan igual
+// sin importar si la búsqueda tenía un punto de referencia o no.
+function comparadorCalidad(a: Property, b: Property): number {
+  const porFeatured = (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
+  if (porFeatured !== 0) return porFeatured;
+  const porFotos = (b.fotos.length > 0 ? 1 : 0) - (a.fotos.length > 0 ? 1 : 0);
+  if (porFotos !== 0) return porFotos;
+  return new Date(b.fechaPublicacion).getTime() - new Date(a.fechaPublicacion).getTime();
 }
 
 function tamano(p: Property): number {

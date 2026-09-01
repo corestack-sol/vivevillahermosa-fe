@@ -15,6 +15,7 @@ import { SimilarCarousel } from '@/components/property/SimilarCarousel';
 import { ContactForm } from '@/components/forms/ContactForm';
 import { MapViewDynamic } from '@/components/map/MapViewDynamic';
 import { Badge } from '@/components/ui/Badge';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { FavoriteButton } from '@/components/property/FavoriteButton';
 import { ReportButton } from '@/components/property/ReportButton';
 import { RecentlyViewedTracker } from '@/components/property/RecentlyViewedTracker';
@@ -329,9 +330,11 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
                       {SERVICIOS_RENTA
                         .filter((s) => property.servicios!.includes(s.key))
                         .map(({ key, label, Icon }) => (
-                          <div key={key} title={label} className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center text-white">
-                            <Icon size={18} />
-                          </div>
+                          <Tooltip key={key} label={label}>
+                            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center text-white">
+                              <Icon size={18} />
+                            </div>
+                          </Tooltip>
                         ))}
                     </div>
                   </div>

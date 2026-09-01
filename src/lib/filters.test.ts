@@ -166,6 +166,81 @@ describe('applyFilters — landmark (documented bug fix: unresolved landmark mus
   });
 });
 
+describe('applyFilters — orden por distancia real cuando hay un punto de referencia (bug real reportado 2026-09-02)', () => {
+  it('colonia catalogada + sort por defecto: ordena de más cerca a más lejos, no revuelto', () => {
+    // Atasta catalogada: 17.9846, -92.9495 (RADIO_COLONIA_KM = 1.3).
+    const lejos  = mkProperty({ colonia: 'X', lat: 17.9946, lng: -92.9495 }); // ~1.11km
+    const cerca  = mkProperty({ colonia: 'Y', lat: 17.9850, lng: -92.9495 }); // ~0.04km
+    const medio  = mkProperty({ colonia: 'Z', lat: 17.9880, lng: -92.9495 }); // ~0.38km
+    const result = applyFilters([lejos, cerca, medio], { colonia: 'Atasta' });
+    expect(result.map((p) => p.id)).toEqual([cerca.id, medio.id, lejos.id]);
+  });
+
+  it('landmark + sort por defecto: ordena de más cerca a más lejos', async () => {
+    vi.resetModules();
+    vi.doMock('./backendApi', () => ({
+      backendFetch: vi.fn().mockResolvedValue([
+        { key: 'hospital-rovirosa', label: 'Hospital Rovirosa', categoria: 'salud', lat: 17.99, lng: -92.93, radioKm: 5 },
+      ]),
+    }));
+    const { obtenerLandmarksBackend } = await import('./landmarks');
+    await obtenerLandmarksBackend();
+    const { applyFilters: freshApplyFilters } = await import('./filters');
+
+    const lejos = mkProperty({ lat: 18.02, lng: -92.93 });
+    const cerca = mkProperty({ lat: 17.991, lng: -92.931 });
+    const medio = mkProperty({ lat: 18.0, lng: -92.93 });
+    const result = freshApplyFilters([lejos, cerca, medio], { landmark: 'hospital-rovirosa' });
+    expect(result.map((p) => p.id)).toEqual([cerca.id, medio.id, lejos.id]);
+    vi.resetModules();
+  });
+
+  it('a la misma distancia real, desempata igual que el orden por defecto (destacado primero)', () => {
+    const a = mkProperty({ colonia: 'X', lat: 17.9846, lng: -92.9495, featured: false });
+    const b = mkProperty({ colonia: 'Y', lat: 17.9846, lng: -92.9495, featured: true });
+    const result = applyFilters([a, b], { colonia: 'Atasta' });
+    expect(result[0].id).toBe(b.id);
+  });
+
+  it('un sort explícito (ej. precio-asc) gana sobre el orden por distancia', () => {
+    const barataLejos = mkProperty({ colonia: 'X', lat: 17.9946, lng: -92.9495, precio: 1 });
+    const caraCerca   = mkProperty({ colonia: 'Y', lat: 17.9850, lng: -92.9495, precio: 2 });
+    const result = applyFilters([caraCerca, barataLejos], { colonia: 'Atasta', sort: 'precio-asc' });
+    expect(result.map((p) => p.id)).toEqual([barataLejos.id, caraCerca.id]);
+  });
+
+  it('categoriaLandmark ("cerca de un hospital", sin nombrar cuál) también ordena de más cerca a más lejos', async () => {
+    vi.resetModules();
+    vi.doMock('./backendApi', () => ({
+      backendFetch: vi.fn().mockResolvedValue([
+        { key: 'hospital-rovirosa', label: 'Hospital Rovirosa', categoria: 'salud', lat: 17.99, lng: -92.93, radioKm: 5 },
+      ]),
+    }));
+    const { obtenerLandmarksBackend } = await import('./landmarks');
+    await obtenerLandmarksBackend();
+    const { applyFilters: freshApplyFilters } = await import('./filters');
+
+    // RADIO_CATEGORIA_KM = 2.5km — ambos puntos deben quedar DENTRO para
+    // poder comparar su orden entre sí (si uno queda fuera, solo sobrevive
+    // uno y no hay nada que ordenar).
+    const lejos = mkProperty({ lat: 18.008, lng: -92.93 }); // ~2km
+    const cerca = mkProperty({ lat: 17.991, lng: -92.931 }); // ~0.15km
+    const result = freshApplyFilters([lejos, cerca], { categoriaLandmark: 'salud' });
+    expect(result.map((p) => p.id)).toEqual([cerca.id, lejos.id]);
+    vi.resetModules();
+  });
+});
+
+describe('applyFilters — zonaDestacada', () => {
+  it('"tabasco-2000" (fuente: colonia tabasco-2000) filtra por distancia real a ese centroide', () => {
+    // Tabasco 2000 catalogada: 17.9994, -92.9316 (radio 1.3km).
+    const dentro = mkProperty({ lat: 17.9994, lng: -92.9316 });
+    const fuera = mkProperty({ lat: 18.5, lng: -92.6 });
+    const result = applyFilters([dentro, fuera], { zonaDestacada: 'tabasco-2000' });
+    expect(result.map((p) => p.id)).toEqual([dentro.id]);
+  });
+});
+
 describe('applyFilters — sort + limite', () => {
   it('sorts by precio-asc/precio-desc', () => {
     const props = [mkProperty({ precio: 3 }), mkProperty({ precio: 1 }), mkProperty({ precio: 2 })];
@@ -177,6 +252,26 @@ describe('applyFilters — sort + limite', () => {
     const featured = mkProperty({ featured: true });
     const result = applyFilters([notFeatured, featured], {});
     expect(result[0].id).toBe(featured.id);
+  });
+  it('default sort — cascada completa: destacado > con fotos reales > más reciente > municipio (pedido explícito 2026-09-02)', () => {
+    const sinFotos = mkProperty({ fotos: [], fechaPublicacion: '2026-01-01T00:00:00.000Z' });
+    const conFotosVieja = mkProperty({ fotos: ['a.jpg'], fechaPublicacion: '2026-01-01T00:00:00.000Z' });
+    const conFotosReciente = mkProperty({ fotos: ['a.jpg'], fechaPublicacion: '2026-06-01T00:00:00.000Z' });
+    const destacada = mkProperty({ featured: true, fotos: [], fechaPublicacion: '2020-01-01T00:00:00.000Z' });
+    // Destacada gana aunque sea la más vieja y sin fotos; entre las no
+    // destacadas, con fotos > sin fotos; entre las que sí tienen, la más
+    // reciente va primero.
+    const result = applyFilters([sinFotos, conFotosVieja, conFotosReciente, destacada], {});
+    expect(result.map((p) => p.id)).toEqual([destacada.id, conFotosReciente.id, conFotosVieja.id, sinFotos.id]);
+  });
+  it('default sort — municipio es SOLO el desempate final, no el criterio principal', () => {
+    // Antes el municipio decidía primero — ahora una propiedad de un
+    // municipio "peor priorizado" pero con fotos gana sobre una de Centro
+    // sin fotos.
+    const centroSinFotos = mkProperty({ municipio: 'Centro', fotos: [] });
+    const cardenasConFotos = mkProperty({ municipio: 'Cárdenas', fotos: ['a.jpg'] });
+    const result = applyFilters([centroSinFotos, cardenasConFotos], {});
+    expect(result[0].id).toBe(cardenasConFotos.id);
   });
   it('limite applies AFTER sorting, not before', () => {
     const props = [mkProperty({ precio: 3 }), mkProperty({ precio: 1 }), mkProperty({ precio: 2 })];

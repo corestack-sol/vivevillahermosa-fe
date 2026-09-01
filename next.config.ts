@@ -54,7 +54,20 @@ const securityHeaders = [
       // navegador. Sin esto, ninguna subida de foto llega a completarse
       // (bloqueada en silencio). Detectado en QA manual con navegador real,
       // 2026-08-12/13.
-      `connect-src 'self' data: ${backendOrigin} ${posthogHost} ${posthogAssetsHost} https://accounts.google.com https://graph.facebook.com`.trim(),
+      // tiles.openfreemap.org — MapView.tsx/MapPicker.tsx (migración a
+      // MapLibre GL, 2026-09-02) piden ahí el style.json y cada tile
+      // vectorial. Mismo bloqueo silencioso que el backend/PostHog de
+      // arriba: sin esto, el mapa entero se queda en blanco (confirmado en
+      // vivo — la consola sí marca la violación de CSP, pero no hay ningún
+      // error visible en la UI).
+      `connect-src 'self' data: ${backendOrigin} ${posthogHost} ${posthogAssetsHost} https://accounts.google.com https://graph.facebook.com https://tiles.openfreemap.org`.trim(),
+      // MapLibre GL parsea los tiles vectoriales en un Web Worker propio,
+      // instanciado desde un blob: URL (su código va empacado en el bundle,
+      // no se descarga aparte) — sin worker-src explícito, el navegador cae
+      // al fallback de child-src/script-src, que no incluye blob:, y el
+      // worker nunca arranca (el mapa se queda sin renderizar tiles, sin
+      // ningún error obvio salvo la consola).
+      "worker-src 'self' blob:",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

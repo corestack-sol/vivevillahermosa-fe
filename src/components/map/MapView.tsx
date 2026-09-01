@@ -1,8 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+// maplibre-gl no tiene default export (a diferencia de Leaflet) — solo
+// exports nombrados. `Map` choca con el `Map` nativo de JS que ya se usa
+// en este archivo (markerByIdRef, positionsRef), por eso el alias.
+import type { Map as MaplibreMap, Marker as MaplibreMarker, GeoJSONSource } from 'maplibre-gl';
+import Supercluster, { type PointFeature } from 'supercluster';
 import { jitterCoord } from '@/lib/colonias';
 import { TABASCO_BOUNDS } from '@/lib/tabascoBoundary';
+import { shortPrice, circlePolygon, toMaplibreBounds } from '@/lib/mapGeo';
 
 export interface MapMarker {
   id: string;
@@ -36,6 +42,12 @@ interface MapViewProps {
   center?: [number, number];
   zoom?: number;
   height?: string;
+  // 'satellite' pendiente de reconstruir sobre el proveedor nuevo — pedido
+  // explícito 2026-09-02: migrar a OpenFreeMap/MapLibre GL, pero SIN la
+  // vista satelital por ahora. El prop se deja (nada que lo consume se
+  // rompe) pero MapView solo sabe dibujar 'street'; 'satellite' cae al
+  // mismo estilo hasta que se reconstruya (ver MapaClient.tsx, donde el
+  // selector de vista queda oculto mientras tanto).
   tileType?: 'street' | 'satellite';
   selectedId?: string | null;
   onMarkerSelect?: (marker: MapMarker | null) => void;
@@ -84,45 +96,25 @@ interface MapViewProps {
 const FLOOD_COLORS = { alto: '#EF4444', medio: '#F59E0B', bajo: '#10B981' } as const;
 const FLOOD_DARK   = { alto: '#B91C1C', medio: '#D97706', bajo: '#059669' } as const;
 
-// 'street' migrado de CARTO (basemaps.cartocdn.com/rastertiles/voyager) a
-// Esri 2026-08-26: CARTO cambió su política y ahora exige API key incluso
-// para uso básico — confirmado en vivo bajando un tile real, el servidor
-// respondía 200 OK pero la imagen era un mosaico con el texto "API KEY
-// REQUIRED" repetido en vez del mapa (así se veía en producción). El plan
-// gratuito de CARTO además es explícitamente "solo uso no comercial", así
-// que no aplicaba de todos modos. Esri (ver Light_Gray_Base abajo) es
-// gratis, sin llave, y ya es el mismo proveedor que 'satellite'
-// (World_Imagery) usa desde antes — un solo proveedor para las dos capas,
-// sin agregar una cuenta/llave nueva a mantener.
-const TILES = {
-  // World_Street_Map tiene un fondo beige/amarillo predominante que no
-  // encajaba con el resto de la plataforma (pedido explícito 2026-08-26:
-  // "fondo blanco"). Se intentó primero Canvas/World_Light_Gray_Base (el
-  // estilo "canvas" de Esri, fondo casi blanco) pero NO tiene cobertura
-  // completa sobre Tabasco a partir de zoom 17 — confirmado en vivo, la
-  // respuesta es 200 OK pero la imagen es el placeholder de Esri "Map data
-  // not yet available" (mismo problema de fondo que CARTO, un proveedor
-  // fallando en silencio con HTTP 200). Se queda World_Street_Map (sí
-  // cubre Tabasco hasta zoom 19, confirmado) y el color se corrige con un
-  // filtro CSS (`.map-tiles-light`, ver globals.css) aplicado solo a esta
-  // capa vía `className` — nunca a 'satellite', que debe verse a color real.
-  street: {
-    url:  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-    attr: '© Esri, HERE, Garmin, USGS, © OpenStreetMap contributors',
-  },
-  satellite: {
-    url:  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attr: '© Esri, USGS, NOAA',
-  },
-} as const;
+// Migrado de Esri World_Topo_Map (raster + filtro CSS) a OpenFreeMap/
+// MapLibre GL (pedido explícito 2026-09-02: "solución a largo plazo" —
+// sin límite de cuota, y con tiles VECTORIALES en vez de imagen, así que
+// el estilo ("colores de Google Maps", pedido previo) se logra pintando
+// cada tipo de elemento por separado en vez de un filtro CSS global sobre
+// toda la imagen, que nunca iba a poder distinguir agua de calles. El
+// estilo 'liberty' de OpenFreeMap ya trae, sin ningún ajuste extra
+// (verificado leyendo su style.json real): agua rgb(158,189,255) —
+// prácticamente el azul de Google —, fondo #f8f4f0 (casi blanco), parques
+// #d8e8c8 (verde suave) y autopistas en naranja/amarillo — el mismo
+// lenguaje visual que Google Maps, sin necesidad de tocar paint
+// properties a mano.
+const STREET_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
-function shortPrice(precio: number, operacion: 'venta' | 'renta'): string {
-  let s: string;
-  if (precio >= 1_000_000)      s = `$${(precio / 1_000_000).toFixed(precio % 1_000_000 === 0 ? 0 : 1)}M`;
-  else if (precio >= 1_000)     s = `$${Math.round(precio / 1_000)}k`;
-  else                          s = `$${precio}`;
-  return operacion === 'renta' ? `${s}/mo` : s;
-}
+// server.arcgisonline.com no exige llave — se mantiene SOLO como reserva
+// para el día que se reconstruya la vista satelital (fuera de alcance
+// ahora), no se usa en ningún render actual.
+const SATELLITE_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+void SATELLITE_TILE_URL;
 
 function pinHtml(color: string, dark: string, label: string, active: boolean): string {
   const shadow = active
@@ -137,15 +129,25 @@ function pinHtml(color: string, dark: string, label: string, active: boolean): s
 function clusterHtml(count: number): string {
   const size = count > 99 ? 44 : 38;
   const fs   = count > 99 ? 11 : 13;
-  return `<div style="background:#0D7065;color:#fff;width:${size}px;height:${size}px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:${fs}px;font-family:Inter,system-ui,sans-serif;box-shadow:0 3px 10px rgba(0,0,0,.3),0 0 0 3px #fff;">${count}</div>`;
+  return `<div style="background:#0D7065;color:#fff;width:${size}px;height:${size}px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:${fs}px;font-family:Inter,system-ui,sans-serif;box-shadow:0 3px 10px rgba(0,0,0,.3),0 0 0 3px #fff;cursor:pointer;">${count}</div>`;
 }
+
+/** Convierte un string HTML en el elemento DOM real que pide el `Marker` de MapLibre (no acepta HTML string directo, a diferencia de Leaflet). */
+function elementFromHtml(html: string): HTMLElement {
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = html;
+  return wrapper.firstElementChild as HTMLElement;
+}
+
+const MAPLIBRE_MAX_BOUNDS = toMaplibreBounds(TABASCO_BOUNDS);
+
+const ZONE_CIRCLE_SOURCE = 'zone-circle';
 
 export function MapView({
   markers,
   center = [17.9893, -92.9458],
   zoom = 12,
   height = '100%',
-  tileType = 'street',
   selectedId = null,
   onMarkerSelect,
   onBoundsChange,
@@ -155,14 +157,35 @@ export function MapView({
   fitToMarkers = false,
   minZoom = 10,
 }: MapViewProps) {
-  const containerRef    = useRef<HTMLDivElement>(null);
-  const mapRef          = useRef<any>(null);
-  const tileRef         = useRef<any>(null);
-  const clusterRef      = useRef<any>(null);
-  const lmRef           = useRef<Map<string, any>>(new Map());
-  const circleRef       = useRef<any>(null);
-  const skipMapClickRef = useRef(false);
+  const containerRef  = useRef<HTMLDivElement>(null);
+  const mapRef         = useRef<MaplibreMap | null>(null);
+  const markersOnMapRef = useRef<MaplibreMarker[]>([]);
+  // Constructores de maplibre-gl guardados tras el import dinámico inicial
+  // (módulo ya no tiene un solo namespace `L`-style con default export) —
+  // así renderClusters() no tiene que volver a `await import(...)` en cada
+  // pan/zoom, y de paso queda 100% síncrono (sin eso, dos llamadas
+  // seguidas de renderClusters — ej. paneo rápido — podían resolver sus
+  // imports en cualquier orden y pintar marcadores viejos encima de los
+  // nuevos).
+  const MarkerCtorRef = useRef<typeof MaplibreMarker | null>(null);
+  const LngLatBoundsCtorRef = useRef<typeof import('maplibre-gl').LngLatBounds | null>(null);
+  const clusterIndexRef = useRef<Supercluster<{ id: string }> | null>(null);
+  const positionsRef    = useRef<Map<string, [number, number]>>(new Map()); // id -> [lng,lat] tras el jitter
+  const markerByIdRef   = useRef<Map<string, MapMarker>>(new Map());
   const [ready, setReady] = useState(false);
+
+  // Refs para que el listener de moveend/zoomend (agregado una sola vez)
+  // siempre lea el valor más reciente sin tener que reagregarse — mismo
+  // criterio que ya se usa en otras partes del proyecto para listeners de
+  // module-level/DOM que no deben reconstruirse en cada render. Se
+  // sincronizan en un efecto, no durante el render (un ref es un valor
+  // mutable fuera del ciclo de render de React).
+  const selectedIdRef = useRef(selectedId);
+  const onMarkerSelectRef = useRef(onMarkerSelect);
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+    onMarkerSelectRef.current = onMarkerSelect;
+  });
 
   // ── Init map once ──
   useEffect(() => {
@@ -170,72 +193,89 @@ export function MapView({
     let alive = true;
 
     (async () => {
-      const L = (await import('leaflet')).default;
-      await import('leaflet/dist/leaflet.css');
-      try {
-        await import('leaflet.markercluster');
-        await import('leaflet.markercluster/dist/MarkerCluster.css');
-        await import('leaflet.markercluster/dist/MarkerCluster.Default.css');
-      } catch { /* clustering not available — graceful fallback */ }
-      if (!alive) return;
+      const { Map: MaplibreMapCtor, NavigationControl, Marker, LngLatBounds, setWorkerUrl } = await import('maplibre-gl');
+      await import('maplibre-gl/dist/maplibre-gl.css');
+      if (!alive || !containerRef.current) return;
+      MarkerCtorRef.current = Marker;
+      LngLatBoundsCtorRef.current = LngLatBounds;
+      // Turbopack no resuelve bien el `import.meta.url` con el que
+      // MapLibre intenta detectar la URL de su propio worker — sin esto,
+      // el mapa monta pero nunca pinta ningún tile (ver
+      // scripts/copy-maplibre-worker.mjs para el detalle completo).
+      setWorkerUrl('/maplibre-gl-worker.mjs');
 
-      const map = L.map(containerRef.current!, {
-        center, zoom,
-        zoomControl: false,
-        scrollWheelZoom: true,
+      const map = new MaplibreMapCtor({
+        container: containerRef.current,
+        style: STREET_STYLE,
+        center: [center[1], center[0]],
+        zoom,
         // No tiene sentido navegar el mapa de propiedades más allá de
         // Tabasco — todo el catálogo está adentro (ver tabascoBoundary.ts,
-        // que también bloquea publicar fuera del estado). maxBoundsViscosity
-        // en 1.0 hace el límite sólido, no un rebote tras soltar.
-        // minZoom 8 → 9 → 10 (2026-08-17, pedidos explícitos sucesivos):
-        // cada paso acerca más la vista mínima al tamaño real de Tabasco,
-        // dejando ver menos franja de fuera del estado en el zoom-out
-        // máximo.
-        maxBounds: TABASCO_BOUNDS,
-        maxBoundsViscosity: 1.0,
+        // que también bloquea publicar fuera del estado). A diferencia de
+        // Leaflet, maxBounds de MapLibre ya es un límite sólido por
+        // definición — no existe un equivalente a maxBoundsViscosity
+        // porque no hace falta, nunca "rebota", solo topa.
+        maxBounds: MAPLIBRE_MAX_BOUNDS,
         minZoom,
+        attributionControl: { compact: true },
       });
-      L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-      tileRef.current = L.tileLayer(TILES.street.url, {
-        attribution: TILES.street.attr,
-        maxZoom: 19,
-        className: 'map-tiles-light',
-      }).addTo(map);
+      map.addControl(new NavigationControl({ showCompass: false }), 'bottom-right');
 
-      map.on('moveend zoomend', () => {
+      // `onMapReady` se dispara DENTRO de 'load', no justo después de crear
+      // el mapa — a diferencia de Leaflet (listo de inmediato tras
+      // `L.map()`), MapLibre necesita el estilo cargado antes de poder
+      // `addSource`/`addLayer` (lo que hacen showZoneCircle/clearZoneCircle
+      // más abajo); llamarlas antes de tiempo lanza una excepción real.
+      // Riesgo bajo en la práctica (mapControls solo se usa por acción
+      // directa de la persona, nunca automático al montar — MapaClient.tsx
+      // guarda los controles en estado y el estilo carga mucho antes de
+      // que alguien alcance a hacer clic en algo), pero es la forma
+      // correcta de todos modos.
+      map.on('load', () => {
+        if (!alive) return;
+        mapRef.current = map;
+        setReady(true);
+        onMapReady?.({
+          flyTo: (lat, lng, z = 14) => map.flyTo({ center: [lng, lat], zoom: z, duration: 800 }),
+          showZoneCircle: (lat, lng, radius) => {
+            const data = circlePolygon(lat, lng, radius);
+            const src = map.getSource(ZONE_CIRCLE_SOURCE) as GeoJSONSource | undefined;
+            if (src) { src.setData(data); return; }
+            map.addSource(ZONE_CIRCLE_SOURCE, { type: 'geojson', data });
+            map.addLayer({
+              id: `${ZONE_CIRCLE_SOURCE}-fill`, type: 'fill', source: ZONE_CIRCLE_SOURCE,
+              paint: { 'fill-color': '#0D7065', 'fill-opacity': 0.07 },
+            });
+            map.addLayer({
+              id: `${ZONE_CIRCLE_SOURCE}-line`, type: 'line', source: ZONE_CIRCLE_SOURCE,
+              paint: { 'line-color': '#0D7065', 'line-width': 2, 'line-opacity': 0.55, 'line-dasharray': [2, 1.5] },
+            });
+          },
+          clearZoneCircle: () => {
+            if (map.getLayer(`${ZONE_CIRCLE_SOURCE}-fill`)) map.removeLayer(`${ZONE_CIRCLE_SOURCE}-fill`);
+            if (map.getLayer(`${ZONE_CIRCLE_SOURCE}-line`)) map.removeLayer(`${ZONE_CIRCLE_SOURCE}-line`);
+            if (map.getSource(ZONE_CIRCLE_SOURCE)) map.removeSource(ZONE_CIRCLE_SOURCE);
+          },
+        });
+      });
+
+      function notifyBounds() {
         if (!onBoundsChange) return;
         const b = map.getBounds();
         onBoundsChange({ north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() });
-      });
+      }
+      map.on('moveend', notifyBounds);
+      map.on('zoomend', notifyBounds);
 
+      // A diferencia de Leaflet (donde un marcador SÍ vive dentro del mismo
+      // árbol de eventos que el mapa, y hacía falta un flag para no
+      // deseleccionar al hacer clic en un pin), los Marker de MapLibre son
+      // elementos DOM aparte, fuera del <canvas> — un clic ahí nunca llega
+      // a este listener, así que no hace falta ningún workaround.
       map.on('click', () => {
-        if (skipMapClickRef.current) { skipMapClickRef.current = false; return; }
-        onMarkerSelect?.(null);
+        onMarkerSelectRef.current?.(null);
       });
-
-      onMapReady?.({
-        flyTo: (lat, lng, z = 14) => map.flyTo([lat, lng], z, { duration: 0.8 }),
-        showZoneCircle: (lat, lng, radius) => {
-          circleRef.current?.remove();
-          circleRef.current = L.circle([lat, lng], {
-            radius,
-            color:       '#0D7065',
-            fillColor:   '#0D7065',
-            fillOpacity: 0.07,
-            weight:      2,
-            opacity:     0.55,
-            dashArray:   '8 6',
-          }).addTo(map);
-        },
-        clearZoneCircle: () => {
-          circleRef.current?.remove();
-          circleRef.current = null;
-        },
-      });
-
-      mapRef.current = map;
-      setReady(true);
     })();
 
     return () => {
@@ -248,174 +288,174 @@ export function MapView({
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Tile layer switch ──
-  useEffect(() => {
-    if (!ready) return;
-    (async () => {
-      const L = (await import('leaflet')).default;
-      tileRef.current?.remove();
-      const t = TILES[tileType];
-      tileRef.current = L.tileLayer(t.url, {
-        attribution: t.attr,
-        maxZoom: 19,
-        // El filtro de color solo aplica a 'street' — 'satellite' debe
-        // verse a color real, nunca desaturado.
-        className: tileType === 'street' ? 'map-tiles-light' : '',
-      }).addTo(mapRef.current);
-    })();
-  }, [tileType, ready]);
-
   // ── Zona aproximada (privacidad) — círculo en vez de pin exacto ──
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !mapRef.current) return;
     if (!approximate) return;
     if (!Number.isFinite(center[0]) || !Number.isFinite(center[1])) return;
-    (async () => {
-      const L = (await import('leaflet')).default;
-      circleRef.current?.remove();
-      circleRef.current = L.circle(center, {
-        radius: approximateRadius,
-        color: '#0D7065',
-        fillColor: '#0D7065',
-        fillOpacity: 0.1,
-        weight: 2,
-        opacity: 0.6,
-        dashArray: '8 6',
-      }).addTo(mapRef.current);
-      mapRef.current.setView(center, zoom);
-    })();
-    return () => { circleRef.current?.remove(); circleRef.current = null; };
+    const map = mapRef.current;
+    const data = circlePolygon(center[0], center[1], approximateRadius);
+    const src = map.getSource(ZONE_CIRCLE_SOURCE) as GeoJSONSource | undefined;
+    if (src) {
+      src.setData(data);
+    } else {
+      map.addSource(ZONE_CIRCLE_SOURCE, { type: 'geojson', data });
+      map.addLayer({
+        id: `${ZONE_CIRCLE_SOURCE}-fill`, type: 'fill', source: ZONE_CIRCLE_SOURCE,
+        paint: { 'fill-color': '#0D7065', 'fill-opacity': 0.1 },
+      });
+      map.addLayer({
+        id: `${ZONE_CIRCLE_SOURCE}-line`, type: 'line', source: ZONE_CIRCLE_SOURCE,
+        paint: { 'line-color': '#0D7065', 'line-width': 2, 'line-opacity': 0.6, 'line-dasharray': [2, 1.5] },
+      });
+    }
+    map.jumpTo({ center: [center[1], center[0]], zoom });
+    return () => {
+      if (map.getLayer(`${ZONE_CIRCLE_SOURCE}-fill`)) map.removeLayer(`${ZONE_CIRCLE_SOURCE}-fill`);
+      if (map.getLayer(`${ZONE_CIRCLE_SOURCE}-line`)) map.removeLayer(`${ZONE_CIRCLE_SOURCE}-line`);
+      if (map.getSource(ZONE_CIRCLE_SOURCE)) map.removeSource(ZONE_CIRCLE_SOURCE);
+    };
   }, [approximate, approximateRadius, ready]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Markers / clustering ──
+  // ── Dibuja pines/clusters según el índice + el viewport actual ──
+  // useCallback con deps [] a propósito: el cuerpo solo lee `.current` de
+  // refs (todas estables entre renders), nunca props/state directo — así
+  // la función en sí es estable y no hace falta la indirección de un ref
+  // aparte para poder llamarla desde un listener agregado una sola vez.
+  const renderClusters = useCallback(() => {
+    const map = mapRef.current;
+    const index = clusterIndexRef.current;
+    const MarkerCtor = MarkerCtorRef.current;
+    if (!map || !index || !MarkerCtor) return;
+
+    markersOnMapRef.current.forEach((m) => m.remove());
+    markersOnMapRef.current = [];
+
+    const b = map.getBounds();
+    const bbox: [number, number, number, number] = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+    const clusters = index.getClusters(bbox, Math.round(map.getZoom()));
+
+    clusters.forEach((c) => {
+      const [lng, lat] = c.geometry.coordinates;
+      const props = c.properties as { cluster?: boolean; point_count?: number; cluster_id?: number; id?: string };
+
+      if (props.cluster) {
+        const el = elementFromHtml(clusterHtml(props.point_count!));
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const expansionZoom = Math.min(index.getClusterExpansionZoom(props.cluster_id!), 19);
+          map.easeTo({ center: [lng, lat], zoom: expansionZoom, duration: 400 });
+        });
+        const marker = new MarkerCtor({ element: el, anchor: 'center' }).setLngLat([lng, lat]).addTo(map);
+        markersOnMapRef.current.push(marker);
+        return;
+      }
+
+      const original = markerByIdRef.current.get(props.id!);
+      if (!original) return;
+      const active = selectedIdRef.current === original.id;
+      const el = elementFromHtml(pinHtml(
+        FLOOD_COLORS[original.riesgoInundacion],
+        FLOOD_DARK[original.riesgoInundacion],
+        shortPrice(original.precio, original.operacion),
+        active,
+      ));
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onMarkerSelectRef.current?.(original);
+      });
+      const marker = new MarkerCtor({ element: el, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map);
+      markersOnMapRef.current.push(marker);
+    });
+  }, []);
+
+  // Los clusters dependen del viewport, así que tienen que recalcularse en
+  // cada pan/zoom — algo que Leaflet.markercluster hacía solo por dentro
+  // del plugin; supercluster no dibuja nada por sí mismo, hay que
+  // llamarlo. `renderClusters` es estable (useCallback arriba), así que
+  // este listener no necesita reagregarse en cada render.
+  useEffect(() => {
+    if (!ready || !mapRef.current) return;
+    const map = mapRef.current;
+    const handler = () => renderClusters();
+    map.on('moveend', handler);
+    map.on('zoomend', handler);
+    return () => {
+      map.off('moveend', handler);
+      map.off('zoomend', handler);
+    };
+  }, [ready, renderClusters]);
+
+  // ── Reconstruye el índice de clustering cuando cambian los marcadores ──
+  useEffect(() => {
+    if (!ready || !mapRef.current || approximate) return;
+    const map = mapRef.current;
+
+    const puntos: PointFeature<{ id: string }>[] = [];
+    const posiciones = new Map<string, [number, number]>();
+    const porId = new Map<string, MapMarker>();
+
+    markers.forEach((m) => {
+      // Un solo pin con coordenada inválida (ej. propiedad local vieja sin
+      // latPublico/lngPublico, ver conPuntoPublico en propiedadesLocales.ts)
+      // no debe tirar el resto del mapa.
+      if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) return;
+      const [jLat, jLng] = jitterCoord(m.id, m.lat, m.lng);
+      posiciones.set(m.id, [jLng, jLat]);
+      porId.set(m.id, m);
+      puntos.push({
+        type: 'Feature',
+        properties: { id: m.id },
+        geometry: { type: 'Point', coordinates: [jLng, jLat] },
+      });
+    });
+
+    // maxZoom por encima del máximo real de interacción del mapa (19) —
+    // así, al llegar al zoom máximo, supercluster sigue intentando separar
+    // puntos cercanos en vez de dejarlos agrupados sin salida (equivalente
+    // al "spiderfy" que traía el plugin de Leaflet).
+    const index = new Supercluster<{ id: string }>({ radius: 55, maxZoom: 20 });
+    index.load(puntos);
+    clusterIndexRef.current = index;
+    positionsRef.current = posiciones;
+    markerByIdRef.current = porId;
+
+    renderClusters();
+
+    // Sin esto, si el contenedor del mapa cambió de tamaño por cualquier
+    // reflow de la página desde que MapLibre lo midió por última vez (ej.
+    // al hacer clic en un chip de filtro y que algo alrededor del mapa se
+    // reacomode), el mapa sigue usando su tamaño cacheado viejo hasta que
+    // algo se lo avisa. Bug real reportado 2026-08-17 (chips de filtro en
+    // modo mapa de /propiedades). `resize()` es barato cuando no hace
+    // falta.
+    map.resize();
+
+    // Ver el comentario de `fitToMarkers` en MapViewProps — encuadra sobre
+    // las posiciones YA colocadas (después del jitter de privacidad), no
+    // sobre `markers` crudo, para que el encuadre coincida con dónde están
+    // los pines de verdad.
+    const LngLatBoundsCtor = LngLatBoundsCtorRef.current;
+    if (fitToMarkers && posiciones.size > 0 && LngLatBoundsCtor) {
+      const coords = Array.from(posiciones.values());
+      if (coords.length === 1) {
+        map.jumpTo({ center: coords[0], zoom: Math.max(zoom, 13) });
+      } else {
+        const bounds = coords.reduce(
+          (b, c) => b.extend(c),
+          new LngLatBoundsCtor(coords[0], coords[0]),
+        );
+        map.fitBounds(bounds, { padding: 32, maxZoom: 14, duration: 0 });
+      }
+    }
+  }, [markers, ready, approximate, fitToMarkers, renderClusters]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Solo cambió cuál está seleccionado — no hace falta reconstruir el
+  //    índice, solo volver a pintar con el estilo activo/inactivo correcto. ──
   useEffect(() => {
     if (!ready || approximate) return;
-    (async () => {
-      const L = (await import('leaflet')).default;
-      const hasCluster = !!(L as any).markerClusterGroup;
-
-      if (clusterRef.current) { clusterRef.current.remove(); clusterRef.current = null; }
-      lmRef.current.forEach((m) => m.remove());
-      lmRef.current.clear();
-
-      // Protección de respaldo — solo importa cuando `hasCluster` es false
-      // (el import dinámico de leaflet.markercluster falló): en ese modo no
-      // hay spiderfy que separe pines apilados en el mismo punto al llegar
-      // a maxZoom, así que dos propiedades muy cercanas quedarían una
-      // tapando a la otra, inalcanzable. `jitterCoord` ya reparte cada
-      // propiedad en hasta 120m según su id, así que una colisión real es
-      // poco común, pero no imposible (dos ids con ángulo/distancia
-      // parecidos) — esto la resuelve de forma determinista en vez de
-      // confiar en que nunca pase.
-      const posicionesUsadas: [number, number][] = [];
-      const MIN_SEPARACION_GRADOS = 0.00015; // ~15-17m, visible incluso a zoom máximo
-      function separarSiColisiona(lat: number, lng: number, id: string): [number, number] {
-        let finalLat = lat;
-        let finalLng = lng;
-        let intento = 0;
-        while (
-          intento < 12 &&
-          posicionesUsadas.some(
-            ([pl, pn]) => Math.abs(pl - finalLat) < MIN_SEPARACION_GRADOS && Math.abs(pn - finalLng) < MIN_SEPARACION_GRADOS
-          )
-        ) {
-          intento++;
-          const angle = ((id.charCodeAt(0) * 37 + intento * 47) % 360) * (Math.PI / 180);
-          const dist = MIN_SEPARACION_GRADOS * 1.3 * intento;
-          finalLat = lat + dist * Math.cos(angle);
-          finalLng = lng + dist * Math.sin(angle);
-        }
-        posicionesUsadas.push([finalLat, finalLng]);
-        return [finalLat, finalLng];
-      }
-
-      let container: any;
-      if (hasCluster) {
-        clusterRef.current = (L as any).markerClusterGroup({
-          maxClusterRadius: 55,
-          showCoverageOnHover: false,
-          spiderfyOnMaxZoom: true,
-          // Procesa los marcadores en lotes (requestAnimationFrame) en vez
-          // de todos de golpe — sin esto, agregar varios cientos/miles de
-          // marcadores de una sola vez puede congelar la pestaña un
-          // instante. Complementa el fetch acotado por área
-          // (MapaClient.tsx) — ayuda incluso mientras el backend no
-          // implemente el filtro por bounds.
-          chunkedLoading: true,
-          iconCreateFunction: (cluster: any) => {
-            const n = cluster.getChildCount();
-            const sz = n > 99 ? 44 : 38;
-            return L.divIcon({
-              className: '',
-              html: clusterHtml(n),
-              iconSize:   [sz, sz] as [number, number],
-              iconAnchor: [sz / 2, sz / 2] as [number, number],
-            });
-          },
-        });
-        container = clusterRef.current;
-      } else {
-        container = mapRef.current;
-      }
-
-      markers.forEach((m) => {
-        // Un solo pin con coordenada inválida (ej. propiedad local vieja sin
-        // latPublico/lngPublico, ver conPuntoPublico en propiedadesLocales.ts)
-        // no debe tirar el resto del mapa — Leaflet lanza y corta el forEach
-        // a la mitad si se le pasa NaN, dejando de dibujar todos los pines
-        // siguientes. Se salta silenciosamente solo ese marcador.
-        if (!Number.isFinite(m.lat) || !Number.isFinite(m.lng)) return;
-        const color  = FLOOD_COLORS[m.riesgoInundacion];
-        const dark   = FLOOD_DARK[m.riesgoInundacion];
-        const active = selectedId === m.id;
-        const icon   = L.divIcon({
-          className:  '',
-          html:       pinHtml(color, dark, shortPrice(m.precio, m.operacion), active),
-          iconSize:   undefined,
-          iconAnchor: [38, 29] as [number, number],
-        });
-
-        const [jLat, jLng] = jitterCoord(m.id, m.lat, m.lng);
-        const posicionFinal = hasCluster ? [jLat, jLng] as [number, number] : separarSiColisiona(jLat, jLng, m.id);
-        const lm = L.marker(posicionFinal, { icon, zIndexOffset: active ? 1000 : 0 });
-        lm.on('click', (e: any) => {
-          e.originalEvent?.stopPropagation();
-          skipMapClickRef.current = true;
-          onMarkerSelect?.(m);
-        });
-        container.addLayer(lm);
-        lmRef.current.set(m.id, lm);
-      });
-
-      if (hasCluster) mapRef.current.addLayer(clusterRef.current);
-
-      // Sin esto, si el contenedor del mapa cambió de tamaño por cualquier
-      // reflow de la página desde que Leaflet lo midió por última vez
-      // (ej. al hacer clic en un chip de filtro y que algo alrededor del
-      // mapa se reacomode), Leaflet sigue usando su tamaño cacheado viejo
-      // hasta que algo se lo avisa — eso se ve como un salto/desalineación
-      // del mapa. Bug real reportado 2026-08-17 (chips de filtro en modo
-      // mapa de /propiedades). `invalidateSize` es barato cuando no hace
-      // falta (no hace nada si el tamaño no cambió).
-      mapRef.current.invalidateSize();
-
-      // Ver el comentario de `fitToMarkers` en MapViewProps — encuadra
-      // sobre las posiciones YA colocadas (lmRef, después del jitter de
-      // privacidad), no sobre `markers` crudo, para que el encuadre
-      // coincida exactamente con dónde están los pines de verdad.
-      if (fitToMarkers && lmRef.current.size > 0) {
-        const coords: [number, number][] = Array.from(lmRef.current.values()).map((lm) => {
-          const ll = lm.getLatLng();
-          return [ll.lat, ll.lng];
-        });
-        if (coords.length === 1) {
-          mapRef.current.setView(coords[0], Math.max(zoom, 13));
-        } else {
-          mapRef.current.fitBounds(L.latLngBounds(coords), { padding: [32, 32], maxZoom: 14 });
-        }
-      }
-    })();
-  }, [markers, selectedId, ready, onMarkerSelect, fitToMarkers, zoom]);
+    renderClusters();
+  }, [selectedId, ready, approximate, renderClusters]);
 
   return <div ref={containerRef} style={{ height, width: '100%' }} />;
 }

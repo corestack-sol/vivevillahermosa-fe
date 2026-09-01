@@ -188,36 +188,25 @@
   animation: countUp 0.6s ease-out both;
 }
 
-/* Leaflet fixes inside Next.js */
-.leaflet-container {
+/* MapLibre GL fixes inside Next.js — mismo propósito que antes tenía
+   .leaflet-container (migración 2026-09-02): asegura que el mapa nunca
+   arranque con un z-index alto que compita con overlays propios de la
+   página (modales, paneles de filtro, etc., que ya manejan su propio
+   z-index explícito). */
+.maplibregl-map {
   width: 100%;
   height: 100%;
   z-index: 1;
 }
 
-/* Aclara el basemap de calles (Esri World_Street_Map, ver MapView.tsx) —
-   ese proveedor trae un fondo beige/amarillo de fábrica.
-   Ajustado dos veces 2026-08-26, ambas verificadas localmente con `sharp`
-   (misma fórmula que `filter:` del navegador) sobre tiles reales de
-   Villahermosa antes de subir el número:
-   1ª versión (saturate+brightness) dejaba las vías principales bien pero
-   las calles de colonia (líneas delgadas y pálidas de por sí) casi
-   invisibles contra el fondo ya blanqueado.
-   2ª versión (saturate+brightness+contrast alto) empeoró justo eso: subir
-   el contraste empuja lo que ya está cerca del blanco TODAVÍA más al
-   blanco — las vías principales (con color propio, naranja/rojo) se
-   veían mejor, pero las calles de colonia (casi del mismo tono que el
-   fondo) se perdían por completo. Pedido explícito: "me refiero a las
-   calles de las colonias... no las vías principales (esas se ven bien)".
-   Esta versión BAJA el brillo en vez de subirlo — dejando el fondo claro
-   pero no blanco puro, con margen suficiente para que las líneas pálidas
-   de colonia sigan siendo visibles como gris sobre el fondo, sin perder
-   el naranja/rojo de las vías principales. Solo se aplica a la capa
-   'street' (via className en L.tileLayer) — nunca a 'satellite', que
-   debe verse a color real. */
-.map-tiles-light {
-  filter: saturate(0.25) brightness(0.95) contrast(1.2);
-}
+/* .map-tiles-light existió del 2026-08-26 al 2026-09-02 (Esri raster +
+   filtro CSS para acercarlo a un look tipo Google Maps) — retirada al
+   migrar a OpenFreeMap/MapLibre GL (ver MapView.tsx): el estilo vectorial
+   'liberty' ya pinta agua/calles/parques con su color real cada uno, así
+   que el filtro global que aproximaba eso sobre una imagen ya no hace
+   falta ni tiene a qué aplicarse. Historial de la afinación completa
+   (3 rondas de ajuste real) se puede ver en el historial de git de este
+   archivo si hace falta retomar el approach raster+filtro alguna vez. */
 
 /* Price display font */
 .font-price {
