@@ -31,9 +31,28 @@ export function NotificationBell() {
 
   useEffect(() => {
     if (!user) return;
-    backendFetch<{ notificaciones: Notificacion[]; noLeidas: number }>('/notificaciones')
-      .then((d) => { setItems(d.notificaciones ?? []); setUnread(d.noLeidas ?? 0); })
-      .catch(() => {});
+    function cargar() {
+      backendFetch<{ notificaciones: Notificacion[]; noLeidas: number }>('/notificaciones')
+        .then((d) => { setItems(d.notificaciones ?? []); setUnread(d.noLeidas ?? 0); })
+        .catch(() => {});
+    }
+    cargar();
+    // Antes solo se pedía una vez al montar — alguien que ya tenía la
+    // pestaña abierta cuando le llegaba un mensaje nunca veía el badge
+    // actualizarse sin recargar toda la página (reporte real 2026-09-01,
+    // sobre notificaciones de contacto). Mismo patrón de `visibilitychange`
+    // que ya usa AuthContext.tsx para revalidar sesión al volver a la
+    // pestaña; el intervalo cubre el caso de quedarse en la misma pestaña
+    // sin cambiar de foco.
+    const interval = setInterval(cargar, 60_000);
+    function onVisible() {
+      if (document.visibilityState === 'visible') cargar();
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [user]);
 
   async function marcarTodasLeidas() {

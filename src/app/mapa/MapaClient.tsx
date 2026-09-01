@@ -339,23 +339,23 @@ export function MapaClient({ allProperties }: Props) {
           salida (Inicio / Ver como lista) en vez de dejar a la persona
           sin ninguna forma de salir del mapa si no quiere girar el
           teléfono. */}
-      <div className="rotate-hint fixed inset-0 z-[1300] bg-brand-dark flex-col items-center justify-center text-center px-8 gap-5">
-        <span className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center">
-          <RotateCw size={28} className="text-white" />
+      <div className="rotate-hint fixed inset-0 z-[1300] bg-page flex-col items-center justify-center text-center px-8 gap-5">
+        <span className="w-16 h-16 rounded-2xl bg-brand-pale flex items-center justify-center">
+          <RotateCw size={28} className="text-brand" />
         </span>
         <div>
-          <p className="font-heading font-bold text-lg text-white mb-1.5">Gira tu dispositivo</p>
-          <p className="text-sm text-white/50 max-w-xs">
+          <p className="font-heading font-bold text-lg text-gray-900 mb-1.5">Gira tu dispositivo</p>
+          <p className="text-sm text-gray-500 max-w-xs">
             El mapa se explora mucho mejor en horizontal. Gira tu teléfono o tablet para verlo completo.
           </p>
         </div>
         <div className="flex flex-col gap-2 w-full max-w-[220px] mt-2">
           <Link href="/propiedades"
-            className="flex items-center justify-center gap-2 bg-white text-brand-dark font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-white/90 transition-colors">
+            className="flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors">
             <List size={15} /> Ver como lista
           </Link>
           <Link href="/"
-            className="flex items-center justify-center gap-2 text-white/60 hover:text-white text-sm px-4 py-2 transition-colors">
+            className="flex items-center justify-center gap-2 text-gray-400 hover:text-gray-600 text-sm px-4 py-2 transition-colors">
             <ChevronLeft size={15} /> Volver al inicio
           </Link>
         </div>
