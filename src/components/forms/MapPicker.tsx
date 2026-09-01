@@ -98,9 +98,13 @@ export function MapPicker({ value, onChange, center = [17.9869, -92.9303], onRej
         center: start,
         zoom: 14,
         // Restringe panning/zoom a Tabasco + margen — ver TABASCO_BOUNDS.
-        // minZoom 8 → 9 → 10, mismo ajuste que MapView.tsx (2026-08-17).
+        // minZoom bajado de 10 a 8 (2026-09-02), mismo ajuste y mismo
+        // motivo real que MapView.tsx: 10 era matemáticamente más alto
+        // que el zoom mínimo real para ver el estado completo (~9 en
+        // desktop, calculado con la fórmula estándar de fitBounds — ver
+        // el comentario de `minZoom` en MapView.tsx para el detalle).
         maxBounds: MAPLIBRE_MAX_BOUNDS,
-        minZoom: 10,
+        minZoom: 8,
         attributionControl: false,
       });
       mapRef.current = map;

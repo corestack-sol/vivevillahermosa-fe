@@ -79,16 +79,24 @@ interface MapViewProps {
    */
   fitToMarkers?: boolean;
   /**
-   * Piso de zoom-out. Default 10 — el mismo valor ya afinado (2026-08-17)
-   * para /mapa y el mapa embebido de /propiedades, donde el usuario
-   * navega a mano y no tiene sentido alejarse más allá de Tabasco. El
-   * mini-mapa del Home (ClickableMap, `fitToMarkers`) es distinto: con
+   * Piso de zoom-out. Default 8 — bajado desde 10 (pedido explícito
+   * 2026-09-02: "no puedo hacer zoom out para ver el mapa completo de
+   * Tabasco"). El valor anterior (subido 8→9→10 en 2026-08-17 a base de
+   * ajustes sucesivos, sin verificar contra el tamaño real del estado)
+   * resultó ser MÁS ALTO que el zoom mínimo real para que quepa
+   * TABASCO_BOUNDS completo: calculado con la misma fórmula estándar de
+   * Mercator que usa cualquier librería de mapas (fitBounds), un
+   * viewport de escritorio típico necesita ~zoom 9 para ver el estado
+   * completo, uno de celular ~zoom 7 — con minZoom=10 era matemáticamente
+   * imposible alejarse lo suficiente en ningún dispositivo, no un
+   * problema del botón. 8 deja margen real de sobra sobre el mínimo
+   * calculado (9.3 en desktop) sin regresar al extremo original (el
+   * primer valor histórico, antes de la serie de ajustes sin verificar).
+   * El mini-mapa del Home (ClickableMap, `fitToMarkers`) sigue con su
+   * propio override más bajo (`minZoom={7}`, ver src/app/page.tsx) —
    * ~28 marcadores repartidos en todo el estado dentro de una caja de
-   * apenas 320px, `fitBounds` pide un zoom por debajo de 10 y queda
-   * pegado al piso desde que carga — el botón "–" nace deshabilitado.
-   * Bug real reportado 2026-08-20: "en el mapa de HOME no se puede hacer
-   * zoom out igual que en la pág de MAPA". No es que el botón falle, es
-   * que no hay a dónde alejarse. Bajar el piso solo para ese mini-mapa.
+   * apenas 320px necesitan alejarse todavía más que un mapa a pantalla
+   * completa.
    */
   minZoom?: number;
 }
@@ -155,7 +163,7 @@ export function MapView({
   approximate = false,
   approximateRadius = 350,
   fitToMarkers = false,
-  minZoom = 10,
+  minZoom = 8,
 }: MapViewProps) {
   const containerRef  = useRef<HTMLDivElement>(null);
   const mapRef         = useRef<MaplibreMap | null>(null);
@@ -287,6 +295,25 @@ export function MapView({
       }
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Avisa a MapLibre cuando el contenedor SÍ cambia de tamaño de verdad ──
+  // Antes se llamaba `map.resize()` a mano dentro del efecto de marcadores,
+  // sin condición — como ese efecto corre en cada pan/zoom (cada vez que
+  // llega un área nueva de propiedades), `resize()` se disparaba en cada
+  // uno también. Se pensó "barato cuando no hace falta" (bug real
+  // 2026-08-17, chips de filtro reacomodando el layout), pero un trace de
+  // rendimiento en vivo (reporte real de latencia al mover el mapa,
+  // 2026-09-02) mostró 127ms de forced reflow reales dentro de
+  // `_containerDimensions` de MapLibre — nada barato. `ResizeObserver` solo
+  // dispara cuando el tamaño de VERDAD cambia, cubriendo el caso original
+  // (y cualquier otro) sin pagar el costo en cada pan.
+  useEffect(() => {
+    if (!ready || !mapRef.current || !containerRef.current) return;
+    const map = mapRef.current;
+    const observer = new ResizeObserver(() => map.resize());
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [ready]);
 
   // ── Zona aproximada (privacidad) — círculo en vez de pin exacto ──
   useEffect(() => {
@@ -421,15 +448,6 @@ export function MapView({
     markerByIdRef.current = porId;
 
     renderClusters();
-
-    // Sin esto, si el contenedor del mapa cambió de tamaño por cualquier
-    // reflow de la página desde que MapLibre lo midió por última vez (ej.
-    // al hacer clic en un chip de filtro y que algo alrededor del mapa se
-    // reacomode), el mapa sigue usando su tamaño cacheado viejo hasta que
-    // algo se lo avisa. Bug real reportado 2026-08-17 (chips de filtro en
-    // modo mapa de /propiedades). `resize()` es barato cuando no hace
-    // falta.
-    map.resize();
 
     // Ver el comentario de `fitToMarkers` en MapViewProps — encuadra sobre
     // las posiciones YA colocadas (después del jitter de privacidad), no
