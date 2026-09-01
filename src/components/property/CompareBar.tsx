@@ -11,10 +11,18 @@ export function CompareBar() {
   if (ids.length === 0) return null;
 
   return (
-    // bottom-20 en móvil/tablet: deja espacio libre para la barra de
-    // acción fija de la ficha de propiedad (Contactar), que también vive
-    // pegada abajo — en lg+ esa barra no existe, así que baja a bottom-4.
-    <div className="fixed inset-x-0 bottom-20 lg:bottom-4 z-40 flex justify-center px-4 pointer-events-none">
+    // Antes bottom-20 fijo en móvil/tablet, pensado solo para dejar
+    // espacio a la barra de acción fija de la ficha de propiedad
+    // (Contactar) — en CUALQUIER OTRA página (sin esa barra) quedaba
+    // innecesariamente lejos del borde inferior (reporte real
+    // 2026-09-02). Ahora usa una variable CSS que solo la ficha de
+    // propiedad enciende mientras está montada (ReservaEspacioCompareBar,
+    // ver PropertyDetailView.tsx) — en el resto de páginas queda en 0 y
+    // esta barra se acerca al borde como cualquier toast normal. `lg:`
+    // sigue como clase real (no inline style) para que la cascada de
+    // Tailwind pueda seguir pisándola en escritorio, donde nunca hay nada
+    // que evitar abajo.
+    <div className="fixed inset-x-0 bottom-[calc(var(--compare-bar-bottom-offset,0px)+1rem)] lg:bottom-4 z-40 flex justify-center px-5 pointer-events-none">
       <div className="pointer-events-auto flex items-center gap-3 bg-brand-dark text-white rounded-2xl shadow-2xl pl-4 pr-2 py-2 animate-toast-in">
         <Scale size={16} className="text-accent flex-shrink-0" />
         <span className="text-sm font-medium whitespace-nowrap">

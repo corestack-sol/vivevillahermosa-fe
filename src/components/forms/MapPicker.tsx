@@ -39,6 +39,7 @@ export function MapPicker({ value, onChange, center = [17.9869, -92.9303], onRej
   // así el efecto que sincroniza `value` (línea ~110) no tiene que volver
   // a `await import(...)` cada vez que cambia el pin.
   const MarkerCtorRef = useRef<typeof MaplibreMarker | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   // Refs para que los listeners (agregados una sola vez al montar) siempre
   // lean el valor/callback más reciente sin tener que reagregarse. Se
@@ -109,6 +110,20 @@ export function MapPicker({ value, onChange, center = [17.9869, -92.9303], onRej
       });
       mapRef.current = map;
 
+      // Este mapa vive dentro de un paso del wizard de PublishForm.tsx —
+      // si el contenedor todavía no tenía su tamaño final cuando MapLibre
+      // lo midió por primera vez (ej. una transición/animación de paso que
+      // no había terminado de asentarse), se queda mal medido para
+      // siempre: cada clic/arrastre calcula mal a qué lat/lng corresponde
+      // el pixel donde tocaste, y el mapa se siente "trabado" o imposible
+      // de navegar bien. `ResizeObserver` avisa a MapLibre en cuanto el
+      // contenedor SÍ asienta su tamaño real (mismo fix aplicado a
+      // MapView.tsx tras encontrar el problema de latencia ahí — ver ese
+      // archivo para el detalle completo).
+      const resizeObserver = new ResizeObserver(() => map.resize());
+      resizeObserver.observe(containerRef.current);
+      resizeObserverRef.current = resizeObserver;
+
       map.on('click', (e) => {
         const { lat, lng } = e.lngLat;
         // Rechaza el clic en vez de colocar el pin cuando cae fuera de la
@@ -129,6 +144,8 @@ export function MapPicker({ value, onChange, center = [17.9869, -92.9303], onRej
 
     return () => {
       alive = false;
+      resizeObserverRef.current?.disconnect();
+      resizeObserverRef.current = null;
       markerRef.current?.remove();
       markerRef.current = null;
       mapRef.current?.remove();

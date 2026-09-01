@@ -21,6 +21,7 @@ import { ReportButton } from '@/components/property/ReportButton';
 import { RecentlyViewedTracker } from '@/components/property/RecentlyViewedTracker';
 import { OwnerActionsBar } from '@/components/property/OwnerActionsBar';
 import { MobileContactCta } from '@/components/property/MobileContactCta';
+import { ReservaEspacioCompareBar } from '@/components/property/ReservaEspacioCompareBar';
 import { formatRelativeDate } from '@/lib/format';
 
 export interface PropertyDetailExtras {
@@ -91,6 +92,7 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
         <FavoriteButton propiedadId={property.id} />
         <MobileContactCta propertyId={property.id} />
       </div>
+      <ReservaEspacioCompareBar />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24 lg:pb-0">
 
