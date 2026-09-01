@@ -60,7 +60,9 @@ export function PropertyCard({ property, landmarkQuery, distanciaLabel }: Proper
   const { isSelected, toggle } = useCompare();
   const compared = isSelected(property.id);
 
-  // aspect-[20/21] = 20% más de alto que el aspect-[8/7] anterior, misma proporción de ancho
+  // aspect-[9/10] = un poco más de alto que el aspect-[20/21] anterior
+  // (pedido explícito 2026-09-01), que a su vez ya era 20% más alto que el
+  // aspect-[8/7] original — misma proporción de ancho en los tres casos.
   // @container: el ancho real de ESTA tarjeta (no el viewport) es lo que
   // decide su propio tamaño de texto/padding más abajo — necesario porque
   // el grid de /propiedades usa auto-fill (PropertiesClient.tsx) con un
@@ -70,7 +72,7 @@ export function PropertyCard({ property, landmarkQuery, distanciaLabel }: Proper
   // viewport no puede cubrir ambos casos, pero un container query sí.
   return (
     <>
-    <div className="group relative rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 ease-out aspect-[20/21] @container">
+    <div className="group relative rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 ease-out aspect-[9/10] @container">
       <Link
         href={`/propiedades/${property.slug}${landmarkQuery ?? ''}`}
         className="absolute inset-0 select-none"

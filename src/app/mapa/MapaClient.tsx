@@ -329,7 +329,13 @@ export function MapaClient({ allProperties }: Props) {
     // y el mapa siempre ganaba sin importar qué z-index se le pusiera al
     // header, porque nada dentro de este div podía "escapar" a competir con
     // hermanos fuera de él una vez que este div tiene su propio z-index.
-    <div ref={mapContainerRef} className="relative z-0 flex h-[calc(100vh-64px)] max-lg:landscape:pointer-coarse:h-screen [&:fullscreen]:h-screen bg-white">
+    // dvh en vez de vh: en iOS Safari, la barra de pestañas/dirección se
+    // queda visible al girar a horizontal (no soporta la Fullscreen API,
+    // ver toggleFullscreen() más abajo) — 100vh ahí mide el viewport de
+    // layout completo (como si el navegador ya no tuviera esa barra),
+    // dejando una franja del mapa tapada/cortada. 100dvh sí se ajusta al
+    // viewport que en verdad se ve (reporte real 2026-09-01).
+    <div ref={mapContainerRef} className="relative z-0 flex h-[calc(100dvh-64px)] max-lg:landscape:pointer-coarse:h-dvh [&:fullscreen]:h-dvh bg-white">
 
       {/* ══ Aviso "gira tu dispositivo" — solo móvil/tablet en vertical ══
           .rotate-hint (globals.css) lo muestra solo por CSS (max-width
