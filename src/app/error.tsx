@@ -2,7 +2,8 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { Home, RotateCw, ServerCrash } from 'lucide-react';
+import Image from 'next/image';
+import { Home, RotateCw } from 'lucide-react';
 import { buttonClasses } from '@/components/ui/Button';
 
 // Sin este archivo, cualquier error no atrapado (ej. el backend caído
@@ -24,9 +25,17 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
 
       <div className="relative min-h-[70vh] flex items-center justify-center px-4 py-20">
         <div className="max-w-lg w-full text-center">
-          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-white/10 flex items-center justify-center">
-            <ServerCrash size={28} className="text-white" />
-          </div>
+          {/* Misma mascota que not-found.tsx (pedido explícito 2026-09-02) —
+              un solo ícono de "algo no salió bien" en toda la plataforma,
+              en vez de uno genérico por tipo de error. */}
+          <Image
+            src="/images/icons/404-mascota.webp"
+            alt=""
+            width={168}
+            height={104}
+            priority
+            className="mx-auto mb-6"
+          />
 
           <p className="text-white/50 text-xs font-bold uppercase tracking-[0.2em] mb-3">Algo salió mal</p>
           <h1 className="font-display font-black text-white leading-tight mb-3"
