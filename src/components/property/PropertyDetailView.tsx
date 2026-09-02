@@ -19,6 +19,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { FavoriteButton } from '@/components/property/FavoriteButton';
 import { ReportButton } from '@/components/property/ReportButton';
 import { RecentlyViewedTracker } from '@/components/property/RecentlyViewedTracker';
+import { VistaTracker } from '@/components/property/VistaTracker';
 import { OwnerActionsBar } from '@/components/property/OwnerActionsBar';
 import { MobileContactCta } from '@/components/property/MobileContactCta';
 import { ReservaEspacioCompareBar } from '@/components/property/ReservaEspacioCompareBar';
@@ -79,6 +80,7 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
   return (
     <div className="min-h-screen bg-page">
       <RecentlyViewedTracker propertyId={property.id} />
+      <VistaTracker propertyId={property.id} />
 
       {/* Barra de acción fija en móvil/tablet — antes, para llegar al botón
           de contacto había que bajar por toda la descripción, amenidades,

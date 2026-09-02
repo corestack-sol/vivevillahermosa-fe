@@ -59,6 +59,16 @@ export interface BackendPublicProperty {
   agenteEmail?: string | null;
   agenteWhatsapp?: string | null;
   requiereMensajePrimero?: boolean;
+  // Presentes solo cuando el backend ya tiene tabla de eventos real (ver
+  // docs/BACKEND-VISTAS-CONTACTOS-02092026.md, pedido explícito
+  // 2026-09-02) — `undefined` hasta entonces, mapMiaBackend() lo trata
+  // como 0 en vez de inventar un número. `contactosReales` (no
+  // `contactos`) para coincidir con el nombre que OwnerActionsBar.tsx ya
+  // esperaba desde antes (ver su `MiaBackend.contactosReales`) — dos
+  // nombres distintos para el mismo dato hubiera sido confuso para el
+  // backend al implementarlo.
+  vistas?: number;
+  contactosReales?: number;
 }
 
 export function mapBackendProperty(bp: BackendPublicProperty): Property {

@@ -101,15 +101,20 @@ export interface MiPropiedad {
  * Adapta una propiedad del backend (GET /propiedades/mias) a la forma que
  * usa el panel del dueño — compartida por dashboard/propiedades,
  * dashboard/analitica y dashboard/page.tsx para no triplicar el mapeo.
- * vistas/contactos/favoritos en 0: sin backend de analítica todavía
- * (BACKEND.md §12, fuera del MVP).
+ * `favoritos` se queda en 0: no hay forma de saber cuánta gente marcó
+ * como favorita UNA propiedad específica (el backend solo expone los
+ * favoritos DEL visitante que pregunta, nunca por propiedad — pedirlo
+ * necesitaría un endpoint nuevo, fuera de alcance de este cambio).
+ * `vistas`/`contactos` sí leen el campo real del backend cuando existe
+ * (ver docs/BACKEND-VISTAS-CONTACTOS-02092026.md) — `?? 0` es el estado
+ * honesto mientras el backend no lo mande, no un placeholder inventado.
  */
 export function mapMiaBackend(bp: BackendPublicProperty): MiPropiedad {
   return {
     property: mapBackendProperty(bp),
     estado: bp.estado as EstadoPublicacion,
-    vistas: 0,
-    contactos: 0,
+    vistas: bp.vistas ?? 0,
+    contactos: bp.contactosReales ?? 0,
     favoritos: 0,
     publicadaHace: formatRelativeDate(bp.createdAt),
   };
