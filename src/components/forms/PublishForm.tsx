@@ -411,8 +411,22 @@ export function PublishForm() {
         // Fotos en este momento, no el mapa (eso vive en el paso de
         // Ubicación, anterior). Sin este aviso, el pin se movería solo
         // en un paso que ya no está mirando.
-        toast.success('Ubicamos tu propiedad en el mapa usando la ubicación de tu foto — puedes ajustarla en el paso de Ubicación.');
-        if (resultado.coloniaSugerida) setColoniaSugerida(resultado.coloniaSugerida);
+        // Antes decía "puedes ajustarla en el paso de Ubicación" — quedó
+        // desactualizado desde que el selector de pin se movió AQUÍ mismo
+        // (paso de Fotos, ver el comentario grande junto a <MapPicker>
+        // más abajo, 2026-08-26) — mandaba a buscar el mapa en un paso
+        // donde ya no vive, bug real reportado 2026-09-01 ("tengo que
+        // navegar por el mapa hasta encontrar el pin").
+        toast.success('Ubicamos tu propiedad en el mapa usando la ubicación de tu foto — siempre puedes ajustar el pin abajo.');
+        // Se aplica directo, sin preguntar — pedido explícito 2026-09-01:
+        // mismo criterio que ya usa el pin (setCoords sin confirmación),
+        // "colonia" es un campo de texto normal, siempre corregible a
+        // mano. `coloniaSugerida` sigue guardando el valor solo para
+        // mostrar el aviso de abajo, ya no para decidir si se aplica.
+        if (resultado.coloniaSugerida) {
+          setValue('colonia', resultado.coloniaSugerida.label, { shouldValidate: true, shouldDirty: true });
+          setColoniaSugerida(resultado.coloniaSugerida);
+        }
       });
     });
   }
@@ -1482,32 +1496,23 @@ export function PublishForm() {
               </div>
             )}
 
-            {/* Colonia sugerida por el GPS de una foto — nunca se aplica
-                sola, ver sugerirPinDesdeFoto()/coloniaCercana() arriba. */}
+            {/* Colonia sugerida por el GPS de una foto — se aplica directo
+                al campo (paso de Ubicación, ver addFiles arriba), esto
+                solo avisa que pasó y que se puede corregir a mano, sin
+                pedir confirmación (pedido explícito 2026-09-01). */}
             {coloniaSugerida && (
               <div className="flex items-center justify-between gap-2 bg-accent-pale border border-accent/20 rounded-xl px-3.5 py-2.5">
                 <p className="flex items-center gap-1.5 text-xs text-accent-dark">
-                  <MapPin size={13} className="flex-shrink-0" /> La ubicación de tu foto coincide con la colonia &quot;{coloniaSugerida.label}&quot; — ¿corregimos el campo Colonia?
+                  <MapPin size={13} className="flex-shrink-0" /> Detectamos que tu foto es de &quot;{coloniaSugerida.label}&quot; y ya actualizamos el campo Colonia — puedes corregirlo en el paso de Ubicación.
                 </p>
-                <div className="flex-shrink-0 flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setValue('colonia', coloniaSugerida.label, { shouldValidate: true, shouldDirty: true });
-                      setColoniaSugerida(null);
-                    }}
-                    className="text-xs font-semibold text-accent-dark hover:text-brand-dark whitespace-nowrap"
-                  >
-                    Corregir
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setColoniaSugerida(null)}
-                    className="text-xs text-gray-400 hover:text-gray-600 whitespace-nowrap"
-                  >
-                    Descartar
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setColoniaSugerida(null)}
+                  aria-label="Cerrar aviso"
+                  className="flex-shrink-0 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={13} />
+                </button>
               </div>
             )}
 

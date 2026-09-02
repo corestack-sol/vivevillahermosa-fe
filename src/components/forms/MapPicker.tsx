@@ -166,6 +166,17 @@ export function MapPicker({ value, onChange, center = [17.9869, -92.9303], onRej
       markerRef.current.setLngLat([value.lng, value.lat]);
     } else {
       markerRef.current = crearPin(map, MarkerCtor, value);
+      // Mueve la cámara al punto nuevo — bug real reportado 2026-09-01:
+      // cuando el pin llega solo (GPS de una foto, ver
+      // sugerirPinDesdeFoto() en PublishForm.tsx), el mapa se quedaba
+      // centrado donde estaba antes (el centro del municipio escrito a
+      // mano) y el pin real podía aparecer bien lejos de ahí, fuera de
+      // vista — quien publica tenía que navegar el mapa a ciegas para
+      // encontrarlo. Un primer clic manual también entra por esta misma
+      // rama (el marcador tampoco existía antes), pero ahí no cambia
+      // nada en la práctica: la persona ya está viendo el punto exacto
+      // donde acaba de tocar.
+      map.flyTo({ center: [value.lng, value.lat], zoom: Math.max(map.getZoom(), 15), duration: 800 });
     }
   }, [value]);
 
