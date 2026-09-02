@@ -311,6 +311,20 @@ export function MapView({
               'text-halo-width': 1.5,
             },
           });
+
+          // Sin esto, el municipio queda con DOS nombres encimados: el
+          // negro que ya trae 'liberty' desde OSM (source-layer "place",
+          // ver el comentario de `showMunicipioLabels` en MapViewProps) y
+          // el verde de la capa de arriba — bug real reportado 2026-09-01,
+          // visible en varios municipios a la vez. Se apagan los labels de
+          // lugar del estilo base en vez de filtrar cuáles coinciden con
+          // los 17 (no hay forma simple de saber, desde el filtro
+          // declarativo de un layer, "esta ciudad es justo una de esas
+          // 17") — la capa propia ya es la única fuente de verdad para
+          // nombre de municipio en este mapa.
+          for (const id of ['label_city', 'label_city_capital', 'label_town', 'label_village']) {
+            if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
+          }
         }
 
         onMapReady?.({
