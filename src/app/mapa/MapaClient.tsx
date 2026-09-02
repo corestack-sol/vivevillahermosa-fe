@@ -402,6 +402,7 @@ export function MapaClient({ allProperties }: Props) {
           onMarkerSelect={handleMarkerSelect}
           onBoundsChange={handleBoundsChange}
           onMapReady={handleMapReady}
+          showMunicipioLabels
         />
 
         {/* Sin resultados — antes el mapa quedaba en blanco sin ninguna

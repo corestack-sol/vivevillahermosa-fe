@@ -9,6 +9,7 @@ import Supercluster, { type PointFeature } from 'supercluster';
 import { jitterCoord } from '@/lib/colonias';
 import { TABASCO_BOUNDS } from '@/lib/tabascoBoundary';
 import { shortPrice, circlePolygon, toMaplibreBounds } from '@/lib/mapGeo';
+import { getAllMunicipalities } from '@/lib/api';
 
 export interface MapMarker {
   id: string;
@@ -99,7 +100,41 @@ interface MapViewProps {
    * completa.
    */
   minZoom?: number;
+  /**
+   * Dibuja el nombre de los 17 municipios sobre el mapa, siempre visible —
+   * pedido explícito 2026-09-01: "no veo los municipios Centla, Jalpa de
+   * Méndez... se deben poder ver los 17". No es un bug de este código: los
+   * nombres de lugar que ya trae el estilo `liberty` de OpenFreeMap vienen
+   * de OSM (`source-layer: place`, ver `label_town`/`label_village` en su
+   * style.json), y varias cabeceras municipales de Tabasco están
+   * catalogadas ahí con una categoría/población baja que el propio estilo
+   * oculta hasta zooms más altos — no hay forma de "arreglar" eso desde
+   * este lado, la fuente de datos no es nuestra. La solución real es dejar
+   * de depender de esos labels para algo tan básico como los 17 municipios
+   * y dibujar los nuestros, con las coordenadas ya verificadas de
+   * `src/data/municipalities.json` (mismo dato que ya usa /zonas). Solo
+   * `false` por default para no aparecer en MapPicker.tsx (elegir pin al
+   * publicar) ni en el mini-mapa de destacadas del Home — ninguno de los
+   * dos necesita orientación a nivel estado.
+   */
+  showMunicipioLabels?: boolean;
 }
+
+const MUNICIPIO_LABELS_SOURCE = 'municipios-labels';
+
+// Se calcula una sola vez a nivel de módulo — municipalities.json es
+// estático, no hace falta reconstruir este GeoJSON en cada render/montaje
+// del mapa. "Centro" se etiqueta "Villahermosa" para que coincida con el
+// nombre que ya usa el resto de la plataforma para ese municipio (ver el
+// breadcrumb de PropertyDetailView.tsx).
+const MUNICIPIO_LABELS_GEOJSON: GeoJSON.FeatureCollection<GeoJSON.Point, { nombre: string }> = {
+  type: 'FeatureCollection',
+  features: getAllMunicipalities().map((m) => ({
+    type: 'Feature',
+    properties: { nombre: m.id === 'centro' ? 'Villahermosa' : m.nombre },
+    geometry: { type: 'Point', coordinates: [m.lng, m.lat] },
+  })),
+};
 
 const FLOOD_COLORS = { alto: '#EF4444', medio: '#F59E0B', bajo: '#10B981' } as const;
 const FLOOD_DARK   = { alto: '#B91C1C', medio: '#D97706', bajo: '#059669' } as const;
@@ -164,6 +199,7 @@ export function MapView({
   approximateRadius = 350,
   fitToMarkers = false,
   minZoom = 8,
+  showMunicipioLabels = false,
 }: MapViewProps) {
   const containerRef  = useRef<HTMLDivElement>(null);
   const mapRef         = useRef<MaplibreMap | null>(null);
@@ -244,6 +280,39 @@ export function MapView({
         if (!alive) return;
         mapRef.current = map;
         setReady(true);
+
+        if (showMunicipioLabels) {
+          map.addSource(MUNICIPIO_LABELS_SOURCE, { type: 'geojson', data: MUNICIPIO_LABELS_GEOJSON });
+          map.addLayer({
+            id: `${MUNICIPIO_LABELS_SOURCE}-text`,
+            type: 'symbol',
+            source: MUNICIPIO_LABELS_SOURCE,
+            layout: {
+              'text-field': ['get', 'nombre'],
+              // "Noto Sans Bold" — confirmado leyendo el style.json real de
+              // 'liberty' (mismo stack que ya usan sus propios labels de
+              // lugar), no un nombre de fuente inventado: si no está en los
+              // glyphs que sirve el estilo, MapLibre simplemente no dibuja
+              // el texto, sin ningún error visible.
+              'text-font': ['Noto Sans Bold'],
+              'text-size': ['interpolate', ['linear'], ['zoom'], 7, 11, 12, 15],
+              // true en ambos — con 17 municipios en toda la extensión de
+              // Tabasco, algunos quedan cerca uno de otro (Nacajuca, Jalpa de
+              // Méndez, Cunduacán); el pedido explícito es ver LOS 17
+              // siempre, así que se prioriza sobre el criterio normal de
+              // MapLibre de esconder texto que colisiona con otro (incluido
+              // el de los propios labels de lugar del estilo base).
+              'text-allow-overlap': true,
+              'text-ignore-placement': true,
+            },
+            paint: {
+              'text-color': '#0D7065',
+              'text-halo-color': '#ffffff',
+              'text-halo-width': 1.5,
+            },
+          });
+        }
+
         onMapReady?.({
           flyTo: (lat, lng, z = 14) => map.flyTo({ center: [lng, lat], zoom: z, duration: 800 }),
           showZoneCircle: (lat, lng, radius) => {
