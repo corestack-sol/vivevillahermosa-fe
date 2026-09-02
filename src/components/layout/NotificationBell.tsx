@@ -1,82 +1,20 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { Bell } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useClickOutside } from '@/hooks/useClickOutside';
-import { backendFetch } from '@/lib/backendApi';
+import { useNotificaciones, type Notificacion } from '@/hooks/useNotificaciones';
 
-export interface Notificacion {
-  id: string;
-  titulo: string;
-  mensaje: string;
-  propiedadId: string | null;
-  leida: boolean;
-  createdAt: string;
-}
+export type { Notificacion };
 
 export function NotificationBell() {
   const { user } = useAuth();
-  const [items, setItems] = useState<Notificacion[]>([]);
-  // El backend ya devuelve un conteo dedicado (`noLeidas`) junto con la
-  // lista — antes se descartaba y se recalculaba con `items.filter(...)`,
-  // que solo es exacto si la lista trae TODAS las notificaciones no leídas
-  // (si el endpoint algún día pagina, ese cálculo local quedaría corto).
-  // Usar el campo real del servidor evita depender de ese supuesto.
-  const [unread, setUnread] = useState(0);
+  const { items, noLeidas: unread, marcarLeida, marcarTodasLeidas } = useNotificaciones();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   useClickOutside(menuRef, open, () => setOpen(false));
-
-  useEffect(() => {
-    if (!user) return;
-    function cargar() {
-      backendFetch<{ notificaciones: Notificacion[]; noLeidas: number }>('/notificaciones')
-        .then((d) => { setItems(d.notificaciones ?? []); setUnread(d.noLeidas ?? 0); })
-        .catch(() => {});
-    }
-    cargar();
-    // Antes solo se pedía una vez al montar — alguien que ya tenía la
-    // pestaña abierta cuando le llegaba un mensaje nunca veía el badge
-    // actualizarse sin recargar toda la página (reporte real 2026-09-01,
-    // sobre notificaciones de contacto). Mismo patrón de `visibilitychange`
-    // que ya usa AuthContext.tsx para revalidar sesión al volver a la
-    // pestaña; el intervalo cubre el caso de quedarse en la misma pestaña
-    // sin cambiar de foco.
-    const interval = setInterval(cargar, 60_000);
-    function onVisible() {
-      if (document.visibilityState === 'visible') cargar();
-    }
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
-  }, [user]);
-
-  async function marcarTodasLeidas() {
-    setItems((prev) => prev.map((n) => ({ ...n, leida: true })));
-    setUnread(0);
-    try {
-      await backendFetch('/notificaciones', {
-        method: 'PATCH',
-        body: JSON.stringify({ all: true }),
-      });
-    } catch { /* estado optimista ya aplicado; se resincroniza en la próxima carga */ }
-  }
-
-  async function marcarLeida(id: string) {
-    const era = items.find((n) => n.id === id);
-    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, leida: true } : n)));
-    if (era && !era.leida) setUnread((u) => Math.max(0, u - 1));
-    try {
-      await backendFetch('/notificaciones', {
-        method: 'PATCH',
-        body: JSON.stringify({ id }),
-      });
-    } catch { /* idem */ }
-  }
 
   if (!user) return null;
 
@@ -111,7 +49,7 @@ export function NotificationBell() {
               {items.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-8 px-4">Sin notificaciones todavía</p>
               ) : (
-                items.map((n) => (
+                items.slice(0, 8).map((n) => (
                   <Link
                     key={n.id}
                     href={n.propiedadId ? `/propiedades/${n.propiedadId}` : '/dashboard'}
@@ -129,6 +67,16 @@ export function NotificationBell() {
                 ))
               )}
             </div>
+            {/* Este dropdown es para un vistazo rápido, no para revisar el
+                historial completo — "ver todas" manda al inbox real
+                (dashboard/notificaciones/page.tsx), sin tope de 8. */}
+            <Link
+              href="/dashboard/notificaciones"
+              onClick={() => setOpen(false)}
+              className="block text-center text-xs font-semibold text-brand hover:text-brand-dark py-2.5 border-t border-gray-50 hover:bg-gray-50 transition-colors"
+            >
+              Ver todas
+            </Link>
           </div>
       )}
     </div>

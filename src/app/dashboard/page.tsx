@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Heart, Bell, Plus, Eye, TrendingUp, Home, LayoutDashboard, Lightbulb, MessageCircle, Building2, Download, CalendarDays, Users, Loader2, Info, Sparkles, AlertTriangle } from 'lucide-react';
+import { Heart, Bell, Plus, Eye, TrendingUp, LayoutDashboard, Lightbulb, MessageCircle, Building2, Download, Loader2, Info, Sparkles, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { backendFetch } from '@/lib/backendApi';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -12,7 +12,7 @@ import type { BackendPublicProperty } from '@/lib/api';
 import { generarReporteDesempeno } from '@/lib/reportePdf';
 import { obtenerResumenReporte } from '@/lib/aiClient';
 import { usePerfilInmobiliaria } from '@/hooks/usePerfilInmobiliaria';
-import type { Notificacion } from '@/components/layout/NotificationBell';
+import { useNotificaciones } from '@/hooks/useNotificaciones';
 import { formatRelativeDate } from '@/lib/format';
 import { evaluarCartera } from '@/lib/coach';
 import { CoachModal } from '@/components/dashboard/CoachModal';
@@ -41,7 +41,7 @@ export default function DashboardPage() {
   const [favCount, setFavCount] = useState(0);
   const [alertaCount, setAlertaCount] = useState(0);
   const [misPropiedades, setMisPropiedades] = useState<MiPropiedad[]>([]);
-  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+  const { items: notificaciones, marcarLeida: marcarNotificacionLeida, marcarTodasLeidas: marcarNotificacionesLeidas } = useNotificaciones();
   const [generandoReporte, setGenerandoReporte] = useState(false);
   // Panel profesional es solo para inmobiliarias — pedido explícito
   // 2026-08-20 ("no para cualquier usuario").
@@ -61,24 +61,12 @@ export default function DashboardPage() {
       backendFetch<{ favoritos: string[] }>('/favoritos'),
       backendFetch<{ alertas: unknown[] }>('/alertas'),
       esProfesional ? backendFetch<{ propiedades: BackendPublicProperty[] }>('/propiedades/mias') : Promise.resolve(null),
-      backendFetch<{ notificaciones: Notificacion[] }>('/notificaciones'),
-    ]).then(([favData, alertData, propiedadesData, notifData]) => {
+    ]).then(([favData, alertData, propiedadesData]) => {
       setFavCount(favData.favoritos?.length ?? 0);
       setAlertaCount(alertData.alertas?.length ?? 0);
       setMisPropiedades(propiedadesData?.propiedades.map(mapMiaBackend) ?? []);
-      setNotificaciones(notifData.notificaciones ?? []);
     }).catch(() => {});
   }, [user, loading, router, esProfesional]);
-
-  async function marcarNotificacionesLeidas() {
-    setNotificaciones((prev) => prev.map((n) => ({ ...n, leida: true })));
-    try {
-      await backendFetch('/notificaciones', {
-        method: 'PATCH',
-        body: JSON.stringify({ all: true }),
-      });
-    } catch { /* estado optimista ya aplicado */ }
-  }
 
   if (loading) {
     return (
@@ -186,16 +174,30 @@ export default function DashboardPage() {
           </div>
           <div className="divide-y divide-gray-50">
             {notificaciones.slice(0, 5).map((n) => (
-              <div key={n.id} className={`flex items-start gap-3 px-5 py-3.5 ${!n.leida ? 'bg-brand-pale/20' : ''}`}>
+              <Link
+                key={n.id}
+                href={n.propiedadId ? `/propiedades/${n.propiedadId}` : '/dashboard'}
+                onClick={() => marcarNotificacionLeida(n.id)}
+                className={`flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors ${!n.leida ? 'bg-brand-pale/20' : ''}`}
+              >
                 {!n.leida && <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0 mt-1.5" />}
                 <div className={`min-w-0 ${n.leida ? 'ml-[18px]' : ''}`}>
                   <p className="text-sm font-medium text-gray-800 leading-snug">{n.titulo}</p>
                   <p className="text-xs text-gray-500 mt-0.5 leading-snug">{n.mensaje}</p>
                   <p className="text-[11px] text-gray-400 mt-1">{formatRelativeDate(n.createdAt)}</p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
+          {/* Aquí solo se ven las 5 más recientes — el inbox completo
+              (sin ese tope) vive en su propia página, ver
+              dashboard/notificaciones/page.tsx. */}
+          <Link
+            href="/dashboard/notificaciones"
+            className="block text-center text-xs font-semibold text-brand hover:text-brand-dark py-2.5 border-t border-gray-100 hover:bg-gray-50 transition-colors"
+          >
+            Ver todas
+          </Link>
         </div>
       )}
 
@@ -245,75 +247,6 @@ export default function DashboardPage() {
             <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
           </Link>
         ))}
-      </div>
-
-      {/* Quick actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-        <Link href="/favoritos"
-          className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl p-4 hover:border-brand/30 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-200">
-          <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Heart size={18} className="text-red-500" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-800">Ver mis favoritos</p>
-            <p className="text-xs text-gray-500">{favCount} guardada{favCount !== 1 ? 's' : ''}</p>
-          </div>
-        </Link>
-        <Link href="/alertas"
-          className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl p-4 hover:border-brand/30 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-200">
-          <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Bell size={18} className="text-amber-500" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-800">Mis alertas</p>
-            <p className="text-xs text-gray-500">{alertaCount > 0 ? `${alertaCount} activa${alertaCount > 1 ? 's' : ''}` : 'Ninguna configurada'}</p>
-          </div>
-        </Link>
-        {esProfesional ? (
-          <>
-            <Link href="/dashboard/propiedades"
-              className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl p-4 hover:border-brand/30 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-200">
-              <div className="w-10 h-10 bg-brand-pale rounded-xl flex items-center justify-center flex-shrink-0">
-                <Building2 size={18} className="text-brand" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-800">Mis propiedades</p>
-                <p className="text-xs text-gray-500">{misPropiedades.length} publicada{misPropiedades.length !== 1 ? 's' : ''}</p>
-              </div>
-            </Link>
-            <Link href="/dashboard/citas"
-              className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl p-4 hover:border-brand/30 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-200">
-              <div className="w-10 h-10 bg-brand-pale rounded-xl flex items-center justify-center flex-shrink-0">
-                <CalendarDays size={18} className="text-brand" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-800">Mi agenda</p>
-                <p className="text-xs text-gray-500">Citas con clientes</p>
-              </div>
-            </Link>
-            <Link href="/dashboard/leads"
-              className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl p-4 hover:border-brand/30 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-200">
-              <div className="w-10 h-10 bg-brand-pale rounded-xl flex items-center justify-center flex-shrink-0">
-                <Users size={18} className="text-brand" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-800">Leads</p>
-                <p className="text-xs text-gray-500">Da seguimiento a interesados</p>
-              </div>
-            </Link>
-          </>
-        ) : (
-          <Link href="/propiedades"
-            className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl p-4 hover:border-brand/30 hover:shadow-sm hover:-translate-y-0.5 transition-all duration-200">
-            <div className="w-10 h-10 bg-brand-pale rounded-xl flex items-center justify-center flex-shrink-0">
-              <Home size={18} className="text-brand" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-gray-800">Explorar propiedades</p>
-              <p className="text-xs text-gray-500">Todo Tabasco</p>
-            </div>
-          </Link>
-        )}
       </div>
 
       {/* Tip */}
