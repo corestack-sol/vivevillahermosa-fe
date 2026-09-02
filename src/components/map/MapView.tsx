@@ -120,22 +120,6 @@ interface MapViewProps {
   showMunicipioLabels?: boolean;
 }
 
-const MUNICIPIO_LABELS_SOURCE = 'municipios-labels';
-
-// Se calcula una sola vez a nivel de módulo — municipalities.json es
-// estático, no hace falta reconstruir este GeoJSON en cada render/montaje
-// del mapa. "Centro" se etiqueta "Villahermosa" para que coincida con el
-// nombre que ya usa el resto de la plataforma para ese municipio (ver el
-// breadcrumb de PropertyDetailView.tsx).
-const MUNICIPIO_LABELS_GEOJSON: GeoJSON.FeatureCollection<GeoJSON.Point, { nombre: string }> = {
-  type: 'FeatureCollection',
-  features: getAllMunicipalities().map((m) => ({
-    type: 'Feature',
-    properties: { nombre: m.id === 'centro' ? 'Villahermosa' : m.nombre },
-    geometry: { type: 'Point', coordinates: [m.lng, m.lat] },
-  })),
-};
-
 const FLOOD_COLORS = { alto: '#EF4444', medio: '#F59E0B', bajo: '#10B981' } as const;
 const FLOOD_DARK   = { alto: '#B91C1C', medio: '#D97706', bajo: '#059669' } as const;
 
@@ -167,6 +151,15 @@ function pinHtml(color: string, dark: string, label: string, active: boolean): s
     <div style="background:${color};color:#fff;padding:5px 11px;border-radius:100px;font-size:11.5px;font-weight:800;white-space:nowrap;letter-spacing:0.2px;box-shadow:${shadow};line-height:1;font-family:Inter,system-ui,sans-serif;">${label}</div>
     <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid ${dark};margin-top:-1px;"></div>
   </div>`;
+}
+
+// pointer-events:none — es solo texto informativo, un clic ahí debe llegar
+// al pin/cluster o al fondo del mapa que tiene debajo, nunca quedarse
+// atrapado en el label. text-shadow en 4 direcciones simula el halo blanco
+// que sí tiene el texto de una capa `symbol` (aquí es HTML normal, no hay
+// `text-halo-*`).
+function municipioLabelHtml(nombre: string): string {
+  return `<div style="pointer-events:none;white-space:nowrap;font-weight:800;font-size:12.5px;letter-spacing:0.2px;font-family:Inter,system-ui,sans-serif;color:#0D7065;text-shadow:-1.5px -1.5px 0 #fff,1.5px -1.5px 0 #fff,-1.5px 1.5px 0 #fff,1.5px 1.5px 0 #fff,0 0 4px #fff;">${nombre}</div>`;
 }
 
 function clusterHtml(count: number): string {
@@ -282,46 +275,39 @@ export function MapView({
         setReady(true);
 
         if (showMunicipioLabels) {
-          map.addSource(MUNICIPIO_LABELS_SOURCE, { type: 'geojson', data: MUNICIPIO_LABELS_GEOJSON });
-          map.addLayer({
-            id: `${MUNICIPIO_LABELS_SOURCE}-text`,
-            type: 'symbol',
-            source: MUNICIPIO_LABELS_SOURCE,
-            layout: {
-              'text-field': ['get', 'nombre'],
-              // "Noto Sans Bold" — confirmado leyendo el style.json real de
-              // 'liberty' (mismo stack que ya usan sus propios labels de
-              // lugar), no un nombre de fuente inventado: si no está en los
-              // glyphs que sirve el estilo, MapLibre simplemente no dibuja
-              // el texto, sin ningún error visible.
-              'text-font': ['Noto Sans Bold'],
-              'text-size': ['interpolate', ['linear'], ['zoom'], 7, 11, 12, 15],
-              // true en ambos — con 17 municipios en toda la extensión de
-              // Tabasco, algunos quedan cerca uno de otro (Nacajuca, Jalpa de
-              // Méndez, Cunduacán); el pedido explícito es ver LOS 17
-              // siempre, así que se prioriza sobre el criterio normal de
-              // MapLibre de esconder texto que colisiona con otro (incluido
-              // el de los propios labels de lugar del estilo base).
-              'text-allow-overlap': true,
-              'text-ignore-placement': true,
-            },
-            paint: {
-              'text-color': '#0D7065',
-              'text-halo-color': '#ffffff',
-              'text-halo-width': 1.5,
-            },
+          // Antes esto era una capa `symbol` sobre el canvas — se veía bien
+          // en un mapa vacío, pero en la práctica CASI SIEMPRE hay un pin o
+          // un círculo de cluster de propiedades justo sobre el centroide de
+          // un municipio (Cárdenas y Villahermosa, los dos con más
+          // propiedades, tapados casi siempre). Los Marker de MapLibre son
+          // elementos DOM aparte del `<canvas>` — SIEMPRE se dibujan encima
+          // de cualquier capa del estilo, sin excepción, así que ningún
+          // ajuste de esa capa (offset, halo, orden de capas) podía ganarle
+          // a un pin/cluster que también es DOM. Bug real reportado
+          // 2026-09-02: "solo veo 15 [de 17] municipios" — los 2 que
+          // faltaban eran justo los que sí tenían pines encima. Se
+          // reconstruye como Marker (mismo mecanismo que los pines/clusters
+          // de abajo) con z-index explícito más alto, para que SIEMPRE gane
+          // el empate visual contra cualquier pin/cluster que caiga en el
+          // mismo punto — la única forma real de garantizar los 17 siempre
+          // visibles.
+          getAllMunicipalities().forEach((m) => {
+            const nombre = m.id === 'centro' ? 'Villahermosa' : m.nombre;
+            const el = elementFromHtml(municipioLabelHtml(nombre));
+            el.style.zIndex = '5';
+            new Marker({ element: el, anchor: 'center' }).setLngLat([m.lng, m.lat]).addTo(map);
           });
 
           // Sin esto, el municipio queda con DOS nombres encimados: el
           // negro que ya trae 'liberty' desde OSM (source-layer "place",
           // ver el comentario de `showMunicipioLabels` en MapViewProps) y
-          // el verde de la capa de arriba — bug real reportado 2026-09-01,
-          // visible en varios municipios a la vez. Se apagan los labels de
-          // lugar del estilo base en vez de filtrar cuáles coinciden con
-          // los 17 (no hay forma simple de saber, desde el filtro
-          // declarativo de un layer, "esta ciudad es justo una de esas
-          // 17") — la capa propia ya es la única fuente de verdad para
-          // nombre de municipio en este mapa.
+          // el verde de los Marker de arriba — bug real reportado
+          // 2026-09-01, visible en varios municipios a la vez. Se apagan
+          // los labels de lugar del estilo base en vez de filtrar cuáles
+          // coinciden con los 17 (no hay forma simple de saber, desde el
+          // filtro declarativo de un layer, "esta ciudad es justo una de
+          // esas 17") — los Marker propios ya son la única fuente de
+          // verdad para nombre de municipio en este mapa.
           for (const id of ['label_city', 'label_city_capital', 'label_town', 'label_village']) {
             if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
           }
