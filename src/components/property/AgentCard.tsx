@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import type { PropertyAgent } from '@/types/property';
 import { Mail, BadgeCheck, Eye, Loader2, MessageCircle, Phone, LogIn, ShieldAlert } from 'lucide-react';
 import { usePropiedadEstado } from '@/hooks/usePropiedadEstado';
+import { useEsMiPropiedad } from '@/hooks/useEsMiPropiedad';
 import { estadoNoDisponibleInfo } from '@/lib/misPropiedades';
 import { useAuth } from '@/context/AuthContext';
 import { loginRedirectUrl } from '@/lib/authRedirect';
@@ -46,6 +47,7 @@ export function AgentCard({ agent, propiedadId, propertyTitle, requiereMensajePr
   const [error, setError] = useState(false);
   const estadoNoDisponible = usePropiedadEstado(propiedadId);
   const infoNoDisponible = estadoNoDisponible ? estadoNoDisponibleInfo(estadoNoDisponible) : null;
+  const esMiPropiedad = useEsMiPropiedad(propiedadId);
 
   async function revelar() {
     setLoading(true);
@@ -93,7 +95,13 @@ export function AgentCard({ agent, propiedadId, propertyTitle, requiereMensajePr
         </div>
       </div>
 
-      {infoNoDisponible ? (
+      {esMiPropiedad ? (
+        <p className={`flex items-center justify-center gap-1.5 text-xs text-center rounded-xl px-3 py-2.5 ${
+          dark ? 'text-white/50 bg-white/5 border border-white/10' : 'text-gray-400 bg-gray-50 border border-gray-100'
+        }`}>
+          Esta es tu propiedad — gestiónala desde tu panel.
+        </p>
+      ) : infoNoDisponible ? (
         <p className={`flex items-center justify-center gap-1.5 text-xs text-center rounded-xl px-3 py-2.5 ${
           dark ? 'text-white/50 bg-white/5 border border-white/10' : 'text-gray-400 bg-gray-50 border border-gray-100'
         }`}>

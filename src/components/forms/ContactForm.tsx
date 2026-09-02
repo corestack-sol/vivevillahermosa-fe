@@ -8,10 +8,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { CheckCircle, ShieldAlert, LogIn, ArrowRight } from 'lucide-react';
+import { CheckCircle, ShieldAlert, LogIn, ArrowRight, Building2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { loginRedirectUrl } from '@/lib/authRedirect';
 import { usePropiedadEstado } from '@/hooks/usePropiedadEstado';
+import { useEsMiPropiedad } from '@/hooks/useEsMiPropiedad';
 import { estadoNoDisponibleInfo } from '@/lib/misPropiedades';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
@@ -37,6 +38,7 @@ export function ContactForm({ propertyTitle, propertyId, ownerName, dark = false
   const [sent, setSent] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const estadoNoDisponible = usePropiedadEstado(propertyId);
+  const esMiPropiedad = useEsMiPropiedad(propertyId);
 
   const {
     register,
@@ -77,6 +79,23 @@ export function ContactForm({ propertyTitle, propertyId, ownerName, dark = false
     : errors.mensaje
       ? 'border-danger'
       : 'border-gray-200 focus:border-brand focus:ring-brand/40';
+
+  // El dueño no debe poder enviarse un mensaje a sí mismo — bug real
+  // reportado 2026-09-01: el formulario seguía visible al ver la propia
+  // ficha, como si fuera cualquier otro visitante interesado.
+  if (esMiPropiedad) {
+    return (
+      <div className="text-center py-6">
+        <div className={`inline-flex items-center justify-center w-12 h-12 rounded-2xl mb-3 ${dark ? 'bg-white/10 text-white/60' : 'bg-gray-100 text-gray-400'}`}>
+          <Building2 size={20} strokeWidth={1.75} />
+        </div>
+        <h3 className={`font-semibold mb-1 ${dark ? 'text-white' : 'text-gray-800'}`}>Esta es tu propiedad</h3>
+        <p className={`text-sm leading-relaxed ${dark ? 'text-white/60' : 'text-gray-500'}`}>
+          Gestiónala desde tu panel — no puedes enviarte un mensaje a ti mismo.
+        </p>
+      </div>
+    );
+  }
 
   // Una publicación pausada, vencida o ya archivada (vendida/rentada) no
   // debe recibir mensajes nuevos — mostrar el formulario (o los datos de
