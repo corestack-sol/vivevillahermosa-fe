@@ -12,7 +12,7 @@ import { FraudAlertBadge } from '@/components/property/FraudAlertBadge';
 import { PriceTag } from '@/components/property/PriceTag';
 import { AgentCard } from '@/components/property/AgentCard';
 import { SimilarCarousel } from '@/components/property/SimilarCarousel';
-import { ContactForm } from '@/components/forms/ContactForm';
+import { ContactCard } from '@/components/property/ContactCard';
 import { MapViewDynamic } from '@/components/map/MapViewDynamic';
 import { Badge } from '@/components/ui/Badge';
 import { Tooltip } from '@/components/ui/Tooltip';
@@ -357,12 +357,7 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
               </div>
 
               {/* ② Card de contacto */}
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden scroll-mt-20" id="contacto">
-                <div className="px-5 py-5">
-                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400 mb-4">Enviar mensaje</p>
-                  <ContactForm propertyTitle={property.titulo} propertyId={property.id} ownerName={property.agente.nombre} />
-                </div>
-              </div>
+              <ContactCard propertyId={property.id} propertyTitle={property.titulo} ownerName={property.agente.nombre} />
 
               {/* ③ Compartir */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex gap-2">
