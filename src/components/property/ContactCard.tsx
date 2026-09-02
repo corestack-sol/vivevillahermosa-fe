@@ -15,10 +15,15 @@ interface ContactCardProps {
  * quedaba el mismo recuadro con un mensaje adentro, "no tiene sentido que
  * aparezca en absoluto"). OwnerActionsBar ya cubre la gestión real de la
  * propiedad para el dueño, esta card no le sirve de nada.
+ *
+ * `!== false` (no solo el `true` de dueño confirmado) — mientras
+ * useEsMiPropiedad todavía no sabe (`null`), también se esconde: mostrarla
+ * de entrada y quitarla un instante después, si resulta que sí es el
+ * dueño, era justo el parpadeo reportado 2026-09-02.
  */
 export function ContactCard({ propertyId, propertyTitle, ownerName }: ContactCardProps) {
   const esMiPropiedad = useEsMiPropiedad(propertyId);
-  if (esMiPropiedad) return null;
+  if (esMiPropiedad !== false) return null;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden scroll-mt-20" id="contacto">

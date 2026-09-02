@@ -12,6 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import { loginRedirectUrl } from '@/lib/authRedirect';
 import { backendFetch } from '@/lib/backendApi';
 import { whatsappUrl } from '@/lib/phone';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 // Subconjunto público y seguro de mostrar de entrada — nombre y estado de
 // verificación no son datos sensibles.
@@ -95,7 +96,14 @@ export function AgentCard({ agent, propiedadId, propertyTitle, requiereMensajePr
         </div>
       </div>
 
-      {esMiPropiedad ? (
+      {esMiPropiedad === null ? (
+        // Todavía no se sabe si esta propiedad es del visitante — ni
+        // "Esta es tu propiedad" ni el botón normal de contacto hasta
+        // confirmarlo, para no mostrar algo que puede desaparecer un
+        // instante después (bug real reportado 2026-09-02, el botón de
+        // contactar "parpadeaba" en la ficha del propio dueño al cargar).
+        <Skeleton variant="image" className="h-11 w-full" />
+      ) : esMiPropiedad ? (
         <p className={`flex items-center justify-center gap-1.5 text-xs text-center rounded-xl px-3 py-2.5 ${
           dark ? 'text-white/50 bg-white/5 border border-white/10' : 'text-gray-400 bg-gray-50 border border-gray-100'
         }`}>

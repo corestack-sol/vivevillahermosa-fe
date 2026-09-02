@@ -10,7 +10,11 @@ export function MobileContactCta({ propertyId }: { propertyId: string }) {
   const estadoNoDisponible = usePropiedadEstado(propertyId);
   const esMiPropiedad = useEsMiPropiedad(propertyId);
 
-  if (esMiPropiedad) return null;
+  // `!== false` — mientras todavía no se sabe (`null`) también se
+  // esconde, no solo cuando ya se confirmó dueño (`true`). Bug real
+  // reportado 2026-09-02: con el valor inicial de antes, "Contactar"
+  // aparecía un instante en la propia ficha antes de ocultarse.
+  if (esMiPropiedad !== false) return null;
 
   if (estadoNoDisponible) {
     const info = estadoNoDisponibleInfo(estadoNoDisponible);

@@ -84,7 +84,14 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
           de contacto había que bajar por toda la descripción, amenidades,
           mapa y riesgo de inundación. La acción principal de esta página
           ahora está siempre al alcance de la mano, sin importar el scroll. */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-4 py-3 flex items-center gap-3">
+      {/* justify-center — cuando MobileContactCta se esconde (dueño viendo
+          su propia ficha, ver useEsMiPropiedad.ts), solo quedan precio y
+          favorito: sin esto se iban pegados a la izquierda, dejando un
+          hueco vacío a la derecha (pedido explícito 2026-09-02). No afecta
+          el caso normal — MobileContactCta es flex-1 y llena el espacio
+          restante igual que antes, sin importar el justify-content del
+          padre. */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-4 py-3 flex items-center justify-center gap-3">
         <p className="flex-shrink-0 text-lg font-heading font-bold text-gray-900 leading-none">
           {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(property.precio)}
           {property.operacion === 'renta' && <span className="text-xs font-normal text-gray-400">/mes</span>}
