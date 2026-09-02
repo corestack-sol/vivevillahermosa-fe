@@ -201,14 +201,19 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Mismo criterio que /dashboard/analitica y /dashboard/propiedades
-          (ver misPropiedades.ts, BACKEND.md §12): las propiedades ya son
-          reales, "Vistas"/"Contactos" todavía no cuentan actividad real. */}
+      {/* Para profesionales, "Contactos recibidos" ya es real (confirmado
+          en vivo 2026-09-02) — solo "Vistas totales" sigue pendiente. Para
+          cuentas normales, "Propiedades vistas/contactadas" es actividad
+          COMO COMPRADOR (una métrica distinta, sin backend todavía) — ese
+          aviso se queda exactamente igual que antes. */}
       <div className="flex items-start gap-2.5 bg-brand-pale border border-brand/20 rounded-xl px-4 py-3 mb-6">
         <Info size={15} className="text-brand flex-shrink-0 mt-0.5" />
         <p className="text-xs text-brand-dark leading-relaxed">
-          <strong>Vistas y contactos todavía no cuentan actividad real</strong> — cuando exista una tabla de
-          eventos con fecha, estos números reflejarán tu desempeño de verdad.
+          {esProfesional ? (
+            <><strong>Los contactos recibidos ya son reales</strong> — las vistas totales todavía no, llegan cuando el backend implemente ese conteo.</>
+          ) : (
+            <><strong>Vistas y contactos todavía no cuentan actividad real</strong> — cuando exista una tabla de eventos con fecha, estos números reflejarán tu desempeño de verdad.</>
+          )}
         </p>
       </div>
 

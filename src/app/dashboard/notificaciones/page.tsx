@@ -8,28 +8,28 @@ import { useAuth } from '@/context/AuthContext';
 import { useNotificaciones } from '@/hooks/useNotificaciones';
 import { formatRelativeDate } from '@/lib/format';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Button } from '@/components/ui/Button';
 
 /**
  * Inbox completo — antes solo existían las 5 más recientes en
  * dashboard/page.tsx (sin forma de ver el resto) y las ~8 del dropdown de
  * la campana. Pedido explícito 2026-09-02: "qué va a pasar cuando existan
- * cientos de notificaciones". Respuesta real hoy: `GET /notificaciones`
- * NO pagina (verificado en vivo, `page`/`perPage` se ignoran, nunca trae
- * `total`) — esta página ya muestra la lista completa que el backend
- * devuelve, sin controles de paginación falsos. Cuando el backend agregue
- * paginación real (ver docs/BACKEND-NOTIFICACIONES-PAGINACION-02092026.md),
- * esta pantalla es el lugar natural para agregarla.
+ * cientos de notificaciones". `GET /notificaciones` ya pagina de verdad
+ * (confirmado en vivo, ver docs/BACKEND-NOTIFICACIONES-PAGINACION-
+ * 02092026.md) — `page` funciona, `perPage` queda fijo en 20 del lado del
+ * servidor (rechazado como query param). "Cargar más" pide la siguiente
+ * página de 20 en vez de traer todo de una sola vez.
  */
 export default function NotificacionesPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { items: notificaciones, noLeidas, loading, marcarLeida, marcarTodasLeidas } = useNotificaciones();
+  const { items: notificaciones, noLeidas, total, hayMas, loading, cargarMas, marcarLeida, marcarTodasLeidas } = useNotificaciones();
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/auth/login');
   }, [authLoading, user, router]);
 
-  if (authLoading || !user || loading) {
+  if (authLoading || !user || (loading && notificaciones.length === 0)) {
     return (
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <Skeleton className="w-48 mb-8" />
@@ -46,7 +46,9 @@ export default function NotificacionesPage() {
         </Link>
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-heading font-bold text-gray-900">Notificaciones</h1>
-          <p className="text-sm text-gray-500">Todo lo que te ha llegado, más reciente primero</p>
+          <p className="text-sm text-gray-500">
+            {total > 0 ? `${total} en total, ` : ''}más reciente primero
+          </p>
         </div>
         {noLeidas > 0 && (
           <button onClick={marcarTodasLeidas} className="text-xs text-brand font-semibold hover:underline flex-shrink-0">
@@ -77,6 +79,14 @@ export default function NotificacionesPage() {
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {hayMas && (
+        <div className="text-center mt-5">
+          <Button variant="ghost" onClick={cargarMas} isLoading={loading}>
+            Cargar más
+          </Button>
         </div>
       )}
     </div>
