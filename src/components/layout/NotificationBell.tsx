@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Bell } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useClickOutside } from '@/hooks/useClickOutside';
-import { useNotificaciones, type Notificacion } from '@/hooks/useNotificaciones';
+import { useNotificaciones, notificacionHref, type Notificacion } from '@/hooks/useNotificaciones';
 
 export type { Notificacion };
 
@@ -52,7 +52,7 @@ export function NotificationBell() {
                 items.slice(0, 8).map((n) => (
                   <Link
                     key={n.id}
-                    href={n.propiedadId ? `/propiedades/${n.propiedadId}` : '/dashboard'}
+                    href={notificacionHref(n)}
                     onClick={() => { setOpen(false); if (!n.leida) marcarLeida(n.id); }}
                     className={`block px-4 py-3 border-b border-gray-50 last:border-0 hover:bg-brand-pale/40 transition-colors ${!n.leida ? 'bg-brand-pale/20' : ''}`}
                   >

@@ -9,8 +9,30 @@ export interface Notificacion {
   titulo: string;
   mensaje: string;
   propiedadId: string | null;
+  // Confirmado en vivo 2026-09-02 — el backend ya lo manda (ej.
+  // "contacto_propiedad"). No exhaustivo a propósito: cualquier tipo
+  // futuro que no sea de contacto simplemente cae en el destino genérico
+  // de notificacionHref() de abajo.
+  tipo?: string;
   leida: boolean;
   createdAt: string;
+}
+
+/**
+ * A dónde manda el clic en una notificación — antes las 3 pantallas que
+ * la muestran (campana, card del panel, inbox completo) mandaban SIEMPRE
+ * a la ficha pública de la propiedad, que no muestra nada del interesado.
+ * Bug real reportado 2026-09-02: "no muestra los datos del interesado".
+ * Las de tipo "contacto_propiedad" ahora van directo a la bandeja de
+ * mensajes de esa propiedad (dashboard/propiedades/[id]/mensajes/page.tsx,
+ * construida hoy mismo) — ahí sí está nombre/teléfono/correo/mensaje real
+ * de quien escribió. Cualquier otro tipo (o uno sin `propiedadId`) se
+ * queda con el destino de antes.
+ */
+export function notificacionHref(n: Pick<Notificacion, 'tipo' | 'propiedadId'>): string {
+  if (n.propiedadId && n.tipo === 'contacto_propiedad') return `/dashboard/propiedades/${n.propiedadId}/mensajes`;
+  if (n.propiedadId) return `/propiedades/${n.propiedadId}`;
+  return '/dashboard';
 }
 
 /**

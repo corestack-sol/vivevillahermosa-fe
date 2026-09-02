@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Bell } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useNotificaciones } from '@/hooks/useNotificaciones';
+import { useNotificaciones, notificacionHref } from '@/hooks/useNotificaciones';
 import { formatRelativeDate } from '@/lib/format';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
@@ -67,7 +67,7 @@ export default function NotificacionesPage() {
           {notificaciones.map((n) => (
             <Link
               key={n.id}
-              href={n.propiedadId ? `/propiedades/${n.propiedadId}` : '/dashboard'}
+              href={notificacionHref(n)}
               onClick={() => { if (!n.leida) marcarLeida(n.id); }}
               className={`flex items-start gap-3 px-5 py-4 hover:bg-gray-50 transition-colors ${!n.leida ? 'bg-brand-pale/20' : ''}`}
             >

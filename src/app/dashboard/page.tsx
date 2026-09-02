@@ -12,7 +12,7 @@ import type { BackendPublicProperty } from '@/lib/api';
 import { generarReporteDesempeno } from '@/lib/reportePdf';
 import { obtenerResumenReporte } from '@/lib/aiClient';
 import { usePerfilInmobiliaria } from '@/hooks/usePerfilInmobiliaria';
-import { useNotificaciones } from '@/hooks/useNotificaciones';
+import { useNotificaciones, notificacionHref } from '@/hooks/useNotificaciones';
 import { formatRelativeDate } from '@/lib/format';
 import { evaluarCartera } from '@/lib/coach';
 import { CoachModal } from '@/components/dashboard/CoachModal';
@@ -176,7 +176,7 @@ export default function DashboardPage() {
             {notificaciones.slice(0, 5).map((n) => (
               <Link
                 key={n.id}
-                href={n.propiedadId ? `/propiedades/${n.propiedadId}` : '/dashboard'}
+                href={notificacionHref(n)}
                 onClick={() => marcarNotificacionLeida(n.id)}
                 className={`flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors ${!n.leida ? 'bg-brand-pale/20' : ''}`}
               >
