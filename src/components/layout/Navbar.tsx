@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Menu, X, Plus, User, Heart, Bell, LayoutDashboard, LogOut, ChevronDown, Building2, Settings,
-  CalendarDays, Users, TrendingUp, UserPlus, ShieldCheck, Home, Trash2, Sparkles, type LucideIcon,
+  CalendarDays, Users, TrendingUp, UserPlus, ShieldCheck, Home, Trash2, Sparkles, MessageCircle, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -56,6 +56,12 @@ const HERRAMIENTAS_ITEMS: MenuItem[] = [
 ];
 
 const PERFIL_ITEMS_BASE: MenuItem[] = [
+  // Mensajería bidireccional — ver docs/superpowers/specs/2026-09-02-
+  // mensajeria-bidireccional-design.md. Aplica a ambos roles (una cuenta
+  // puede ser interesada en unas propiedades y dueña de otras a la vez),
+  // por eso vive en "Perfil" (cuenta), no en "Herramientas" (solo
+  // profesional).
+  { href: '/dashboard/mensajes', icon: MessageCircle, label: 'Mensajes' },
   { href: '/favoritos', icon: Heart, label: 'Mis favoritos' },
   { href: '/alertas', icon: Bell, label: 'Mis alertas' },
 ];

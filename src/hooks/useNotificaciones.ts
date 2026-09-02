@@ -14,6 +14,12 @@ export interface Notificacion {
   // futuro que no sea de contacto simplemente cae en el destino genérico
   // de notificacionHref() de abajo.
   tipo?: string;
+  // Nuevo — solo presente en notificaciones de tipo "mensaje_nuevo" del
+  // sistema de mensajería bidireccional (ver docs/superpowers/specs/
+  // 2026-09-02-mensajeria-bidireccional-design.md). `undefined` hasta que
+  // el backend lo implemente; notificacionHref() cae al destino de antes
+  // mientras tanto.
+  conversacionId?: string;
   leida: boolean;
   createdAt: string;
 }
@@ -23,13 +29,18 @@ export interface Notificacion {
  * la muestran (campana, card del panel, inbox completo) mandaban SIEMPRE
  * a la ficha pública de la propiedad, que no muestra nada del interesado.
  * Bug real reportado 2026-09-02: "no muestra los datos del interesado".
- * Las de tipo "contacto_propiedad" ahora van directo a la bandeja de
- * mensajes de esa propiedad (dashboard/propiedades/[id]/mensajes/page.tsx,
- * construida hoy mismo) — ahí sí está nombre/teléfono/correo/mensaje real
- * de quien escribió. Cualquier otro tipo (o uno sin `propiedadId`) se
- * queda con el destino de antes.
+ *
+ * "mensaje_nuevo" (sistema de mensajería bidireccional, todavía sin
+ * construir del lado del backend) manda directo al hilo de chat — la
+ * fuente de verdad real una vez exista. "contacto_propiedad" (el sistema
+ * viejo, de una sola vía) sigue mandando a la bandeja por-propiedad de
+ * hoy — esa ruta NO se toca todavía (ver el spec, "Orden de despliegue":
+ * no se corta el flujo actual hasta confirmar que el nuevo funciona de
+ * verdad). Cualquier otro tipo (o uno sin `propiedadId`) se queda con el
+ * destino genérico.
  */
-export function notificacionHref(n: Pick<Notificacion, 'tipo' | 'propiedadId'>): string {
+export function notificacionHref(n: Pick<Notificacion, 'tipo' | 'propiedadId' | 'conversacionId'>): string {
+  if (n.tipo === 'mensaje_nuevo' && n.conversacionId) return `/dashboard/mensajes/${n.conversacionId}`;
   if (n.propiedadId && n.tipo === 'contacto_propiedad') return `/dashboard/propiedades/${n.propiedadId}/mensajes`;
   if (n.propiedadId) return `/propiedades/${n.propiedadId}`;
   return '/dashboard';
