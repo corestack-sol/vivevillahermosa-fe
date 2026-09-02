@@ -4,7 +4,11 @@ import type { Municipality, Zone } from '@/types/zone';
 import { formatPrice } from './format';
 
 const SITE_NAME = 'Vive Villahermosa';
-const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://vivevillahermosa.mx';
+// Fallback corregido 2026-09-02 — el dominio real es
+// vivevillahermosa.corestacksolutions.com.mx, "vivevillahermosa.mx" nunca
+// existió. En la práctica NEXT_PUBLIC_BASE_URL siempre está seteado (ver
+// .env.local), este fallback solo importa si algún día falta.
+const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://vivevillahermosa.corestacksolutions.com.mx';
 const DEFAULT_OG = `${SITE_URL}/images/og-default.jpg`;
 
 /**

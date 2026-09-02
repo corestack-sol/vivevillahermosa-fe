@@ -2,7 +2,11 @@ import type { MetadataRoute } from 'next';
 import { getAllProperties, getAllMunicipalities, getAllZones } from '@/lib/api';
 import guiasData from '@/data/guias.json';
 
-const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://vivevillahermosa.mx';
+// Fallback corregido 2026-09-02 (dominio real, "vivevillahermosa.mx" no
+// existe) — bug real: NEXT_PUBLIC_BASE_URL estaba mal seteado en
+// .env.local (localhost) y el sitemap.xml de producción apuntaba a
+// localhost en cada URL. Ver .env.local para la corrección real.
+const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://vivevillahermosa.corestacksolutions.com.mx';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const properties = await getAllProperties();

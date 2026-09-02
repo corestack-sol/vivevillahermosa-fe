@@ -134,7 +134,8 @@ export default async function PropertyDetailPage({ params, searchParams }: Props
     '@type': 'RealEstateListing',
     name: property.titulo,
     description: property.descripcion,
-    url: `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://vivevillahermosa.mx'}/propiedades/${property.slug}`,
+    // Fallback corregido 2026-09-02 — ver sitemap.ts, mismo bug real.
+    url: `${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://vivevillahermosa.corestacksolutions.com.mx'}/propiedades/${property.slug}`,
     image: property.fotos,
     address: {
       '@type': 'PostalAddress',

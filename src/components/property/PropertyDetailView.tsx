@@ -71,7 +71,10 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
   }];
 
   const whatsappUrl = (() => {
-    const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://vivevillahermosa.mx';
+    // Fallback corregido 2026-09-02 — dominio real (el viejo no existía),
+    // ver sitemap.ts para el detalle del bug real (NEXT_PUBLIC_BASE_URL
+    // apuntaba a localhost en el build de producción).
+    const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://vivevillahermosa.corestacksolutions.com.mx';
     const url  = `${base}/propiedades/${property.slug}`;
     const text = `🏠 *${property.titulo}*\n📍 ${property.colonia}, ${property.municipio}\n\n${url}`;
     return `https://wa.me/?text=${encodeURIComponent(text)}`;
