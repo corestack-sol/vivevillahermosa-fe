@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  ArrowLeft, Plus, Info, Pencil, Trash2, Play, Pause, Archive, Star, Building2, Download, Upload, TrendingUp, Loader2,
+  ArrowLeft, Plus, Info, Pencil, Trash2, Play, Pause, Archive, Star, Building2, Download, Upload, TrendingUp, Loader2, MessageCircle,
 } from 'lucide-react';
 import { ESTADOS_ARCHIVADOS, ESTADO_CFG, mapMiaBackend, type EstadoPublicacion, type MiPropiedad } from '@/lib/misPropiedades';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
@@ -22,9 +22,8 @@ import { DestacarPropiedadModal } from '@/components/property/DestacarPropiedadM
 import { Skeleton } from '@/components/ui/Skeleton';
 import { MENSAJE_LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
 
-// Debe coincidir con LIMITE_PROPIEDADES_ACTIVAS en el backend
-// (properties.service.ts) — solo para el mensaje, el servidor lo hace
-// cumplir de verdad (código LIMITE_PROPIEDADES_ALCANZADO).
+// Debe coincidir con el límite real del backend — solo para el mensaje,
+// el servidor lo hace cumplir de verdad (código LIMITE_PROPIEDADES_ALCANZADO).
 // 2026-08-10: bajado de 4 a 3, ver docs/PLAN-AUDITORIA-FASE1-MVP.md punto 0.
 const LIMITE_PROPIEDADES = 3;
 
@@ -101,8 +100,11 @@ export default function MisPropiedadesPage() {
   // Pre-chequeo del límite gratuito — atenúa "Publicar nueva" en vez de
   // dejar que la persona entre al formulario de 6 pasos para recién
   // toparse con el gate hasta el final (reporte real 2026-09-01). Reusa
-  // `items`, ya cargado — sin llamada extra al backend.
-  const limitePropiedades = counts.activa >= LIMITE_PROPIEDADES;
+  // `items`, ya cargado — sin llamada extra al backend. `counts.activa +
+  // counts.pausada`, no solo activa — confirmado en vivo 2026-09-02
+  // (docs/BACKEND-LIMITE-PROPIEDADES-02092026.md): el backend cuenta
+  // ambas juntas contra el límite.
+  const limitePropiedades = counts.activa + counts.pausada >= LIMITE_PROPIEDADES;
 
   function pendiente(accion: string) {
     toast.info(`"${accion}" estará disponible cuando se conecte el panel real de propiedades (Módulo 2, Fase 2).`);
@@ -143,7 +145,7 @@ export default function MisPropiedadesPage() {
         const code = (err.body as { code?: string } | null)?.code;
         toast.error(
           code === 'LIMITE_PROPIEDADES_ALCANZADO'
-            ? `Ya tienes ${LIMITE_PROPIEDADES} propiedades activas — el máximo gratuito. Contáctanos para un plan profesional si necesitas reactivar más.`
+            ? `Ya tienes ${LIMITE_PROPIEDADES} propiedades (activas o pausadas) — el máximo gratuito. Elimina alguna para reactivar esta.`
             : err.message,
         );
         return;
@@ -270,13 +272,15 @@ export default function MisPropiedadesPage() {
         </div>
       </div>
 
-      {/* Estadísticas de vistas/contactos todavía no existen (BACKEND.md
-          §12, analítica fuera del alcance del MVP) — honesto sobre esa
-          única pieza que sigue pendiente, las propiedades ya son reales. */}
+      {/* Contactos ya son reales (confirmado en vivo 2026-09-02, ver
+          docs/BACKEND-VISTAS-CONTACTOS-02092026.md) — solo vistas sigue
+          pendiente (el backend todavía no implementa el endpoint que las
+          cuenta). Se actualiza el aviso para no seguir diciendo "ninguna
+          de las dos" cuando ya es solo una. */}
       <div className="flex items-start gap-2.5 bg-brand-pale border border-brand/20 rounded-xl px-4 py-3 mb-6">
         <Info size={15} className="text-brand flex-shrink-0 mt-0.5" />
         <p className="text-xs text-brand-dark leading-relaxed">
-          Las estadísticas de vistas y contactos todavía no están disponibles — llegan en una fase futura.
+          Las estadísticas de vistas todavía no están disponibles — los contactos ya reflejan actividad real.
         </p>
       </div>
 
@@ -423,6 +427,13 @@ export default function MisPropiedadesPage() {
                       </Tooltip>
                     </>
                   )}
+                  <Tooltip label="Mensajes recibidos">
+                    <Link href={`/dashboard/propiedades/${p.id}/mensajes`}
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-brand hover:bg-brand-pale transition-colors"
+                    >
+                      <MessageCircle size={15} />
+                    </Link>
+                  </Tooltip>
                   <Tooltip label="Editar propiedad">
                     <Link href={`/dashboard/propiedades/${p.id}/editar`}
                       className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-brand hover:bg-brand-pale transition-colors"

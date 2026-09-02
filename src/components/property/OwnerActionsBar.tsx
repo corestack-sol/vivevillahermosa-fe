@@ -14,9 +14,9 @@ import { PausarPropiedadModal } from '@/components/property/PausarPropiedadModal
 import { DestacarPropiedadModal } from '@/components/property/DestacarPropiedadModal';
 import { useRouter } from 'next/navigation';
 
-// Debe coincidir con LIMITE_PROPIEDADES_ACTIVAS en el backend
-// (properties.service.ts) — solo se usa para el mensaje de error, el
-// servidor es quien de verdad lo hace cumplir (código LIMITE_PROPIEDADES_ALCANZADO).
+// Debe coincidir con el límite real del backend — solo se usa para el
+// mensaje de error, el servidor es quien de verdad lo hace cumplir
+// (código LIMITE_PROPIEDADES_ALCANZADO).
 // 2026-08-10: bajado de 4 a 3, ver docs/PLAN-AUDITORIA-FASE1-MVP.md punto 0.
 const LIMITE_PROPIEDADES = 3;
 
@@ -26,8 +26,9 @@ interface MiaBackend {
   operacion: 'venta' | 'renta';
   estado: EstadoPublicacion;
   featured: boolean;
-  // Ver docs/BACKEND-MOTIVOS-CIERRE-23082026.md §5 — el backend todavía no
-  // lo manda, queda undefined hasta entonces (el modal ya maneja ese caso).
+  // Confirmado en vivo 2026-09-02 — el backend ya lo manda real (ver
+  // docs/BACKEND-VISTAS-CONTACTOS-02092026.md). Opcional se queda igual,
+  // por si algún día vuelve a faltar (ej. propiedad muy vieja).
   contactosReales?: number;
 }
 
@@ -93,7 +94,7 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
         const code = (err.body as { code?: string } | null)?.code;
         toast.error(
           code === 'LIMITE_PROPIEDADES_ALCANZADO'
-            ? `Ya tienes ${LIMITE_PROPIEDADES} propiedades activas — el máximo gratuito. Contáctanos para un plan profesional si necesitas reactivar más.`
+            ? `Ya tienes ${LIMITE_PROPIEDADES} propiedades (activas o pausadas) — el máximo gratuito. Elimina alguna para reactivar esta.`
             : err.message,
         );
         return;

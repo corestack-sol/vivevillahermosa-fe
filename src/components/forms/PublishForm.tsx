@@ -120,14 +120,17 @@ const STEP_SUBTITLES = [
 // Pedido explícito 2026-08-22: no bloquear en esos casos, se queda como
 // aviso (igual que oscura/sobreexpuesta), nunca como bloqueo duro.
 const TIPOS_SIN_BLOQUEO_BORROSA = new Set(['terreno', 'local', 'bodega']);
-// Debe coincidir con LIMITE_PROPIEDADES_ACTIVAS en el backend
+// Debe coincidir con el límite real del backend
 // (properties.service.ts) — el servidor es quien de verdad lo hace cumplir
 // (código LIMITE_PROPIEDADES_ALCANZADO), esto solo evita hacer perder el
 // tiempo a quien ya topó antes de llenar los 6 pasos del formulario.
 // 2026-08-10: bajado de 4 a 3 por decisión de producto confirmada — ver
-// docs/PLAN-AUDITORIA-FASE1-MVP.md punto 0. Coordinar con el backend, ver
-// docs/BACKEND-17082026.md.
+// docs/PLAN-AUDITORIA-FASE1-MVP.md punto 0.
 const LIMITE_PROPIEDADES = 3;
+// Confirmado en vivo 2026-09-02 (docs/BACKEND-LIMITE-PROPIEDADES-
+// 02092026.md): el backend cuenta activas Y pausadas juntas — pausar ya
+// no libera espacio, solo eliminar.
+const ESTADOS_QUE_CUENTAN_PARA_LIMITE = new Set(['activa', 'pausada']);
 
 // Nombres legibles para el resumen de "campos por corregir" — sin esto, la
 // lista mostraría las llaves crudas del schema (ej. "riesgoInundacion" en
@@ -224,8 +227,8 @@ export function PublishForm() {
     backendFetch<{ propiedades: { id: string; estado: string; titulo: string; fotos: string[] }[] }>('/propiedades/mias')
       .then(({ propiedades }) => {
         if (cancelado) return;
-        const activas = propiedades.filter((p) => p.estado === 'activa').length;
-        setLimiteAlcanzado(activas >= LIMITE_PROPIEDADES);
+        const vivas = propiedades.filter((p) => ESTADOS_QUE_CUENTAN_PARA_LIMITE.has(p.estado)).length;
+        setLimiteAlcanzado(vivas >= LIMITE_PROPIEDADES);
         setPropiasFotos(propiedades.filter((p) => p.fotos.length > 0));
       })
       .catch(() => {});
@@ -1104,7 +1107,7 @@ export function PublishForm() {
         </div>
         <h2 className="text-xl font-heading font-bold text-gray-900 mb-2">Llegaste al límite gratuito</h2>
         <p className="text-sm text-gray-500 leading-relaxed mb-6">
-          Ya tienes {LIMITE_PROPIEDADES} propiedades activas — el máximo gratuito por cuenta. Pausa o elimina alguna para publicar una nueva.
+          Ya tienes {LIMITE_PROPIEDADES} propiedades (activas o pausadas) — el máximo gratuito por cuenta. Elimina alguna para publicar una nueva.
         </p>
         <Link href="/dashboard/propiedades" className={buttonClasses('primary', 'lg', 'w-full')}>
           Ver mis propiedades

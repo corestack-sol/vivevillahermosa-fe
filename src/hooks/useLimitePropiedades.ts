@@ -1,14 +1,23 @@
 import { useEffect, useState } from 'react';
 import { backendFetch } from '@/lib/backendApi';
 
-// Debe coincidir con LIMITE_PROPIEDADES_ACTIVAS en el backend y con la
-// misma constante duplicada en PublishForm.tsx/OwnerActionsBar.tsx/
+// Debe coincidir con el límite real del backend y con la misma constante
+// duplicada en PublishForm.tsx/OwnerActionsBar.tsx/
 // dashboard/propiedades/page.tsx — el servidor es quien de verdad lo hace
 // cumplir (código LIMITE_PROPIEDADES_ALCANZADO).
 export const LIMITE_PROPIEDADES = 3;
 
+// Cambio de política confirmado en vivo 2026-09-02
+// (docs/BACKEND-LIMITE-PROPIEDADES-02092026.md): el backend ahora cuenta
+// activas Y pausadas juntas contra el límite — pausar una propiedad ya NO
+// libera espacio, solo eliminarla. Antes de este cambio, contar solo
+// 'activa' aquí hubiera dejado publicar/reactivar cosas que el backend
+// iba a rechazar igual (el chequeo real es el del servidor, este es solo
+// para no mandar a alguien a un formulario de 6 pasos para nada).
+export const ESTADOS_QUE_CUENTAN_PARA_LIMITE = ['activa', 'pausada'] as const;
+
 export const MENSAJE_LIMITE_PROPIEDADES =
-  `Ya tienes ${LIMITE_PROPIEDADES} propiedades activas — el máximo gratuito. Pausa o elimina alguna para publicar una nueva.`;
+  `Ya tienes ${LIMITE_PROPIEDADES} propiedades (activas o pausadas) — el máximo gratuito. Elimina alguna para publicar una nueva.`;
 
 /**
  * Pre-chequeo del límite gratuito de propiedades activas — pensado para
@@ -32,8 +41,10 @@ export function useLimitePropiedades(activo: boolean): boolean {
     backendFetch<{ propiedades: { estado: string }[] }>('/propiedades/mias')
       .then(({ propiedades }) => {
         if (cancelado) return;
-        const activas = propiedades.filter((p) => p.estado === 'activa').length;
-        setLimiteAlcanzado(activas >= LIMITE_PROPIEDADES);
+        const vivas = propiedades.filter((p) =>
+          (ESTADOS_QUE_CUENTAN_PARA_LIMITE as readonly string[]).includes(p.estado),
+        ).length;
+        setLimiteAlcanzado(vivas >= LIMITE_PROPIEDADES);
       })
       .catch(() => {});
     return () => { cancelado = true; };
