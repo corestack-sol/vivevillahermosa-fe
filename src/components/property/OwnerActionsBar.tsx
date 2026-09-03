@@ -194,15 +194,18 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
             </Tooltip>
           </>
         )}
-        <Tooltip label="Copiar mi ubicación exacta">
-          <button
-            type="button"
-            onClick={copiarUbicacion}
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-brand-dark/60 hover:text-brand hover:bg-white transition-colors"
-          >
-            <MapPin size={16} />
-          </button>
-        </Tooltip>
+        {/* Aparte del resto (no solo ícono) — pedido explícito 2026-09-03:
+            va a ser el botón que más se use de todos (compartir ubicación
+            real por WhatsApp), necesita destacarse y decir qué hace sin
+            depender de un tooltip al pasar el mouse. */}
+        <button
+          type="button"
+          onClick={copiarUbicacion}
+          title="Copiar mi ubicación exacta"
+          className="flex items-center gap-1.5 bg-white border border-brand/25 text-brand hover:bg-brand hover:text-white hover:border-brand transition-colors text-xs font-semibold pl-2.5 pr-3 py-2 rounded-xl mx-2"
+        >
+          <MapPin size={14} /> Copiar ubicación
+        </button>
         <Tooltip label="Editar propiedad">
           <Link href={`/dashboard/propiedades/${propertyId}/editar`}
             className="w-9 h-9 rounded-xl flex items-center justify-center text-brand-dark/60 hover:text-brand hover:bg-white transition-colors"

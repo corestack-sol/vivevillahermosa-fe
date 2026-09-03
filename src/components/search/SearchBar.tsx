@@ -7,6 +7,7 @@ import { getAllProperties } from '@/lib/api';
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches';
 import { interpretarBusqueda, esOracionLarga, MAX_QUERY_LENGTH, type FiltrosIA } from '@/lib/interpretarBusqueda';
 import type { Property } from '@/types/property';
+import { AMENIDADES_OPTIONS } from '@/lib/amenidades';
 
 // Bandera de un solo uso para avisar en /propiedades que la búsqueda que
 // trajo hasta ahí no tenía nada concreto que interpretar (ver irA más abajo)
@@ -25,14 +26,24 @@ const TIPO_LABEL: Record<Property['tipo'], string> = {
   habitacion: 'habitación',
 };
 
+const formatoMonedaPlaceholder = new Intl.NumberFormat('es-MX', {
+  style: 'currency', currency: 'MXN', minimumFractionDigits: 0, maximumFractionDigits: 0,
+});
+
 /**
  * Placeholder rotativo — pedido explícito 2026-09-03, referencia: cosmos.so
  * (el placeholder no es estático, cambia cada cierto tiempo con fade
  * in/out). Cada ejemplo se arma a partir de propiedades reales ya cargadas
  * (mismo fetch que ya alimenta las sugerencias de lugar) — nunca sugiere
- * algo que la plataforma no tiene hoy. Formato fijo, pedido explícito
- * 2026-09-03: "{tipo} en {operación}, {municipio}" — ej. "habitación en
- * renta, Comalcalco" — una propiedad real por ejemplo, tope de 6.
+ * algo que la plataforma no tiene hoy.
+ *
+ * El primer formato ("{tipo} en {operación}, {municipio}") era demasiado
+ * mecánico — no mostraba lo que la IA de verdad entiende. Corrección del
+ * mismo día, pedido explícito: priorizar frases en lenguaje natural que sí
+ * muestran el potencial real (cercanía a un punto, riesgo de inundación,
+ * amenidad, rango de precio) — cada una sigue construida solo si hay una
+ * propiedad real que la respalde, nunca inventa un dato. El formato simple
+ * queda como relleno al final, solo si hace falta llegar a 6.
  */
 export function construirEjemplosPlaceholder(properties: Property[]): string[] {
   const ejemplos: string[] = [];
@@ -44,23 +55,48 @@ export function construirEjemplosPlaceholder(properties: Property[]): string[] {
   // siempre las mismas primeras propiedades del arreglo.
   const barajadas = [...properties].sort(() => Math.random() - 0.5);
 
-  // Primera pasada: como mucho un ejemplo por municipio — pedido explícito
-  // 2026-09-03, Centro tiene mucha más oferta que el resto y se comía los
-  // 6 espacios (mismo string deduplicado, pero municipio repetido).
+  // Cercanía a un punto de interés real — muestra que entiende "cerca de".
+  const cercaDosBocas = barajadas.find((p) => p.cercaDosoBocas);
+  if (cercaDosBocas) agregar(`${TIPO_LABEL[cercaDosBocas.tipo] ?? cercaDosBocas.tipo} cerca de Dos Bocas`);
+
+  // Riesgo de inundación — no es un filtro obvio de buscador tradicional.
+  const sinRiesgo = barajadas.find((p) => p.riesgoInundacion === 'bajo');
+  if (sinRiesgo) agregar(`algo que no se inunde en ${sinRiesgo.municipio}`);
+
+  // Amenidad real mencionada en lenguaje natural, no como checkbox.
+  const conAmenidad = barajadas.find((p) => p.amenidades.length > 0);
+  if (conAmenidad) {
+    const amenidadKey = conAmenidad.amenidades[0];
+    const amenidadLabel = (AMENIDADES_OPTIONS.find((a) => a.key === amenidadKey)?.label ?? amenidadKey).toLowerCase();
+    agregar(`${TIPO_LABEL[conAmenidad.tipo] ?? conAmenidad.tipo} con ${amenidadLabel} en ${conAmenidad.colonia}`);
+  }
+
+  // Recámaras como número dentro de una frase, no un selector.
+  const conRecamaras = barajadas.find((p) => p.recamaras >= 2);
+  if (conRecamaras) agregar(`${conRecamaras.recamaras} recámaras en ${conRecamaras.colonia}`);
+
+  // Techo de precio en renta — la IA extrae el número de la frase.
+  const enRenta = barajadas.find((p) => p.operacion === 'renta');
+  if (enRenta) {
+    const rentas = properties.filter((p) => p.operacion === 'renta').map((p) => p.precio);
+    const techo = Math.ceil(Math.min(...rentas) / 1000) * 1000;
+    agregar(`renta bajo ${formatoMonedaPlaceholder.format(techo)} en ${enRenta.municipio}`);
+  }
+
+  // Rango de precio en venta — dos números en una sola frase.
+  const ventas = properties.filter((p) => p.operacion === 'venta').map((p) => p.precio);
+  if (ventas.length >= 2) {
+    agregar(`casas entre ${formatoMonedaPlaceholder.format(Math.min(...ventas))} y ${formatoMonedaPlaceholder.format(Math.max(...ventas))}`);
+  }
+
+  // Relleno si aún no se llega a 6 — formato simple tipo+operación+lugar,
+  // como mucho un municipio repetido (Centro no se come todo el cupo).
   const municipiosUsados = new Set<string>();
   for (const p of barajadas) {
     if (ejemplos.length >= 6) break;
     if (municipiosUsados.has(p.municipio)) continue;
     agregar(`${TIPO_LABEL[p.tipo] ?? p.tipo} en ${p.operacion}, ${p.municipio}`);
     municipiosUsados.add(p.municipio);
-  }
-
-  // Si no hay suficientes municipios distintos para llegar a 6, se
-  // completa repitiendo — mejor un municipio real repetido que menos
-  // ejemplos de los que caben.
-  for (const p of barajadas) {
-    if (ejemplos.length >= 6) break;
-    agregar(`${TIPO_LABEL[p.tipo] ?? p.tipo} en ${p.operacion}, ${p.municipio}`);
   }
 
   return ejemplos;
@@ -176,7 +212,7 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
     // Mismo respaldo de siempre mientras carga el catálogo (o si falla,
     // ej. CORS bloqueado en localhost) — no inventa un ejemplo del
     // catálogo, es un caso fijo y genérico.
-    : 'casa en venta, Centro';
+    : 'casa que no se inunde en Centro';
 
   const filtered = value.length >= 2
     ? places.filter((s) => s.toLowerCase().includes(value.toLowerCase())).slice(0, 6)
