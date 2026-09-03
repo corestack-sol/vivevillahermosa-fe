@@ -20,6 +20,19 @@ export const MENSAJE_LIMITE_PROPIEDADES =
   `Ya tienes ${LIMITE_PROPIEDADES} propiedades (activas o pausadas) — el máximo gratuito. Elimina alguna para publicar una nueva.`;
 
 /**
+ * Extraída 2026-09-02 (auditoría del día) — antes este mismo filtro vivía
+ * copiado 3 veces (aquí, PublishForm.tsx, dashboard/propiedades/page.tsx),
+ * cada uno con su propio riesgo de desalinearse del cambio de política de
+ * arriba si alguien lo tocaba en un solo lado. Pura y exportada para
+ * poder probarla directo (useLimitePropiedades.test.ts).
+ */
+export function contarPropiedadesVivas(propiedades: { estado: string }[]): number {
+  return propiedades.filter((p) =>
+    (ESTADOS_QUE_CUENTAN_PARA_LIMITE as readonly string[]).includes(p.estado),
+  ).length;
+}
+
+/**
  * Pre-chequeo del límite gratuito de propiedades activas — pensado para
  * atenuar el botón "Publicar" ANTES de que la persona entre al formulario
  * de 6 pasos y lo llene completo solo para toparse con el gate hasta el
@@ -41,10 +54,7 @@ export function useLimitePropiedades(activo: boolean): boolean {
     backendFetch<{ propiedades: { estado: string }[] }>('/propiedades/mias')
       .then(({ propiedades }) => {
         if (cancelado) return;
-        const vivas = propiedades.filter((p) =>
-          (ESTADOS_QUE_CUENTAN_PARA_LIMITE as readonly string[]).includes(p.estado),
-        ).length;
-        setLimiteAlcanzado(vivas >= LIMITE_PROPIEDADES);
+        setLimiteAlcanzado(contarPropiedadesVivas(propiedades) >= LIMITE_PROPIEDADES);
       })
       .catch(() => {});
     return () => { cancelado = true; };

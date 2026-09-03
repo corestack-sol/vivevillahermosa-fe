@@ -36,6 +36,7 @@ import {
 } from '@/lib/publishFraudGuard';
 import { hashImagenDesdeFile, hashImagenDesdeUrl, distanciaHamming, UMBRAL_HASH_SIMILAR } from '@/lib/fotoHash';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
+import { LIMITE_PROPIEDADES, contarPropiedadesVivas } from '@/hooks/useLimitePropiedades';
 import { resizeImageToDataUrl, MAX_SOURCE_BYTES } from '@/lib/imageResize';
 import {
   publishSchema, type PublishFormData,
@@ -120,17 +121,6 @@ const STEP_SUBTITLES = [
 // Pedido explícito 2026-08-22: no bloquear en esos casos, se queda como
 // aviso (igual que oscura/sobreexpuesta), nunca como bloqueo duro.
 const TIPOS_SIN_BLOQUEO_BORROSA = new Set(['terreno', 'local', 'bodega']);
-// Debe coincidir con el límite real del backend
-// (properties.service.ts) — el servidor es quien de verdad lo hace cumplir
-// (código LIMITE_PROPIEDADES_ALCANZADO), esto solo evita hacer perder el
-// tiempo a quien ya topó antes de llenar los 6 pasos del formulario.
-// 2026-08-10: bajado de 4 a 3 por decisión de producto confirmada — ver
-// docs/PLAN-AUDITORIA-FASE1-MVP.md punto 0.
-const LIMITE_PROPIEDADES = 3;
-// Confirmado en vivo 2026-09-02 (docs/BACKEND-LIMITE-PROPIEDADES-
-// 02092026.md): el backend cuenta activas Y pausadas juntas — pausar ya
-// no libera espacio, solo eliminar.
-const ESTADOS_QUE_CUENTAN_PARA_LIMITE = new Set(['activa', 'pausada']);
 
 // Nombres legibles para el resumen de "campos por corregir" — sin esto, la
 // lista mostraría las llaves crudas del schema (ej. "riesgoInundacion" en
@@ -227,8 +217,7 @@ export function PublishForm() {
     backendFetch<{ propiedades: { id: string; estado: string; titulo: string; fotos: string[] }[] }>('/propiedades/mias')
       .then(({ propiedades }) => {
         if (cancelado) return;
-        const vivas = propiedades.filter((p) => ESTADOS_QUE_CUENTAN_PARA_LIMITE.has(p.estado)).length;
-        setLimiteAlcanzado(vivas >= LIMITE_PROPIEDADES);
+        setLimiteAlcanzado(contarPropiedadesVivas(propiedades) >= LIMITE_PROPIEDADES);
         setPropiasFotos(propiedades.filter((p) => p.fotos.length > 0));
       })
       .catch(() => {});
