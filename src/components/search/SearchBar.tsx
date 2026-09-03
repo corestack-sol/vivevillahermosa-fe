@@ -401,9 +401,10 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
       )}
       </div>
 
-      {/* Botón aparte, solo en móvil — pedido explícito 2026-09-03. */}
+      {/* Botón aparte, solo en móvil — pedido explícito 2026-09-03. Tamaño
+          propio (no todo el ancho), centrado. */}
       <button type="submit" disabled={buscando}
-        className="sm:hidden mt-3 w-full flex items-center justify-center gap-1.5 bg-brand hover:bg-brand-dark text-white text-sm font-bold px-6 py-3 rounded-xl transition-colors disabled:opacity-70">
+        className="sm:hidden mt-3 mx-auto flex w-fit items-center gap-1.5 bg-brand hover:bg-brand-dark text-white text-sm font-bold px-6 py-3 rounded-xl transition-colors disabled:opacity-70">
         {buscando && <Loader2 size={14} className="animate-spin" />}
         Buscar
       </button>
