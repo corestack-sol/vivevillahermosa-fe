@@ -96,7 +96,14 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
           el caso normal — MobileContactCta es flex-1 y llena el espacio
           restante igual que antes, sin importar el justify-content del
           padre. */}
-      <div className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-4 py-3 flex items-center justify-center gap-3">
+      {/* pt-3 + pb-[calc(...)] en vez de py-3 — auditoría PWA 2026-09-02:
+          instalada en iOS (sin barra de Safari que ya daba ese margen
+          gratis), esta barra quedaba pegada justo detrás del indicador de
+          inicio (home indicator) del gesto de swipe. env(safe-area-inset-
+          bottom) es 0 en cualquier navegador normal (no rompe nada ahí),
+          solo suma espacio real en standalone/instalado donde el sistema
+          operativo lo reporta. */}
+      <div className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-center gap-3">
         <p className="flex-shrink-0 text-lg font-heading font-bold text-gray-900 leading-none">
           {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(property.precio)}
           {property.operacion === 'renta' && <span className="text-xs font-normal text-gray-400">/mes</span>}

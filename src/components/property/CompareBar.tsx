@@ -22,7 +22,12 @@ export function CompareBar() {
     // sigue como clase real (no inline style) para que la cascada de
     // Tailwind pueda seguir pisándola en escritorio, donde nunca hay nada
     // que evitar abajo.
-    <div className="fixed inset-x-0 bottom-[calc(var(--compare-bar-bottom-offset,0px)+1rem)] lg:bottom-4 z-40 flex justify-center px-5 pointer-events-none">
+    // + env(safe-area-inset-bottom) — auditoría PWA 2026-09-02: instalada
+    // en iOS, esta barra quedaba pegada al indicador de inicio (home
+    // indicator) en cualquier página sin la barra de "Contactar" debajo
+    // (esa sí ya tenía su propio margen real de sistema, esta no). 0 en
+    // cualquier navegador normal, no cambia nada ahí.
+    <div className="fixed inset-x-0 bottom-[calc(var(--compare-bar-bottom-offset,0px)+1rem+env(safe-area-inset-bottom))] lg:bottom-4 z-40 flex justify-center px-5 pointer-events-none">
       <div className="pointer-events-auto flex items-center gap-2 sm:gap-3 bg-brand-dark text-white rounded-2xl shadow-2xl pl-3 sm:pl-4 pr-2 py-2 animate-toast-in max-w-full">
         <Scale size={16} className="text-accent flex-shrink-0" />
         {/* "para comparar" se recorta en pantallas angostas (<640px) — con
