@@ -140,33 +140,64 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
   // así que se apaga entera para esa preferencia en vez de solo acortar el
   // fade.
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  const [placeholderVisible, setPlaceholderVisible] = useState(true);
+  // Barrido de izquierda a derecha (no solo opacidad) — pedido explícito
+  // 2026-09-03. 'visible' = texto completo destapado. 'hidden-left' = tapado
+  // desde el borde derecho (el barrido de entrada avanza hacia la derecha
+  // hasta destaparlo entero). 'hidden-right' = tapado desde el borde
+  // izquierdo (el barrido de salida avanza hacia la derecha hasta taparlo
+  // entero) — misma dirección en ambos sentidos, entra y sale "barriendo"
+  // igual.
+  const [wipeState, setWipeState] = useState<'hidden-left' | 'visible' | 'hidden-right'>('visible');
+  const [wipeAnimado, setWipeAnimado] = useState(true);
   useEffect(() => {
     if (placeholder) return;
     if (ejemplosPlaceholder.length === 0) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     let fadeTimeoutId: ReturnType<typeof setTimeout>;
+    let raf1 = 0;
+    let raf2 = 0;
     const intervalId = setInterval(() => {
-      setPlaceholderVisible(false);
+      setWipeAnimado(true);
+      setWipeState('hidden-right');
       fadeTimeoutId = setTimeout(() => {
         setPlaceholderIndex((i) => (i + 1) % ejemplosPlaceholder.length);
-        setPlaceholderVisible(true);
+        // Reposiciona sin transición al otro lado, listo para el próximo
+        // barrido de entrada — un doble requestAnimationFrame para que el
+        // navegador pinte este estado "sin animación" antes de reactivarla,
+        // si no, el salto se animaría también.
+        setWipeAnimado(false);
+        setWipeState('hidden-left');
+        raf1 = requestAnimationFrame(() => {
+          raf2 = requestAnimationFrame(() => {
+            setWipeAnimado(true);
+            setWipeState('visible');
+          });
+        });
       }, PLACEHOLDER_FADE_MS);
     }, PLACEHOLDER_ROTAR_MS);
     return () => {
       clearInterval(intervalId);
       clearTimeout(fadeTimeoutId);
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
     };
   }, [placeholder, ejemplosPlaceholder]);
-  const placeholderTexto = placeholder
-    ?? (ejemplosPlaceholder.length > 0
-      ? `Prueba "${ejemplosPlaceholder[placeholderIndex % ejemplosPlaceholder.length]}"`
-      // Mientras carga el catálogo (o si la carga falla, ej. CORS bloqueado
-      // en localhost) — pedido explícito 2026-09-03: el respaldo anterior
-      // era solo una lista de nombres de lugar ("Tabasco 2000, Gaviotas...")
-      // que no enseñaba a buscar nada. Este ya tiene la misma forma que los
-      // ejemplos reales (verbo + comillas), aunque no venga del catálogo.
-      : 'Prueba "casa en Tabasco 2000"');
+  const wipeClipPath = wipeState === 'visible'
+    ? 'inset(0 0 0 0)'
+    : wipeState === 'hidden-left'
+      ? 'inset(0 100% 0 0)'
+      : 'inset(0 0 0 100%)';
+  // "Prueba" fijo, solo lo que va entre comillas cambia — pedido explícito
+  // 2026-09-03. El atributo `placeholder` nativo es un solo string plano,
+  // no se puede animar una parte y otra no, así que cuando toca rotar se
+  // reemplaza por una capa propia (ver overlay más abajo) en vez de
+  // usar el placeholder nativo del <input>.
+  const ejemploActual = ejemplosPlaceholder.length > 0
+    ? ejemplosPlaceholder[placeholderIndex % ejemplosPlaceholder.length]
+    // Mismo respaldo de siempre mientras carga el catálogo (o si falla,
+    // ej. CORS bloqueado en localhost) — no inventa un ejemplo del
+    // catálogo, es un caso fijo y genérico.
+    : 'casa en Tabasco 2000';
 
   const filtered = value.length >= 2
     ? places.filter((s) => s.toLowerCase().includes(value.toLowerCase())).slice(0, 6)
@@ -307,16 +338,39 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
       <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl shadow-2xl px-5 py-4"
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
         <Search size={20} className="text-gray-400 flex-shrink-0" />
-        <input
-          ref={inputRef}
-          type="text"
-          value={value}
-          onChange={(e) => { setValue(e.target.value); setOpen(true); }}
-          onFocus={() => setOpen(true)}
-          maxLength={MAX_QUERY_LENGTH}
-          placeholder={placeholderTexto}
-          className={`flex-1 text-base text-gray-800 placeholder-gray-400 bg-transparent focus:outline-none min-w-0 placeholder:transition-opacity placeholder:duration-300 ${placeholderVisible ? 'placeholder:opacity-100' : 'placeholder:opacity-0'}`}
-        />
+        <div className="relative flex-1 min-w-0">
+          <input
+            ref={inputRef}
+            type="text"
+            value={value}
+            onChange={(e) => { setValue(e.target.value); setOpen(true); }}
+            onFocus={() => setOpen(true)}
+            maxLength={MAX_QUERY_LENGTH}
+            placeholder={placeholder}
+            aria-label={placeholder ? undefined : 'Buscar propiedades por lugar, precio o características'}
+            className="w-full text-base text-gray-800 placeholder-gray-400 bg-transparent focus:outline-none"
+          />
+          {/* "Prueba" fijo, el ejemplo entre comillas rota con fade — el
+              placeholder nativo del <input> queda vacío en este caso, esta
+              capa lo reemplaza. pointer-events-none para no robarle clics
+              al input; solo se ve cuando no hay texto escrito, igual que
+              un placeholder normal. */}
+          {!placeholder && (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 flex items-center text-base text-gray-400 truncate"
+              style={{ visibility: value ? 'hidden' : 'visible' }}
+            >
+              Prueba&nbsp;
+              <span
+                className={`inline-block ${wipeAnimado ? 'transition-[clip-path] duration-300 ease-out' : ''}`}
+                style={{ clipPath: wipeClipPath }}
+              >
+                &ldquo;{ejemploActual}&rdquo;
+              </span>
+            </span>
+          )}
+        </div>
         <button type="submit" disabled={buscando}
           className="flex-shrink-0 flex items-center gap-1.5 bg-brand hover:bg-brand-dark text-white text-sm font-bold px-6 py-2.5 rounded-xl transition-colors whitespace-nowrap disabled:opacity-70">
           {buscando && <Loader2 size={14} className="animate-spin" />}
