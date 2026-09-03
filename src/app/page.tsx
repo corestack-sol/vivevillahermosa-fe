@@ -210,7 +210,7 @@ export default async function HomePage() {
             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-brand uppercase tracking-wide bg-brand-pale px-3 py-1 rounded-full mb-2">
               <Bot size={14} /> Búsqueda con IA
             </span>
-            <SearchBar placeholder="Ej: casa cerca de Dos Bocas que no se inunde, renta hasta $12,000" />
+            <SearchBar />
             <p className="text-xs text-gray-400 mt-2">
               Escríbelo como si le hablaras a una persona — la IA entiende zona, precio, tipo de propiedad y riesgo de inundación.
             </p>

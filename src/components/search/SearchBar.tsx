@@ -6,6 +6,7 @@ import { Search, MapPin, Clock, X, Loader2 } from 'lucide-react';
 import { getAllProperties } from '@/lib/api';
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches';
 import { interpretarBusqueda, esOracionLarga, MAX_QUERY_LENGTH, type FiltrosIA } from '@/lib/interpretarBusqueda';
+import type { Property } from '@/types/property';
 
 // Bandera de un solo uso para avisar en /propiedades que la búsqueda que
 // trajo hasta ahí no tenía nada concreto que interpretar (ver irA más abajo)
@@ -13,6 +14,81 @@ import { interpretarBusqueda, esOracionLarga, MAX_QUERY_LENGTH, type FiltrosIA }
 // "cómo llegaste aquí", no un estado de la página en sí; no debería
 // sobrevivir un refresh ni ensuciar la URL compartible.
 export const BUSQUEDA_SIN_INTERPRETAR_KEY = 'vv:busqueda-sin-interpretar';
+
+const TIPO_LABEL: Record<Property['tipo'], string> = {
+  casa: 'casa',
+  departamento: 'depa',
+  terreno: 'terreno',
+  local: 'local comercial',
+  oficina: 'oficina',
+  bodega: 'bodega',
+  habitacion: 'habitación',
+};
+
+const formatoMonedaPlaceholder = new Intl.NumberFormat('es-MX', {
+  style: 'currency', currency: 'MXN', minimumFractionDigits: 0, maximumFractionDigits: 0,
+});
+
+/**
+ * Placeholder rotativo — pedido explícito 2026-09-03, referencia: cosmos.so
+ * (el placeholder no es estático, cambia cada cierto tiempo con fade
+ * in/out). Corrección del mismo día: la primera versión tenía frases
+ * inventadas a mano (colonias/precios que podían no existir en el catálogo
+ * real). Ahora cada ejemplo se arma a partir de propiedades reales ya
+ * cargadas (mismo fetch que ya alimenta las sugerencias de lugar) — nunca
+ * sugiere algo que la plataforma no tiene hoy.
+ */
+export function construirEjemplosPlaceholder(properties: Property[]): string[] {
+  const ejemplos: string[] = [];
+  const agregar = (texto: string) => {
+    if (!ejemplos.includes(texto)) ejemplos.push(texto);
+  };
+
+  // Barajado para que la selección varíe entre cargas de página, no
+  // siempre las mismas primeras propiedades del arreglo.
+  const barajadas = [...properties].sort(() => Math.random() - 0.5);
+
+  for (const p of barajadas) {
+    if (ejemplos.length >= 2) break;
+    agregar(`${TIPO_LABEL[p.tipo] ?? p.tipo} en ${p.colonia}`);
+  }
+
+  const enRenta = barajadas.find((p) => p.operacion === 'renta');
+  if (enRenta) agregar(`${TIPO_LABEL[enRenta.tipo] ?? enRenta.tipo} en renta en ${enRenta.colonia}`);
+
+  const conRecamaras = barajadas.find((p) => p.recamaras >= 2);
+  if (conRecamaras) agregar(`${conRecamaras.recamaras} recámaras en ${conRecamaras.colonia}`);
+
+  const sinRiesgo = barajadas.find((p) => p.riesgoInundacion === 'bajo');
+  if (sinRiesgo) {
+    const municipioLabel = sinRiesgo.municipio === 'Centro' ? 'Villahermosa' : sinRiesgo.municipio;
+    agregar(`algo que no se inunde en ${municipioLabel}`);
+  }
+
+  const cercaDosBocas = barajadas.find((p) => p.cercaDosoBocas);
+  if (cercaDosBocas) agregar(`${TIPO_LABEL[cercaDosBocas.tipo] ?? cercaDosBocas.tipo} cerca de Dos Bocas`);
+
+  const rentas = properties.filter((p) => p.operacion === 'renta').map((p) => p.precio);
+  if (rentas.length > 0) {
+    const techo = Math.ceil(Math.min(...rentas) / 1000) * 1000;
+    agregar(`renta bajo ${formatoMonedaPlaceholder.format(techo)}`);
+  }
+
+  const ventas = properties.filter((p) => p.operacion === 'venta').map((p) => p.precio);
+  if (ventas.length >= 2) {
+    agregar(`casas entre ${formatoMonedaPlaceholder.format(Math.min(...ventas))} y ${formatoMonedaPlaceholder.format(Math.max(...ventas))}`);
+  }
+
+  // Tope de 6 — pedido explícito 2026-09-03 ("5-6 solo si existen"). Cada
+  // categoría de arriba ya se salta sola si no hay ninguna propiedad real
+  // que la respalde, así que esto nunca rellena con menos de lo que
+  // debería si el catálogo es chico — solo evita pasarse de 6 cuando el
+  // catálogo tiene de sobra para las 8 categorías posibles.
+  return ejemplos.slice(0, 6);
+}
+
+const PLACEHOLDER_ROTAR_MS = 3200;
+const PLACEHOLDER_FADE_MS = 350;
 
 interface SearchBarProps {
   initialValue?: string;
@@ -35,6 +111,7 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
   // (colonias + municipios con al menos una propiedad), así nunca se
   // sugiere un lugar donde el usuario luego encuentra "sin resultados".
   const [places, setPlaces] = useState<string[]>([]);
+  const [ejemplosPlaceholder, setEjemplosPlaceholder] = useState<string[]>([]);
   useEffect(() => {
     let cancelado = false;
     getAllProperties().then((props) => {
@@ -45,6 +122,7 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
         set.add(p.municipio === 'Centro' ? 'Villahermosa' : p.municipio);
       }
       setPlaces(Array.from(set).sort((a, b) => a.localeCompare(b, 'es')));
+      setEjemplosPlaceholder(construirEjemplosPlaceholder(props));
     });
     return () => { cancelado = true; };
   }, []);
@@ -55,6 +133,40 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
     }
     cargarRecientes();
   }, []);
+
+  // Solo rota cuando nadie pasó un `placeholder` fijo por prop (algunas
+  // pantallas necesitan un texto específico, no genérico) y cuando el
+  // usuario no pidió reducir movimiento — la rotación no es indispensable,
+  // así que se apaga entera para esa preferencia en vez de solo acortar el
+  // fade.
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [placeholderVisible, setPlaceholderVisible] = useState(true);
+  useEffect(() => {
+    if (placeholder) return;
+    if (ejemplosPlaceholder.length === 0) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let fadeTimeoutId: ReturnType<typeof setTimeout>;
+    const intervalId = setInterval(() => {
+      setPlaceholderVisible(false);
+      fadeTimeoutId = setTimeout(() => {
+        setPlaceholderIndex((i) => (i + 1) % ejemplosPlaceholder.length);
+        setPlaceholderVisible(true);
+      }, PLACEHOLDER_FADE_MS);
+    }, PLACEHOLDER_ROTAR_MS);
+    return () => {
+      clearInterval(intervalId);
+      clearTimeout(fadeTimeoutId);
+    };
+  }, [placeholder, ejemplosPlaceholder]);
+  const placeholderTexto = placeholder
+    ?? (ejemplosPlaceholder.length > 0
+      ? `Prueba "${ejemplosPlaceholder[placeholderIndex % ejemplosPlaceholder.length]}"`
+      // Mientras carga el catálogo (o si la carga falla, ej. CORS bloqueado
+      // en localhost) — pedido explícito 2026-09-03: el respaldo anterior
+      // era solo una lista de nombres de lugar ("Tabasco 2000, Gaviotas...")
+      // que no enseñaba a buscar nada. Este ya tiene la misma forma que los
+      // ejemplos reales (verbo + comillas), aunque no venga del catálogo.
+      : 'Prueba "casa en Tabasco 2000"');
 
   const filtered = value.length >= 2
     ? places.filter((s) => s.toLowerCase().includes(value.toLowerCase())).slice(0, 6)
@@ -202,8 +314,8 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
           onChange={(e) => { setValue(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           maxLength={MAX_QUERY_LENGTH}
-          placeholder={placeholder ?? 'Tabasco 2000, Gaviotas, Paraíso, Comalcalco...'}
-          className="flex-1 text-base text-gray-800 placeholder-gray-400 bg-transparent focus:outline-none min-w-0"
+          placeholder={placeholderTexto}
+          className={`flex-1 text-base text-gray-800 placeholder-gray-400 bg-transparent focus:outline-none min-w-0 placeholder:transition-opacity placeholder:duration-300 ${placeholderVisible ? 'placeholder:opacity-100' : 'placeholder:opacity-0'}`}
         />
         <button type="submit" disabled={buscando}
           className="flex-shrink-0 flex items-center gap-1.5 bg-brand hover:bg-brand-dark text-white text-sm font-bold px-6 py-2.5 rounded-xl transition-colors whitespace-nowrap disabled:opacity-70">
