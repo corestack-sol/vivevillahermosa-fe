@@ -25,18 +25,14 @@ const TIPO_LABEL: Record<Property['tipo'], string> = {
   habitacion: 'habitación',
 };
 
-const formatoMonedaPlaceholder = new Intl.NumberFormat('es-MX', {
-  style: 'currency', currency: 'MXN', minimumFractionDigits: 0, maximumFractionDigits: 0,
-});
-
 /**
  * Placeholder rotativo — pedido explícito 2026-09-03, referencia: cosmos.so
  * (el placeholder no es estático, cambia cada cierto tiempo con fade
- * in/out). Corrección del mismo día: la primera versión tenía frases
- * inventadas a mano (colonias/precios que podían no existir en el catálogo
- * real). Ahora cada ejemplo se arma a partir de propiedades reales ya
- * cargadas (mismo fetch que ya alimenta las sugerencias de lugar) — nunca
- * sugiere algo que la plataforma no tiene hoy.
+ * in/out). Cada ejemplo se arma a partir de propiedades reales ya cargadas
+ * (mismo fetch que ya alimenta las sugerencias de lugar) — nunca sugiere
+ * algo que la plataforma no tiene hoy. Formato fijo, pedido explícito
+ * 2026-09-03: "{tipo} en {operación}, {municipio}" — ej. "habitación en
+ * renta, Comalcalco" — una propiedad real por ejemplo, tope de 6.
  */
 export function construirEjemplosPlaceholder(properties: Property[]): string[] {
   const ejemplos: string[] = [];
@@ -49,42 +45,11 @@ export function construirEjemplosPlaceholder(properties: Property[]): string[] {
   const barajadas = [...properties].sort(() => Math.random() - 0.5);
 
   for (const p of barajadas) {
-    if (ejemplos.length >= 2) break;
-    agregar(`${TIPO_LABEL[p.tipo] ?? p.tipo} en ${p.colonia}`);
+    if (ejemplos.length >= 6) break;
+    agregar(`${TIPO_LABEL[p.tipo] ?? p.tipo} en ${p.operacion}, ${p.municipio}`);
   }
 
-  const enRenta = barajadas.find((p) => p.operacion === 'renta');
-  if (enRenta) agregar(`${TIPO_LABEL[enRenta.tipo] ?? enRenta.tipo} en renta en ${enRenta.colonia}`);
-
-  const conRecamaras = barajadas.find((p) => p.recamaras >= 2);
-  if (conRecamaras) agregar(`${conRecamaras.recamaras} recámaras en ${conRecamaras.colonia}`);
-
-  const sinRiesgo = barajadas.find((p) => p.riesgoInundacion === 'bajo');
-  if (sinRiesgo) {
-    const municipioLabel = sinRiesgo.municipio === 'Centro' ? 'Villahermosa' : sinRiesgo.municipio;
-    agregar(`algo que no se inunde en ${municipioLabel}`);
-  }
-
-  const cercaDosBocas = barajadas.find((p) => p.cercaDosoBocas);
-  if (cercaDosBocas) agregar(`${TIPO_LABEL[cercaDosBocas.tipo] ?? cercaDosBocas.tipo} cerca de Dos Bocas`);
-
-  const rentas = properties.filter((p) => p.operacion === 'renta').map((p) => p.precio);
-  if (rentas.length > 0) {
-    const techo = Math.ceil(Math.min(...rentas) / 1000) * 1000;
-    agregar(`renta bajo ${formatoMonedaPlaceholder.format(techo)}`);
-  }
-
-  const ventas = properties.filter((p) => p.operacion === 'venta').map((p) => p.precio);
-  if (ventas.length >= 2) {
-    agregar(`casas entre ${formatoMonedaPlaceholder.format(Math.min(...ventas))} y ${formatoMonedaPlaceholder.format(Math.max(...ventas))}`);
-  }
-
-  // Tope de 6 — pedido explícito 2026-09-03 ("5-6 solo si existen"). Cada
-  // categoría de arriba ya se salta sola si no hay ninguna propiedad real
-  // que la respalde, así que esto nunca rellena con menos de lo que
-  // debería si el catálogo es chico — solo evita pasarse de 6 cuando el
-  // catálogo tiene de sobra para las 8 categorías posibles.
-  return ejemplos.slice(0, 6);
+  return ejemplos;
 }
 
 const PLACEHOLDER_ROTAR_MS = 3200;
@@ -197,7 +162,7 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
     // Mismo respaldo de siempre mientras carga el catálogo (o si falla,
     // ej. CORS bloqueado en localhost) — no inventa un ejemplo del
     // catálogo, es un caso fijo y genérico.
-    : 'casa en Tabasco 2000';
+    : 'casa en venta, Centro';
 
   const filtered = value.length >= 2
     ? places.filter((s) => s.toLowerCase().includes(value.toLowerCase())).slice(0, 6)
