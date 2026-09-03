@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
 import { Inter } from 'next/font/google';
 import '@/styles/globals.css';
@@ -19,6 +19,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = defaultMetadata;
+
+// themeColor vive aparte de `metadata` desde Next 14 (deprecado ahí, ver
+// node_modules/next/dist/docs) — controla el color de la barra de estado/
+// tabs en Android y del área de la notch en iOS instalado.
+export const viewport: Viewport = {
+  themeColor: '#1D4A2C',
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

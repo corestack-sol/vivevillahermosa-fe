@@ -38,3 +38,18 @@ if (KEY) {
 export function onRouterTransitionStart(url: string) {
   if (KEY) posthog.capture('$pageview', { $current_url: url });
 }
+
+// PWA — pedido explícito 2026-09-02. Mismo lugar que la inicialización de
+// PostHog de arriba: código que debe correr UNA vez al cargar el cliente,
+// fuera del ciclo de vida de React (no hace falta un componente aparte
+// solo para esto). `'serviceWorker' in navigator` cubre navegadores viejos
+// sin la API — se salta en silencio, la app funciona igual sin PWA.
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // Sin service worker no hay instalación ni push — pero el resto del
+      // sitio no depende de esto para nada, no vale la pena un toast de
+      // error que nadie sabría interpretar.
+    });
+  });
+}

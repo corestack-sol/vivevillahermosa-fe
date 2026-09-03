@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Menu, X, Plus, User, Heart, Bell, LayoutDashboard, LogOut, ChevronDown, Building2, Settings,
-  CalendarDays, Users, TrendingUp, UserPlus, ShieldCheck, Home, Trash2, Sparkles, MessageCircle, type LucideIcon,
+  CalendarDays, Users, TrendingUp, UserPlus, ShieldCheck, Home, Trash2, Sparkles, MessageCircle, Download, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -17,6 +17,8 @@ import { loginRedirectUrl } from '@/lib/authRedirect';
 import { useCoach } from '@/hooks/useCoach';
 import { CoachModal } from '@/components/dashboard/CoachModal';
 import { useLimitePropiedades, MENSAJE_LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
+import { useInstallPwa } from '@/hooks/useInstallPwa';
+import { InstalarAppModal } from '@/components/layout/InstalarAppModal';
 
 // /guias (antes /blog) volvió al menú 2026-08-23 (pedido explícito) — la
 // decisión de 2026-08-19 de sacarlo era porque no había contenido nuevo
@@ -140,6 +142,13 @@ export function Navbar() {
   // §2 — "eso es fase 2", confirmado por el usuario).
   const { pendientes: coachPendientes } = useCoach(esProfesional);
   const [showCoachModal, setShowCoachModal] = useState(false);
+  // Ícono de instalar PWA — pedido explícito 2026-09-02: solo visible con
+  // sesión iniciada (`user`), y solo si de verdad se puede instalar
+  // (Chrome/Android disparó beforeinstallprompt y todavía no está
+  // instalada) — desaparece solo al instalar, `puedeInstalar` ya lo
+  // resuelve (ver useInstallPwa.ts).
+  const { puedeInstalar, instalar } = useInstallPwa();
+  const [showInstalarModal, setShowInstalarModal] = useState(false);
   // Separados por label (no un .map genérico) para que el menú móvil
   // pueda tratar "Perfil" distinto (colapsable) de "Herramientas"/
   // "Administración" (siempre visibles) — ver perfilAbierto arriba.
@@ -373,6 +382,16 @@ export function Navbar() {
               (FilterPanel/PropertiesClient) para su propio cambio
               sidebar-vs-botón — antes estaban desalineados entre sí. */}
           <div className="lg:hidden flex items-center gap-1">
+            {!loading && user && puedeInstalar && (
+              <button
+                onClick={() => setShowInstalarModal(true)}
+                aria-label="Instalar Vive Villahermosa como app"
+                title="Instalar como app"
+                className="p-2 rounded-xl transition-colors text-white hover:bg-white/10"
+              >
+                <Download size={18} />
+              </button>
+            )}
             {!loading && user && <NotificationBell />}
             <button
               className="p-2 rounded-xl transition-colors text-white hover:bg-white/10"
@@ -391,14 +410,33 @@ export function Navbar() {
         {isOpen && (
           <div className="lg:hidden border-t py-3 pb-4 space-y-0.5 border-white/10">
             {user ? (
-              <div className="pb-2 mb-2 border-b border-white/10 space-y-0.5">
+              // Mejora de jerarquía/color 2026-09-02 — antes toda la cuenta
+              // (herramientas + perfil + admin) vivía sobre un fondo
+              // idéntico al resto del header (bg-brand-dark), sin ninguna
+              // separación visual del bloque de navegación de abajo — solo
+              // un borde de 1px. Un fondo ligeramente más oscuro para todo
+              // el bloque de cuenta lo lee como una "tarjeta" propia, antes
+              // de llegar a Inicio/Comprar/Rentar/etc.
+              <div className="pb-2 mb-2 rounded-2xl bg-black/15 space-y-0.5">
                 {herramientasGroup && (
-                  <div className="space-y-0.5">
-                    <p className="px-4 pt-1 pb-1 text-[10px] font-bold text-white uppercase tracking-wide">{herramientasGroup.label}</p>
+                  <div className="space-y-0.5 pt-1.5">
+                    {/* Etiquetas de sección — antes text-white, igual de
+                        brillante que las opciones mismas, competían por
+                        atención en vez de organizar. Atenuadas (white/40,
+                        mismo criterio que gray-400 en el dropdown de
+                        escritorio) para que retrocedan y el texto de cada
+                        opción sea lo que de verdad resalte. */}
+                    <p className="px-4 pt-1 pb-1 text-[10px] font-bold text-white/40 uppercase tracking-wide">{herramientasGroup.label}</p>
                     {herramientasGroup.items.map((item) => (
                       <Link key={item.href} href={item.href} onClick={() => setIsOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm rounded-xl text-white hover:bg-white/8">
-                        <item.icon size={14} /> {item.label}
+                        className="group flex items-center gap-2.5 px-4 py-2.5 text-sm rounded-xl text-white hover:bg-white/8 transition-colors">
+                        {/* Ícono atenuado en reposo, blanco pleno al pasar
+                            el mouse/tocar — capa visual extra entre el
+                            ícono (apoyo) y la etiqueta (contenido
+                            principal), en vez de que ambos compitan al
+                            mismo brillo. */}
+                        <item.icon size={14} className="text-white/50 group-hover:text-white transition-colors flex-shrink-0" />
+                        {item.label}
                       </Link>
                     ))}
                   </div>
@@ -410,12 +448,16 @@ export function Navbar() {
                     por defecto. El divider propio antes de "Eliminar mi
                     cuenta" se conserva (pedido explícito 2026-08-21: esa
                     acción destructiva queda claramente aparte del resto,
-                    no es "una acción de sesión más"). */}
+                    no es "una acción de sesión más"). El botón de toggle
+                    ahora tiene su propio fondo al pasar el mouse/tocar —
+                    antes se veía igual que las etiquetas NO interactivas
+                    de arriba (HERRAMIENTAS/ADMINISTRACIÓN), sin ninguna
+                    señal de que esta sí se puede tocar. */}
                 {perfilGroup && (
-                  <div className={herramientasGroup ? 'border-t border-white/10 mt-2 pt-2' : ''}>
+                  <div className={herramientasGroup ? 'border-t border-white/10 mt-2 pt-2' : 'pt-1.5'}>
                     <button type="button" onClick={() => setPerfilAbierto((v) => !v)}
                       aria-expanded={perfilAbierto}
-                      className="flex items-center justify-between w-full px-4 pt-1 pb-1.5 text-[10px] font-bold text-white uppercase tracking-wide">
+                      className="flex items-center justify-between w-full px-4 pt-1.5 pb-2 text-[10px] font-bold text-white/40 hover:text-white/70 uppercase tracking-wide rounded-xl hover:bg-white/8 transition-colors">
                       {perfilGroup.label}
                       <ChevronDown size={12} className={`transition-transform ${perfilAbierto ? 'rotate-180' : ''}`} />
                     </button>
@@ -423,15 +465,16 @@ export function Navbar() {
                       <div className="space-y-0.5">
                         {perfilGroup.items.map((item) => (
                           <Link key={item.href} href={item.href} onClick={() => setIsOpen(false)}
-                            className="flex items-center gap-2.5 px-4 py-2.5 text-sm rounded-xl text-white hover:bg-white/8">
-                            <item.icon size={14} /> {item.label}
+                            className="group flex items-center gap-2.5 px-4 py-2.5 text-sm rounded-xl text-white hover:bg-white/8 transition-colors">
+                            <item.icon size={14} className="text-white/50 group-hover:text-white transition-colors flex-shrink-0" />
+                            {item.label}
                           </Link>
                         ))}
                         {esProfesional && (
                           <div className="border-t border-white/10 mt-2 pt-2">
                             <button onClick={() => { setIsOpen(false); setShowCoachModal(true); }}
-                              className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm rounded-xl text-white hover:bg-white/8">
-                              <Sparkles size={14} /> Coach de anuncios
+                              className="group flex items-center gap-2.5 w-full px-4 py-2.5 text-sm rounded-xl text-white hover:bg-white/8 transition-colors">
+                              <Sparkles size={14} className="text-white/50 group-hover:text-white transition-colors flex-shrink-0" /> Coach de anuncios
                               {coachPendientes.length > 0 && (
                                 <span className="ml-auto flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[10px] font-bold flex items-center justify-center">
                                   {coachPendientes.length}
@@ -440,16 +483,23 @@ export function Navbar() {
                             </button>
                           </div>
                         )}
+                        {/* Cerrar sesión: NO es una acción destructiva —
+                            antes compartía el mismo rojo que "Eliminar mi
+                            cuenta", como si ambas fueran igual de graves.
+                            Tono neutral (mismo blanco atenuado que el
+                            resto de opciones) — el rojo se reserva por
+                            completo para la única acción real e
+                            irreversible del menú. */}
                         <div className="border-t border-white/10 mt-2 pt-2">
                           <button onClick={handleLogout}
-                            className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-300 hover:bg-red-500/15 rounded-xl">
-                            <LogOut size={14} /> Cerrar sesión
+                            className="group flex items-center gap-2.5 w-full px-4 py-2.5 text-sm rounded-xl text-white/75 hover:text-white hover:bg-white/8 transition-colors">
+                            <LogOut size={14} className="text-white/50 group-hover:text-white transition-colors flex-shrink-0" /> Cerrar sesión
                           </button>
                         </div>
                         <div className="border-t border-white/10 mt-2 pt-2">
                           <button onClick={() => { setIsOpen(false); setShowEliminarModal(true); }}
-                            className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-300/70 hover:bg-red-500/15 hover:text-red-300 rounded-xl">
-                            <Trash2 size={14} /> Eliminar mi cuenta
+                            className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-300 hover:bg-red-500/15 hover:text-red-200 rounded-xl transition-colors">
+                            <Trash2 size={14} className="flex-shrink-0" /> Eliminar mi cuenta
                           </button>
                         </div>
                       </div>
@@ -459,11 +509,11 @@ export function Navbar() {
 
                 {administracionGroup && (
                   <div className="border-t border-white/10 mt-2 pt-2 space-y-0.5">
-                    <p className="px-4 pt-1 pb-1 text-[10px] font-bold text-white uppercase tracking-wide">{administracionGroup.label}</p>
+                    <p className="px-4 pt-1 pb-1 text-[10px] font-bold text-white/40 uppercase tracking-wide">{administracionGroup.label}</p>
                     {administracionGroup.items.map((item) => (
                       <Link key={item.href} href={item.href} onClick={() => setIsOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm rounded-xl text-white hover:bg-white/8">
-                        <item.icon size={14} /> {item.label}
+                        className="group flex items-center gap-2.5 px-4 py-2.5 text-sm rounded-xl text-white hover:bg-white/8 transition-colors">
+                        <item.icon size={14} className="text-white/50 group-hover:text-white transition-colors flex-shrink-0" /> {item.label}
                       </Link>
                     ))}
                   </div>
@@ -476,18 +526,25 @@ export function Navbar() {
               </Link>
             )}
 
+            {/* Navegación principal — antes visualmente idéntica al bloque
+                de cuenta de arriba (mismo peso, mismo estado activo
+                apagado en bg-white/10). El estado activo ahora suma una
+                barra de acento a la izquierda (mismo color que ya usa el
+                punto indicador de escritorio), más fácil de detectar de
+                un vistazo que un fondo blanco al 10% sobre un header ya
+                oscuro. */}
             <Link href="/" onClick={() => setIsOpen(false)}
-              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                pathname === '/' ? 'text-white bg-white/10' : 'text-white hover:bg-white/8'
+              className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors border-l-2 ${
+                pathname === '/' ? 'text-white bg-white/10 border-accent' : 'text-white hover:bg-white/8 border-transparent'
               }`}>
               <Home size={15} /> Inicio
             </Link>
             {navLinks.map((link) => (
               <Link key={link.href} href={link.href} onClick={() => setIsOpen(false)}
-                className={`flex items-center px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                className={`flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors border-l-2 ${
                   isActive(link)
-                    ? 'text-white bg-white/10'
-                    : 'text-white hover:bg-white/8'
+                    ? 'text-white bg-white/10 border-accent'
+                    : 'text-white hover:bg-white/8 border-transparent'
                 }`}>
                 {link.label}
               </Link>
@@ -519,6 +576,11 @@ export function Navbar() {
     {esProfesional && (
       <CoachModal isOpen={showCoachModal} onClose={() => setShowCoachModal(false)} pendientes={coachPendientes} />
     )}
+    <InstalarAppModal
+      isOpen={showInstalarModal}
+      onClose={() => setShowInstalarModal(false)}
+      onAceptar={() => { setShowInstalarModal(false); instalar(); }}
+    />
     </>
   );
 }

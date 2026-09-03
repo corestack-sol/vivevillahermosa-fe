@@ -105,4 +105,21 @@ export const defaultMetadata: Metadata = {
   },
   robots: { index: true, follow: true },
   metadataBase: new URL(SITE_URL),
+  // PWA — pedido explícito 2026-09-02. `manifest` apunta al route handler
+  // real (src/app/manifest.ts), no un archivo estático — Next.js resuelve
+  // la ruta sola. `icons.apple` es lo que Safari/iOS usa para "Agregar a
+  // pantalla de inicio" — el manifest normal (arriba) lo ignora casi por
+  // completo, necesita este link aparte.
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+  appleWebApp: {
+    title: 'Vive Villahermosa',
+    // 'default' (no 'black-translucent') — la barra de estado se queda
+    // opaca con el color de marca en vez de transparente encima del
+    // contenido, más legible sobre el header oscuro.
+    statusBarStyle: 'default',
+  },
 };
