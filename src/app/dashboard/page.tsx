@@ -18,6 +18,7 @@ import { evaluarCartera } from '@/lib/coach';
 import { CoachModal } from '@/components/dashboard/CoachModal';
 import { useLimitePropiedades, MENSAJE_LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
 import { useToast } from '@/context/ToastContext';
+import { getRecentlyViewedIds } from '@/lib/recentlyViewed';
 
 // "buscador" se queda mapeado a la nueva etiqueta — el backend todavía no
 // migró el valor default (rename acordado 2026-08-20: buscador -> particular),
@@ -53,6 +54,16 @@ export default function DashboardPage() {
   // toparse con el gate hasta el final (reporte real 2026-09-01).
   const limitePropiedades = useLimitePropiedades(!!user && !esProfesional);
   const toast = useToast();
+  // 0 hasta que el efecto corra — localStorage no existe en el render de
+  // servidor, leerlo directo en el cuerpo del componente (aunque este ya
+  // es 'use client') hubiera desalineado el HTML del servidor con el del
+  // navegador en la primera hidratación (mismo problema de siempre con
+  // datos que solo existen en el navegador).
+  const [vistasRecientesCount, setVistasRecientesCount] = useState(0);
+  useEffect(() => {
+    function leerVistasRecientes() { setVistasRecientesCount(getRecentlyViewedIds().length); }
+    leerVistasRecientes();
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) { router.push('/auth/login'); return; }
@@ -109,10 +120,15 @@ export default function DashboardPage() {
     : [
         { icon: Heart, label: 'Favoritos guardados', value: favCount, href: '/favoritos', color: 'text-red-500', bg: 'bg-red-50' },
         { icon: Bell, label: 'Alertas activas', value: alertaCount, href: '/alertas', color: 'text-amber-500', bg: 'bg-amber-50' },
-        // Sin backend de analítica todavía (BACKEND.md §12, fuera del MVP) —
-        // ceros honestos en vez del mock determinístico que traía GET /api/me/stats.
-        { icon: Eye, label: 'Propiedades vistas', value: 0, href: '/propiedades', color: 'text-blue-500', bg: 'bg-blue-50' },
-        { icon: TrendingUp, label: 'Propiedades contactadas', value: 0, href: '/propiedades', color: 'text-brand', bg: 'bg-brand-pale' },
+        // Bug real reportado 2026-09-02: "Propiedades vistas" mandaba a
+        // /propiedades (el catálogo completo, no lo que esa persona vio) —
+        // ahora manda a la lista real de vistos recientemente
+        // (localStorage, ver dashboard/recientes/page.tsx). "Propiedades
+        // contactadas" se queda SIN href (no clicable) — a diferencia de
+        // vistas, no hay ningún dato real detrás todavía (ni siquiera
+        // local), así que no hay a dónde mandar sin inventar un destino.
+        { icon: Eye, label: 'Propiedades vistas', value: vistasRecientesCount, href: '/dashboard/recientes', color: 'text-blue-500', bg: 'bg-blue-50' },
+        { icon: TrendingUp, label: 'Propiedades contactadas', value: 0, href: undefined, color: 'text-brand', bg: 'bg-brand-pale' },
       ];
 
   async function descargarReporte() {
@@ -242,16 +258,33 @@ export default function DashboardPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        {stats.map((s) => (
-          <Link key={s.label} href={s.href}
-            className="bg-white rounded-2xl border border-gray-200 p-5 hover:border-brand/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-            <div className={`w-10 h-10 ${s.bg} rounded-xl flex items-center justify-center mb-3`}>
-              <s.icon size={20} className={s.color} />
-            </div>
-            <p className="text-2xl font-display font-black text-gray-900">{s.value}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
-          </Link>
-        ))}
+        {stats.map((s) => {
+          const contenido = (
+            <>
+              <div className={`w-10 h-10 ${s.bg} rounded-xl flex items-center justify-center mb-3`}>
+                <s.icon size={20} className={s.color} />
+              </div>
+              <p className="text-2xl font-display font-black text-gray-900">{s.value}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+            </>
+          );
+          // Sin href — sin ningún dato real detrás todavía (ver el
+          // comentario junto al array `stats`), no clicable a propósito
+          // en vez de mandar a algo inventado.
+          if (!s.href) {
+            return (
+              <div key={s.label} className="bg-white rounded-2xl border border-gray-200 p-5 opacity-60 cursor-default">
+                {contenido}
+              </div>
+            );
+          }
+          return (
+            <Link key={s.label} href={s.href}
+              className="bg-white rounded-2xl border border-gray-200 p-5 hover:border-brand/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+              {contenido}
+            </Link>
+          );
+        })}
       </div>
 
       {/* Tip */}
