@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bell, Plus, Trash2, ArrowLeft, Zap } from 'lucide-react';
+import { Bell, BellRing, BellOff, Plus, Trash2, ArrowLeft, Zap, Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,6 +12,7 @@ import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { MUNICIPIO_OPTIONS } from '@/lib/publishSchema';
+import { obtenerEstadoPush, suscribirPush, desuscribirPush, type EstadoPush } from '@/lib/push';
 
 const schema = z.object({
   municipio: z.string().optional(),
@@ -50,6 +51,12 @@ export default function AlertasPage() {
   const [fetching, setFetching] = useState(true);
   const [eliminando, setEliminando] = useState<Set<string>>(new Set());
   const formRef = useRef<HTMLDivElement>(null);
+  // Push — pedido explícito 2026-09-02, ver docs/BACKEND-PUSH-
+  // NOTIFICACIONES-02092026.md. 'inactivo' por default (no
+  // 'no-soportado') para no mostrar "sin soporte" un instante antes de
+  // que el efecto confirme el estado real.
+  const [estadoPush, setEstadoPush] = useState<EstadoPush>('inactivo');
+  const [cambiandoPush, setCambiandoPush] = useState(false);
 
   const { register, handleSubmit, reset, setFocus, formState: { isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -68,6 +75,36 @@ export default function AlertasPage() {
       .then((d) => setAlertas(d.alertas ?? []))
       .finally(() => setFetching(false));
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (!user) return;
+    obtenerEstadoPush().then(setEstadoPush).catch(() => {});
+  }, [user]);
+
+  async function alternarPush() {
+    setCambiandoPush(true);
+    try {
+      if (estadoPush === 'activo') {
+        await desuscribirPush();
+        setEstadoPush('inactivo');
+        toast.success('Notificaciones push desactivadas.');
+      } else {
+        await suscribirPush();
+        setEstadoPush('activo');
+        toast.success('Notificaciones push activadas — te avisamos apenas haya una coincidencia.');
+      }
+    } catch (err) {
+      // Notification.requestPermission() resuelto 'denied' llega aquí
+      // como Error normal (suscribirPush lo lanza a propósito) — se
+      // relee el estado real en vez de asumir, por si el navegador ya
+      // había bloqueado el permiso desde antes de esta sesión.
+      const real = await obtenerEstadoPush();
+      setEstadoPush(real);
+      toast.error(err instanceof Error ? err.message : 'No se pudo cambiar el estado de las notificaciones push.');
+    } finally {
+      setCambiandoPush(false);
+    }
+  }
 
   async function onSubmit(data: FormData) {
     const body = {
@@ -179,6 +216,51 @@ export default function AlertasPage() {
           <p className="text-sm text-gray-500">Recibe aviso cuando se publique la propiedad que buscas</p>
         </div>
       </div>
+
+      {/* Notificaciones push — pedido explícito 2026-09-02. Solo se
+          muestra si el navegador las soporta en absoluto ('no-soportado'
+          se salta, no tiene sentido ofrecer un botón que nunca va a
+          funcionar). 'denegado' no tiene botón — no hay nada que este
+          código pueda hacer, el bloqueo vive en la configuración del
+          navegador. */}
+      {estadoPush !== 'no-soportado' && (
+        <div className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 mb-8 ${
+          estadoPush === 'activo' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200'
+        }`}>
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+            estadoPush === 'activo' ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'
+          }`}>
+            {estadoPush === 'activo' ? <BellRing size={16} /> : <BellOff size={16} />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-gray-800">
+              {estadoPush === 'activo' ? 'Notificaciones push activadas' : 'Activa las notificaciones push'}
+            </p>
+            <p className="text-xs text-gray-500">
+              {estadoPush === 'denegado'
+                ? 'Bloqueadas en la configuración de tu navegador — actívalas ahí para recibir avisos.'
+                : estadoPush === 'activo'
+                  ? 'Te avisamos en cuanto una propiedad coincida con alguna alerta, aunque no tengas la pestaña abierta.'
+                  : 'Recibe el aviso al instante, sin depender del correo ni de tener la pestaña abierta.'}
+            </p>
+          </div>
+          {estadoPush !== 'denegado' && (
+            <button
+              type="button"
+              onClick={alternarPush}
+              disabled={cambiandoPush}
+              className={`flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl transition-colors disabled:opacity-60 ${
+                estadoPush === 'activo'
+                  ? 'text-gray-500 border border-gray-200 hover:bg-gray-50'
+                  : 'bg-brand text-white hover:bg-brand-dark'
+              }`}
+            >
+              {cambiandoPush && <Loader2 size={13} className="animate-spin" />}
+              {estadoPush === 'activo' ? 'Desactivar' : 'Activar'}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Form */}
       <div ref={formRef} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-8">
