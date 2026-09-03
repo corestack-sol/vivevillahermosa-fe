@@ -22,6 +22,16 @@ export interface FiltrosIA {
   zonaDestacada?: string;
   sort?: string;
   limite?: number;
+  /**
+   * PR #89 del backend (pendiente de merge/deploy al 2026-09-03) — la
+   * consulta nombró una ciudad de otro estado (Ciudad del Carmen, Campeche,
+   * Coatzacoalcos...) y no se pudo anclar a ningún municipio/colonia/
+   * landmark de Tabasco. Cuando viene en true, el backend omite a
+   * propósito los filtros de ubicación — quien llama debe avisar en vez de
+   * disparar una búsqueda que ya sabe que no va a encontrar nada útil.
+   * Opcional: mientras el backend no lo mande, simplemente nunca es true.
+   */
+  fueraDeCobertura?: boolean;
 }
 
 // El backend (BACKEND.md §8, OPENROUTER_TIMEOUT_MS en ia.constants.ts) ya

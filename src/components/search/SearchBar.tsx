@@ -8,6 +8,7 @@ import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/r
 import { interpretarBusqueda, esOracionLarga, MAX_QUERY_LENGTH, type FiltrosIA } from '@/lib/interpretarBusqueda';
 import type { Property } from '@/types/property';
 import { AMENIDADES_OPTIONS } from '@/lib/amenidades';
+import { useToast } from '@/context/ToastContext';
 
 // Bandera de un solo uso para avisar en /propiedades que la búsqueda que
 // trajo hasta ahí no tenía nada concreto que interpretar (ver irA más abajo)
@@ -145,6 +146,7 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
+  const toast = useToast();
 
   // Antes esta lista era 14 colonias hardcodeadas, algunas sin ninguna
   // propiedad real detrás. Ahora las sugerencias salen del catálogo real
@@ -311,6 +313,14 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
     setBuscando(true);
     const filtros = await interpretarBusqueda(s);
     setBuscando(false);
+    // PR #89 del backend (pendiente de merge/deploy al 2026-09-03) — la
+    // consulta nombró una ciudad fuera de Tabasco. Avisa en vez de mandar
+    // a /buscar con una lista vacía o mezclada (mientras el backend no lo
+    // mande, filtros.fueraDeCobertura nunca es true y esto no hace nada).
+    if (filtros.fueraDeCobertura) {
+      toast.info('Por ahora solo operamos en el estado de Tabasco.');
+      return;
+    }
     irA(s, filtros);
   }
 

@@ -303,6 +303,15 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
     const filtros = await interpretarBusqueda(texto);
     setBuscandoIA(false);
 
+    // PR #89 del backend (pendiente de merge/deploy al 2026-09-03) — la
+    // consulta nombró una ciudad fuera de Tabasco. Avisa en vez de aplicar
+    // filtros vacíos que mostrarían el catálogo completo sin explicar por
+    // qué (mientras el backend no lo mande, esto nunca se activa).
+    if (filtros.fueraDeCobertura) {
+      toast.info('Por ahora solo operamos en el estado de Tabasco.');
+      return;
+    }
+
     const hayFiltros = Object.keys(filtros).length > 0;
     const updates: Partial<SearchFilters> = {};
     // Mismo criterio que SearchBar.tsx: `q` es un AND de texto literal
