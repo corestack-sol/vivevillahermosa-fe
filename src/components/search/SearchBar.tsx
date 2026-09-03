@@ -44,6 +44,20 @@ export function construirEjemplosPlaceholder(properties: Property[]): string[] {
   // siempre las mismas primeras propiedades del arreglo.
   const barajadas = [...properties].sort(() => Math.random() - 0.5);
 
+  // Primera pasada: como mucho un ejemplo por municipio — pedido explícito
+  // 2026-09-03, Centro tiene mucha más oferta que el resto y se comía los
+  // 6 espacios (mismo string deduplicado, pero municipio repetido).
+  const municipiosUsados = new Set<string>();
+  for (const p of barajadas) {
+    if (ejemplos.length >= 6) break;
+    if (municipiosUsados.has(p.municipio)) continue;
+    agregar(`${TIPO_LABEL[p.tipo] ?? p.tipo} en ${p.operacion}, ${p.municipio}`);
+    municipiosUsados.add(p.municipio);
+  }
+
+  // Si no hay suficientes municipios distintos para llegar a 6, se
+  // completa repitiendo — mejor un municipio real repetido que menos
+  // ejemplos de los que caben.
   for (const p of barajadas) {
     if (ejemplos.length >= 6) break;
     agregar(`${TIPO_LABEL[p.tipo] ?? p.tipo} en ${p.operacion}, ${p.municipio}`);
@@ -298,6 +312,12 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
     // barra de "31+ / 17 mun / $0 / 5 min" justo debajo), hace falta
     // promover el contexto de este contenedor entero, no solo el <ul>.
     <form ref={containerRef} onSubmit={handleSubmit} className={`relative z-20 ${className}`}>
+      {/* Wrapper propio para el input+dropdown — el botón de móvil que se
+          agrega debajo (pedido explícito 2026-09-03) es hermano de esto,
+          no hijo; si el dropdown colgara directo del <form> (con el botón
+          de móvil también adentro), "top-full" lo empujaría por debajo del
+          botón en vez de pegado al input. */}
+      <div className="relative">
       {/* Borde real (no solo un ring blanco pensado para fondos oscuros) —
           así la tarjeta se define igual sobre un hero claro que sobre uno oscuro. */}
       <div className="flex items-center gap-3 bg-white border border-gray-100 rounded-2xl shadow-2xl px-5 py-4"
@@ -336,8 +356,10 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
             </span>
           )}
         </div>
+        {/* Solo escritorio/tablet — en móvil el botón vive aparte, debajo
+            del recuadro (pedido explícito 2026-09-03). */}
         <button type="submit" disabled={buscando}
-          className="flex-shrink-0 flex items-center gap-1.5 bg-brand hover:bg-brand-dark text-white text-sm font-bold px-6 py-2.5 rounded-xl transition-colors whitespace-nowrap disabled:opacity-70">
+          className="hidden sm:flex flex-shrink-0 items-center gap-1.5 bg-brand hover:bg-brand-dark text-white text-sm font-bold px-6 py-2.5 rounded-xl transition-colors whitespace-nowrap disabled:opacity-70">
           {buscando && <Loader2 size={14} className="animate-spin" />}
           Buscar
         </button>
@@ -377,6 +399,14 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
           )}
         </ul>
       )}
+      </div>
+
+      {/* Botón aparte, solo en móvil — pedido explícito 2026-09-03. */}
+      <button type="submit" disabled={buscando}
+        className="sm:hidden mt-3 w-full flex items-center justify-center gap-1.5 bg-brand hover:bg-brand-dark text-white text-sm font-bold px-6 py-3 rounded-xl transition-colors disabled:opacity-70">
+        {buscando && <Loader2 size={14} className="animate-spin" />}
+        Buscar
+      </button>
     </form>
   );
 }
