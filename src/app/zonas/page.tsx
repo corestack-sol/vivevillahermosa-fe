@@ -256,37 +256,46 @@ export default async function ZonasPage() {
 
       {/* ── Municipios — grid más denso (17 items), tarjetas claras y compactas ── */}
       <section>
-        <h2 className="text-xl font-heading font-bold text-gray-900 mb-5">
+        <h2 className="text-xl font-heading font-bold text-gray-900 mb-14">
           Los 17 municipios — más allá de Villahermosa
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-9">
           {municipalities.map((mun) => {
             const munSpec = MUNICIPIO_ICON[mun.id] ?? { type: 'lucide' as const, Icon: MapIcon };
             return (
               <Link
                 key={mun.id}
                 href={`/zonas/${mun.slug}`}
-                className="group relative overflow-hidden rounded-2xl border border-brand/10 bg-gradient-to-br from-brand-pale/70 via-white to-white p-5 transition-all duration-200 hover:border-brand/30 hover:shadow-lg hover:-translate-y-0.5"
+                // Patrón de tarjeta con ícono "flotando" sobre el borde
+                // superior (pedido explícito 2026-09-02, referencia:
+                // uiverse.io/ilkhoeri/thin-bobcat-83) — mismos colores de
+                // marca de siempre (gradiente brand-pale, borde brand/10),
+                // solo cambia la estructura: la insignia deja de vivir
+                // dentro del padding y pasa a sobresalir del borde de la
+                // card vía margen negativo. gap-y-9 en el grid le da campo
+                // a esa insignia para no pisar la fila de arriba.
+                className="group relative rounded-2xl border border-brand/10 bg-gradient-to-br from-brand-pale/70 via-white to-white pt-8 px-5 pb-5 shadow-[0_1px_2px_rgba(60,64,67,0.15),0_2px_6px_rgba(60,64,67,0.08)] transition-all duration-200 hover:border-brand/30 hover:shadow-xl hover:-translate-y-0.5"
               >
-                <div className="relative flex items-start justify-between mb-3">
-                  {/* El ícono pasa de insignia pequeña + marca de agua casi
-                      invisible a protagonista único, a color real (los
-                      íconos "color" ya traen su propio color, no se tiñen)
-                      — se eligieron a mano por lo que de verdad distingue
-                      a cada municipio, mejor mostrarlos que esconderlos. */}
-                  <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center flex-shrink-0">
-                    <MunicipioIcon spec={munSpec} size={30} className={munSpec.type === 'lucide' ? 'text-brand' : ''} />
-                  </div>
-                  {mun.cercaDosoBocas && (
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full flex-shrink-0">
-                      <Zap size={9} /> PEMEX
-                    </span>
-                  )}
-                </div>
+                {mun.cercaDosoBocas && (
+                  <span className="absolute top-4 right-4 z-10 flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-full flex-shrink-0">
+                    <Zap size={9} /> PEMEX
+                  </span>
+                )}
+                {/* El ícono pasa de insignia pequeña + marca de agua casi
+                    invisible a protagonista único, a color real (los
+                    íconos "color" ya traen su propio color, no se tiñen)
+                    — se eligieron a mano por lo que de verdad distingue
+                    a cada municipio, mejor mostrarlos que esconderlos.
+                    Sin caja blanca detrás — igual que el original de
+                    referencia, el ícono flota solo sobre el borde de la
+                    card, pedido explícito 2026-09-02. */}
+                <span className="relative z-10 mx-auto -mt-14 mb-3 flex items-center justify-center drop-shadow-sm">
+                  <MunicipioIcon spec={munSpec} size={40} className={munSpec.type === 'lucide' ? 'text-brand' : ''} />
+                </span>
                 <h3 className="relative font-heading font-bold text-gray-900 text-sm mb-1 group-hover:text-brand transition-colors">
                   {mun.nombre}
                 </h3>
-                <p className="relative text-xs text-gray-400 line-clamp-2 mb-4 leading-relaxed min-h-[2rem]">{mun.descripcion}</p>
+                <p className="relative text-xs text-gray-400 text-justify line-clamp-2 mb-4 leading-relaxed min-h-[2rem]">{mun.descripcion}</p>
                 <div className="relative pt-3 border-t border-gray-900/5">
                   <span className={`text-xs font-semibold ${mun.propiedades > 0 ? 'text-brand' : 'text-gray-300'}`}>
                     {mun.propiedades > 0 ? `${mun.propiedades} propiedad${mun.propiedades !== 1 ? 'es' : ''}` : 'Sin propiedades'}
