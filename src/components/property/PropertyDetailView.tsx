@@ -21,6 +21,7 @@ import { ReportButton } from '@/components/property/ReportButton';
 import { RecentlyViewedTracker } from '@/components/property/RecentlyViewedTracker';
 import { VistaTracker } from '@/components/property/VistaTracker';
 import { OwnerActionsBar } from '@/components/property/OwnerActionsBar';
+import { PrecioOperacionLabel } from '@/components/property/PrecioOperacionLabel';
 import { MobileContactCta } from '@/components/property/MobileContactCta';
 import { ReservaEspacioCompareBar } from '@/components/property/ReservaEspacioCompareBar';
 import { formatRelativeDate } from '@/lib/format';
@@ -104,7 +105,8 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
           solo suma espacio real en standalone/instalado donde el sistema
           operativo lo reporta. */}
       <div className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-center gap-3">
-        <p className="flex-shrink-0 text-lg font-heading font-bold text-gray-900 leading-none">
+        <p className="flex-shrink-0 flex items-baseline gap-1.5 text-lg font-heading font-bold text-gray-900 leading-none">
+          <PrecioOperacionLabel propertyId={property.id} operacion={property.operacion} />
           {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(property.precio)}
           {property.operacion === 'renta' && <span className="text-xs font-normal text-gray-400">/mes</span>}
         </p>

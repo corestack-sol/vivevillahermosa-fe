@@ -580,6 +580,30 @@ export function PublishForm() {
     setValue('descripcion', `${actual}${separador}${texto}`, { shouldValidate: true, shouldDirty: true });
   }
 
+  // Un clic por landmark agregaba "Cerca de X." como oración aparte cada
+  // vez — con 2-3 lugares marcados la descripción quedaba "Cerca de
+  // Tabasco 2000. Cerca de Planetario." repitiendo la frase. Pedido
+  // explícito 2026-09-03: una sola oración con todos los lugares
+  // separados por coma. Se rastrea qué se agregó (no se parsea texto
+  // libre) para poder ampliar esa misma oración en el siguiente clic; si
+  // la persona edita la descripción a mano y esa oración exacta ya no
+  // está, se agrega como oración nueva en vez de fallar en silencio.
+  const [landmarksMencionados, setLandmarksMencionados] = useState<string[]>([]);
+  function agregarLandmarkADescripcion(label: string) {
+    const actual = getValues('descripcion') || '';
+    if (landmarksMencionados.length > 0) {
+      const fraseAnterior = `Cerca de ${landmarksMencionados.join(', ')}.`;
+      if (actual.includes(fraseAnterior)) {
+        const nuevos = [...landmarksMencionados, label];
+        setValue('descripcion', actual.replace(fraseAnterior, `Cerca de ${nuevos.join(', ')}.`), { shouldValidate: true, shouldDirty: true });
+        setLandmarksMencionados(nuevos);
+        return;
+      }
+    }
+    agregarMencionADescripcion(`Cerca de ${label}.`);
+    setLandmarksMencionados([label]);
+  }
+
   // ── Detección automática de riesgo de inundación ───────────────────────────
   const [deteccion, setDeteccion] = useState<DeteccionUI | null>(null);
   const [autoRiesgo, setAutoRiesgo] = useState<string | null>(null);
@@ -1734,7 +1758,7 @@ export function PublishForm() {
                     <button
                       key={l.key}
                       type="button"
-                      onClick={() => agregarMencionADescripcion(`Cerca de ${l.label}.`)}
+                      onClick={() => agregarLandmarkADescripcion(l.label)}
                       className="text-[11px] font-medium text-brand-dark bg-white border border-brand/30 hover:bg-brand-pale rounded-full px-2.5 py-1 transition-colors"
                     >
                       + Cerca de {l.label}

@@ -134,7 +134,8 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
   }
 
   return (
-    <div className="flex items-center justify-between gap-4 flex-wrap bg-brand-pale border border-brand/20 rounded-2xl px-5 py-4 mb-5">
+    <div className="bg-brand-pale border border-brand/20 rounded-2xl px-5 py-4 mb-5">
+    <div className="flex items-center justify-between gap-4 flex-wrap">
       <div className="flex items-center gap-3 min-w-0">
         <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center flex-shrink-0">
           <Building2 size={17} className="text-brand" />
@@ -194,18 +195,6 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
             </Tooltip>
           </>
         )}
-        {/* Aparte del resto (no solo ícono) — pedido explícito 2026-09-03:
-            va a ser el botón que más se use de todos (compartir ubicación
-            real por WhatsApp), necesita destacarse y decir qué hace sin
-            depender de un tooltip al pasar el mouse. */}
-        <button
-          type="button"
-          onClick={copiarUbicacion}
-          title="Copiar mi ubicación exacta"
-          className="flex items-center gap-1.5 bg-white border border-brand/25 text-brand hover:bg-brand hover:text-white hover:border-brand transition-colors text-xs font-semibold pl-2.5 pr-3 py-2 rounded-xl mx-2"
-        >
-          <MapPin size={14} /> Copiar ubicación
-        </button>
         <Tooltip label="Editar propiedad">
           <Link href={`/dashboard/propiedades/${propertyId}/editar`}
             className="w-9 h-9 rounded-xl flex items-center justify-center text-brand-dark/60 hover:text-brand hover:bg-white transition-colors"
@@ -226,6 +215,23 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
           className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-brand hover:text-brand-dark ml-2">
           Gestionar en mi panel <ArrowRight size={13} />
         </Link>
+      </div>
+    </div>
+
+      {/* Fila aparte, no un ícono más del montón — pedido explícito
+          2026-09-03: va a ser el botón que más se use de todos (compartir
+          ubicación real por WhatsApp), necesita destacarse y decir qué
+          hace sin depender de un tooltip. Sólido en vez de outline (mismo
+          estilo que el botón primario "Buscar" de SearchBar.tsx) para que
+          de verdad se note aparte de los íconos de arriba. */}
+      <div className="mt-3 pt-3 border-t border-brand/15">
+        <button
+          type="button"
+          onClick={copiarUbicacion}
+          className="flex items-center gap-1.5 bg-brand hover:bg-brand-dark text-white text-xs font-semibold pl-2.5 pr-3 py-2 rounded-xl transition-colors"
+        >
+          <MapPin size={14} /> Copiar ubicación
+        </button>
       </div>
 
       <ArchivarPropiedadModal
