@@ -1,10 +1,10 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
-  Menu, X, Plus, User, Heart, Bell, LayoutDashboard, LogOut, ChevronDown, Building2, Settings,
+  Menu, X, Plus, User, Heart, Bell, LayoutDashboard, LogOut, ChevronDown, ChevronLeft, Building2, Settings,
   CalendarDays, Users, TrendingUp, UserPlus, ShieldCheck, Home, Trash2, Sparkles, MessageCircle, Download, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -147,8 +147,21 @@ export function Navbar() {
   // (Chrome/Android disparó beforeinstallprompt y todavía no está
   // instalada) — desaparece solo al instalar, `puedeInstalar` ya lo
   // resuelve (ver useInstallPwa.ts).
-  const { puedeInstalar, instalar } = useInstallPwa();
+  const { puedeInstalar, instalar, instalada } = useInstallPwa();
   const [showInstalarModal, setShowInstalarModal] = useState(false);
+  // Instalada como app (iOS/Android/escritorio) = sin chrome del
+  // navegador, así que tampoco hay botón "atrás" nativo ni gesto de swipe
+  // — pedido explícito 2026-09-03. `history.length > 1` es la misma señal
+  // que ya usa el patrón estándar para esto: en el primer launch desde el
+  // ícono de inicio, la pila de historial trae solo esa entrada (nada a
+  // donde volver); crece a medida que se navega dentro de la app.
+  const [puedeVolver, setPuedeVolver] = useState(false);
+  useEffect(() => {
+    function detectarPuedeVolver() {
+      setPuedeVolver(window.history.length > 1);
+    }
+    detectarPuedeVolver();
+  }, [pathname]);
   // Separados por label (no un .map genérico) para que el menú móvil
   // pueda tratar "Perfil" distinto (colapsable) de "Herramientas"/
   // "Administración" (siempre visibles) — ver perfilAbierto arriba.
@@ -213,6 +226,19 @@ export function Navbar() {
             internos (logo-nav, entre links, entre acciones) eran demasiado
             angostos y todo se sentía apelmazado. */}
         <div className="flex items-center h-16 gap-8">
+
+          {/* Botón "atrás" — solo instalada (sin chrome del navegador) y
+              solo si hay algo a donde volver, ver arriba. */}
+          {instalada && puedeVolver && (
+            <button
+              type="button"
+              onClick={() => router.back()}
+              aria-label="Regresar"
+              className="flex items-center justify-center w-9 h-9 -ml-1.5 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
+            >
+              <ChevronLeft size={20} />
+            </button>
+          )}
 
           {/* Logo + nav — un solo grupo a la izquierda */}
           <div className="flex items-center gap-8 min-w-0">
