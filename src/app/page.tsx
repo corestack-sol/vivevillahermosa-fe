@@ -208,7 +208,7 @@ export default async function HomePage() {
               ese hermano, no un nieto más adentro. */}
           <div className="relative z-20 max-w-2xl animate-fade-up" style={{ animationDelay: '270ms' }}>
             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-brand uppercase tracking-wide bg-brand-pale px-3 py-1 rounded-full mb-2">
-              <Bot size={14} /> Búsqueda con IA
+              <Bot size={18} /> Búsqueda con IA
             </span>
             <SearchBar />
             <p className="text-xs text-gray-400 mt-2">
