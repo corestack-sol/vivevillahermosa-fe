@@ -9,6 +9,7 @@ import { interpretarBusqueda, esOracionLarga, MAX_QUERY_LENGTH, type FiltrosIA }
 import type { Property } from '@/types/property';
 import { AMENIDADES_OPTIONS } from '@/lib/amenidades';
 import { useToast } from '@/context/ToastContext';
+import posthog from 'posthog-js';
 
 // Bandera de un solo uso para avisar en /propiedades que la búsqueda que
 // trajo hasta ahí no tenía nada concreto que interpretar (ver irA más abajo)
@@ -332,6 +333,17 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
     if (filtros.fueraDeCobertura) {
       toast.info('Por ahora solo operamos en el estado de Tabasco.');
       return;
+    }
+    // Pedido explícito 2026-09-04: en vez de adivinar apodos populares de
+    // colonias uno por uno vía búsqueda web (rendimientos decrecientes,
+    // ver docs/investigacion-nombres-populares-colonias.md §6), se
+    // registra en PostHog cuando una búsqueda corta y específica (no una
+    // oración larga descriptiva) no resolvió a ningún lugar conocido —
+    // esa es la señal real de un posible apodo sin catalogar. Solo texto
+    // de la búsqueda, nada de datos personales.
+    if (!filtros.colonia && !filtros.municipio && !filtros.zonaDestacada && !filtros.landmark
+      && !filtros.categoriaLandmark && !esOracionLarga(s)) {
+      posthog.capture('busqueda_lugar_no_resuelto', { query: s });
     }
     irA(s, filtros);
   }

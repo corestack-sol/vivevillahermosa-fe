@@ -26,6 +26,7 @@ import { ExploreZonasCta } from '@/components/search/ExploreZonasCta';
 import { BUSQUEDA_SIN_INTERPRETAR_KEY } from '@/components/search/SearchBar';
 import { useToast } from '@/context/ToastContext';
 import { PROPERTY_GRID_CLASSES } from '@/lib/gridClasses';
+import posthog from 'posthog-js';
 
 const PER_PAGE = 12;
 
@@ -320,6 +321,12 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
     if (filtros.fueraDeCobertura) {
       toast.info('Por ahora solo operamos en el estado de Tabasco.');
       return;
+    }
+    // Pedido explícito 2026-09-04 — ver mismo criterio y comentario largo
+    // en SearchBar.tsx.
+    if (!filtros.colonia && !filtros.municipio && !filtros.zonaDestacada && !filtros.landmark
+      && !filtros.categoriaLandmark && !esOracionLarga(texto)) {
+      posthog.capture('busqueda_lugar_no_resuelto', { query: texto });
     }
 
     const hayFiltros = Object.keys(filtros).length > 0;

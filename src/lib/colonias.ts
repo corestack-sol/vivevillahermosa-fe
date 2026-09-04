@@ -92,7 +92,7 @@ export const COLONIAS_COORDS: ColoniaCoord[] = [
   // normal (~1.5km vs Nominatim) al reverificar el lote por el bug de
   // 'gaviotas-norte' de abajo — no es el mismo lote el que arrastra el
   // error, son entradas puntuales.
-  { key: 'tabasco-2000', label: 'Tabasco 2000', municipio: 'Centro', lat: 17.9994, lng: -92.9316, radioKm: RADIO_COLONIA_KM },
+  { key: 'tabasco-2000', label: 'Tabasco 2000', municipio: 'Centro', lat: 17.9994, lng: -92.9316, radioKm: RADIO_COLONIA_KM, aliases: ['T2000'] },
   // Corregida 2026-08-21 — reporte real: pin puesto en el centro visible
   // de la colonia en el mapa marcaba "a 4km de Gaviotas Norte". El valor
   // viejo (18.0141, -92.9312) resultó estar ~3.9km del punto real
@@ -139,7 +139,7 @@ export const COLONIAS_COORDS: ColoniaCoord[] = [
   // más defendible para "el centro histórico" de una ciudad mexicana — no
   // se encontró un nodo de OSM etiquetado específicamente
   // place/neighbourhood="Centro Histórico" para usar en su lugar.
-  { key: 'centro-historico', label: 'Centro Histórico', municipio: 'Centro', lat: 17.9896, lng: -92.9282, radioKm: RADIO_COLONIA_KM },
+  { key: 'centro-historico', label: 'Centro Histórico', municipio: 'Centro', lat: 17.9896, lng: -92.9282, radioKm: RADIO_COLONIA_KM, aliases: ['Zona Luz'] },
   { key: 'olmeca', label: 'Olmeca', municipio: 'Centro', lat: 17.9812, lng: -92.9502, radioKm: RADIO_COLONIA_KM },
   { key: 'gil-y-saenz', label: 'Gil y Sáenz', municipio: 'Centro', lat: 17.9867, lng: -92.9356, radioKm: RADIO_COLONIA_KM },
   { key: 'col-del-parque', label: 'Col. del Parque', municipio: 'Centro', lat: 17.9734, lng: -92.9267, radioKm: RADIO_COLONIA_KM },
@@ -175,7 +175,19 @@ export const COLONIAS_COORDS: ColoniaCoord[] = [
   { key: 'galaxia', label: 'Galaxia', municipio: 'Centro', lat: 18.0001, lng: -92.9505, radioKm: RADIO_COLONIA_KM },
   { key: 'guadalupe', label: 'Guadalupe', municipio: 'Centro', lat: 17.9769, lng: -92.9634, radioKm: RADIO_COLONIA_KM },
   { key: 'guadalupe-borja', label: 'Guadalupe Borja', municipio: 'Centro', lat: 17.9769, lng: -92.9634, radioKm: RADIO_COLONIA_KM },
-  { key: 'heriberto-kehoe-vicent', label: 'Heriberto Kehoe Vicent', municipio: 'Centro', lat: 18.0091, lng: -92.9412, radioKm: RADIO_COLONIA_KM },
+  // Alias "Petrolera" — pedido explícito 2026-09-04, reporte real: buscar
+  // "colonia petrolera" no encontraba esta colonia. Investigado a fondo: SÍ
+  // existe una "Colonia Petrolera" real y distinta en Cárdenas (INEGI, CP
+  // 86597, ~2,130 habitantes — ya catalogada en colonias-municipios.json),
+  // así que el nombre "Petrolera" está genuinamente compartido por dos
+  // lugares reales en municipios distintos, no es un error de datos. Como
+  // `todasLasColonias()` concatena `COLONIAS_COORDS` ANTES que
+  // `COLONIAS_MUNICIPIOS`, un match sin `municipioHint` resuelve a ESTA
+  // entrada (Centro) primero — correcto, coincide con el pedido de que sin
+  // municipio explícito el resultado por defecto caiga en Centro. Con
+  // `municipioHint: 'Cárdenas'` explícito, `matchColonia` sigue resolviendo
+  // bien a la Petrolera real de Cárdenas (rama `exactoEnMunicipio`).
+  { key: 'heriberto-kehoe-vicent', label: 'Heriberto Kehoe Vicent', municipio: 'Centro', lat: 18.0091, lng: -92.9412, radioKm: RADIO_COLONIA_KM, aliases: ['Petrolera', 'La Petrolera', 'Colonia Petrolera'] },
   { key: 'insurgentes', label: 'Insurgentes', municipio: 'Centro', lat: 18.0334, lng: -92.9005, radioKm: RADIO_COLONIA_KM },
   { key: 'jardines-del-sol', label: 'Jardines del Sol', municipio: 'Centro', lat: 18.0262, lng: -92.9048, radioKm: RADIO_COLONIA_KM },
   { key: 'jardines-del-sur', label: 'Jardines del Sur', municipio: 'Centro', lat: 17.9649, lng: -92.9547, radioKm: RADIO_COLONIA_KM },

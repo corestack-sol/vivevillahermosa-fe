@@ -37,6 +37,18 @@ describe('matchColonia', () => {
   it('matches via a registered alias', () => {
     expect(matchColonia('Pino Suárez')?.key).toBe('jose-maria-pino-suarez');
     expect(matchColonia('campestre')?.key).toBe('club-campestre');
+    expect(matchColonia('T2000')?.key).toBe('tabasco-2000');
+    expect(matchColonia('Zona Luz')?.key).toBe('centro-historico');
+  });
+  it('resolves "Petrolera" to Heriberto Kehoe Vicent (Centro) by default, and to the real Cárdenas one with municipioHint — caso real reportado 2026-09-04', () => {
+    // "Petrolera" es un nombre real compartido por dos colonias distintas:
+    // el apodo popular de Heriberto Kehoe Vicent (Centro) y una colonia
+    // homónima real en Cárdenas (catalogada en colonias-municipios.json).
+    // Sin pista de municipio, debe ganar Centro (mismo criterio pedido
+    // para "sin municipio especificado, caer en Centro por defecto").
+    expect(matchColonia('Petrolera')?.key).toBe('heriberto-kehoe-vicent');
+    expect(matchColonia('La Petrolera')?.key).toBe('heriberto-kehoe-vicent');
+    expect(matchColonia('Petrolera', 'Cárdenas')?.key).toBe('petrolera');
   });
   it('returns undefined for a completely unrelated string', () => {
     expect(matchColonia('Guadalajara Centro Histórico Sur')).toBeUndefined();
