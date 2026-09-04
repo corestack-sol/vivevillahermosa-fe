@@ -230,6 +230,22 @@ export async function generarDescripcionAnuncio(datos: DatosAnuncio, userId?: st
 
 ---
 
+## Módulo 13 — Verificación Real de Agentes (REDAIT)
+
+**Candidato confirmado 2026-09-03 — no construido todavía.** Origen: `docs/investigacion-mercado-tabasco.md` §7, fila 1 (identificado como la mejora de mayor impacto para verse "más pro" — separa la plataforma de listados informales tipo Facebook Marketplace, ataca directo el problema de fraude documentado en §5 de esa misma investigación).
+
+**Investigación de viabilidad (2026-09-03):** el dominio original de REDAIT (`sedec.tabasco.gob.mx`) está caído (no resuelve DNS). Se encontró el padrón vigente y público en `https://turismo.tabasco.gob.mx/redait/agentes` — HTML plano, sin login, sin API formal. Confirmado en vivo: **88 agentes registrados vigentes**, cada uno con nombre completo, número de licencia (formato `AM-0001` hasta `AM-0305`), fecha de inicio de operación y fecha de vencimiento. Es viable construir verificación real (comparar folio + nombre declarado por el agente contra este padrón), pero depende de scraping de una página de gobierno sin contrato de API — riesgo real de romperse si cambian el HTML, necesita mantenimiento periódico.
+
+| Feature | Prioridad | Estado real 2026-09-03 |
+|---|---|---|
+| Campo de folio REDAIT (`AM-XXXX`) al publicarse como agente profesional | 🟡 ALTA | ❌ No existe — hoy `verificacionDemo.ts` es un documento genérico autodeclarado, sin verificación contra ninguna fuente real |
+| Verificación automática contra el padrón público de `turismo.tabasco.gob.mx/redait/agentes` (scraping periódico, no API) | 🟡 ALTA | ❌ No existe |
+| Badge "Verificado REDAIT" visible en ficha del agente/propiedad, distinto del genérico actual | 🟡 ALTA | ❌ No existe |
+| Alerta si la licencia está vencida (el padrón trae fecha de vencimiento) | 🟠 MEDIA | ❌ No existe |
+| Job periódico para refrescar el padrón local (evitar pegarle al sitio de gobierno en cada verificación) | 🟠 MEDIA | ❌ No existe |
+
+---
+
 ## Modelo de Datos Completo Fase 2
 
 **Obsoleto — reemplazado por el modelo `Property` sugerido al final de `prisma/schema.prisma` y documentado en `docs/BACKEND.md`.** Se deja aquí como referencia histórica del plan original; el modelo actualizado difiere en varios campos (`estado` como enum de texto en vez de boolean, sin `agenteId` separado, etc.) y ya incluye todo lo que el frontend construido en 2026-08-06 necesita.

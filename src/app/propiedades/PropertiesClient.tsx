@@ -300,13 +300,23 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
     addRecentSearch(texto);
     setRecent(getRecentSearches());
     setBuscandoIA(true);
-    const filtros = await interpretarBusqueda(texto);
+    let filtros = await interpretarBusqueda(texto);
+    // Auditoría en vivo 2026-09-03: bajo latencia alta contra OpenRouter,
+    // la extracción de colonia puede perderse en silencio. Reintento
+    // dirigido, solo cuando el texto SÍ menciona un lugar real del
+    // catálogo (`places`) y la IA no lo extrajo — ver mismo criterio en
+    // SearchBar.tsx.
+    if (!filtros.colonia && !filtros.municipio && !filtros.zonaDestacada) {
+      const textoLower = texto.toLowerCase();
+      const lugarMencionado = places.some((p) => textoLower.includes(p.toLowerCase()));
+      if (lugarMencionado) filtros = await interpretarBusqueda(texto);
+    }
     setBuscandoIA(false);
 
-    // PR #89 del backend (pendiente de merge/deploy al 2026-09-03) — la
-    // consulta nombró una ciudad fuera de Tabasco. Avisa en vez de aplicar
-    // filtros vacíos que mostrarían el catálogo completo sin explicar por
-    // qué (mientras el backend no lo mande, esto nunca se activa).
+    // PR #89 del backend (ya deployado, confirmado en vivo 2026-09-03) —
+    // la consulta nombró una ciudad fuera de Tabasco. Avisa en vez de
+    // aplicar filtros vacíos que mostrarían el catálogo completo sin
+    // explicar por qué.
     if (filtros.fueraDeCobertura) {
       toast.info('Por ahora solo operamos en el estado de Tabasco.');
       return;

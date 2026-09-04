@@ -311,12 +311,24 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
   async function buscarTexto(s: string) {
     setValue(s);
     setBuscando(true);
-    const filtros = await interpretarBusqueda(s);
+    let filtros = await interpretarBusqueda(s);
+    // Auditoría en vivo 2026-09-03: bajo latencia alta contra OpenRouter
+    // (cerca del timeout de 9s del backend), la extracción de colonia
+    // puede perderse en silencio aunque el resto de los filtros salga
+    // bien (confirmado: mismo query reintentado a mano, 3/3 correcto).
+    // Reintento dirigido, no ciego — solo cuando el texto SÍ menciona un
+    // lugar real del catálogo (`places`, ya cargado) y la IA no lo
+    // extrajo de ninguna forma — evita duplicar la llamada en el caso
+    // normal, donde si no hay lugar mencionado no hay nada que perder.
+    if (!filtros.colonia && !filtros.municipio && !filtros.zonaDestacada) {
+      const sLower = s.toLowerCase();
+      const lugarMencionado = places.some((p) => sLower.includes(p.toLowerCase()));
+      if (lugarMencionado) filtros = await interpretarBusqueda(s);
+    }
     setBuscando(false);
-    // PR #89 del backend (pendiente de merge/deploy al 2026-09-03) — la
-    // consulta nombró una ciudad fuera de Tabasco. Avisa en vez de mandar
-    // a /buscar con una lista vacía o mezclada (mientras el backend no lo
-    // mande, filtros.fueraDeCobertura nunca es true y esto no hace nada).
+    // PR #89 del backend (ya deployado, confirmado en vivo 2026-09-03) —
+    // la consulta nombró una ciudad fuera de Tabasco. Avisa en vez de
+    // mandar a /buscar con una lista vacía o mezclada.
     if (filtros.fueraDeCobertura) {
       toast.info('Por ahora solo operamos en el estado de Tabasco.');
       return;

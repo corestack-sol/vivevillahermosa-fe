@@ -97,13 +97,56 @@ Ya se construyó (frontend-only) una función de **"Verificación de agencia"** 
 
 | # | Oportunidad | Qué tan accionable | Ya existe en la plataforma |
 |---|---|---|---|
-| 1 | Verificación de agencia ligada al folio real del **REDAIT** (no solo un documento genérico) | Alta — mejora quirúrgica sobre algo ya construido | ⚠️ Existe versión genérica (`verificacionDemo.ts`), falta el campo de folio REDAIT |
+| 1 | Verificación de agencia ligada al folio real del **REDAIT** (no solo un documento genérico) | Alta — viabilidad confirmada 2026-09-03 (padrón público real encontrado en `turismo.tabasco.gob.mx/redait/agentes`, 88 agentes vigentes con folio/nombre/vencimiento). Documentado como **Módulo 13 de Fase 2**, no Fase 1 | ⚠️ Existe versión genérica (`verificacionDemo.ts`), falta el campo de folio REDAIT |
 | 2 | Contenido/SEO sobre el impacto del **Corredor Interoceánico** al concluir en 2026 | Alta — ventana de oportunidad de tiempo específica | ❌ No existe |
 | 3 | Expandir catálogo/contenido más allá de Villahermosa Centro — **Comalcalco, Huimanguillo, Macuspana, Cunduacán** están creciendo más rápido en vivienda | Media — requiere inventario real en esas zonas | ⚠️ El catálogo demo no las cubre bien |
 | 4 | **Índice de seguridad por colonia** (dato INEGI real + colonias ya identificadas por prensa) | Media — necesita fuente oficial verificable, no solo notas de prensa | ❌ No existe (ya estaba en el roadmap de `docs/BACKEND.md`) |
 | 5 | Categoría/mensajería específica para **renta de trabajadores foráneos de proyectos (Dos Bocas)**, incluyendo alianza con pólizas de arrendamiento como alternativa a fiador | Media — depende de conseguir un socio/aseguradora | ⚠️ Existe el filtro `cercaDosoBocas`, falta la mensajería y el servicio de fiador |
 | 6 | Mensajería anti-fraude explícita ("nunca pagues antes de ver la propiedad", contraste directo con Facebook Marketplace) | Alta — solo requiere contenido/copy, sin desarrollo | ❌ No existe como mensaje explícito en la plataforma |
 | 7 | Cobertura de riesgo de inundación en **Centla y Macuspana** (riesgo costero/fluvial, no solo el urbano de Villahermosa) | Media — depende de tener inventario ahí | ⚠️ El sistema de riesgo ya existe, falta cobertura geográfica |
+| 8 | **Sección de "roomies" / cuartos compartidos** — ver análisis §8 | **Baja por ahora — a propósito no priorizada, ver veredicto** | ❌ No existe |
+
+---
+
+## 8. Análisis: sección de "roomies" / cuartos compartidos — ¿vale la pena?
+
+**Fecha de este análisis:** 2026-09-03. **Nota:** esta sección es una evaluación, no un compromiso de roadmap — no está en `fase2-spec.md` a propósito, ver veredicto.
+
+### 8.1 La demanda es real y hoy se resuelve mal
+
+Hay al menos 3 grupos de Facebook activos específicos de Villahermosa dedicados a esto ("BUSCO ROOMIES! VILLAHERMOSA TABASCO", "Roomies Villahermosa, Tabasco. Casa de Huéspedes", más el grupo genérico "RENTA DE DEPARTAMENTOS VILLAHERMOSA"), una página nacional "Busco Roomies" (~1,007 likes, modelo de posts gratis, buscoroomies.mx), y dos competidores con listados reales y activos en la ciudad: **Roomgo** (perfiles de roomies en Villahermosa) y **Pincali** (categoría "Busco Roomie" en colonias como Cumbres; cuartos individuales desde $4,500/mes + mantenimiento en Bonanza Centro). No es un mercado vacío — es un mercado servido de forma informal (scroll de posts en Facebook, sin verificación, sin filtro real).
+
+### 8.2 Segmentos reales en Tabasco
+
+- **Estudiantes UJAT** — universidad grande (29,367 inscritos en el ciclo 2022-2023 según Data México; uniRank la ubica en el rango de 35,000-39,999). Es el ancla natural de demanda de roomies, patrón consistente con cualquier ciudad universitaria mexicana.
+- **Contratistas de PEMEX** — se descartó como segmento principal para esto: en 2025 el sector vivió protestas y bloqueos carreteros por adeudos de PEMEX a subcontratistas por más de 400,000 millones de pesos a nivel nacional. Es un segmento inestable/volátil ahora mismo, no la base sobre la que construir un producto nuevo.
+
+### 8.3 El riesgo que cualquier implementación tendría que diseñar en contra
+
+El patrón de fraude "monta rentas" (alguien publica una propiedad que no es suya, cobra un adelanto, desaparece) es activo y documentado en México en 2025-2026, con recomendaciones oficiales de la SSPC de nunca pagar por adelantado sin contrato firmado y nunca cerrar tratos solo por redes sociales/mensajería. Un post de "persona buscando roomie" sin ninguna propiedad real verificable detrás reproduce exactamente el hueco que explotan estos fraudes.
+
+### 8.4 Flujo evaluado (si se construyera)
+
+La arquitectura recomendada NO es un post de persona suelta, sino extender una propiedad **ya real y ya publicada** con un campo "cuartos disponibles para compartir":
+
+1. Al publicar/editar una propiedad en renta, toggle "¿Rentas por habitación / buscas roomie?" revela: número de habitaciones disponibles, precio POR habitación (no precio total), mini-perfil de qué busca el publicador en un roomie (edad aprox., fumador/no, mascotas — sin datos sensibles).
+2. La propiedad pasa por el mismo filtro anti-fraude de siempre; la card se etiqueta "Roomie / Cuarto compartido".
+3. Quien busca puede filtrar/buscar por esta intención (requiere que el prompt de IA del backend aprenda a reconocerla).
+4. Contacto vía la mensajería in-app ya construida — nunca WhatsApp/teléfono directo hasta que ambas partes acepten, mismo patrón "message-first" que ya usa el resto de la plataforma.
+5. Reportes y el sistema de 3 strikes ya existentes cubren abuso en este flujo sin construir nada nuevo.
+
+Este diseño hereda ~90% de la infraestructura de confianza que ya existe (login-gate, moderación, mensajería) — la parte nueva real es: campos en `Property`, UI de publicar/mostrar, filtro de búsqueda, y ampliar el prompt de IA del backend (esto último es trabajo de backend, no solo frontend).
+
+### 8.5 Veredicto — no priorizar todavía
+
+**No se recomienda construir esto ahora**, por:
+
+- No es trabajo aislado de frontend — toca schema del backend y el prompt de IA del backend, cruza varias capas.
+- Ya hay competencia real sirviendo Villahermosa (Roomgo, Pincali) — no es mercado vacío; la ventaja de "más seguro" es real pero no urgente para captar mercado desde cero.
+- La plataforma todavía no termina Fase 1 al 100% y Fase 2 ya tiene su propio roadmap priorizado — esto competiría por el mismo tiempo de desarrollo de backend contra trabajo ya comprometido.
+- El riesgo de esperar es bajo: la demanda ya existe y se sirve (mal) en Facebook — no se evapora si se posterga.
+
+**Se documenta aquí como candidato futuro (post-Fase 2), no como ítem de roadmap comprometido.** Si en el futuro hay una razón de negocio puntual (ej. campaña de marketing, temporada de inscripciones UJAT) que justifique adelantarlo, revisar esta sección antes de diseñar desde cero.
 
 ---
 
@@ -131,10 +174,24 @@ Ya se construyó (frontend-only) una función de **"Verificación de agencia"** 
 - [Alarma AMPI por aumento de fraudes en venta y renta por empresas no registradas — XEVT](https://www.xevt.com/tabasco/alarma-ampi-por-aumento-de-fraudes-en-venta-y-renta-de-viviendas-por-empresas-no-registradas/400617)
 - [INVITAB alerta por falso trabajador que ofrecía viviendas y terrenos — Tabasco Hoy](https://www.tabascohoy.com/invitab-alerta-por-falso-trabajador-que-ofrecia-viviendas-y-terrenos/)
 - [Investiga INVITAB fraudes por venta ilegal de predios en La Ladrillera — XEVA](https://xeva.com.mx/villahermosa/283016/investiga-invitab-fraudes-por-venta-ilegal-de-predios-en-la-ladrillera)
-- [Registro Estatal de Agentes Inmobiliarios de Tabasco (REDAIT) — SEDEC](https://sedec.tabasco.gob.mx/redait/)
+- [Registro Estatal de Agentes Inmobiliarios de Tabasco (REDAIT) — SEDEC](https://sedec.tabasco.gob.mx/redait/) — ⚠️ dominio caído al 2026-09-03, no resuelve DNS
+- [Padrón de agentes REDAIT vigentes (fuente viva confirmada 2026-09-03)](https://turismo.tabasco.gob.mx/redait/agentes)
 - [Requisitos para licencia de operaciones inmobiliarias — AMPI Villahermosa](https://ampivillahermosa.com/requisitos-licencia-inmobiliaria/)
 - [Agentes Inmobiliarios del Estado de Tabasco — Portal Tabasco](https://tabasco.gob.mx/agentes-inmobiliarios-del-estado-de-tabasco)
 - [Fraude inmobiliario crece en México: 7 de cada 10 casos ligados a rentas — La Prensa](https://oem.com.mx/la-prensa/metropoli/fraude-inmobiliario-crece-en-mexico-7-de-cada-10-casos-estan-ligados-a-rentas-28255981)
 - [Diferencias entre fiador y aval en contratos de renta — Century21 México](https://blog.century21mexico.com/administracion-empresarial/fiador-y-aval/)
 - [Garantías en el arrendamiento: obligado solidario, aval y fiador — RADE](https://rade.mx/blog/articulo/garantias-en-el-arrendamiento-diferencias-entre-obligado-solidario-aval-y-fiador)
 - [¿No tienes aval? 3 opciones para rentar un depa — El Financiero](https://www.elfinanciero.com.mx/mis-finanzas/2022/11/12/quieres-rentar-un-depa-pero-no-tienes-aval-estas-son-las-3-opciones-que-tienes/)
+
+**Fuentes del análisis de roomies (§8):**
+- [BUSCO ROOMIES! VILLAHERMOSA TABASCO — Facebook](https://www.facebook.com/groups/1643732995770825/?locale=es_LA)
+- [Roomies Villahermosa, Tabasco. Casa de Huéspedes — Facebook](https://www.facebook.com/groups/1453023748050052/)
+- [Busco Roomies — Facebook](https://www.facebook.com/buscoroomies/)
+- [Busco Roomie - Renta cuarto Cumbres — Pincali](https://www.pincali.com/en/home/busco-roomie-renta-cuarto-cumbres)
+- [Roomgo Villahermosa](https://www.roomgo.com.mx/en-renta-villahermosca/juan-villahermosca/L260531135453326)
+- [Habitación en Renta, Bonanza Centro Villahermosa — Inmuebles en México](https://mexico.inmobiliarie.com/inmuebles-en-venta-y-renta/habitacion-en-renta-departamento-en-bonanza-centro-villahermosa-tabasco/)
+- [Universidad Juárez Autónoma de Tabasco — Data México](https://www.economia.gob.mx/datamexico/es/profile/institution/universidad-juarez-autonoma-de-tabasco)
+- [UJAT — uniRank](https://www.unirank.org/mx/uni/universidad-juarez-autonoma-de-tabasco/)
+- [Contratistas despliegan anuncios móviles en Tabasco para exigir pagos a Pemex — Expansión Política](https://politica.expansion.mx/estados/2025/08/30/contratistas-despliegan-anuncios-moviles-en-tabasco-para-exigir-pagos-a-pemex)
+- [¿Buscas rentar un departamento este 2026? SSPC comparte claves para evitar caer en una estafa — El Universal](https://www.eluniversal.com.mx/nacion/buscas-rentar-un-departamento-este-2026-ten-cuidado-con-las-estafas-sspc-comparte-claves-para-evitar-fraudes/)
+- [¿Cómo operan monta rentas en CDMX? — MedioTiempo](https://www.mediotiempo.com/actualidad/comunidad/monta-rentas-en-cdmx-asi-operan-estafadores-en-apps-de-alquiler-en-2026-nuevo-fraude)

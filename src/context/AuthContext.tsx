@@ -9,6 +9,7 @@ export interface AuthUser {
   nombre: string;
   rol: string;
   esAdmin?: boolean;
+  emailVerificado: boolean;
 }
 
 interface AuthContextValue {
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               nombre: backendUser.nombre,
               rol: backendUser.rol,
               esAdmin: backendUser.esAdmin,
+              emailVerificado: backendUser.emailVerificado,
             }
           : null,
       );
