@@ -112,10 +112,11 @@ interface MapViewProps {
    * este lado, la fuente de datos no es nuestra. La solución real es dejar
    * de depender de esos labels para algo tan básico como los 17 municipios
    * y dibujar los nuestros, con las coordenadas ya verificadas de
-   * `src/data/municipalities.json` (mismo dato que ya usa /zonas). Solo
-   * `false` por default para no aparecer en MapPicker.tsx (elegir pin al
-   * publicar) ni en el mini-mapa de destacadas del Home — ninguno de los
-   * dos necesita orientación a nivel estado.
+   * `src/data/municipalities.json` (mismo dato que ya usa /zonas). `false`
+   * por default para no aparecer en MapPicker.tsx (elegir pin al publicar,
+   * zoom a nivel colonia, no necesita orientación a nivel estado) — el
+   * mini-mapa de destacadas del Home sí los activa explícitamente desde
+   * 2026-09-03 (pedido explícito, mismo criterio que /mapa).
    */
   showMunicipioLabels?: boolean;
 }

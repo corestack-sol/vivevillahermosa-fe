@@ -367,7 +367,7 @@ export default async function HomePage() {
                   ~28 propiedades por todo el estado: con el piso normal,
                   el mapa carga ya pegado al mínimo y el botón "–" nace
                   deshabilitado (bug real reportado 2026-08-20). */}
-              <ClickableMap markers={markers} zoom={11} minZoom={7} />
+              <ClickableMap markers={markers} zoom={11} minZoom={7} showMunicipioLabels />
             </div>
           </div>
         </div>

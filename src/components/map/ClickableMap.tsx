@@ -9,6 +9,7 @@ interface ClickableMapProps {
   zoom?: number;
   center?: [number, number];
   minZoom?: number;
+  showMunicipioLabels?: boolean;
 }
 
 /**
@@ -26,7 +27,7 @@ interface ClickableMapProps {
  * Centro/Villahermosa sin ningún aviso — "el mapa solo marca 3
  * propiedades" cuando en realidad había 5, dos simplemente no se veían.
  */
-export function ClickableMap({ markers, zoom, center, minZoom }: ClickableMapProps) {
+export function ClickableMap({ markers, zoom, center, minZoom, showMunicipioLabels }: ClickableMapProps) {
   const router = useRouter();
 
   return (
@@ -35,6 +36,7 @@ export function ClickableMap({ markers, zoom, center, minZoom }: ClickableMapPro
       zoom={zoom}
       center={center}
       minZoom={minZoom}
+      showMunicipioLabels={showMunicipioLabels}
       fitToMarkers
       onMarkerSelect={(marker) => {
         if (marker) router.push(`/propiedades/${marker.slug}`);
