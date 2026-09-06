@@ -36,13 +36,16 @@ export default function ConversacionPage() {
   const [enviando, setEnviando] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const idsVistosRef = useRef<Set<string>>(new Set());
-  // Mini-ficha de la propiedad en el header — pedido explícito 2026-09-06.
-  // No existe un GET /conversaciones/:id que devuelva esto solo (confirmado
-  // en vivo: 404), así que se reusa GET /mensajes/conversaciones (la
-  // bandeja completa, que SÍ trae `propiedad` por conversación) y se busca
-  // la que coincide con este id — un viaje de más contra tener que pedirle
-  // al backend un endpoint nuevo solo para esto.
+  // Mini-ficha de la propiedad + nombre completo de la otra persona en el
+  // header — pedido explícito 2026-09-06/07 ("quiero ver el nombre
+  // completo del interesado"). No existe un GET /conversaciones/:id que
+  // devuelva esto solo (confirmado en vivo: 404), así que se reusa GET
+  // /mensajes/conversaciones (la bandeja completa, que SÍ trae `propiedad`
+  // y `otraPersona` por conversación) y se busca la que coincide con este
+  // id — un viaje de más contra tener que pedirle al backend un endpoint
+  // nuevo solo para esto.
   const [propiedad, setPropiedad] = useState<ConversacionResumen['propiedad'] | null>(null);
+  const [otraPersona, setOtraPersona] = useState<ConversacionResumen['otraPersona'] | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) { router.push('/auth/login'); return; }
@@ -58,7 +61,10 @@ export default function ConversacionPage() {
     backendFetch<{ conversaciones: ConversacionResumen[] }>('/mensajes/conversaciones')
       .then((d) => {
         const conv = (d.conversaciones ?? []).find((c) => c.id === conversacionId);
-        if (conv) setPropiedad(conv.propiedad);
+        if (conv) {
+          setPropiedad(conv.propiedad);
+          setOtraPersona(conv.otraPersona);
+        }
       })
       .catch(() => {});
   }, [authLoading, user, router, conversacionId]);
@@ -124,7 +130,10 @@ export default function ConversacionPage() {
         <Link href="/dashboard/mensajes" className="text-gray-400 hover:text-brand transition-colors flex-shrink-0">
           <ArrowLeft size={20} />
         </Link>
-        <h1 className="text-lg font-heading font-bold text-gray-900">Conversación</h1>
+        {/* Nombre completo de la otra persona — pedido explícito
+            2026-09-07, antes decía siempre "Conversación" a secas sin
+            decir con quién. */}
+        <h1 className="text-lg font-heading font-bold text-gray-900 truncate">{otraPersona?.nombre ?? 'Conversación'}</h1>
       </div>
 
       {/* Mini-ficha de la propiedad — pedido explícito 2026-09-06: "una
@@ -149,17 +158,35 @@ export default function ConversacionPage() {
         </Link>
       )}
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto bg-white border border-gray-200 rounded-2xl p-4 space-y-2.5">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
         {mensajes.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-8">Sin mensajes todavía — escribe el primero.</p>
         ) : (
-          mensajes.map((m) => {
+          mensajes.map((m, i) => {
             const esMio = m.remitenteId === user.userId;
+            // Estructura de chat real — pedido explícito 2026-09-07: antes
+            // solo cambiaba el color/lado de la burbuja, sin nada que diga
+            // de quién es cada mensaje. Ahora cada uno lleva un avatar
+            // (inicial) del lado que le toca y, cuando cambia el remitente
+            // respecto al mensaje anterior, una etiqueta con el nombre
+            // ("Tú" para los propios) — no se repite en cada burbuja
+            // seguida del mismo remitente, para no saturar.
+            const nombreRemitente = esMio ? 'Tú' : (otraPersona?.nombre ?? 'Interesado');
+            const cambioDeRemitente = i === 0 || mensajes[i - 1].remitenteId !== m.remitenteId;
+            const inicial = nombreRemitente.trim().charAt(0).toUpperCase();
             return (
-              <div key={m.id} className={`flex ${esMio ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 ${esMio ? 'bg-brand text-white rounded-br-sm' : 'bg-gray-100 text-gray-800 rounded-bl-sm'}`}>
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.texto}</p>
-                  <p className={`text-[10px] mt-1 ${esMio ? 'text-white/60' : 'text-gray-400'}`}>{formatRelativeDate(m.createdAt)}</p>
+              <div key={m.id} className={`flex items-end gap-2 ${esMio ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${esMio ? 'bg-brand text-white' : 'bg-gray-200 text-gray-600'}`}>
+                  {inicial}
+                </div>
+                <div className={`flex flex-col max-w-[75%] ${esMio ? 'items-end' : 'items-start'}`}>
+                  {cambioDeRemitente && (
+                    <p className={`text-[11px] font-semibold mb-1 px-1 ${esMio ? 'text-brand' : 'text-gray-500'}`}>{nombreRemitente}</p>
+                  )}
+                  <div className={`rounded-2xl px-3.5 py-2 ${esMio ? 'bg-brand text-white rounded-br-sm' : 'bg-gray-100 text-gray-800 rounded-bl-sm'}`}>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.texto}</p>
+                    <p className={`text-[10px] mt-1 ${esMio ? 'text-white/60' : 'text-gray-400'}`}>{formatRelativeDate(m.createdAt)}</p>
+                  </div>
                 </div>
               </div>
             );
