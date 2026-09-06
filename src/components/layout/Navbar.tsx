@@ -483,9 +483,9 @@ export function Navbar() {
                   <div className={herramientasGroup ? 'border-t border-white/10 mt-2 pt-2' : 'pt-1.5'}>
                     <button type="button" onClick={() => setPerfilAbierto((v) => !v)}
                       aria-expanded={perfilAbierto}
-                      className="flex items-center justify-between w-full px-4 pt-1.5 pb-2 text-[10px] font-bold text-white/40 hover:text-white/70 uppercase tracking-wide rounded-xl hover:bg-white/8 transition-colors">
+                      className="flex items-center justify-between w-full px-4 pt-1.5 pb-2 text-[10px] font-bold text-white uppercase tracking-wide rounded-xl hover:bg-white/8 transition-colors">
                       {perfilGroup.label}
-                      <ChevronDown size={12} className={`transition-transform ${perfilAbierto ? 'rotate-180' : ''}`} />
+                      <ChevronDown size={12} className={`text-white transition-transform ${perfilAbierto ? 'rotate-180' : ''}`} />
                     </button>
                     {perfilAbierto && (
                       <div className="space-y-0.5">
@@ -563,7 +563,7 @@ export function Navbar() {
               className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors border-l-2 ${
                 pathname === '/' ? 'text-white bg-white/10 border-accent' : 'text-white hover:bg-white/8 border-transparent'
               }`}>
-              <Home size={15} /> Inicio
+              Inicio
             </Link>
             {navLinks.map((link) => (
               <Link key={link.href} href={link.href} onClick={() => setIsOpen(false)}

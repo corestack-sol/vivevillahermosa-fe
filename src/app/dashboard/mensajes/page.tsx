@@ -3,11 +3,14 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, MessageCircle, Building2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Building2, ArrowDownLeft, ArrowUpRight, Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { backendFetch } from '@/lib/backendApi';
+import { useToast } from '@/context/ToastContext';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { formatRelativeDate } from '@/lib/format';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 import { combinarBandejaMensajes, type ConversacionResumen, type MensajeLegado, type ItemBandejaMensajes } from '@/lib/mensajeria';
 import { estaLegadoLeido, marcarLegadoLeido } from '@/lib/mensajesLegadoLeidos';
 
@@ -37,8 +40,36 @@ interface PropiedadMia {
 export default function MensajesPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const [items, setItems] = useState<ItemBandejaMensajes[]>([]);
   const [loading, setLoading] = useState(true);
+  // Eliminar chat completo — pedido explícito 2026-09-07. Backend nuevo,
+  // no existe todavía (confirmado en vivo: DELETE /conversaciones/:id y
+  // DELETE /propiedades/:id/mensajes/:mensajeId, ambos 404) — ver
+  // docs/BACKEND-ELIMINAR-CONVERSACION-07092026.md. "Eliminar" borra solo
+  // de TU bandeja (semántica documentada), no destruye el historial de la
+  // otra persona.
+  const [itemAEliminar, setItemAEliminar] = useState<ItemBandejaMensajes | null>(null);
+  const [eliminando, setEliminando] = useState(false);
+
+  async function confirmarEliminar() {
+    if (!itemAEliminar) return;
+    setEliminando(true);
+    try {
+      if (itemAEliminar.tipo === 'conversacion') {
+        await backendFetch(`/conversaciones/${itemAEliminar.id}`, { method: 'DELETE' });
+      } else {
+        await backendFetch(`/propiedades/${itemAEliminar.propiedadId}/mensajes/${itemAEliminar.mensajeId}`, { method: 'DELETE' });
+      }
+      setItems((prev) => prev.filter((x) => x.id !== itemAEliminar.id));
+      toast.success('Chat eliminado.');
+    } catch (err) {
+      toast.error(err instanceof BackendApiError ? err.message : 'No se pudo eliminar el chat.');
+    } finally {
+      setEliminando(false);
+      setItemAEliminar(null);
+    }
+  }
 
   useEffect(() => {
     if (!authLoading && !user) { router.push('/auth/login'); return; }
@@ -175,11 +206,39 @@ export default function MensajesPage() {
                     )}
                   </div>
                 </Link>
+
+                {/* Eliminar chat completo — pedido explícito 2026-09-07. */}
+                <button
+                  type="button"
+                  onClick={() => setItemAEliminar(it)}
+                  aria-label="Eliminar chat"
+                  className="flex-shrink-0 p-2 -m-2 text-gray-300 hover:text-red-500 transition-colors"
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
             );
           })}
         </div>
       )}
+
+      <Modal isOpen={!!itemAEliminar} onClose={() => setItemAEliminar(null)} title="Eliminar chat" maxWidth="sm">
+        {itemAEliminar && (
+          <>
+            <p className="text-sm text-gray-600 mb-5 leading-relaxed">
+              Vas a eliminar tu chat con <strong className="text-gray-800">{itemAEliminar.otraPersonaNombre}</strong> sobre <strong className="text-gray-800">{itemAEliminar.propiedad.titulo}</strong>. Solo desaparece de tu bandeja — si te vuelve a escribir, la conversación reaparece.
+            </p>
+            <div className="flex gap-3">
+              <Button type="button" variant="ghost" onClick={() => setItemAEliminar(null)} className="flex-1 justify-center">
+                Cancelar
+              </Button>
+              <Button type="button" variant="danger" onClick={confirmarEliminar} isLoading={eliminando} className="flex-1 justify-center">
+                Eliminar
+              </Button>
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }
