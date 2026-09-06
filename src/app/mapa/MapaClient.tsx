@@ -407,26 +407,32 @@ export function MapaClient({ allProperties }: Props) {
 
         {/* Sin resultados — antes el mapa quedaba en blanco sin ninguna
             guía cuando los filtros (o el recuadro visible) no dejaban
-            ninguna propiedad. */}
+            ninguna propiedad. Rediseñado 2026-09-07 a pedido explícito
+            ("menos intrusivo") — pasa de tarjeta centrada tapando el mapa
+            (shadow-xl, bloqueaba toda la interacción del centro) a un
+            banner angosto arriba, que no cubre el área donde de verdad se
+            mira/toca el mapa. */}
         {filtered.length === 0 && activeBounds !== dismissedBounds && (
-          <div className="absolute inset-0 z-[1001] flex items-center justify-center pointer-events-none px-4">
-            <div className="relative pointer-events-auto bg-white rounded-2xl shadow-xl border border-gray-100 px-6 py-5 text-center max-w-xs">
+          <div className="absolute top-3 inset-x-0 z-[1001] flex justify-center pointer-events-none px-4">
+            <div className="relative pointer-events-auto flex items-center gap-2.5 bg-white/95 backdrop-blur-sm rounded-full shadow-md border border-gray-100 pl-4 pr-9 py-2 max-w-full">
+              <p className="text-xs text-gray-600 whitespace-nowrap">
+                <span className="font-semibold text-gray-800">Sin propiedades aquí</span>
+                {' — '}
+                <button
+                  type="button"
+                  onClick={() => { clearFilters(); setActiveBounds(null); mapControls?.flyTo(17.9869, -92.9303, 11); }}
+                  className="font-semibold text-brand hover:text-brand-dark transition-colors underline underline-offset-2"
+                >
+                  limpiar filtros
+                </button>
+              </p>
               <button
                 type="button"
                 onClick={() => setDismissedBounds(activeBounds)}
                 aria-label="Cerrar aviso"
-                className="absolute top-2.5 right-2.5 p-1.5 -m-1.5 text-gray-300 hover:text-gray-600 transition-colors"
+                className="absolute top-1/2 right-2 -translate-y-1/2 p-1 text-gray-300 hover:text-gray-600 transition-colors"
               >
-                <X size={14} />
-              </button>
-              <p className="text-sm font-semibold text-gray-800 mb-1 pr-4">Sin propiedades aquí</p>
-              <p className="text-xs text-gray-500 mb-3">Ninguna propiedad coincide con tus filtros en esta zona del mapa.</p>
-              <button
-                type="button"
-                onClick={() => { clearFilters(); setActiveBounds(null); mapControls?.flyTo(17.9869, -92.9303, 11); }}
-                className="text-xs font-semibold text-brand hover:text-brand-dark transition-colors"
-              >
-                Limpiar filtros y volver a Villahermosa
+                <X size={13} />
               </button>
             </div>
           </div>

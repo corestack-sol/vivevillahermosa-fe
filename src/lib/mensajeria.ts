@@ -41,7 +41,15 @@ export interface MensajeLegado {
  *  (mensaje_nuevo) en la misma lista, en vez de dos pantallas separadas.
  *  `tipo` decide a dónde navega la card al hacer clic (ver
  *  dashboard/mensajes/page.tsx) — 'legado' no tiene hilo real, solo el
- *  mensaje original + datos de contacto directo (tel/correo). */
+ *  mensaje original + datos de contacto directo (tel/correo).
+ *
+ *  `soyDueno` — pedido explícito 2026-09-07: diferenciar "me contactaron
+ *  en una propiedad mía" de "yo contacté a alguien más". El backend no
+ *  manda esto directo; se calcula comparando `propiedad.id` contra las
+ *  propiedades propias (ver combinarBandejaMensajes) — un `legado` SIEMPRE
+ *  es `true` porque solo existe para propiedades propias (`GET
+ *  /propiedades/:id/mensajes` es por-propiedad-propia, nunca se pide para
+ *  la propiedad de alguien más). */
 export type ItemBandejaMensajes =
   | {
       tipo: 'conversacion';
@@ -51,6 +59,7 @@ export type ItemBandejaMensajes =
       ultimoTexto: string;
       fecha: string;
       noLeidos: number;
+      soyDueno: boolean;
     }
   | {
       tipo: 'legado';
@@ -62,6 +71,7 @@ export type ItemBandejaMensajes =
       ultimoTexto: string;
       fecha: string;
       noLeidos: number;
+      soyDueno: true;
     };
 
 /**
@@ -71,10 +81,12 @@ export type ItemBandejaMensajes =
  * entrada por mensaje, con la propiedad a la que pertenece) porque
  * `GET /propiedades/:id/mensajes` es por-propiedad, no hay un endpoint
  * "todos mis mensajes viejos" — quien llama ya hizo ese join.
+ * `misPropiedadIds` decide `soyDueno` en cada conversación (ver arriba).
  */
 export function combinarBandejaMensajes(
   conversaciones: ConversacionResumen[],
   legados: { propiedad: { id: string; titulo: string; slug: string; foto: string | null }; mensaje: MensajeLegado }[],
+  misPropiedadIds: Set<string> = new Set(),
 ): ItemBandejaMensajes[] {
   const deConversaciones: ItemBandejaMensajes[] = conversaciones.map((c) => ({
     tipo: 'conversacion',
@@ -84,6 +96,7 @@ export function combinarBandejaMensajes(
     ultimoTexto: c.ultimoMensaje?.texto ?? '',
     fecha: c.ultimoMensaje?.createdAt ?? '',
     noLeidos: c.noLeidos,
+    soyDueno: misPropiedadIds.has(c.propiedad.id),
   }));
   const deLegados: ItemBandejaMensajes[] = legados.map(({ propiedad, mensaje }) => ({
     tipo: 'legado',
@@ -95,6 +108,7 @@ export function combinarBandejaMensajes(
     ultimoTexto: mensaje.mensaje,
     fecha: mensaje.createdAt,
     noLeidos: mensaje.leido ? 0 : 1,
+    soyDueno: true,
   }));
   return [...deConversaciones, ...deLegados].sort(
     (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),

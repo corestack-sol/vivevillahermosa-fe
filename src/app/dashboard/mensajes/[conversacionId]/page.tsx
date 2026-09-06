@@ -3,12 +3,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Send, Building2 } from 'lucide-react';
+import { ArrowLeft, Send, Building2, MoreVertical, Ban, Flag, ShieldOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { backendFetch, BACKEND_URL } from '@/lib/backendApi';
+import { useToast } from '@/context/ToastContext';
+import { backendFetch, BackendApiError, BACKEND_URL } from '@/lib/backendApi';
 import { formatRelativeDate } from '@/lib/format';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useClickOutside } from '@/hooks/useClickOutside';
 import type { MensajeChat, ConversacionResumen } from '@/lib/mensajeria';
+import { ModeracionUsuarioModal } from '@/components/mensajeria/ModeracionUsuarioModal';
 
 /**
  * Hilo de chat de una conversación — ver docs/superpowers/specs/
@@ -46,6 +49,19 @@ export default function ConversacionPage() {
   // nuevo solo para esto.
   const [propiedad, setPropiedad] = useState<ConversacionResumen['propiedad'] | null>(null);
   const [otraPersona, setOtraPersona] = useState<ConversacionResumen['otraPersona'] | null>(null);
+  const toast = useToast();
+
+  // Bloquear/reportar — pedido explícito 2026-09-07. Backend nuevo, ver
+  // docs/BACKEND-BLOQUEO-REPORTE-USUARIOS-07092026.md (no existe todavía,
+  // confirmado en vivo con 8 variantes de endpoint probadas). Mientras el
+  // backend no lo tenga, estas llamadas van a fallar en silencio (mismo
+  // criterio "no bloquea nada mientras no exista" que el resto de esta
+  // pantalla) — el botón queda listo para funcionar en cuanto exista.
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const [modalAccion, setModalAccion] = useState<'bloquear' | 'reportar' | null>(null);
+  const [bloqueado, setBloqueado] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useClickOutside(menuRef, menuAbierto, () => setMenuAbierto(false));
 
   useEffect(() => {
     if (!authLoading && !user) { router.push('/auth/login'); return; }
@@ -64,10 +80,52 @@ export default function ConversacionPage() {
         if (conv) {
           setPropiedad(conv.propiedad);
           setOtraPersona(conv.otraPersona);
+          backendFetch<{ bloqueado: boolean }>(`/usuarios/${conv.otraPersona.id}/bloqueado`)
+            .then((d2) => setBloqueado(d2.bloqueado))
+            .catch(() => {});
         }
       })
       .catch(() => {});
   }, [authLoading, user, router, conversacionId]);
+
+  async function bloquear(motivo: string, motivoDetalle: string | undefined) {
+    if (!otraPersona) return;
+    try {
+      await backendFetch(`/usuarios/${otraPersona.id}/bloquear`, {
+        method: 'POST',
+        body: JSON.stringify({ motivo, motivoDetalle }),
+      });
+      setBloqueado(true);
+      toast.success(`Bloqueaste a ${otraPersona.nombre}.`);
+    } catch (err) {
+      toast.error(err instanceof BackendApiError ? err.message : 'No se pudo bloquear.');
+    }
+  }
+
+  async function desbloquear() {
+    if (!otraPersona) return;
+    try {
+      await backendFetch(`/usuarios/${otraPersona.id}/desbloquear`, { method: 'POST' });
+      setBloqueado(false);
+      toast.success(`Desbloqueaste a ${otraPersona.nombre}.`);
+    } catch (err) {
+      toast.error(err instanceof BackendApiError ? err.message : 'No se pudo desbloquear.');
+    }
+  }
+
+  async function reportar(motivo: string, motivoDetalle: string | undefined, tambienBloquear: boolean) {
+    if (!otraPersona) return;
+    try {
+      await backendFetch(`/usuarios/${otraPersona.id}/reportar`, {
+        method: 'POST',
+        body: JSON.stringify({ motivo, motivoDetalle, conversacionId }),
+      });
+      toast.success('Reporte enviado — un administrador lo va a revisar.');
+    } catch (err) {
+      toast.error(err instanceof BackendApiError ? err.message : 'No se pudo enviar el reporte.');
+    }
+    if (tambienBloquear) await bloquear('otro', 'Reportado y bloqueado');
+  }
 
   // Conexión SSE — vive y muere con este componente. `withCredentials`
   // manda la cookie de sesión igual que backendFetch (`credentials:
@@ -133,7 +191,49 @@ export default function ConversacionPage() {
         {/* Nombre completo de la otra persona — pedido explícito
             2026-09-07, antes decía siempre "Conversación" a secas sin
             decir con quién. */}
-        <h1 className="text-lg font-heading font-bold text-gray-900 truncate">{otraPersona?.nombre ?? 'Conversación'}</h1>
+        <h1 className="text-lg font-heading font-bold text-gray-900 truncate flex-1">{otraPersona?.nombre ?? 'Conversación'}</h1>
+
+        {/* Bloquear/reportar — pedido explícito 2026-09-07. */}
+        {otraPersona && (
+          <div ref={menuRef} className="relative flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setMenuAbierto((v) => !v)}
+              aria-label="Más opciones"
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            >
+              <MoreVertical size={18} />
+            </button>
+            {menuAbierto && (
+              <div className="absolute top-full right-0 mt-1 bg-white rounded-xl border border-gray-100 shadow-xl overflow-hidden z-20 w-48">
+                {bloqueado ? (
+                  <button
+                    type="button"
+                    onClick={() => { setMenuAbierto(false); desbloquear(); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 text-left transition-colors"
+                  >
+                    <ShieldOff size={14} /> Desbloquear
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setMenuAbierto(false); setModalAccion('bloquear'); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 text-left transition-colors"
+                  >
+                    <Ban size={14} /> Bloquear
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => { setMenuAbierto(false); setModalAccion('reportar'); }}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 text-left transition-colors"
+                >
+                  <Flag size={14} /> Reportar
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Mini-ficha de la propiedad — pedido explícito 2026-09-06: "una
@@ -173,7 +273,12 @@ export default function ConversacionPage() {
             // seguida del mismo remitente, para no saturar.
             const nombreRemitente = esMio ? 'Tú' : (otraPersona?.nombre ?? 'Interesado');
             const cambioDeRemitente = i === 0 || mensajes[i - 1].remitenteId !== m.remitenteId;
-            const inicial = nombreRemitente.trim().charAt(0).toUpperCase();
+            // El avatar usa el nombre REAL incluso en los mensajes propios
+            // — pedido explícito 2026-09-07 ("¿es de Tú?"): "Tú" es la
+            // etiqueta que se lee arriba de la burbuja, pero la inicial del
+            // círculo debe ser la del nombre de verdad, igual que ya pasa
+            // del lado del interesado.
+            const inicial = (esMio ? user.nombre : nombreRemitente).trim().charAt(0).toUpperCase();
             return (
               <div key={m.id} className={`flex items-end gap-2 ${esMio ? 'flex-row-reverse' : 'flex-row'}`}>
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${esMio ? 'bg-brand text-white' : 'bg-gray-200 text-gray-600'}`}>
@@ -194,25 +299,49 @@ export default function ConversacionPage() {
         )}
       </div>
 
-      <div className="flex items-center gap-2 mt-3 flex-shrink-0">
-        <input
-          type="text"
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } }}
-          placeholder="Escribe un mensaje..."
-          className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
+      {bloqueado ? (
+        <div className="flex items-center justify-between gap-3 mt-3 flex-shrink-0 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+          <p className="text-sm text-gray-500">
+            Bloqueaste a <strong className="text-gray-700">{otraPersona?.nombre}</strong> — ya no puede escribirte.
+          </p>
+          <button type="button" onClick={desbloquear} className="flex-shrink-0 text-xs font-semibold text-brand hover:text-brand-dark transition-colors">
+            Desbloquear
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 mt-3 flex-shrink-0">
+          <input
+            type="text"
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } }}
+            placeholder="Escribe un mensaje..."
+            className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
+          />
+          <button
+            type="button"
+            onClick={enviar}
+            disabled={!texto.trim() || enviando}
+            aria-label="Enviar mensaje"
+            className="flex-shrink-0 w-10 h-10 rounded-xl bg-brand hover:bg-brand-dark text-white flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-default"
+          >
+            <Send size={16} />
+          </button>
+        </div>
+      )}
+
+      {otraPersona && modalAccion && (
+        <ModeracionUsuarioModal
+          isOpen={!!modalAccion}
+          onClose={() => setModalAccion(null)}
+          accion={modalAccion}
+          nombrePersona={otraPersona.nombre}
+          onConfirm={(motivo, motivoDetalle, tambienBloquear) => {
+            if (modalAccion === 'bloquear') bloquear(motivo, motivoDetalle);
+            else reportar(motivo, motivoDetalle, tambienBloquear);
+          }}
         />
-        <button
-          type="button"
-          onClick={enviar}
-          disabled={!texto.trim() || enviando}
-          aria-label="Enviar mensaje"
-          className="flex-shrink-0 w-10 h-10 rounded-xl bg-brand hover:bg-brand-dark text-white flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-default"
-        >
-          <Send size={16} />
-        </button>
-      </div>
+      )}
     </div>
   );
 }

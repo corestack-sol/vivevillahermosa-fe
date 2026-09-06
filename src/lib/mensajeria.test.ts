@@ -36,4 +36,23 @@ describe('combinarBandejaMensajes', () => {
   it('lista vacia de ambos da lista vacia', () => {
     expect(combinarBandejaMensajes([], [])).toEqual([]);
   });
+
+  it('soyDueno distingue "me contactaron" de "yo contacte" segun mis propiedades', () => {
+    const propiedadAjena = { id: 'p2', titulo: 'Depa ajeno', slug: 'depa-ajeno', foto: null };
+    const conversaciones: ConversacionResumen[] = [
+      { id: 'c1', propiedad, otraPersona: { id: 'u1', nombre: 'Ana' }, ultimoMensaje: { texto: 'Hola', createdAt: '2026-09-01T10:00:00Z', remitenteId: 'u1' }, noLeidos: 0 },
+      { id: 'c2', propiedad: propiedadAjena, otraPersona: { id: 'u2', nombre: 'Beto' }, ultimoMensaje: { texto: 'Hola', createdAt: '2026-09-02T10:00:00Z', remitenteId: 'u2' }, noLeidos: 0 },
+    ];
+    const resultado = combinarBandejaMensajes(conversaciones, [], new Set(['p1']));
+    expect(resultado.find((r) => r.id === 'c1')?.soyDueno).toBe(true);
+    expect(resultado.find((r) => r.id === 'c2')?.soyDueno).toBe(false);
+  });
+
+  it('un item legado siempre es soyDueno=true, sin importar misPropiedadIds', () => {
+    const legados = [
+      { propiedad, mensaje: { id: 'm1', nombre: 'Beto', telefono: '993', email: 'b@x.com', mensaje: 'hola', leido: true, createdAt: '2026-09-02T10:00:00Z' } as MensajeLegado },
+    ];
+    const resultado = combinarBandejaMensajes([], legados, new Set());
+    expect(resultado[0].soyDueno).toBe(true);
+  });
 });

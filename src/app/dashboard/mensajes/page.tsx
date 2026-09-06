@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, MessageCircle, Building2 } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Building2, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { backendFetch } from '@/lib/backendApi';
 import { formatRelativeDate } from '@/lib/format';
@@ -66,7 +66,10 @@ export default function MensajesPage() {
         ),
       );
       if (cancelado) return;
-      setItems(combinarBandejaMensajes(convData.conversaciones ?? [], legadosPorPropiedad.flat()));
+      // soyDueno — pedido explícito 2026-09-07: diferenciar "me
+      // contactaron en una propiedad mía" de "yo contacté a alguien más".
+      const misPropiedadIds = new Set(propiedades.map((p) => p.id));
+      setItems(combinarBandejaMensajes(convData.conversaciones ?? [], legadosPorPropiedad.flat(), misPropiedadIds));
     }).finally(() => {
       if (!cancelado) setLoading(false);
     });
@@ -143,6 +146,18 @@ export default function MensajesPage() {
                     <div className="flex items-center gap-1.5">
                       {it.noLeidos > 0 && <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0" />}
                       <p className="text-sm font-semibold text-gray-800 truncate">{it.otraPersonaNombre}</p>
+                      {/* Pedido explícito 2026-09-07: distinguir "me
+                          contactaron en mi propiedad" de "yo contacté a
+                          alguien más" — sin esto las dos se veían igual. */}
+                      {it.soyDueno ? (
+                        <span title="Te contactó en tu propiedad" className="flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                          <ArrowDownLeft size={9} /> Te contactó
+                        </span>
+                      ) : (
+                        <span title="Tú contactaste esta propiedad" className="flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                          <ArrowUpRight size={9} /> Tú contactaste
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-gray-400 truncate">{it.propiedad.titulo}</p>
                     {it.ultimoTexto && (
