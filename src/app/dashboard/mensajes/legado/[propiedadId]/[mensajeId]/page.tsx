@@ -9,6 +9,7 @@ import { backendFetch } from '@/lib/backendApi';
 import { formatRelativeDate } from '@/lib/format';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { MensajeLegado } from '@/lib/mensajeria';
+import { marcarLegadoLeido } from '@/lib/mensajesLegadoLeidos';
 
 interface PropiedadPublica {
   titulo: string;
@@ -53,6 +54,10 @@ export default function ConversacionLegadoPage() {
         if (!encontrado) { setNoEncontrado(true); return; }
         setPropiedad(p);
         setMensaje(encontrado);
+        // Por si se llega aquí directo (link guardado, notificación) sin
+        // pasar por el clic de la tarjeta en la bandeja — ver
+        // mensajesLegadoLeidos.ts, el backend no tiene endpoint para esto.
+        marcarLegadoLeido(mensajeId);
       })
       .catch(() => { if (!cancelado) setNoEncontrado(true); })
       .finally(() => { if (!cancelado) setLoading(false); });

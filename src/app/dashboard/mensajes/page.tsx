@@ -9,6 +9,7 @@ import { backendFetch } from '@/lib/backendApi';
 import { formatRelativeDate } from '@/lib/format';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { combinarBandejaMensajes, type ConversacionResumen, type MensajeLegado, type ItemBandejaMensajes } from '@/lib/mensajeria';
+import { estaLegadoLeido, marcarLegadoLeido } from '@/lib/mensajesLegadoLeidos';
 
 interface PropiedadMia {
   id: string;
@@ -55,7 +56,11 @@ export default function MensajesPage() {
           backendFetch<{ mensajes: MensajeLegado[] }>(`/propiedades/${p.id}/mensajes`)
             .then((d) => (d.mensajes ?? []).map((mensaje) => ({
               propiedad: { id: p.id, titulo: p.titulo, slug: p.slug, foto: p.fotos[0] ?? null },
-              mensaje,
+              // El backend nunca expuso un endpoint para marcar un mensaje
+              // legado como leído (confirmado en vivo 2026-09-06) — se
+              // completa con lo que este navegador recuerda haber abierto
+              // (ver marcarLegadoLeido en mensajesLegadoLeidos.ts).
+              mensaje: { ...mensaje, leido: mensaje.leido || estaLegadoLeido(mensaje.id) },
             })))
             .catch(() => []),
         ),
@@ -101,6 +106,17 @@ export default function MensajesPage() {
             const hrefChat = it.tipo === 'conversacion'
               ? `/dashboard/mensajes/${it.id}`
               : `/dashboard/mensajes/legado/${it.propiedadId}/${it.mensajeId}`;
+            // Marca leído al instante, sin esperar a volver a esta pantalla
+            // para que se note — pedido explícito 2026-09-06. Una
+            // conversación real ya se marca leída en el backend en cuanto
+            // se abre el hilo (confirmado en vivo: GET /conversaciones/:id/
+            // mensajes marca los mensajes, esto solo adelanta la UI); un
+            // mensaje legado no tiene backend que lo recuerde, así que
+            // además queda guardado en este navegador.
+            function marcarLeidoAlAbrir() {
+              if (it.tipo === 'legado') marcarLegadoLeido(it.mensajeId);
+              setItems((prev) => prev.map((x) => (x.id === it.id ? { ...x, noLeidos: 0 } : x)));
+            }
             return (
               <div
                 key={it.id}
@@ -122,7 +138,7 @@ export default function MensajesPage() {
                     <Building2 size={18} className="text-gray-300" />
                   )}
                 </Link>
-                <Link href={hrefChat} className="flex items-center gap-3 min-w-0 flex-1">
+                <Link href={hrefChat} onClick={marcarLeidoAlAbrir} className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       {it.noLeidos > 0 && <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0" />}
