@@ -6,9 +6,8 @@ import { usePathname } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { CheckCircle, ShieldAlert, LogIn, ArrowRight } from 'lucide-react';
+import { CheckCircle, ShieldAlert, LogIn, ArrowRight, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { loginRedirectUrl } from '@/lib/authRedirect';
 import { usePropiedadEstado } from '@/hooks/usePropiedadEstado';
@@ -16,9 +15,6 @@ import { estadoNoDisponibleInfo } from '@/lib/misPropiedades';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 
 const schema = z.object({
-  nombre: z.string().min(2, 'Ingresa tu nombre completo'),
-  telefono: z.string().min(10, 'Ingresa un teléfono válido'),
-  email: z.string().email('Correo electrónico inválido'),
   mensaje: z.string().min(10, 'El mensaje debe tener al menos 10 caracteres'),
 });
 
@@ -45,26 +41,36 @@ export function ContactForm({ propertyTitle, propertyId, ownerName, dark = false
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
-  // Ya sabemos quién es — no tiene sentido volver a pedirle nombre/correo.
+  // Ya sabemos quién es — no tiene sentido volver a pedirle nombre/correo
+  // (el sistema de mensajería ya identifica al remitente por su sesión).
   // `reset()` en un efecto (en vez de `values` en useForm) para que solo se
   // aplique cuando `user` realmente cambia, no en cada tecleo del mensaje.
   useEffect(() => {
     if (!user) return;
     reset({
-      nombre: user.nombre,
-      email: user.email,
-      telefono: '',
       mensaje: 'Hola, vi esta propiedad en Vive Villahermosa y me gustaría recibir más información.',
     });
   }, [user, reset]);
 
+  const [conversacionId, setConversacionId] = useState<string | null>(null);
+
+  // Migrado 2026-09-06 de POST /propiedades/:id/contactar (solo mandaba un
+  // correo, nunca quedaba registrado ni ligado a la propiedad de forma
+  // consultable — reporte real del usuario) a POST /propiedades/:id/
+  // mensajes, el sistema de mensajería bidireccional construido el
+  // 2026-09-02. Confirmado en vivo con 2 cuentas de prueba: crea la
+  // Conversacion+Mensaje real, dispara la notificación al dueño con
+  // conversacionId (ya rutea bien, ver notificacionHref en
+  // useNotificaciones.ts) y aparece en /dashboard/mensajes con foto y
+  // título de la propiedad.
   const onSubmit = async (data: FormData) => {
     setSendError(null);
     try {
-      await backendFetch(`/propiedades/${propertyId}/contactar`, {
+      const { conversacionId: id } = await backendFetch<{ conversacionId: string }>(`/propiedades/${propertyId}/mensajes`, {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: JSON.stringify({ texto: data.mensaje }),
       });
+      setConversacionId(id);
       setSent(true);
     } catch (err) {
       setSendError(err instanceof BackendApiError ? err.message : 'No se pudo enviar el mensaje, intenta de nuevo.');
@@ -133,9 +139,19 @@ export function ContactForm({ propertyTitle, propertyId, ownerName, dark = false
       <div className="text-center py-6">
         <CheckCircle className={`mx-auto mb-3 ${dark ? 'text-white' : 'text-success'}`} size={40} />
         <h3 className={`font-semibold mb-1 ${dark ? 'text-white' : 'text-gray-800'}`}>¡Mensaje enviado!</h3>
-        <p className={`text-sm ${dark ? 'text-white/70' : 'text-gray-500'}`}>
-          {ownerName} se comunicará contigo en las próximas horas.
+        <p className={`text-sm mb-4 ${dark ? 'text-white/70' : 'text-gray-500'}`}>
+          {ownerName} puede responderte directo desde la plataforma.
         </p>
+        {conversacionId && (
+          <Link
+            href={`/dashboard/mensajes/${conversacionId}`}
+            className={`inline-flex items-center justify-center gap-2 font-semibold text-sm py-2.5 px-5 rounded-xl transition-colors ${
+              dark ? 'bg-white text-brand-dark hover:bg-white/90' : 'bg-brand hover:bg-brand-dark text-white'
+            }`}
+          >
+            <MessageCircle size={15} /> Ver conversación
+          </Link>
+        )}
       </div>
     );
   }
@@ -145,32 +161,6 @@ export function ContactForm({ propertyTitle, propertyId, ownerName, dark = false
       <p className={`text-sm mb-4 ${dark ? 'text-white/70' : 'text-gray-500'}`}>
         Consultar sobre: <strong className={dark ? 'text-white' : 'text-gray-700'}>{propertyTitle}</strong>
       </p>
-
-      <Input
-        label="Nombre completo"
-        placeholder="Tu nombre"
-        labelClassName={labelCls}
-        error={errors.nombre?.message}
-        {...register('nombre')}
-      />
-
-      <Input
-        label="Teléfono"
-        type="tel"
-        placeholder="+52 993 000 0000"
-        labelClassName={labelCls}
-        error={errors.telefono?.message}
-        {...register('telefono')}
-      />
-
-      <Input
-        label="Correo electrónico"
-        type="email"
-        placeholder="tu@correo.com"
-        labelClassName={labelCls}
-        error={errors.email?.message}
-        {...register('email')}
-      />
 
       <div>
         <label className={`block text-sm font-medium mb-1 ${labelCls}`}>Mensaje</label>

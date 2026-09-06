@@ -13,17 +13,16 @@ import type { ConversacionResumen } from '@/lib/mensajeria';
 /**
  * Bandeja única de mensajería — reemplaza el destino de la vieja
  * "mensajes recibidos" por-propiedad (dashboard/propiedades/[id]/
- * mensajes/page.tsx, que se queda como está por ahora, ver el spec
- * "Orden de despliegue": esa ruta vieja sigue mostrando los mensajes
- * legado de una sola vía hasta que el sistema nuevo esté confirmado en
- * producción). Una cuenta puede ser interesada en unas propiedades y
- * dueña de otras a la vez — por eso una sola lista, no dos separadas.
+ * mensajes/page.tsx, que se queda como está — sigue mostrando los
+ * mensajes legado de una sola vía de antes de esta migración). Una
+ * cuenta puede ser interesada en unas propiedades y dueña de otras a la
+ * vez — por eso una sola lista, no dos separadas.
  *
- * Backend todavía no existe (GET /mensajes/conversaciones) — esta
- * pantalla queda lista, mostrará "sin conversaciones" hasta que el
- * backend lo implemente y ContactForm.tsx se cambie al endpoint nuevo
- * (ver docs/superpowers/specs/2026-09-02-mensajeria-bidireccional-
- * design.md).
+ * Backend confirmado en vivo 2026-09-06 (cuentas de prueba reales,
+ * flujo completo interesado -> dueño -> respuesta) y ContactForm.tsx ya
+ * migrado al endpoint nuevo (POST /propiedades/:id/mensajes) — mismo
+ * día que se reporta el bug real que esto resuelve: un mensaje de un
+ * interesado no quedaba registrado en ningún lado consultable.
  */
 export default function MensajesPage() {
   const { user, loading: authLoading } = useAuth();
@@ -69,40 +68,49 @@ export default function MensajesPage() {
       ) : (
         <div className="bg-white rounded-2xl border border-gray-200 divide-y divide-gray-50 overflow-hidden">
           {conversaciones.map((c) => (
-            <Link
+            <div
               key={c.id}
-              href={`/dashboard/mensajes/${c.id}`}
               className={`flex items-center gap-3 px-5 py-4 hover:bg-gray-50 transition-colors ${c.noLeidos > 0 ? 'bg-brand-pale/20' : ''}`}
             >
-              <div className="relative w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center">
+              {/* Foto de la propiedad — link APARTE a la ficha pública, pedido
+                  explícito 2026-09-06. No puede ir anidado dentro del <Link>
+                  de la fila (HTML inválido, un <a> dentro de otro <a>), por
+                  eso el resto de la fila es su propio <Link> hermano. */}
+              <Link
+                href={`/propiedades/${c.propiedad.slug}`}
+                title="Ver propiedad"
+                className="relative w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center hover:opacity-80 transition-opacity"
+              >
                 {c.propiedad.foto ? (
                   // eslint-disable-next-line @next/next/no-img-element -- mismo patrón que PropertyCard.tsx/PropertyGallery.tsx (fotos de Cloudinary, dominio no configurado en next.config.ts para next/image)
                   <img src={c.propiedad.foto} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <Building2 size={18} className="text-gray-300" />
                 )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  {c.noLeidos > 0 && <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0" />}
-                  <p className="text-sm font-semibold text-gray-800 truncate">{c.otraPersona.nombre}</p>
+              </Link>
+              <Link href={`/dashboard/mensajes/${c.id}`} className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    {c.noLeidos > 0 && <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0" />}
+                    <p className="text-sm font-semibold text-gray-800 truncate">{c.otraPersona.nombre}</p>
+                  </div>
+                  <p className="text-xs text-gray-400 truncate">{c.propiedad.titulo}</p>
+                  {c.ultimoMensaje && (
+                    <p className="text-sm text-gray-600 truncate mt-0.5">{c.ultimoMensaje.texto}</p>
+                  )}
                 </div>
-                <p className="text-xs text-gray-400 truncate">{c.propiedad.titulo}</p>
-                {c.ultimoMensaje && (
-                  <p className="text-sm text-gray-600 truncate mt-0.5">{c.ultimoMensaje.texto}</p>
-                )}
-              </div>
-              <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                {c.ultimoMensaje && (
-                  <span className="text-[11px] text-gray-400">{formatRelativeDate(c.ultimoMensaje.createdAt)}</span>
-                )}
-                {c.noLeidos > 0 && (
-                  <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[10px] font-bold flex items-center justify-center">
-                    {c.noLeidos > 9 ? '9+' : c.noLeidos}
-                  </span>
-                )}
-              </div>
-            </Link>
+                <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                  {c.ultimoMensaje && (
+                    <span className="text-[11px] text-gray-400">{formatRelativeDate(c.ultimoMensaje.createdAt)}</span>
+                  )}
+                  {c.noLeidos > 0 && (
+                    <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[10px] font-bold flex items-center justify-center">
+                      {c.noLeidos > 9 ? '9+' : c.noLeidos}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            </div>
           ))}
         </div>
       )}

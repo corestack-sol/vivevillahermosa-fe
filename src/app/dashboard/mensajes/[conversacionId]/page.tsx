@@ -3,12 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft, Send, Building2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { backendFetch, BACKEND_URL } from '@/lib/backendApi';
 import { formatRelativeDate } from '@/lib/format';
 import { Skeleton } from '@/components/ui/Skeleton';
-import type { MensajeChat } from '@/lib/mensajeria';
+import type { MensajeChat, ConversacionResumen } from '@/lib/mensajeria';
 
 /**
  * Hilo de chat de una conversación — ver docs/superpowers/specs/
@@ -22,9 +22,9 @@ import type { MensajeChat } from '@/lib/mensajeria';
  * consumo de memoria del servidor a escala de miles de usuarios, sin
  * necesitar WebSockets ni infraestructura nueva (Redis, gateway).
  *
- * Backend todavía sin construir — el EventSource simplemente no conecta
- * (falla en silencio, mismo criterio de "fire-and-forget" que
- * VistaTracker.tsx) hasta que exista `GET /conversaciones/:id/eventos`.
+ * Backend confirmado en vivo 2026-09-06 (`GET /conversaciones/:id/
+ * eventos`, `GET`/`POST /conversaciones/:id/mensajes`, `POST
+ * /propiedades/:id/mensajes` para el primer contacto).
  */
 export default function ConversacionPage() {
   const { conversacionId } = useParams<{ conversacionId: string }>();
@@ -36,6 +36,13 @@ export default function ConversacionPage() {
   const [enviando, setEnviando] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const idsVistosRef = useRef<Set<string>>(new Set());
+  // Mini-ficha de la propiedad en el header — pedido explícito 2026-09-06.
+  // No existe un GET /conversaciones/:id que devuelva esto solo (confirmado
+  // en vivo: 404), así que se reusa GET /mensajes/conversaciones (la
+  // bandeja completa, que SÍ trae `propiedad` por conversación) y se busca
+  // la que coincide con este id — un viaje de más contra tener que pedirle
+  // al backend un endpoint nuevo solo para esto.
+  const [propiedad, setPropiedad] = useState<ConversacionResumen['propiedad'] | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) { router.push('/auth/login'); return; }
@@ -48,6 +55,12 @@ export default function ConversacionPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+    backendFetch<{ conversaciones: ConversacionResumen[] }>('/mensajes/conversaciones')
+      .then((d) => {
+        const conv = (d.conversaciones ?? []).find((c) => c.id === conversacionId);
+        if (conv) setPropiedad(conv.propiedad);
+      })
+      .catch(() => {});
   }, [authLoading, user, router, conversacionId]);
 
   // Conexión SSE — vive y muere con este componente. `withCredentials`
@@ -113,6 +126,28 @@ export default function ConversacionPage() {
         </Link>
         <h1 className="text-lg font-heading font-bold text-gray-900">Conversación</h1>
       </div>
+
+      {/* Mini-ficha de la propiedad — pedido explícito 2026-09-06: "una
+          foto mini de la propiedad por la cual se le contactó, y que al
+          presionarla envíe a la página de la propiedad misma". Enlaza a
+          la ficha pública; el resto de la pantalla (leer/responder) se
+          queda aquí mismo. */}
+      {propiedad && (
+        <Link
+          href={`/propiedades/${propiedad.slug}`}
+          className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-4 py-3 mb-4 flex-shrink-0 hover:border-brand/30 hover:shadow-sm transition-all"
+        >
+          <div className="relative w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center">
+            {propiedad.foto ? (
+              // eslint-disable-next-line @next/next/no-img-element -- mismo patrón que dashboard/mensajes/page.tsx
+              <img src={propiedad.foto} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <Building2 size={18} className="text-gray-300" />
+            )}
+          </div>
+          <p className="text-sm font-semibold text-gray-800 truncate min-w-0">{propiedad.titulo}</p>
+        </Link>
+      )}
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto bg-white border border-gray-200 rounded-2xl p-4 space-y-2.5">
         {mensajes.length === 0 ? (
