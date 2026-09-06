@@ -30,18 +30,19 @@ export interface Notificacion {
  * a la ficha pública de la propiedad, que no muestra nada del interesado.
  * Bug real reportado 2026-09-02: "no muestra los datos del interesado".
  *
- * "mensaje_nuevo" (sistema de mensajería bidireccional, todavía sin
- * construir del lado del backend) manda directo al hilo de chat — la
- * fuente de verdad real una vez exista. "contacto_propiedad" (el sistema
- * viejo, de una sola vía) sigue mandando a la bandeja por-propiedad de
- * hoy — esa ruta NO se toca todavía (ver el spec, "Orden de despliegue":
- * no se corta el flujo actual hasta confirmar que el nuevo funciona de
- * verdad). Cualquier otro tipo (o uno sin `propiedadId`) se queda con el
- * destino genérico.
+ * "mensaje_nuevo" (chat bidireccional, confirmado en vivo 2026-09-06)
+ * manda directo al hilo de esa conversación. "contacto_propiedad" (el
+ * sistema viejo, de una sola vía, sin remitenteId — no se puede armar un
+ * link a un mensaje específico solo con `propiedadId`) manda a la bandeja
+ * unificada (`/dashboard/mensajes`, pedido explícito 2026-09-06: "unifica
+ * como los de tipo contactform") en vez de la pantalla vieja por-
+ * propiedad — ahí va a aparecer como una card más, mezclada con las
+ * conversaciones reales. Cualquier otro tipo (o uno sin `propiedadId`) se
+ * queda con el destino genérico.
  */
 export function notificacionHref(n: Pick<Notificacion, 'tipo' | 'propiedadId' | 'conversacionId'>): string {
   if (n.tipo === 'mensaje_nuevo' && n.conversacionId) return `/dashboard/mensajes/${n.conversacionId}`;
-  if (n.propiedadId && n.tipo === 'contacto_propiedad') return `/dashboard/propiedades/${n.propiedadId}/mensajes`;
+  if (n.tipo === 'contacto_propiedad') return '/dashboard/mensajes';
   if (n.propiedadId) return `/propiedades/${n.propiedadId}`;
   return '/dashboard';
 }

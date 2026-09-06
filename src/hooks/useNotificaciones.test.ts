@@ -12,7 +12,7 @@ describe('notificacionHref', () => {
     // más" en un tipo distinto no debe hacer que esto rutee a un chat
     // que no corresponde.
     expect(notificacionHref({ tipo: 'contacto_propiedad', propiedadId: 'p1', conversacionId: 'c1' }))
-      .toBe('/dashboard/propiedades/p1/mensajes');
+      .toBe('/dashboard/mensajes');
   });
 
   it('mensaje_nuevo sin conversacionId cae al destino genérico de propiedadId', () => {
@@ -23,9 +23,13 @@ describe('notificacionHref', () => {
       .toBe('/propiedades/p1');
   });
 
-  it('contacto_propiedad manda a la bandeja por-propiedad (sistema viejo, todavía no reemplazado)', () => {
+  it('contacto_propiedad manda a la bandeja unificada de mensajes (pedido explícito 2026-09-06)', () => {
+    // Sin remitenteId en el sistema viejo no se puede armar un link a un
+    // mensaje específico, así que aterriza en la bandeja general en vez
+    // de la pantalla vieja por-propiedad — ahí sale mezclado con las
+    // conversaciones reales, ver combinarBandejaMensajes en mensajeria.ts.
     expect(notificacionHref({ tipo: 'contacto_propiedad', propiedadId: 'p1' }))
-      .toBe('/dashboard/propiedades/p1/mensajes');
+      .toBe('/dashboard/mensajes');
   });
 
   it('cualquier otro tipo con propiedadId manda a la ficha pública', () => {
