@@ -46,8 +46,8 @@ export default async function NosotrosPage() {
           <MapPin size={14} /> Hecho en Tabasco
         </div>
         <h1 className="text-4xl md:text-5xl font-display font-black text-gray-900 mb-4 animate-fade-up" style={{ animationDelay: '80ms' }}>
-          Una plataforma pensada
-          <span className="text-brand"> para Tabasco</span>
+          Una plataforma pensada para
+          <span className="text-brand"> Tabasco</span>
         </h1>
         <p className="text-lg text-gray-500 animate-fade-up" style={{ animationDelay: '160ms' }}>
           Vive Villahermosa nació de una idea concreta: quien busca casa en Tabasco merece contacto directo con el dueño, sin comisión, y saber si esa zona se ha inundado antes de mudarse.
