@@ -50,7 +50,7 @@ export default async function NosotrosPage() {
           <span className="text-brand"> Tabasco</span>
         </h1>
         <p className="text-lg text-gray-500 animate-fade-up" style={{ animationDelay: '160ms' }}>
-          Vive Villahermosa nació de una idea concreta: quien busca casa en Tabasco merece contacto directo con el dueño, sin comisión, y saber si esa zona se ha inundado antes de mudarse.
+          Vive Villahermosa nació de una idea concreta: quien busca casa en Tabasco merece contacto directo con el dueño, sin comisión de por medio.
           Empezamos ahí — y seguimos construyendo, siempre para Tabasco.
         </p>
       </div>
