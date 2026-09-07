@@ -427,8 +427,11 @@ export default function MisPropiedadesPage() {
                       </Tooltip>
                     </>
                   )}
+                  {/* Enlaza a la bandeja unificada filtrada por esta
+                      propiedad — pedido explícito 2026-09-07. La página
+                      vieja por-propiedad se eliminó (redundante). */}
                   <Tooltip label="Mensajes recibidos">
-                    <Link href={`/dashboard/propiedades/${p.id}/mensajes`}
+                    <Link href={`/dashboard/mensajes?propiedad=${p.id}`}
                       className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-brand hover:bg-brand-pale transition-colors"
                     >
                       <MessageCircle size={15} />

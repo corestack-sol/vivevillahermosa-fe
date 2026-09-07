@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { ArrowLeft, MessageCircle, Building2, ArrowDownLeft, ArrowUpRight, Trash2 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowLeft, MessageCircle, Building2, ArrowDownLeft, ArrowUpRight, Trash2, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
@@ -24,11 +24,17 @@ interface PropiedadMia {
 /**
  * Bandeja única de mensajería — pedido explícito 2026-09-06: unificar en
  * una sola lista el chat nuevo (Conversacion/Mensaje, bidireccional) y el
- * sistema viejo de contacto de una sola vía (contacto_propiedad), que
- * antes vivía separado en dashboard/propiedades/[id]/mensajes/page.tsx
- * (esa ruta se queda como está, ahora es redundante pero no rompe nada).
- * Una cuenta puede ser interesada en unas propiedades y dueña de otras a
- * la vez — por eso una sola lista, no dos separadas.
+ * sistema viejo de contacto de una sola vía (contacto_propiedad). La
+ * página vieja por-propiedad (dashboard/propiedades/[id]/mensajes) se
+ * eliminó 2026-09-07 — quedó totalmente redundante contra esta, con peor
+ * experiencia (sin chat, sin agrupar por interesado). Una cuenta puede
+ * ser interesada en unas propiedades y dueña de otras a la vez — por eso
+ * una sola lista, no dos separadas.
+ *
+ * `?propiedad={id}` (pedido explícito 2026-09-07) filtra la misma lista a
+ * una sola propiedad — es a donde enlaza el ícono de mensajes de cada
+ * card en /dashboard/propiedades, en vez de a la página vieja ya
+ * eliminada. Mismo dato, mismo fetch, solo recortado en el render.
  *
  * `GET /propiedades/:id/mensajes` (legado) es por-propiedad, no existe un
  * "todos mis mensajes viejos" — por eso primero se piden las propiedades
@@ -38,9 +44,23 @@ interface PropiedadMia {
  * esa lista sale vacía y no se hace ningún fetch de más.
  */
 export default function MensajesPage() {
+  return (
+    <Suspense fallback={null}>
+      <MensajesContent />
+    </Suspense>
+  );
+}
+
+function MensajesContent() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const toast = useToast();
+  const searchParams = useSearchParams();
+  // Filtro por propiedad — pedido explícito 2026-09-07: el ícono de
+  // mensajes de cada card en /dashboard/propiedades enlaza aquí con
+  // ?propiedad={id} en vez de a la página vieja por-propiedad (ya
+  // eliminada). Mismo dato de siempre, solo recortado a una propiedad.
+  const propiedadFiltro = searchParams.get('propiedad');
   const [items, setItems] = useState<ItemBandejaMensajes[]>([]);
   const [loading, setLoading] = useState(true);
   // Eliminar chat completo — pedido explícito 2026-09-07. Backend nuevo,
@@ -117,6 +137,11 @@ export default function MensajesPage() {
     );
   }
 
+  const itemsFiltrados = propiedadFiltro ? items.filter((it) => it.propiedad.id === propiedadFiltro) : items;
+  const propiedadFiltroTitulo = propiedadFiltro
+    ? items.find((it) => it.propiedad.id === propiedadFiltro)?.propiedad.titulo
+    : undefined;
+
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="flex items-center gap-3 mb-6">
@@ -129,14 +154,25 @@ export default function MensajesPage() {
         </div>
       </div>
 
-      {items.length === 0 ? (
+      {propiedadFiltro && (
+        <div className="flex items-center justify-between gap-3 bg-brand-pale border border-brand/20 rounded-xl px-4 py-2.5 mb-4">
+          <p className="text-xs text-brand-dark truncate">
+            Solo mensajes de <strong>{propiedadFiltroTitulo ?? 'esta propiedad'}</strong>
+          </p>
+          <Link href="/dashboard/mensajes" className="flex items-center gap-1 text-xs font-semibold text-brand hover:text-brand-dark flex-shrink-0">
+            <X size={12} /> Ver todos
+          </Link>
+        </div>
+      )}
+
+      {itemsFiltrados.length === 0 ? (
         <div className="text-center py-16">
           <MessageCircle size={32} className="mx-auto mb-3 text-gray-300" strokeWidth={1.5} />
-          <p className="text-sm text-gray-400">Sin conversaciones todavía</p>
+          <p className="text-sm text-gray-400">{propiedadFiltro ? 'Sin mensajes para esta propiedad todavía' : 'Sin conversaciones todavía'}</p>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-200 divide-y divide-gray-50 overflow-hidden">
-          {items.map((it) => {
+          {itemsFiltrados.map((it) => {
             const hrefChat = it.tipo === 'conversacion'
               ? `/dashboard/mensajes/${it.id}`
               : `/dashboard/mensajes/legado/${it.propiedadId}/${it.mensajeId}`;
