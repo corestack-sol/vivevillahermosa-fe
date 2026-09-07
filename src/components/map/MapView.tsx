@@ -144,14 +144,23 @@ const STREET_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const SATELLITE_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 void SATELLITE_TILE_URL;
 
-function pinHtml(color: string, dark: string, label: string, active: boolean): string {
+// Separado de pinHtml para poder actualizar SOLO el contenido interno de un
+// pin ya existente (ver actualizarSeleccion más abajo) sin recrear el nodo
+// contenedor — así no hace falta remover/re-agregar el Marker completo (ni
+// perder su listener de click, que vive en el nodo contenedor) solo porque
+// cambió cuál pin está seleccionado. Pedido explícito 2026-09-07: optimizar
+// fluidez del mapa — antes, seleccionar un pin reconstruía TODOS los
+// marcadores visibles con renderClusters(), no solo el que cambió.
+function pinInnerHtml(color: string, dark: string, label: string, active: boolean): string {
   const shadow = active
     ? `0 2px 10px rgba(0,0,0,.3), 0 0 0 2.5px ${dark}, 0 0 0 5px white, 0 0 0 7px ${color}`
     : `0 2px 8px rgba(0,0,0,.22), 0 0 0 2.5px ${dark}`;
-  return `<div style="display:inline-flex;flex-direction:column;align-items:center;cursor:pointer;">
-    <div style="background:${color};color:#fff;padding:5px 11px;border-radius:100px;font-size:11.5px;font-weight:800;white-space:nowrap;letter-spacing:0.2px;box-shadow:${shadow};line-height:1;font-family:Inter,system-ui,sans-serif;">${label}</div>
-    <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid ${dark};margin-top:-1px;"></div>
-  </div>`;
+  return `<div style="background:${color};color:#fff;padding:5px 11px;border-radius:100px;font-size:11.5px;font-weight:800;white-space:nowrap;letter-spacing:0.2px;box-shadow:${shadow};line-height:1;font-family:Inter,system-ui,sans-serif;">${label}</div>
+    <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid ${dark};margin-top:-1px;"></div>`;
+}
+
+function pinHtml(color: string, dark: string, label: string, active: boolean): string {
+  return `<div style="display:inline-flex;flex-direction:column;align-items:center;cursor:pointer;">${pinInnerHtml(color, dark, label, active)}</div>`;
 }
 
 // pointer-events:none — es solo texto informativo, un clic ahí debe llegar
@@ -210,6 +219,12 @@ export function MapView({
   const clusterIndexRef = useRef<Supercluster<{ id: string }> | null>(null);
   const positionsRef    = useRef<Map<string, [number, number]>>(new Map()); // id -> [lng,lat] tras el jitter
   const markerByIdRef   = useRef<Map<string, MapMarker>>(new Map());
+  // id -> elemento DOM del pin actualmente pintado (solo propiedades reales,
+  // nunca clusters) — permite actualizarSeleccion() tocar únicamente el pin
+  // que cambió, en vez de pasar por renderClusters() completo. Se reconstruye
+  // en cada renderClusters() junto con markersOnMapRef/markerByIdRef.
+  const pinElementsRef  = useRef<Map<string, HTMLElement>>(new Map());
+  const prevSelectedIdRef = useRef<string | null>(null);
   const [ready, setReady] = useState(false);
 
   // Refs para que el listener de moveend/zoomend (agregado una sola vez)
@@ -427,6 +442,7 @@ export function MapView({
 
     markersOnMapRef.current.forEach((m) => m.remove());
     markersOnMapRef.current = [];
+    pinElementsRef.current.clear();
 
     const b = map.getBounds();
     const bbox: [number, number, number, number] = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
@@ -463,7 +479,22 @@ export function MapView({
       });
       const marker = new MarkerCtor({ element: el, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map);
       markersOnMapRef.current.push(marker);
+      pinElementsRef.current.set(original.id, el);
     });
+  }, []);
+
+  // ── Actualiza SOLO el pin que cambió de seleccionado, sin pasar por
+  //    renderClusters() — evita destruir/recrear todos los marcadores
+  //    visibles nada más para cambiar un halo. Si el pin (viejo o nuevo) no
+  //    está actualmente pintado (fuera de vista, o agrupado en un cluster),
+  //    no hay nada que tocar: la próxima reconstrucción real (pan/zoom/datos
+  //    nuevos) ya lee `selectedIdRef.current` y lo pinta bien desde cero. ──
+  const actualizarSeleccion = useCallback((id: string | null, active: boolean) => {
+    if (!id) return;
+    const el = pinElementsRef.current.get(id);
+    const m = markerByIdRef.current.get(id);
+    if (!el || !m) return;
+    el.innerHTML = pinInnerHtml(FLOOD_COLORS[m.riesgoInundacion], FLOOD_DARK[m.riesgoInundacion], shortPrice(m.precio, m.operacion), active);
   }, []);
 
   // Los clusters dependen del viewport, así que tienen que recalcularse en
@@ -539,11 +570,15 @@ export function MapView({
   }, [markers, ready, approximate, fitToMarkers, renderClusters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Solo cambió cuál está seleccionado — no hace falta reconstruir el
-  //    índice, solo volver a pintar con el estilo activo/inactivo correcto. ──
+  //    índice ni ningún marcador salvo el que de verdad cambió de estado. ──
   useEffect(() => {
     if (!ready || approximate) return;
-    renderClusters();
-  }, [selectedId, ready, approximate, renderClusters]);
+    const prevId = prevSelectedIdRef.current;
+    prevSelectedIdRef.current = selectedId;
+    if (prevId === selectedId) return;
+    actualizarSeleccion(prevId, false);
+    actualizarSeleccion(selectedId, true);
+  }, [selectedId, ready, approximate, actualizarSeleccion]);
 
   return <div ref={containerRef} style={{ height, width: '100%' }} />;
 }

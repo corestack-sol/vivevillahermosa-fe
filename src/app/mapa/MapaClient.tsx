@@ -298,13 +298,19 @@ export function MapaClient({ allProperties }: Props) {
     return result;
   }, [properties, filters, riesgoActive, activeBounds, landmarksReady, coloniasReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const markers: MapMarker[] = filtered.map((p) => ({
+  // useMemo por referencia de `filtered` — mismo motivo que PropertiesClient
+  // (pedido explícito 2026-09-07, optimizar fluidez del mapa): sin esto,
+  // cualquier re-render de este componente recreaba el array aunque
+  // `filtered` no hubiera cambiado, y MapView.tsx compara `markers` por
+  // referencia — disparaba una reconstrucción completa del índice de
+  // clustering y de todos los marcadores DOM por nada.
+  const markers: MapMarker[] = useMemo(() => filtered.map((p) => ({
     id: p.id, slug: p.slug, lat: p.latPublico, lng: p.lngPublico,
     titulo: p.titulo, precio: p.precio, operacion: p.operacion,
     tipo: p.tipo, colonia: p.colonia,
     foto: p.fotos[0] ?? null,
     riesgoInundacion: p.riesgoInundacion,
-  }));
+  })), [filtered]);
 
   const currentTipo = filters.tipo ?? '';
   const currentOp   = filters.operacion ?? '';

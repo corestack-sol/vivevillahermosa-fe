@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
@@ -425,12 +425,20 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
     return undefined;
   }
 
-  const mapMarkers = allResults.map((p) => ({
+  // useMemo por referencia de allResults — sin esto, cualquier re-render del
+  // padre (hover, toggle de UI, etc.) generaba un array nuevo aunque los
+  // datos fueran idénticos, y MapView.tsx compara `markers` por referencia:
+  // eso disparaba una reconstrucción completa del índice de clustering y de
+  // TODOS los marcadores DOM por nada. Pedido explícito 2026-09-07
+  // (optimizar fluidez del mapa). `allResults` ya es estable entre renders
+  // cuando useSearch no volvió a hacer fetch (setState solo cambia
+  // referencia cuando de verdad llegan datos nuevos).
+  const mapMarkers = useMemo(() => allResults.map((p) => ({
     id: p.id, slug: p.slug, lat: p.latPublico, lng: p.lngPublico,
     titulo: p.titulo, precio: p.precio, operacion: p.operacion,
     tipo: p.tipo, colonia: p.colonia, foto: p.fotos[0] ?? null,
     riesgoInundacion: p.riesgoInundacion,
-  }));
+  })), [allResults]);
 
   const skeletonCount = Math.min(total || PER_PAGE, PER_PAGE);
 
