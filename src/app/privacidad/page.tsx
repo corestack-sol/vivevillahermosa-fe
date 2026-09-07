@@ -41,7 +41,10 @@ export default function PrivacidadPage() {
             <li>Analítica de uso (qué páginas se visitan, qué botones se usan) mediante PostHog — sin usar cookies de rastreo, y sin registrar lo que escribes en ningún formulario (nombre, teléfono, correo, mensajes). Solo mide comportamiento agregado, nunca el contenido de lo que escribes. Adicionalmente, si ocurre un error técnico en nuestro servidor mientras usas la plataforma, se envía a PostHog información técnica del momento del error (tu dirección IP, navegador, y la ruta que estabas usando) — únicamente con fines de diagnóstico, nunca el contenido de lo que escribiste.</li>
           </ul>
           <p className="leading-relaxed mt-3">
-            Algunas preferencias (propiedades favoritas antes de iniciar sesión, comparador, búsquedas recientes) se guardan únicamente en tu navegador (localStorage), no en nuestros servidores, y desaparecen si borras los datos de ese navegador.
+            Algunas preferencias (propiedades favoritas antes de iniciar sesión, comparador, búsquedas recientes, propiedades vistas recientemente) se guardan únicamente en tu navegador (localStorage), no en nuestros servidores, y desaparecen si borras los datos de ese navegador.
+          </p>
+          <p className="leading-relaxed mt-3">
+            Usamos una única cookie técnica, estrictamente necesaria, para mantener tu sesión iniciada mientras usas la plataforma — no la usamos para rastrearte ni para publicidad, y no requiere tu consentimiento bajo la ley aplicable. No usamos ninguna otra cookie.
           </p>
         </section>
 
