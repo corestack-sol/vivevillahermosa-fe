@@ -11,6 +11,7 @@ import { formatRelativeDate } from '@/lib/format';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
+import { Pagination } from '@/components/ui/Pagination';
 import { combinarBandejaMensajes, type ConversacionResumen, type MensajeLegado, type ItemBandejaMensajes } from '@/lib/mensajeria';
 import { estaLegadoLeido, marcarLegadoLeido } from '@/lib/mensajesLegadoLeidos';
 
@@ -71,6 +72,12 @@ function MensajesContent() {
   // otra persona.
   const [itemAEliminar, setItemAEliminar] = useState<ItemBandejaMensajes | null>(null);
   const [eliminando, setEliminando] = useState(false);
+  // Paginado — pedido explícito 2026-09-07. El backend no pagina
+  // `/mensajes/conversaciones` (trae todo de una), así que se pagina acá
+  // en memoria sobre la lista ya combinada — no hay fetch de más por
+  // cambiar de página.
+  const POR_PAGINA = 15;
+  const [pagina, setPagina] = useState(1);
 
   async function confirmarEliminar() {
     if (!itemAEliminar) return;
@@ -128,6 +135,13 @@ function MensajesContent() {
     return () => { cancelado = true; };
   }, [authLoading, user, router]);
 
+  useEffect(() => {
+    function reiniciarPagina() {
+      setPagina(1);
+    }
+    reiniciarPagina();
+  }, [propiedadFiltro]);
+
   if (authLoading || !user || loading) {
     return (
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -141,6 +155,9 @@ function MensajesContent() {
   const propiedadFiltroTitulo = propiedadFiltro
     ? items.find((it) => it.propiedad.id === propiedadFiltro)?.propiedad.titulo
     : undefined;
+  const totalPaginas = Math.max(1, Math.ceil(itemsFiltrados.length / POR_PAGINA));
+  const paginaActual = Math.min(pagina, totalPaginas);
+  const itemsPagina = itemsFiltrados.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -172,7 +189,7 @@ function MensajesContent() {
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-200 divide-y divide-gray-50 overflow-hidden">
-          {itemsFiltrados.map((it) => {
+          {itemsPagina.map((it) => {
             const hrefChat = it.tipo === 'conversacion'
               ? `/dashboard/mensajes/${it.id}`
               : `/dashboard/mensajes/legado/${it.propiedadId}/${it.mensajeId}`;
@@ -255,6 +272,12 @@ function MensajesContent() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {totalPaginas > 1 && (
+        <div className="mt-6">
+          <Pagination page={paginaActual} totalPages={totalPaginas} onChange={setPagina} />
         </div>
       )}
 
