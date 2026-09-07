@@ -18,7 +18,7 @@ import { MapViewDynamic } from '@/components/map/MapViewDynamic';
 import { SelectedPropertyCard } from '@/components/map/SelectedPropertyCard';
 import type { MapMarker } from '@/components/map/MapView';
 import { getLandmark, distanciaKm, CATEGORIAS_GENERICAS, precargarLandmarks } from '@/lib/landmarks';
-import { matchColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
+import { matchColonia, normalizarNombreColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
 import { interpretarBusqueda, esOracionLarga, MAX_QUERY_LENGTH } from '@/lib/interpretarBusqueda';
 import { getColoniasRankedByPropiedades, searchProperties } from '@/lib/api';
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches';
@@ -411,7 +411,16 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
       return `${distanciaKm(p.lat, p.lng, landmarkResuelto.lat, landmarkResuelto.lng).toFixed(1)} km de ${landmarkResuelto.label}`;
     }
     if (coloniaCercana) {
-      return `${distanciaKm(p.lat, p.lng, coloniaCercana.lat, coloniaCercana.lng).toFixed(1)} km de ${coloniaCercana.label}`;
+      // Si la búsqueda usó un alias ("Petrolera") distinto al nombre
+      // oficial de la colonia ("Heriberto Kehoe Vicent"), se muestran
+      // ambos — pedido explícito 2026-09-07: sin esto la persona que
+      // buscó "Petrolera" no reconoce el resultado porque el label solo
+      // mostraba el nombre oficial, nunca el término que ella escribió.
+      const aliasUsado = filters.colonia && normalizarNombreColonia(filters.colonia) !== normalizarNombreColonia(coloniaCercana.label)
+        ? filters.colonia.trim()
+        : undefined;
+      const nombre = aliasUsado ? `${coloniaCercana.label} / ${aliasUsado}` : coloniaCercana.label;
+      return `${distanciaKm(p.lat, p.lng, coloniaCercana.lat, coloniaCercana.lng).toFixed(1)} km de ${nombre}`;
     }
     return undefined;
   }
