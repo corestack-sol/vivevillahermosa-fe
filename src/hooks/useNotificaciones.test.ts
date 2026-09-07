@@ -31,6 +31,34 @@ describe('agruparNotificaciones', () => {
     expect(agruparNotificaciones(items)[0].leida).toBe(false);
   });
 
+  it('chat viejo ya leído + un mensaje nuevo hoy: sinLeerCount es 1, no el total historico del hilo', () => {
+    // Caso real preguntado 2026-09-07: si un hilo tuvo 3 notificaciones ya
+    // leídas hace días y hoy llega 1 mensaje nuevo, el badge no debe decir
+    // "×4" (asustaría con historial viejo) — debe decir lo que de verdad
+    // es nuevo: 1.
+    const items = [
+      n({ id: '4', tipo: 'mensaje_nuevo', conversacionId: 'c1', leida: false, mensaje: 'mensaje de hoy' }),
+      n({ id: '3', tipo: 'mensaje_nuevo', conversacionId: 'c1', leida: true }),
+      n({ id: '2', tipo: 'mensaje_nuevo', conversacionId: 'c1', leida: true }),
+      n({ id: '1', tipo: 'mensaje_nuevo', conversacionId: 'c1', leida: true }),
+    ];
+    const grupo = agruparNotificaciones(items)[0];
+    expect(grupo.count).toBe(4);
+    expect(grupo.sinLeerCount).toBe(1);
+    expect(grupo.leida).toBe(false);
+    expect(grupo.mensaje).toBe('mensaje de hoy');
+  });
+
+  it('grupo totalmente leído: sinLeerCount es 0', () => {
+    const items = [
+      n({ id: '2', tipo: 'mensaje_nuevo', conversacionId: 'c1', leida: true }),
+      n({ id: '1', tipo: 'mensaje_nuevo', conversacionId: 'c1', leida: true }),
+    ];
+    const grupo = agruparNotificaciones(items)[0];
+    expect(grupo.sinLeerCount).toBe(0);
+    expect(grupo.leida).toBe(true);
+  });
+
   it('no agrupa conversaciones distintas', () => {
     const items = [
       n({ id: '1', tipo: 'mensaje_nuevo', conversacionId: 'c1' }),

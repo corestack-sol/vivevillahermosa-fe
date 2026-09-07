@@ -43,6 +43,15 @@ export interface Notificacion {
 export interface NotificacionAgrupada extends Notificacion {
   /** Cuántas notificaciones crudas representa este grupo (1 si no se agrupó con nada). */
   count: number;
+  /**
+   * Cuántas de esas siguen SIN LEER — pedido explícito 2026-09-07: un chat
+   * viejo (ya leído hace días) que recibe un mensaje nuevo hoy no debe
+   * mostrar "×4" solo porque históricamente tuvo 4 notificaciones — debe
+   * mostrar "1 nuevo", que es lo único que de verdad cambió. `count` queda
+   * como dato informativo (total agrupado); esto es lo que se muestra como
+   * badge de "nuevo".
+   */
+  sinLeerCount: number;
   /** ids reales de todas las notificaciones agrupadas — para marcarlas TODAS leídas de una. */
   idsAgrupados: string[];
 }
@@ -75,12 +84,12 @@ export function agruparNotificaciones(items: Notificacion[]): NotificacionAgrupa
     const idx = indicePorClave.get(clave);
     if (idx === undefined) {
       indicePorClave.set(clave, resultado.length);
-      resultado.push({ ...n, count: 1, idsAgrupados: [n.id] });
+      resultado.push({ ...n, count: 1, sinLeerCount: n.leida ? 0 : 1, idsAgrupados: [n.id] });
     } else {
       const grupo = resultado[idx];
       grupo.count += 1;
       grupo.idsAgrupados.push(n.id);
-      if (!n.leida) grupo.leida = false;
+      if (!n.leida) { grupo.leida = false; grupo.sinLeerCount += 1; }
     }
   }
 

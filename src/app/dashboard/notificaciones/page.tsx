@@ -80,9 +80,9 @@ export default function NotificacionesPage() {
               <div className={`min-w-0 flex-1 ${n.leida ? 'ml-[18px]' : ''}`}>
                 <div className="flex items-center gap-1.5">
                   <p className="text-sm font-medium text-gray-800 leading-snug">{n.titulo}</p>
-                  {n.count > 1 && (
+                  {n.sinLeerCount > 1 && (
                     <span className="flex-shrink-0 text-[10px] font-bold text-brand bg-brand-pale px-1.5 py-0.5 rounded-full">
-                      {n.count}
+                      {n.sinLeerCount}
                     </span>
                   )}
                 </div>
