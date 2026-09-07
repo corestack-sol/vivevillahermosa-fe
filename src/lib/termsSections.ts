@@ -28,8 +28,8 @@ export const TERMS_SECTIONS: { title: string; body: string }[] = [
     body: 'La Plataforma únicamente pone en contacto a las partes interesadas. Cualquier negociación, visita, contrato de compraventa o arrendamiento, pago, anticipo, depósito o acuerdo de cualquier naturaleza se realiza directa y exclusivamente entre los usuarios involucrados, bajo su propio riesgo. Vive Villahermosa no participa, no interviene, no es garante ni parte de dichos acuerdos, y no será responsable por incumplimientos, fraudes, daños, pérdidas económicas, vicios ocultos, controversias posesorias o cualquier conflicto derivado de una transacción entre usuarios.',
   },
   {
-    title: '5. Información de riesgo de inundación',
-    body: 'La clasificación de riesgo de inundación mostrada en la Plataforma tiene carácter exclusivamente informativo y de referencia. Se basa en el Atlas de Riesgos del Municipio de Centro y otros registros históricos disponibles públicamente, que pueden estar desactualizados, ser incompletos o no aplicar con precisión a un predio específico. Esta clasificación no constituye una garantía, dictamen técnico, asesoría profesional ni responsabilidad de la Plataforma. Recomendamos verificar esta información directamente con el H. Ayuntamiento, IMPLAN, Protección Civil u otra autoridad competente antes de tomar cualquier decisión de compra, renta o inversión.',
+    title: '5. Información de historial de inundación',
+    body: 'La clasificación de historial de inundación mostrada en la Plataforma tiene carácter exclusivamente informativo y de referencia. Se basa en el Atlas de Riesgos del Municipio de Centro y otros registros históricos disponibles públicamente, que pueden estar desactualizados, ser incompletos o no aplicar con precisión a un predio específico. Esta clasificación no constituye una garantía, dictamen técnico, asesoría profesional ni responsabilidad de la Plataforma. Recomendamos verificar esta información directamente con el H. Ayuntamiento, IMPLAN, Protección Civil u otra autoridad competente antes de tomar cualquier decisión de compra, renta o inversión.',
   },
   {
     title: '6. Usos prohibidos',

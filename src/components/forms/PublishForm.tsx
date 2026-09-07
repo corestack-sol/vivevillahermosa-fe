@@ -925,7 +925,7 @@ export function PublishForm() {
       return;
     }
     if (step === 2 && esDowngrade && !confirmaRiesgoBajo) {
-      toast.error('Confirma el aviso sobre el riesgo de inundación antes de continuar.');
+      toast.error('Confirma el aviso sobre el historial de inundación antes de continuar.');
       return;
     }
     const valid = await trigger(stepFields[step]);
@@ -953,7 +953,7 @@ export function PublishForm() {
       return;
     }
     if (esDowngrade && !confirmaRiesgoBajo) {
-      toast.error('Confirma el aviso sobre el riesgo de inundación antes de publicar.');
+      toast.error('Confirma el aviso sobre el historial de inundación antes de publicar.');
       setStep(2);
       return;
     }

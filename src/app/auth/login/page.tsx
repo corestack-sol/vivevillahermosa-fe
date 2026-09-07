@@ -139,7 +139,7 @@ function LoginContent() {
               Tu próxima casa<br />en Tabasco, aquí.
             </h2>
             <p className="text-white/65 text-sm leading-relaxed mb-6">
-              La plataforma inmobiliaria local con información real sobre riesgo de inundación.
+              La plataforma inmobiliaria local con información real sobre historial de inundación.
             </p>
             <div className="space-y-3">
               {PERKS.map((p) => (

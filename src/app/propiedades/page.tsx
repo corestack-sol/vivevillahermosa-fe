@@ -6,7 +6,7 @@ import { PropertiesClient } from './PropertiesClient';
 export const metadata: Metadata = {
   title: 'Casas en renta y venta en Tabasco | Vive Villahermosa',
   description:
-    'Encuentra casas, departamentos, terrenos y habitaciones en Villahermosa, Paraíso, Cárdenas y todo Tabasco. Filtra por precio, colonia y riesgo de inundación. Sin comisiones.',
+    'Encuentra casas, departamentos, terrenos y habitaciones en Villahermosa, Paraíso, Cárdenas y todo Tabasco. Filtra por precio, colonia e historial de inundación. Sin comisiones.',
 };
 
 // ⚠️ 2026-08-23: antes traía el catálogo ACTIVO COMPLETO en cada visita

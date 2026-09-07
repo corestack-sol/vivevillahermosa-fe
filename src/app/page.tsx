@@ -212,7 +212,7 @@ export default async function HomePage() {
             </span>
             <SearchBar />
             <p className="text-xs text-gray-400 mt-2">
-              Escríbelo como si le hablaras a una persona — la IA entiende zona, precio, tipo de propiedad y riesgo de inundación.
+              Escríbelo como si le hablaras a una persona — la IA entiende zona, precio, tipo de propiedad e historial de inundación.
             </p>
           </div>
 

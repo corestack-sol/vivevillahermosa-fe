@@ -17,7 +17,7 @@ const VALUES = [
   {
     icon: <Shield size={24} className="text-brand" />,
     title: 'Transparencia',
-    desc: 'Publicamos el riesgo de inundación de cada propiedad. Tabasco merece información honesta para decisiones inmobiliarias.',
+    desc: 'Publicamos el historial de inundación de cada propiedad. Tabasco merece información honesta para decisiones inmobiliarias.',
   },
   {
     icon: <Map size={24} className="text-brand" />,
@@ -50,7 +50,7 @@ export default async function NosotrosPage() {
           <span className="text-brand"> para Tabasco</span>
         </h1>
         <p className="text-lg text-gray-500 animate-fade-up" style={{ animationDelay: '160ms' }}>
-          Vive Villahermosa nació de una pregunta sencilla: ¿por qué es tan difícil encontrar casa en Tabasco?
+          Vive Villahermosa nació de una idea concreta: quien busca casa en Tabasco merece contacto directo con el dueño, sin comisión, y saber si esa zona se ha inundado antes de mudarse.
           Empezamos ahí — y seguimos construyendo, siempre para Tabasco.
         </p>
       </div>

@@ -84,7 +84,7 @@ export function evaluarPropiedad(p: Property, estado: EstadoPublicacion): RazonA
   if (gis && RIESGO_ORDEN[p.riesgoInundacion] < RIESGO_ORDEN[gis.riesgo]) {
     razones.push({
       clave: 'riesgo-inconsistente',
-      mensaje: `Tu anuncio marca riesgo de inundación "${p.riesgoInundacion}", pero el Atlas de Riesgos Municipal clasifica esta zona como "${gis.riesgo}" — revísalo antes de que alguien más lo note.`,
+      mensaje: `Tu anuncio marca un historial de inundación "${p.riesgoInundacion}", pero el Atlas de Riesgos Municipal registra esta zona como "${gis.riesgo}" — revísalo antes de que alguien más lo note.`,
     });
   }
 

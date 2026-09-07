@@ -61,7 +61,7 @@ const baseSchema = z.object({
   colonia:       str('Escribe el nombre de la colonia o fraccionamiento').min(2, 'Escribe el nombre de la colonia o fraccionamiento'),
   titulo:        str('Escribe un título para tu anuncio').min(10, 'El título está muy corto — sé más descriptivo (mín. 10 caracteres)'),
   descripcion:   str('Escribe una descripción para tu anuncio').min(30, 'La descripción está muy corta — añade más detalles (mín. 30 caracteres)'),
-  riesgoInundacion: z.enum(['alto', 'medio', 'bajo'], { error: 'Selecciona el nivel de riesgo de inundación de la zona' }),
+  riesgoInundacion: z.enum(['alto', 'medio', 'bajo'], { error: 'Selecciona el historial de inundación de la zona' }),
   nombreContacto:   str('Escribe tu nombre completo para que puedan contactarte').min(2, 'Escribe tu nombre completo para que puedan contactarte'),
   // Quien publica elige cómo quiere que le escriban — por si no quiere
   // revelar su celular a desconocidos. telefonoContacto/emailContacto se
