@@ -6,6 +6,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { getMunicipalitiesWithLiveStats, getColoniasOrdenadasPorDemanda } from '@/lib/api';
+import { ZONA_GRADIENTS } from '@/lib/zonaGradients';
 import { formatPrice } from '@/lib/format';
 import { ExploreZonasCta } from '@/components/search/ExploreZonasCta';
 import { ColoniaChipsList } from '@/components/zonas/ColoniaChipsList';
@@ -176,7 +177,8 @@ export default async function ZonasPage() {
       </div>
 
       {/* ── Colonias con más propiedades — mismo lenguaje visual que las
-          tarjetas de zona del home (gradiente de marca, texto abajo).
+          tarjetas de zona del home (3 variantes de gradiente en ciclo,
+          ZONA_GRADIENTS, texto abajo).
           Ordenadas por actividad real, no por curación manual: las primeras
           MAX_CARDS (6, igual en móvil y escritorio — pedido explícito
           2026-08-19) se ven en grande, el resto como chip. ── */}
@@ -185,7 +187,7 @@ export default async function ZonasPage() {
           {porDemanda ? 'Colonias más buscadas' : 'Colonias con más propiedades'}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {coloniasCards.map((colonia) => {
+          {coloniasCards.map((colonia, i) => {
             const href = colonia.slug ? `/zonas/${colonia.slug}` : `/propiedades?q=${encodeURIComponent(colonia.nombre)}`;
             // Llama: en modo demanda, en TODAS las colonias con búsquedas
             // reales registradas (no solo la #1) — pedido explícito
@@ -198,7 +200,8 @@ export default async function ZonasPage() {
               <Link
                 key={colonia.nombre}
                 href={href}
-                className="group relative h-52 rounded-3xl overflow-hidden bg-gradient-to-br from-brand-dark to-brand shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                style={{ background: ZONA_GRADIENTS[i % ZONA_GRADIENTS.length] }}
+                className="group relative h-52 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
               >
                 {/* Ícono de marca de agua — mismo truco que PropertyCard, sutil, no compite con el texto — pedido explícito 2026-08-19 */}
                 <div className="absolute -right-5 -bottom-6 opacity-[0.15] pointer-events-none">

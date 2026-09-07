@@ -8,6 +8,7 @@ import {
 import { SearchBar } from '@/components/search/SearchBar';
 import { ClickableMap } from '@/components/map/ClickableMap';
 import { getFeaturedProperties, getAllProperties, getColoniasOrdenadasPorDemanda, getStats } from '@/lib/api';
+import { ZONA_GRADIENTS } from '@/lib/zonaGradients';
 import { formatPropertyCount } from '@/lib/format';
 import { buttonClasses } from '@/components/ui/Button';
 import { PublicarCTA } from '@/components/forms/PublicarCTA';
@@ -402,9 +403,10 @@ export default async function HomePage() {
             compitiendo por atención, así que se unificó a un solo tono de
             marca repetido. Eso dejó las 4 tarjetas planas/apagadas — ahora
             alternan 3 variantes DENTRO de la misma familia (marca/acento/
-            coral), no un arcoíris de vuelta: distinguibles entre sí sin
-            perder cohesión. Gradiente por `style` (no clases from-X/to-X)
-            porque "coral" necesita un stop oscurecido con color-mix() que
+            coral, ZONA_GRADIENTS, compartido con /zonas/page.tsx), no un
+            arcoíris de vuelta: distinguibles entre sí sin perder cohesión.
+            Gradiente por `style` (no clases from-X/to-X) porque "marca" y
+            "coral" necesitan un stop oscurecido con color-mix() que
             Tailwind no genera como utilidad. */}
         {/* Mismo ícono de marca de agua + insignia de llama que ya usa
             /zonas/page.tsx para esta misma fuente de datos (ColoniaCard) —
@@ -414,11 +416,6 @@ export default async function HomePage() {
             el mismo criterio de respaldo por oferta que /zonas. */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {zones.map((zone, i) => {
-            const gradientes = [
-              'linear-gradient(to bottom right, var(--color-brand-dark), var(--color-brand))',
-              'linear-gradient(to bottom right, var(--color-accent-dark), var(--color-accent))',
-              'linear-gradient(to bottom right, color-mix(in srgb, var(--color-coral) 55%, black), var(--color-coral))',
-            ];
             // Sin ficha editorial en zones.json, zone.slug es null (colonia
             // real detectada solo por sus propiedades, sin página propia
             // todavía) — mismo fallback que ya usa /zonas/page.tsx: enlaza
@@ -431,7 +428,7 @@ export default async function HomePage() {
               : maxPropiedades > 1 && zone.propiedades === maxPropiedades;
             return (
               <Link key={zone.nombre} href={href}
-                style={{ background: gradientes[i % gradientes.length] }}
+                style={{ background: ZONA_GRADIENTS[i % ZONA_GRADIENTS.length] }}
                 className="group relative h-40 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
                 <div className="absolute -right-4 -bottom-5 opacity-[0.18] pointer-events-none">
                   <Image src="/images/icons/colonia-color.webp" alt="" width={150} height={90} className="object-contain" />
