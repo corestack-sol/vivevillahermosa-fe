@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   SlidersHorizontal, X, ChevronLeft, ChevronDown, Navigation,
   Info, MapPin,
-  Droplets, Check, RotateCw, List, Maximize2, Minimize2, Heart,
+  Droplets, Check, RotateCw, Maximize2, Minimize2, Heart,
 } from 'lucide-react';
 import Link from 'next/link';
 import type { Property } from '@/types/property';
@@ -90,6 +90,8 @@ export function MapaClient({ allProperties }: Props) {
   const [activeBounds,  setActiveBounds]  = useState<MapBounds | null>(null);
   // Cerrar la leyenda de privacidad — pedido explícito 2026-09-07.
   const [avisoZonaCerrado, setAvisoZonaCerrado] = useState(false);
+  // Cerrar el aviso de "gira tu dispositivo" — mismo criterio.
+  const [avisoGiroCerrado, setAvisoGiroCerrado] = useState(false);
   // `setTileType` no se usa por ahora — el selector Mapa/Satélite se
   // retiró junto con la vista satelital (ver comentarios más abajo), pero
   // el estado se deja listo para cuando se reconstruya.
@@ -333,36 +335,6 @@ export function MapaClient({ allProperties }: Props) {
     // viewport que en verdad se ve (reporte real 2026-09-01).
     <div ref={mapContainerRef} className="relative z-0 flex h-[calc(100dvh-64px)] max-lg:landscape:pointer-coarse:h-dvh [&:fullscreen]:h-dvh bg-white">
 
-      {/* ══ Aviso "gira tu dispositivo" — solo móvil/tablet en vertical ══
-          .rotate-hint (globals.css) lo muestra solo por CSS (max-width
-          1023px + orientation:portrait), sin JS ni permisos. Es "fixed
-          inset-0" con z-index más alto que el Navbar (sticky, z-40), así
-          que también lo tapa — por eso trae sus propios enlaces de
-          salida (Inicio / Ver como lista) en vez de dejar a la persona
-          sin ninguna forma de salir del mapa si no quiere girar el
-          teléfono. */}
-      <div className="rotate-hint fixed inset-0 z-[1300] bg-page flex-col items-center justify-center text-center px-8 gap-5">
-        <span className="w-16 h-16 rounded-2xl bg-brand-pale flex items-center justify-center">
-          <RotateCw size={28} className="text-brand" />
-        </span>
-        <div>
-          <p className="font-heading font-bold text-lg text-gray-900 mb-1.5">Gira tu dispositivo</p>
-          <p className="text-sm text-gray-500 max-w-xs">
-            El mapa se explora mucho mejor en horizontal. Gira tu teléfono o tablet para verlo completo.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 w-full max-w-[220px] mt-2">
-          <Link href="/propiedades"
-            className="flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition-colors">
-            <List size={15} /> Ver como lista
-          </Link>
-          <Link href="/"
-            className="flex items-center justify-center gap-2 text-gray-400 hover:text-gray-600 text-sm px-4 py-2 transition-colors">
-            <ChevronLeft size={15} /> Volver al inicio
-          </Link>
-        </div>
-      </div>
-
       {/* ══ Desktop Sidebar ══════════════════════════════════════════════ */}
       <aside className="hidden lg:flex flex-col w-72 flex-shrink-0 bg-brand-dark border-r border-white/10 overflow-y-auto">
 
@@ -603,6 +575,40 @@ export function MapaClient({ allProperties }: Props) {
               </button>
             ))}
           </div>
+
+          {/* Aviso "gira tu dispositivo" — pedido explícito 2026-09-07: antes
+              bloqueaba el mapa por completo (fixed inset-0) en vertical, sin
+              dejar verlo sin girar. Ahora es un aviso chico, no bloqueante —
+              el mapa SIEMPRE se muestra, esto solo sugiere que se ve mejor
+              en horizontal. Detección 100% CSS (variantes nativas de
+              Tailwind `portrait`/`pointer-coarse`, mismo mecanismo que ya
+              usa el link "Inicio" de abajo en su forma `landscape` inversa)
+              — a propósito NO usa la Screen Orientation API
+              (screen.orientation.lock): no existe en Safari/iOS, y en
+              Android solo funciona dentro de pantalla completa. `pointer-
+              coarse` evita un falso positivo real (encontrado 2026-08-09):
+              una laptop con la ventana angostada a mano/devtools acoplado
+              puede terminar más alta que ancha y por debajo de 1024px —
+              sin este filtro, el aviso aparecía con mouse en una laptop
+              real, donde "gira tu dispositivo" no tiene sentido. */}
+          {!avisoGiroCerrado && (
+          <div className="hidden max-lg:portrait:pointer-coarse:flex justify-center pointer-events-none">
+            <div className="relative flex items-center gap-1.5 bg-brand-dark shadow-md
+                            border border-brand-dark text-white text-xs font-medium
+                            pl-3.5 pr-8 py-1.5 rounded-full pointer-events-auto">
+              <RotateCw size={12} className="text-white/70 flex-shrink-0" />
+              Se ve mejor en horizontal — gira tu dispositivo
+              <button
+                type="button"
+                onClick={() => setAvisoGiroCerrado(true)}
+                aria-label="Cerrar aviso"
+                className="absolute top-1/2 right-1.5 -translate-y-1/2 p-1 text-white/60 hover:text-white transition-colors"
+              >
+                <X size={12} />
+              </button>
+            </div>
+          </div>
+          )}
 
           {/* Leyenda de privacidad: los pines no son la ubicación exacta.
               Fondo sólido de marca (antes bg-white/95 + blur) — pedido
