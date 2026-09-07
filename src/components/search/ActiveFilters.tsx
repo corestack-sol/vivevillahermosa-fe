@@ -37,7 +37,7 @@ export function ActiveFilters({ filters, onUpdate, onClear }: ActiveFiltersProps
   if (filters.m2Min)            chips.push({ label: `Desde ${filters.m2Min}m²`,           onRemove: () => onUpdate({ m2Min: 0 }) });
   if (filters.m2Max)            chips.push({ label: `Hasta ${filters.m2Max}m²`,           onRemove: () => onUpdate({ m2Max: 0 }) });
   if (filters.amenidad)         chips.push({ label: filters.amenidad,                     onRemove: () => onUpdate({ amenidad: '' }) });
-  if (filters.riesgoInundacion) chips.push({ label: `Riesgo ${filters.riesgoInundacion}`, onRemove: () => onUpdate({ riesgoInundacion: '' }) });
+  if (filters.riesgoInundacion) chips.push({ label: `Inundación: ${filters.riesgoInundacion}`, onRemove: () => onUpdate({ riesgoInundacion: '' }) });
   if (filters.cercaDosoBocas)   chips.push({ label: 'Dos Bocas',                         onRemove: () => onUpdate({ cercaDosoBocas: false }) });
   if (filters.landmark) {
     const landmark = getLandmark(filters.landmark);

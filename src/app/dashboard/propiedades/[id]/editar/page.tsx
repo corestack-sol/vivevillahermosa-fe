@@ -676,7 +676,7 @@ export default function EditarPropiedadPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Riesgo de inundación</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Historial de inundación</label>
           <div className="grid grid-cols-3 gap-2">
             {RIESGO_OPTIONS.map(({ value, label }) => (
               <label key={value} className="cursor-pointer">

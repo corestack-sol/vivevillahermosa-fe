@@ -133,7 +133,7 @@ const ETIQUETAS_CAMPO: Partial<Record<keyof FormData, string>> = {
   precio: 'Precio',
   municipio: 'Municipio',
   colonia: 'Colonia',
-  riesgoInundacion: 'Riesgo de inundación',
+  riesgoInundacion: 'Historial de inundación',
   titulo: 'Título del anuncio',
   descripcion: 'Descripción',
   nombreContacto: 'Tu nombre',
@@ -1302,7 +1302,7 @@ export function PublishForm() {
 
             <div>
               <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-2">
-                <Droplets size={14} className="text-gray-400" /> Riesgo de inundación
+                <Droplets size={14} className="text-gray-400" /> Historial de inundación
               </label>
 
               {/* Badge de detección automática — visible solo en móvil (desktop lo muestra el panel lateral) */}
@@ -1316,7 +1316,7 @@ export function PublishForm() {
                     <Info size={13} className="flex-shrink-0 mt-0.5" />
                     <div>
                       <span className="font-semibold">Detectado automáticamente</span>
-                      {' — '}Esta colonia está clasificada como zona de riesgo{' '}
+                      {' — '}Esta colonia tiene historial de inundaciones{' '}
                       <span className="font-bold uppercase">{deteccion.riesgo}</span>
                       {' '}según el Atlas de Riesgos Municipal.
                       {deteccion.confianza === 'probable' && (
@@ -1347,7 +1347,7 @@ export function PublishForm() {
                 <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-2">
                   <ChevronRight size={14} className="text-amber-500 flex-shrink-0" />
                   <p className="text-xs font-semibold text-amber-700">
-                    Selecciona el nivel de riesgo de tu zona
+                    Selecciona qué tanto se ha inundado tu zona antes
                   </p>
                 </div>
               )}
@@ -1395,7 +1395,7 @@ export function PublishForm() {
                     className="mt-0.5 w-4 h-4 flex-shrink-0 rounded border-red-300 text-red-600 focus:ring-2 focus:ring-red-300"
                   />
                   <span className="text-xs text-red-700 leading-relaxed">
-                    Entiendo que el Atlas de Riesgos Municipal clasifica esta zona como <strong className="uppercase">{autoRiesgo}</strong>, y aun así estoy marcando <strong className="uppercase">{riesgoActual}</strong> porque conozco la zona de primera mano.
+                    Entiendo que el Atlas de Riesgos Municipal registra un historial de inundaciones <strong className="uppercase">{autoRiesgo}</strong> en esta zona, y aun así estoy marcando <strong className="uppercase">{riesgoActual}</strong> porque conozco la zona de primera mano.
                   </span>
                 </label>
               )}
@@ -1955,7 +1955,7 @@ export function PublishForm() {
               </div>
             ) : (
               <p className="text-xs text-gray-400 leading-relaxed">
-                Escribe el nombre de la colonia para detectar la zona de riesgo automáticamente.
+                Escribe el nombre de la colonia para detectar su historial de inundación automáticamente.
               </p>
             )}
 
@@ -1975,7 +1975,7 @@ export function PublishForm() {
                 <Droplets size={22} className="flex-shrink-0 mt-1 text-gray-400" />
                 <div className="min-w-0">
                   <p className="font-bold text-xl leading-tight text-gray-500">Sin clasificación</p>
-                  <p className="text-sm mt-1 text-gray-500">Selecciona el nivel en el formulario para ver la información de riesgo.</p>
+                  <p className="text-sm mt-1 text-gray-500">Selecciona una opción en el formulario para ver el historial de inundación.</p>
                 </div>
               </div>
             )}

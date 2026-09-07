@@ -341,7 +341,7 @@ function ComparisonTable({ properties, onRemove }: { properties: Property[]; onR
             ))}
           </tr>
           <tr className={rowBorder}>
-            <th scope="row" className={`${thBase} bg-white`}><RowLabel icon={Droplets}>Riesgo de inundación</RowLabel></th>
+            <th scope="row" className={`${thBase} bg-white`}><RowLabel icon={Droplets}>Historial de inundación</RowLabel></th>
             {properties.map((p) => (
               <td key={p.id} className={tdBase}>
                 <span className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: FLOOD_COLOR[p.riesgoInundacion] }}>

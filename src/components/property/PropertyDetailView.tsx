@@ -256,7 +256,7 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
                   una fuente externa, el Atlas de Riesgos Municipal). */}
               <div className="px-5 py-5 bg-gray-100 rounded-b-2xl">
                 <h2 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-gray-500 mb-3">
-                  <Droplets size={13} className="flex-shrink-0" /> Riesgo de inundación
+                  <Droplets size={13} className="flex-shrink-0" /> Historial de inundación
                 </h2>
                 <FloodRiskBadge nivel={property.riesgoInundacion} />
               </div>
