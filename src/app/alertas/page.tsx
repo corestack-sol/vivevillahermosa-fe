@@ -12,7 +12,7 @@ import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { MUNICIPIO_OPTIONS } from '@/lib/publishSchema';
-import { obtenerEstadoPush, suscribirPush, desuscribirPush, type EstadoPush } from '@/lib/push';
+import { obtenerEstadoPush, suscribirPush, desuscribirPush, fueDesactivadoManualmente, type EstadoPush } from '@/lib/push';
 
 const schema = z.object({
   municipio: z.string().optional(),
@@ -57,6 +57,10 @@ export default function AlertasPage() {
   // que el efecto confirme el estado real.
   const [estadoPush, setEstadoPush] = useState<EstadoPush>('inactivo');
   const [cambiandoPush, setCambiandoPush] = useState(false);
+  // Activo POR DEFECTO (pedido 2026-09-06) — true mientras se intenta la
+  // auto-suscripción al entrar, para no mostrar el botón "Activar"
+  // (framing viejo) durante ese instante.
+  const [activandoAuto, setActivandoAuto] = useState(false);
 
   const { register, handleSubmit, reset, setFocus, formState: { isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -78,7 +82,30 @@ export default function AlertasPage() {
 
   useEffect(() => {
     if (!user) return;
-    obtenerEstadoPush().then(setEstadoPush).catch(() => {});
+    async function resolverPush() {
+      const real = await obtenerEstadoPush();
+      // Push activo por defecto: si nunca se activó (ni se desactivó a
+      // propósito), se auto-suscribe al entrar en vez de esperar un
+      // clic en "Activar" — el permiso del navegador sigue siendo un
+      // gesto explícito (el prompt nativo lo pide), pero no dependemos
+      // de un botón nuestro para dispararlo.
+      if (real === 'inactivo' && !fueDesactivadoManualmente()) {
+        setActivandoAuto(true);
+        try {
+          await suscribirPush();
+          setEstadoPush('activo');
+        } catch {
+          // Rechazó el prompt o lo cerró sin responder — releer estado
+          // real (puede haber quedado 'denegado' o seguir 'inactivo').
+          setEstadoPush(await obtenerEstadoPush());
+        } finally {
+          setActivandoAuto(false);
+        }
+      } else {
+        setEstadoPush(real);
+      }
+    }
+    resolverPush().catch(() => {});
   }, [user]);
 
   async function alternarPush() {
@@ -225,26 +252,30 @@ export default function AlertasPage() {
           navegador. */}
       {estadoPush !== 'no-soportado' && (
         <div className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 mb-8 ${
-          estadoPush === 'activo' ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200'
+          estadoPush === 'activo' || activandoAuto ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200'
         }`}>
           <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-            estadoPush === 'activo' ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'
+            estadoPush === 'activo' || activandoAuto ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'
           }`}>
-            {estadoPush === 'activo' ? <BellRing size={16} /> : <BellOff size={16} />}
+            {estadoPush === 'activo' || activandoAuto ? <BellRing size={16} /> : <BellOff size={16} />}
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-gray-800">
-              {estadoPush === 'activo' ? 'Notificaciones push activadas' : 'Activa las notificaciones push'}
+              {activandoAuto
+                ? 'Activando notificaciones push…'
+                : estadoPush === 'activo'
+                  ? 'Notificaciones push activadas'
+                  : 'Activa las notificaciones push'}
             </p>
             <p className="text-xs text-gray-500">
               {estadoPush === 'denegado'
                 ? 'Bloqueadas en la configuración de tu navegador — actívalas ahí para recibir avisos.'
-                : estadoPush === 'activo'
+                : estadoPush === 'activo' || activandoAuto
                   ? 'Te avisamos en cuanto una propiedad coincida con alguna alerta, aunque no tengas la pestaña abierta.'
                   : 'Recibe el aviso al instante, sin depender del correo ni de tener la pestaña abierta.'}
             </p>
           </div>
-          {estadoPush !== 'denegado' && (
+          {estadoPush !== 'denegado' && !activandoAuto && (
             <button
               type="button"
               onClick={alternarPush}

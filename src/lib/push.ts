@@ -15,6 +15,34 @@ export function urlBase64ToUint8Array(base64: string): Uint8Array {
 
 export type EstadoPush = 'no-soportado' | 'denegado' | 'inactivo' | 'activo';
 
+// Push activo POR DEFECTO (pedido 2026-09-06) — la única señal de "el
+// usuario no quiere push" que el navegador no nos da gratis es esta: si
+// alguna vez tocó "Desactivar" a propósito, no hay que auto-suscribirlo
+// de nuevo en cada visita. Sin este flag, cualquier 'inactivo' (incluida
+// una desactivación explícita) se auto-reactivaría solo, ignorando la
+// elección de la persona.
+const CLAVE_DESACTIVADO_MANUAL = 'push_desactivado_manual';
+
+export function fueDesactivadoManualmente(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(CLAVE_DESACTIVADO_MANUAL) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function marcarDesactivadoManualmente(valor: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (valor) window.localStorage.setItem(CLAVE_DESACTIVADO_MANUAL, '1');
+    else window.localStorage.removeItem(CLAVE_DESACTIVADO_MANUAL);
+  } catch {
+    // localStorage bloqueado (modo privado, etc.) — no es crítico, solo
+    // significa que el auto-activado podría re-preguntar en la próxima visita.
+  }
+}
+
 /**
  * Estado real del navegador respecto a push — no asume nada, pregunta
  * directo a las APIs (Notification.permission, PushManager). `denegado`
@@ -57,6 +85,7 @@ export async function suscribirPush(): Promise<void> {
     method: 'POST',
     body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
   });
+  marcarDesactivadoManualmente(false);
 }
 
 /** Cancela la suscripción, en el navegador Y en el backend — dejar solo una de las dos mitades hechas deja el estado inconsistente (el backend le seguiría mandando push a un endpoint que el navegador ya no escucha, o viceversa). */
@@ -70,4 +99,5 @@ export async function desuscribirPush(): Promise<void> {
     method: 'DELETE',
     body: JSON.stringify({ endpoint }),
   });
+  marcarDesactivadoManualmente(true);
 }
