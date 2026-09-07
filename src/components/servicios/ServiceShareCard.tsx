@@ -43,7 +43,10 @@ export function ServiceShareCard({ servicioId, nombre }: Props) {
   }
 
   function compartirPorWhatsapp() {
-    const texto = encodeURIComponent(`🔧 *${nombre}*\n${construirUrl()}`);
+    // Símbolo simple en vez de emoji — mismo motivo que
+    // PropertyDetailView.tsx (reporte real: emoji de 4 bytes llegando
+    // corrupto en WhatsApp según el cliente receptor).
+    const texto = encodeURIComponent(`• *${nombre}*\n${construirUrl()}`);
     window.open(`https://wa.me/?text=${texto}`, '_blank', 'noopener,noreferrer');
   }
 

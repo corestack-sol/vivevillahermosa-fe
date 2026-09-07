@@ -77,7 +77,14 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
     // apuntaba a localhost en el build de producción).
     const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://vivevillahermosa.corestacksolutions.com.mx';
     const url  = `${base}/propiedades/${property.slug}`;
-    const text = `🏠 *${property.titulo}*\n📍 ${property.colonia}, ${property.municipio}\n\n${url}`;
+    // Símbolos simples (BMP, 3 bytes UTF-8) en vez de emoji (plano
+    // astral, 4 bytes / par subrogado) — pedido explícito 2026-09-07:
+    // reporte real de "🏠"/"📍" llegando como � en WhatsApp. Verificado
+    // que el link que generamos ya sale bien codificado (percent-encoding
+    // correcto en producción); el problema vive en cómo decodifica el
+    // cliente receptor los caracteres de 4 bytes — un símbolo simple no
+    // depende de eso.
+    const text = `• *${property.titulo}*\n- ${property.colonia}, ${property.municipio}\n\n${url}`;
     return `https://wa.me/?text=${encodeURIComponent(text)}`;
   })();
 
