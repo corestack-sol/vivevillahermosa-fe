@@ -483,9 +483,9 @@ export function Navbar() {
                   <div className={herramientasGroup ? 'border-t border-white/10 mt-2 pt-2' : 'pt-1.5'}>
                     <button type="button" onClick={() => setPerfilAbierto((v) => !v)}
                       aria-expanded={perfilAbierto}
-                      className="flex items-center justify-between w-full px-4 pt-1.5 pb-2 text-[10px] font-bold text-white uppercase tracking-wide rounded-xl hover:bg-white/8 transition-colors">
+                      className="flex items-center justify-between w-full px-4 py-2.5 text-sm font-semibold text-white rounded-xl hover:bg-white/8 transition-colors">
                       {perfilGroup.label}
-                      <ChevronDown size={12} className={`text-white transition-transform ${perfilAbierto ? 'rotate-180' : ''}`} />
+                      <ChevronDown size={14} className={`text-white transition-transform ${perfilAbierto ? 'rotate-180' : ''}`} />
                     </button>
                     {perfilAbierto && (
                       <div className="space-y-0.5">
