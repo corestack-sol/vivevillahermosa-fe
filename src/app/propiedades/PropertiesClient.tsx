@@ -159,6 +159,11 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
   // ningún estado para esto, así que hacer clic en un pin no mostraba
   // nada (bug real reportado 2026-08-19). Mismo componente que /mapa.
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
+  // Cerrar la leyenda de privacidad del mapa — pedido explícito 2026-09-07.
+  // Se reinicia si se vuelve a entrar a la vista mapa (no persiste entre
+  // sesiones a propósito, es una aclaración de seguridad, no algo molesto
+  // que deba desaparecer para siempre).
+  const [avisoZonaCerrado, setAvisoZonaCerrado] = useState(false);
 
   // Pantalla completa al cambiar a modo mapa — pedido explícito
   // 2026-08-18, "solo para tablets y móviles". El toggle grid/mapa
@@ -838,15 +843,26 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
 
                 {/* Leyenda de privacidad: los pines no son la ubicación
                     exacta — mismo texto/estilo que /mapa (MapaClient.tsx),
-                    pedido explícito 2026-08-19. */}
+                    pedido explícito 2026-08-19. Botón de cerrar (X) — pedido
+                    explícito 2026-09-07. */}
+                {!avisoZonaCerrado && (
                 <div className="absolute top-14 left-3 right-3 z-[1001] flex justify-center pointer-events-none">
-                  <div className="flex items-center gap-1.5 bg-brand-dark shadow-md
+                  <div className="relative flex items-center gap-1.5 bg-brand-dark shadow-md
                                   border border-brand-dark text-white text-xs font-medium
-                                  px-3.5 py-1.5 rounded-full">
+                                  pl-3.5 pr-8 py-1.5 rounded-full pointer-events-auto">
                     <Info size={12} className="text-white/70 flex-shrink-0" />
                     Por seguridad, los pines muestran la zona aproximada. Ubicación exacta al contactar
+                    <button
+                      type="button"
+                      onClick={() => setAvisoZonaCerrado(true)}
+                      aria-label="Cerrar aviso"
+                      className="absolute top-1/2 right-1.5 -translate-y-1/2 p-1 text-white/60 hover:text-white transition-colors"
+                    >
+                      <X size={12} />
+                    </button>
                   </div>
                 </div>
+                )}
 
                 {selectedMarker && (
                   <SelectedPropertyCard

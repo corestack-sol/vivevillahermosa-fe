@@ -88,6 +88,8 @@ export function MapaClient({ allProperties }: Props) {
   const [riesgoActive,  setRiesgoActive]  = useState<Set<RiesgoLevel>>(new Set(['bajo', 'medio', 'alto']));
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [activeBounds,  setActiveBounds]  = useState<MapBounds | null>(null);
+  // Cerrar la leyenda de privacidad — pedido explícito 2026-09-07.
+  const [avisoZonaCerrado, setAvisoZonaCerrado] = useState(false);
   // `setTileType` no se usa por ahora — el selector Mapa/Satélite se
   // retiró junto con la vista satelital (ver comentarios más abajo), pero
   // el estado se deja listo para cuando se reconstruya.
@@ -608,14 +610,24 @@ export function MapaClient({ allProperties }: Props) {
               zonas claras del mapa (calles, agua en el satélite). Un fondo
               con color propio destaca sobre cualquier parte del mapa, no
               solo las oscuras. */}
+          {!avisoZonaCerrado && (
           <div className="flex justify-center">
-            <div className="flex items-center gap-1.5 bg-brand-dark shadow-md
+            <div className="relative flex items-center gap-1.5 bg-brand-dark shadow-md
                             border border-brand-dark text-white text-xs font-medium
-                            px-3.5 py-1.5 rounded-full">
+                            pl-3.5 pr-8 py-1.5 rounded-full">
               <Info size={12} className="text-white/70 flex-shrink-0" />
               Por seguridad, los pines muestran la zona aproximada. Ubicación exacta al contactar
+              <button
+                type="button"
+                onClick={() => setAvisoZonaCerrado(true)}
+                aria-label="Cerrar aviso"
+                className="absolute top-1/2 right-1.5 -translate-y-1/2 p-1 text-white/60 hover:text-white transition-colors"
+              >
+                <X size={12} />
+              </button>
             </div>
           </div>
+          )}
         </div>
 
         {/* ── Right floating buttons ── */}
