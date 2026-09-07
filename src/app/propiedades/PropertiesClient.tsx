@@ -926,7 +926,15 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                     )}
                   </div>
                 ) : (
-                  <>
+                  // opacity/pointer-events atados a isLoading — sin esto, un
+                  // cambio de filtro seguía mostrando la lista VIEJA (a veces
+                  // el catálogo completo sin filtrar, sembrado por SSR) como
+                  // si fuera el resultado final durante el debounce+fetch de
+                  // useSearch, hasta que results se reemplazaba de golpe.
+                  // Pedido explícito 2026-09-07. No usa skeletons acá a
+                  // propósito (ver comentario de arriba, línea ~878) — esto
+                  // solo atenúa lo ya visible, no lo reemplaza.
+                  <div className={`transition-opacity duration-150 ${isLoading ? 'opacity-40 pointer-events-none' : ''}`}>
                     {hayBusquedaActiva && (
                       <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">
                         Resultados ({results.length})
@@ -989,7 +997,7 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                         Has visto todas las {total} propiedades
                       </p>
                     )}
-                  </>
+                  </div>
                 )}
               </>
             )}
