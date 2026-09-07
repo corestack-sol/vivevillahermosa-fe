@@ -1,14 +1,40 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import { PublicarCTA } from '@/components/forms/PublicarCTA';
-import { Clock, ArrowLeft, ArrowRight, ChevronRight, Home, Sparkles, ExternalLink, SearchCheck } from 'lucide-react';
+import {
+  Clock, ArrowLeft, ArrowRight, ChevronRight, Home, Sparkles, ExternalLink, SearchCheck,
+  DollarSign, Droplets, Search, Heart, MessageCircle, Flag, MapPin, type LucideIcon,
+} from 'lucide-react';
 import guiasData from '@/data/guias.json';
 import { getCategoriaVisual } from '../categoriaConfig';
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
+
+// Mismos íconos que ya usa el resto del sitio para cada concepto — pedido
+// explícito 2026-09-07: no inventar un set nuevo. DollarSign (precio,
+// PublishForm/comparar), Droplets (riesgo de inundación, FloodRiskBadge),
+// Search (buscador, SearchBar), Heart (favoritos, FavoriteButton),
+// MessageCircle (WhatsApp/chat, AgentCard), Flag (reportar, ReportButton).
+const ICONOS_SECCION: Record<string, LucideIcon> = { DollarSign, Droplets, Search, Heart, MessageCircle, Flag };
+
+// Misma paleta "Tabasco patio" (--type-X en globals.css) que ya usan
+// PropertyCard/MapaClient/FilterPanel/categoriaConfig — cada tarjeta toma
+// un color distinto de ese set existente en vez de un tono nuevo. Pedido
+// explícito 2026-09-07: más color en las tarjetas.
+const PALETAS_SECCION: Record<string, { from: string; to: string; accent: string }> = {
+  casa:         { from: 'var(--type-casa-from)',         to: 'var(--type-casa-to)',         accent: 'var(--type-casa-accent)' },
+  departamento: { from: 'var(--type-departamento-from)', to: 'var(--type-departamento-to)', accent: 'var(--type-departamento-accent)' },
+  terreno:      { from: 'var(--type-terreno-from)',      to: 'var(--type-terreno-to)',      accent: 'var(--type-terreno-accent)' },
+  local:        { from: 'var(--type-local-from)',        to: 'var(--type-local-to)',        accent: 'var(--type-local-accent)' },
+  oficina:      { from: 'var(--type-oficina-from)',      to: 'var(--type-oficina-to)',      accent: 'var(--type-oficina-accent)' },
+  bodega:       { from: 'var(--type-bodega-from)',        to: 'var(--type-bodega-to)',       accent: 'var(--type-bodega-accent)' },
+  habitacion:   { from: 'var(--type-habitacion-from)',   to: 'var(--type-habitacion-to)',   accent: 'var(--type-habitacion-accent)' },
+};
+const PALETA_FALLBACK = { from: 'var(--color-brand-pale)', to: 'var(--color-brand-pale)', accent: 'var(--color-brand)' };
 
 export async function generateStaticParams() {
   return guiasData.map((p) => ({ slug: p.slug }));
@@ -31,11 +57,16 @@ export default async function GuiaPostPage({ params }: Props) {
 
   const related = guiasData.filter((p) => p.slug !== slug).slice(0, 3);
   const visual = getCategoriaVisual(post.categoria);
+  // Mascota propia solo para este artículo (mismo patrón sticky que
+  // /privacidad) — pedido explícito 2026-09-07. El resto de las guías
+  // sigue en una sola columna, sin sidebar.
+  const premium = !!(post.secciones && post.secciones.length > 0);
 
   return (
     <div className="bg-page">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-        <div className="max-w-2xl mx-auto">
+        <div className={premium ? 'grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-5xl mx-auto' : 'max-w-2xl mx-auto'}>
+        <div className={premium ? 'lg:col-span-2' : ''}>
           {/* Breadcrumb */}
           <nav className="flex items-center gap-1.5 text-xs text-gray-400 mb-6 flex-wrap">
             <Link href="/" aria-label="Inicio" className="hover:text-brand flex items-center">
@@ -85,11 +116,64 @@ export default async function GuiaPostPage({ params }: Props) {
           {/* Content — prose-base (no prose-sm) y más aire entre párrafos:
               son artículos largos pensados para leerse completos, no un
               resumen a media pantalla. */}
-          <div className="prose prose-base max-w-none text-gray-700 space-y-5 mb-12">
-            {post.contenido.split('\n\n').map((para, i) => (
-              <p key={i} className="leading-[1.8]">{para}</p>
-            ))}
-          </div>
+          {post.secciones && post.secciones.length > 0 ? (
+            <>
+              {/* Diseño premium — solo para este artículo (único con
+                  `secciones` en guias.json), pedido explícito 2026-09-07.
+                  El resto de las guías sigue con párrafos simples más
+                  abajo, sin tocar su plantilla. */}
+              <div className="flex flex-wrap items-center gap-2 mb-6">
+                {[
+                  { Icon: MapPin, label: '17 municipios' },
+                  { Icon: DollarSign, label: '$0 comisión' },
+                  { Icon: Droplets, label: 'Historial de inundación por zona' },
+                ].map(({ Icon, label }) => (
+                  <span key={label} className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand bg-brand-pale px-3 py-1.5 rounded-full">
+                    <Icon size={13} className="flex-shrink-0" /> {label}
+                  </span>
+                ))}
+              </div>
+
+              <p className="text-gray-700 leading-[1.8] text-lg mb-8">
+                {post.contenido.split('\n\n')[0]}
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+                {post.secciones.map((s) => {
+                  const Icon = ICONOS_SECCION[s.icono] ?? Sparkles;
+                  const paleta = PALETAS_SECCION[s.paleta ?? ''] ?? PALETA_FALLBACK;
+                  return (
+                    <div
+                      key={s.titulo}
+                      className="relative overflow-hidden bg-white border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-all"
+                      style={{ borderTopColor: paleta.accent, borderTopWidth: 3 }}
+                    >
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
+                        style={{ background: `linear-gradient(to bottom right, ${paleta.from}, ${paleta.to})`, color: paleta.accent }}
+                      >
+                        <Icon size={18} strokeWidth={1.5} />
+                      </div>
+                      <h3 className="font-heading font-bold text-gray-900 text-sm mb-1.5">{s.titulo}</h3>
+                      <p className="text-sm text-gray-600 leading-relaxed">{s.texto}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="prose prose-base max-w-none text-gray-700 space-y-5 mb-12">
+                {post.contenido.split('\n\n').slice(1).map((para, i) => (
+                  <p key={i} className="leading-[1.8]">{para}</p>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="prose prose-base max-w-none text-gray-700 space-y-5 mb-12">
+              {post.contenido.split('\n\n').map((para, i) => (
+                <p key={i} className="leading-[1.8]">{para}</p>
+              ))}
+            </div>
+          )}
 
           {/* Herramientas de verificación — opcional por artículo (ver
               guias.json), solo para el que recomienda búsqueda inversa de
@@ -141,6 +225,26 @@ export default async function GuiaPostPage({ params }: Props) {
           <Link href="/guias" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-brand transition-colors mb-12">
             <ArrowLeft size={16} /> Volver a Guías
           </Link>
+        </div>
+
+        {/* Mascota — sticky, mismo patrón que /privacidad. Solo desktop
+            (hidden en móvil, no hay ancho para un tercer riel). */}
+        {premium && (
+          <div className="hidden lg:block lg:col-span-1">
+            <div className="sticky top-24 bg-brand-pale rounded-2xl shadow-sm p-6 text-center">
+              <Image
+                src="/images/icons/article-mascota.webp"
+                alt=""
+                width={180}
+                height={210}
+                className="mx-auto"
+              />
+              <p className="text-sm text-gray-600 mt-2">
+                Todo lo que lees aquí existe de verdad en la plataforma — sin promesas de más.
+              </p>
+            </div>
+          </div>
+        )}
         </div>
 
         {/* Related */}
