@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import type { Property } from '@/types/property';
 import { MapPin, BedDouble, Maximize, Bath, ArrowUpRight, Scale, Check, Navigation } from 'lucide-react';
 import { FavoriteButton } from './FavoriteButton';
-import { getPriceContext, type PriceContext } from '@/lib/api';
 import { getPropertyTypeConfig } from '@/lib/propertyTypeConfig';
 import { FLOOD_COLOR, FLOOD_LABEL } from '@/lib/floodColors';
 import { cloudinaryTransform } from '@/lib/cloudinaryUrl';
@@ -51,12 +50,6 @@ export function PropertyCard({ property, landmarkQuery, distanciaLabel }: Proper
   const [imgFailed, setImgFailed] = useState(false);
   const foto = property.fotos[0];
   const showFoto = !!foto && !imgFailed;
-  const [priceCtx, setPriceCtx] = useState<PriceContext | null>(null);
-  useEffect(() => {
-    let cancelado = false;
-    getPriceContext(property).then((ctx) => { if (!cancelado) setPriceCtx(ctx); });
-    return () => { cancelado = true; };
-  }, [property]);
   const { isSelected, toggle } = useCompare();
   const compared = isSelected(property.id);
 
@@ -157,7 +150,7 @@ export function PropertyCard({ property, landmarkQuery, distanciaLabel }: Proper
             {/* min-w-0 + overflow-hidden — sin esto, un flex item nunca se
                 encoge por debajo del ancho de su contenido (min-width:auto
                 por defecto), así que con specs largas (m² + recámaras +
-                baños + precio/m²) en una tarjeta angosta (4 columnas en
+                baños) en una tarjeta angosta (4 columnas en
                 xl:), esta fila se desbordaba y empujaba el botón circular
                 de flecha fuera de su lugar en vez de recortarse ella
                 misma. Ahora lo que no cabe se recorta aquí, y el botón
@@ -176,9 +169,6 @@ export function PropertyCard({ property, landmarkQuery, distanciaLabel }: Proper
               )}
               {property.banos > 0 && (
                 <span className="flex items-center gap-1"><Bath size={11} />{property.banos}</span>
-              )}
-              {priceCtx?.precioPorM2 != null && (
-                <span className="text-white/60">· ${priceCtx.precioPorM2.toLocaleString('es-MX')}/m²</span>
               )}
             </div>
 
