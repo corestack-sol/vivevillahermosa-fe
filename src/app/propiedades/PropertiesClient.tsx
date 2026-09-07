@@ -772,6 +772,7 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                   zoom={11}
                   selectedId={selectedMarker?.id ?? null}
                   onMarkerSelect={setSelectedMarker}
+                  showMunicipioLabels
                 />
 
                 {/* Chips de tipo/operación — a diferencia de /mapa, aquí NO
