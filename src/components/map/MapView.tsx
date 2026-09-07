@@ -403,6 +403,27 @@ export function MapView({
     return () => observer.disconnect();
   }, [ready]);
 
+  // ── Red de seguridad extra para girar el dispositivo (reporte real
+  //    2026-09-07: "en Android el mapa no carga al girar a horizontal") ──
+  // ResizeObserver de arriba debería bastar, pero en algunos Android/Chrome
+  // el evento 'orientationchange' llega ANTES de que el navegador termine
+  // de asentar las nuevas dimensiones del viewport (la barra de
+  // direcciones dinámica todavía se está animando) — un primer
+  // `map.resize()` inmediato puede leer medidas viejas/a medio actualizar
+  // y quedarse ahí. El segundo, con un delay corto, es la mitigación
+  // práctica estándar para este caso (MapLibre/Leaflet en Android WebView)
+  // cuando ResizeObserver solo no alcanza.
+  useEffect(() => {
+    if (!ready || !mapRef.current) return;
+    const map = mapRef.current;
+    function onOrientationChange() {
+      map.resize();
+      setTimeout(() => map.resize(), 350);
+    }
+    window.addEventListener('orientationchange', onOrientationChange);
+    return () => window.removeEventListener('orientationchange', onOrientationChange);
+  }, [ready]);
+
   // ── Zona aproximada (privacidad) — círculo en vez de pin exacto ──
   useEffect(() => {
     if (!ready || !mapRef.current) return;
