@@ -611,10 +611,10 @@ export function MapaClient({ allProperties }: Props) {
               con color propio destaca sobre cualquier parte del mapa, no
               solo las oscuras. */}
           {!avisoZonaCerrado && (
-          <div className="flex justify-center">
+          <div className="flex justify-center pointer-events-none">
             <div className="relative flex items-center gap-1.5 bg-brand-dark shadow-md
                             border border-brand-dark text-white text-xs font-medium
-                            pl-3.5 pr-8 py-1.5 rounded-full">
+                            pl-3.5 pr-8 py-1.5 rounded-full pointer-events-auto">
               <Info size={12} className="text-white/70 flex-shrink-0" />
               Por seguridad, los pines muestran la zona aproximada. Ubicación exacta al contactar
               <button
