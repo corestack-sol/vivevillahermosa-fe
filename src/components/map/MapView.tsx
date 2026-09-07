@@ -151,7 +151,10 @@ void SATELLITE_TILE_URL;
 // cambió cuál pin está seleccionado. Pedido explícito 2026-09-07: optimizar
 // fluidez del mapa — antes, seleccionar un pin reconstruía TODOS los
 // marcadores visibles con renderClusters(), no solo el que cambió.
-function pinInnerHtml(color: string, dark: string, label: string, active: boolean): string {
+// Exportadas (sin usarse fuera de este archivo en producción) para poder
+// probarlas directo — ver MapView.test.ts — son las únicas dos funciones
+// puras de este componente, el resto depende de un mapa MapLibre real.
+export function pinInnerHtml(color: string, dark: string, label: string, active: boolean): string {
   const shadow = active
     ? `0 2px 10px rgba(0,0,0,.3), 0 0 0 2.5px ${dark}, 0 0 0 5px white, 0 0 0 7px ${color}`
     : `0 2px 8px rgba(0,0,0,.22), 0 0 0 2.5px ${dark}`;
@@ -159,7 +162,7 @@ function pinInnerHtml(color: string, dark: string, label: string, active: boolea
     <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid ${dark};margin-top:-1px;"></div>`;
 }
 
-function pinHtml(color: string, dark: string, label: string, active: boolean): string {
+export function pinHtml(color: string, dark: string, label: string, active: boolean): string {
   return `<div style="display:inline-flex;flex-direction:column;align-items:center;cursor:pointer;">${pinInnerHtml(color, dark, label, active)}</div>`;
 }
 
