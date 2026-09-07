@@ -3,15 +3,16 @@
 // dos vistas hablen el mismo lenguaje visual sin quedar desincronizadas
 // (antes cada archivo tenía su propia copia y se desviaron entre sí).
 //
-// El primero (marca) necesita color-mix() para oscurecer un extremo —
-// bug real reportado 2026-09-07: `brand-dark` y `brand` solos quedan
-// demasiado cerca en luminancia (dos verdes oscuros), así que el
-// degradado se veía como un color sólido plano, sobre todo bajo el
-// overlay bg-black/10-20 que llevan estas tarjetas encima. Los otros dos
-// (accent, coral) ya tenían suficiente contraste — coral usa el mismo
-// truco de color-mix() por el mismo motivo.
+// Las 3 variantes usan EXACTAMENTE la misma fórmula (color-mix(color 55%,
+// black) -> color base), nunca un token "-dark" prearmado — pedido
+// explícito 2026-09-07: "la 3ra tiene más degradado que las otras,
+// quiero que todas tengan el mismo nivel". Mezclar cada color base
+// consigo mismo (55% color + 45% negro) en vez de partir de brand-dark/
+// accent-dark (oscurecidos con proporciones distintas entre sí, nunca
+// pensados para verse unos junto a otros) es lo único que garantiza el
+// mismo contraste real entre extremos en las 3 tarjetas.
 export const ZONA_GRADIENTS = [
-  'linear-gradient(to bottom right, color-mix(in srgb, var(--color-brand-dark) 55%, black), var(--color-brand))',
-  'linear-gradient(to bottom right, var(--color-accent-dark), var(--color-accent))',
+  'linear-gradient(to bottom right, color-mix(in srgb, var(--color-brand) 55%, black), var(--color-brand))',
+  'linear-gradient(to bottom right, color-mix(in srgb, var(--color-accent) 55%, black), var(--color-accent))',
   'linear-gradient(to bottom right, color-mix(in srgb, var(--color-coral) 55%, black), var(--color-coral))',
 ];
