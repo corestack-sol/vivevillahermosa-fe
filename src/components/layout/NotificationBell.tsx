@@ -5,16 +5,24 @@ import Link from 'next/link';
 import { Bell } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useClickOutside } from '@/hooks/useClickOutside';
-import { useNotificaciones, notificacionHref, type Notificacion } from '@/hooks/useNotificaciones';
+import { useNotificaciones, notificacionHref, agruparNotificaciones, type Notificacion } from '@/hooks/useNotificaciones';
 
 export type { Notificacion };
 
 export function NotificationBell() {
   const { user } = useAuth();
-  const { items, noLeidas: unread, marcarLeida, marcarTodasLeidas } = useNotificaciones();
+  const { items, marcarVariasLeidas, marcarTodasLeidas } = useNotificaciones();
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   useClickOutside(menuRef, open, () => setOpen(false));
+
+  // Agrupado por conversación — pedido explícito 2026-09-07: varios
+  // mensajes seguidos del mismo interesado antes inflaban el badge y
+  // llenaban el dropdown de filas repetidas. El badge cuenta GRUPOS sin
+  // leer, no notificaciones crudas — un chat activo con 5 mensajes nuevos
+  // suma 1, no 5, igual que WhatsApp/Gmail.
+  const agrupadas = agruparNotificaciones(items);
+  const unread = agrupadas.filter((n) => !n.leida).length;
 
   if (!user) return null;
 
@@ -46,20 +54,27 @@ export function NotificationBell() {
               )}
             </div>
             <div className="max-h-80 overflow-y-auto">
-              {items.length === 0 ? (
+              {agrupadas.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-8 px-4">Sin notificaciones todavía</p>
               ) : (
-                items.slice(0, 8).map((n) => (
+                agrupadas.slice(0, 8).map((n) => (
                   <Link
                     key={n.id}
                     href={notificacionHref(n)}
-                    onClick={() => { setOpen(false); if (!n.leida) marcarLeida(n.id); }}
+                    onClick={() => { setOpen(false); if (!n.leida) marcarVariasLeidas(n.idsAgrupados); }}
                     className={`block px-4 py-3 border-b border-gray-50 last:border-0 hover:bg-brand-pale/40 transition-colors ${!n.leida ? 'bg-brand-pale/20' : ''}`}
                   >
                     <div className="flex items-start gap-2">
                       {!n.leida && <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0 mt-1.5" />}
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-800 leading-snug">{n.titulo}</p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-medium text-gray-800 leading-snug truncate">{n.titulo}</p>
+                          {n.count > 1 && (
+                            <span className="flex-shrink-0 text-[10px] font-bold text-brand bg-brand-pale px-1.5 py-0.5 rounded-full">
+                              {n.count}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500 mt-0.5 leading-snug">{n.mensaje}</p>
                       </div>
                     </div>

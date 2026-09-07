@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Bell } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useNotificaciones, notificacionHref } from '@/hooks/useNotificaciones';
+import { useNotificaciones, notificacionHref, agruparNotificaciones } from '@/hooks/useNotificaciones';
 import { formatRelativeDate } from '@/lib/format';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
@@ -23,7 +23,12 @@ import { Button } from '@/components/ui/Button';
 export default function NotificacionesPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const { items: notificaciones, noLeidas, total, hayMas, loading, cargarMas, marcarLeida, marcarTodasLeidas } = useNotificaciones();
+  const { items, total, hayMas, loading, cargarMas, marcarVariasLeidas, marcarTodasLeidas } = useNotificaciones();
+  // Agrupado por conversación — ver agruparNotificaciones en el hook: un
+  // chat con varios mensajes nuevos seguidos cuenta como una sola fila acá,
+  // no una por mensaje.
+  const notificaciones = agruparNotificaciones(items);
+  const noLeidas = notificaciones.filter((n) => !n.leida).length;
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/auth/login');
@@ -68,12 +73,19 @@ export default function NotificacionesPage() {
             <Link
               key={n.id}
               href={notificacionHref(n)}
-              onClick={() => { if (!n.leida) marcarLeida(n.id); }}
+              onClick={() => { if (!n.leida) marcarVariasLeidas(n.idsAgrupados); }}
               className={`flex items-start gap-3 px-5 py-4 hover:bg-gray-50 transition-colors ${!n.leida ? 'bg-brand-pale/20' : ''}`}
             >
               {!n.leida && <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0 mt-1.5" />}
-              <div className={`min-w-0 ${n.leida ? 'ml-[18px]' : ''}`}>
-                <p className="text-sm font-medium text-gray-800 leading-snug">{n.titulo}</p>
+              <div className={`min-w-0 flex-1 ${n.leida ? 'ml-[18px]' : ''}`}>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-medium text-gray-800 leading-snug">{n.titulo}</p>
+                  {n.count > 1 && (
+                    <span className="flex-shrink-0 text-[10px] font-bold text-brand bg-brand-pale px-1.5 py-0.5 rounded-full">
+                      {n.count}
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-500 mt-0.5 leading-snug">{n.mensaje}</p>
                 <p className="text-xs text-gray-400 mt-1">{formatRelativeDate(n.createdAt)}</p>
               </div>

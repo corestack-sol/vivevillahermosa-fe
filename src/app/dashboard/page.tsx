@@ -12,7 +12,7 @@ import type { BackendPublicProperty } from '@/lib/api';
 import { generarReporteDesempeno } from '@/lib/reportePdf';
 import { obtenerResumenReporte } from '@/lib/aiClient';
 import { usePerfilInmobiliaria } from '@/hooks/usePerfilInmobiliaria';
-import { useNotificaciones, notificacionHref } from '@/hooks/useNotificaciones';
+import { useNotificaciones, notificacionHref, agruparNotificaciones } from '@/hooks/useNotificaciones';
 import { formatRelativeDate } from '@/lib/format';
 import { evaluarCartera } from '@/lib/coach';
 import { CoachModal } from '@/components/dashboard/CoachModal';
@@ -42,7 +42,9 @@ export default function DashboardPage() {
   const [favCount, setFavCount] = useState(0);
   const [alertaCount, setAlertaCount] = useState(0);
   const [misPropiedades, setMisPropiedades] = useState<MiPropiedad[]>([]);
-  const { items: notificaciones, marcarLeida: marcarNotificacionLeida, marcarTodasLeidas: marcarNotificacionesLeidas } = useNotificaciones();
+  const { items: itemsNotificaciones, marcarVariasLeidas: marcarNotificacionLeida, marcarTodasLeidas: marcarNotificacionesLeidas } = useNotificaciones();
+  // Agrupado por conversación — ver agruparNotificaciones en el hook.
+  const notificaciones = agruparNotificaciones(itemsNotificaciones);
   const [generandoReporte, setGenerandoReporte] = useState(false);
   // Panel profesional es solo para inmobiliarias — pedido explícito
   // 2026-08-20 ("no para cualquier usuario").
@@ -234,12 +236,19 @@ export default function DashboardPage() {
               <Link
                 key={n.id}
                 href={notificacionHref(n)}
-                onClick={() => marcarNotificacionLeida(n.id)}
+                onClick={() => marcarNotificacionLeida(n.idsAgrupados)}
                 className={`flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors ${!n.leida ? 'bg-brand-pale/20' : ''}`}
               >
                 {!n.leida && <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0 mt-1.5" />}
-                <div className={`min-w-0 ${n.leida ? 'ml-[18px]' : ''}`}>
-                  <p className="text-sm font-medium text-gray-800 leading-snug">{n.titulo}</p>
+                <div className={`min-w-0 flex-1 ${n.leida ? 'ml-[18px]' : ''}`}>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-gray-800 leading-snug">{n.titulo}</p>
+                    {n.count > 1 && (
+                      <span className="flex-shrink-0 text-[10px] font-bold text-brand bg-brand-pale px-1.5 py-0.5 rounded-full">
+                        {n.count}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500 mt-0.5 leading-snug">{n.mensaje}</p>
                   <p className="text-[11px] text-gray-400 mt-1">{formatRelativeDate(n.createdAt)}</p>
                 </div>

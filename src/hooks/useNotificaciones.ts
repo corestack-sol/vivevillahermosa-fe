@@ -40,6 +40,53 @@ export interface Notificacion {
  * conversaciones reales. Cualquier otro tipo (o uno sin `propiedadId`) se
  * queda con el destino genérico.
  */
+export interface NotificacionAgrupada extends Notificacion {
+  /** Cuántas notificaciones crudas representa este grupo (1 si no se agrupó con nada). */
+  count: number;
+  /** ids reales de todas las notificaciones agrupadas — para marcarlas TODAS leídas de una. */
+  idsAgrupados: string[];
+}
+
+/**
+ * Agrupa notificaciones por conversación — pedido explícito 2026-09-07:
+ * "si el interesado me manda 5 mensajes seguidos, en la campana quiero ver
+ * UNA notificación de esa conversación, no 5". Mismo criterio que
+ * WhatsApp/Gmail: varios eventos del mismo hilo se colapsan en una fila con
+ * el mensaje más reciente y un contador, en vez de una fila por evento.
+ *
+ * Solo agrupa `tipo === 'mensaje_nuevo'` con `conversacionId` — es el único
+ * tipo que puede repetirse muchas veces para el mismo hilo en poco tiempo.
+ * `contacto_propiedad` (legado, sin conversacionId) y cualquier otro tipo
+ * pasan sin tocar, un grupo de 1 cada uno.
+ *
+ * `items` llega ordenado más-reciente-primero (confirmado en
+ * dashboard/notificaciones/page.tsx) — la PRIMERA aparición de cada
+ * conversación ya es la más nueva, así que es la que se queda como
+ * representante del grupo (título/mensaje/fecha), y las siguientes solo
+ * suman al contador. El grupo queda "sin leer" si CUALQUIERA de las
+ * notificaciones que representa sigue sin leer.
+ */
+export function agruparNotificaciones(items: Notificacion[]): NotificacionAgrupada[] {
+  const resultado: NotificacionAgrupada[] = [];
+  const indicePorClave = new Map<string, number>();
+
+  for (const n of items) {
+    const clave = n.tipo === 'mensaje_nuevo' && n.conversacionId ? `conv:${n.conversacionId}` : `single:${n.id}`;
+    const idx = indicePorClave.get(clave);
+    if (idx === undefined) {
+      indicePorClave.set(clave, resultado.length);
+      resultado.push({ ...n, count: 1, idsAgrupados: [n.id] });
+    } else {
+      const grupo = resultado[idx];
+      grupo.count += 1;
+      grupo.idsAgrupados.push(n.id);
+      if (!n.leida) grupo.leida = false;
+    }
+  }
+
+  return resultado;
+}
+
 export function notificacionHref(n: Pick<Notificacion, 'tipo' | 'propiedadId' | 'conversacionId'>): string {
   if (n.tipo === 'mensaje_nuevo' && n.conversacionId) return `/dashboard/mensajes/${n.conversacionId}`;
   if (n.tipo === 'contacto_propiedad') return '/dashboard/mensajes';
@@ -118,6 +165,17 @@ export function useNotificaciones() {
     } catch { /* estado optimista ya aplicado; se resincroniza en la próxima carga */ }
   }
 
+  /** Marca de una todas las notificaciones de un grupo (ver agruparNotificaciones) — clic en una fila agrupada marca las N que representa, no solo la más reciente. */
+  async function marcarVariasLeidas(ids: string[]) {
+    const idsSet = new Set(ids);
+    const sinLeerCount = items.filter((n) => idsSet.has(n.id) && !n.leida).length;
+    setItems((prev) => prev.map((n) => (idsSet.has(n.id) ? { ...n, leida: true } : n)));
+    if (sinLeerCount > 0) setNoLeidas((u) => Math.max(0, u - sinLeerCount));
+    try {
+      await Promise.all(ids.map((id) => backendFetch('/notificaciones', { method: 'PATCH', body: JSON.stringify({ id }) })));
+    } catch { /* estado optimista ya aplicado; se resincroniza en la próxima carga */ }
+  }
+
   async function marcarTodasLeidas() {
     setItems((prev) => prev.map((n) => ({ ...n, leida: true })));
     setNoLeidas(0);
@@ -130,6 +188,6 @@ export function useNotificaciones() {
     items, noLeidas, loading, total,
     hayMas: items.length < total,
     cargarMas,
-    marcarLeida, marcarTodasLeidas,
+    marcarLeida, marcarVariasLeidas, marcarTodasLeidas,
   };
 }
