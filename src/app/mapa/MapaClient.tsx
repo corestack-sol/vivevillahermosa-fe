@@ -88,14 +88,6 @@ export function MapaClient({ allProperties }: Props) {
   const [riesgoActive,  setRiesgoActive]  = useState<Set<RiesgoLevel>>(new Set(['bajo', 'medio', 'alto']));
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [activeBounds,  setActiveBounds]  = useState<MapBounds | null>(null);
-  // Cierra la tarjeta "Sin propiedades aquí" con la X, sin resetear filtros
-  // ni mover el mapa (pedido explícito 2026-08-26 — antes la única forma de
-  // quitarla era el link "Limpiar filtros y volver a Villahermosa"). Guarda
-  // CUÁL `activeBounds` se cerró (no un booleano) — así "reaparece sola" al
-  // moverse a otra zona sin necesitar un efecto que la reinicie: en cuanto
-  // `activeBounds` cambia a un objeto nuevo, deja de ser === al que se
-  // cerró y la comparación de abajo vuelve a ser true por su cuenta.
-  const [dismissedBounds, setDismissedBounds] = useState<MapBounds | null>(null);
   // `setTileType` no se usa por ahora — el selector Mapa/Satélite se
   // retiró junto con la vista satelital (ver comentarios más abajo), pero
   // el estado se deja listo para cuando se reconstruya.
@@ -404,39 +396,6 @@ export function MapaClient({ allProperties }: Props) {
           onMapReady={handleMapReady}
           showMunicipioLabels
         />
-
-        {/* Sin resultados — antes el mapa quedaba en blanco sin ninguna
-            guía cuando los filtros (o el recuadro visible) no dejaban
-            ninguna propiedad. Rediseñado 2026-09-07 a pedido explícito
-            ("menos intrusivo") — pasa de tarjeta centrada tapando el mapa
-            (shadow-xl, bloqueaba toda la interacción del centro) a un
-            banner angosto arriba, que no cubre el área donde de verdad se
-            mira/toca el mapa. */}
-        {filtered.length === 0 && activeBounds !== dismissedBounds && (
-          <div className="absolute top-3 inset-x-0 z-[1001] flex justify-center pointer-events-none px-4">
-            <div className="relative pointer-events-auto flex items-center gap-2.5 bg-white/95 backdrop-blur-sm rounded-full shadow-md border border-gray-100 pl-4 pr-9 py-2 max-w-full">
-              <p className="text-xs text-gray-600 whitespace-nowrap">
-                <span className="font-semibold text-gray-800">Sin propiedades aquí</span>
-                {' — '}
-                <button
-                  type="button"
-                  onClick={() => { clearFilters(); setActiveBounds(null); mapControls?.flyTo(17.9869, -92.9303, 11); }}
-                  className="font-semibold text-brand hover:text-brand-dark transition-colors underline underline-offset-2"
-                >
-                  limpiar filtros
-                </button>
-              </p>
-              <button
-                type="button"
-                onClick={() => setDismissedBounds(activeBounds)}
-                aria-label="Cerrar aviso"
-                className="absolute top-1/2 right-2 -translate-y-1/2 p-1 text-gray-300 hover:text-gray-600 transition-colors"
-              >
-                <X size={13} />
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* ══ Right map panel — desktop only ══════════════════════════════
             hidden lg:pointer-fine:flex, no solo hidden lg:flex — un

@@ -840,30 +840,6 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                   </div>
                 </div>
 
-                {mapMarkers.length === 0 && (
-                  // pt-10 → pt-16: deja espacio para la fila de chips nueva
-                  // de arriba, para que no se solapen.
-                  <div className="absolute inset-0 z-[1002] pointer-events-none flex items-start justify-center pt-16">
-                    {/* Mismo fondo que la leyenda de privacidad de /mapa
-                        (MapaClient.tsx) — bg-brand-dark sólido, no
-                        blanco/translúcido, pedido explícito 2026-08-17. */}
-                    <div className="pointer-events-auto bg-brand-dark shadow-lg border border-brand-dark rounded-2xl px-6 py-4 text-center max-w-xs">
-                      <Map size={28} className="mb-2 mx-auto opacity-60 text-white" />
-                      {esBusquedaSinInterpretar(filters) ? (
-                        <>
-                          <p className="text-sm font-medium text-white">No pudimos interpretar del todo tu búsqueda</p>
-                          <p className="text-xs mt-1 text-white/60">Prueba con menos palabras (ej. solo el lugar) o usa los filtros para acotar a mano</p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-sm font-medium text-white">Sin propiedades en el mapa</p>
-                          <p className="text-xs mt-1 text-white/60">Ajusta los filtros para ver resultados</p>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 {selectedMarker && (
                   <SelectedPropertyCard
                     marker={selectedMarker}
