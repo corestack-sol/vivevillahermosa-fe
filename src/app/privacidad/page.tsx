@@ -15,7 +15,7 @@ export default function PrivacidadPage() {
         <ShieldCheck size={22} className="text-brand" />
         <h1 className="text-3xl font-heading font-bold text-gray-900">Aviso de privacidad</h1>
       </div>
-      <p className="text-sm text-gray-400 mb-10">Última actualización: 19 de agosto de 2026</p>
+      <p className="text-sm text-gray-400 mb-10">Última actualización: 7 de septiembre de 2026</p>
 
       {/* Grid principal + mascota fija a la derecha — mismo patrón sticky
           que el sidebar de /zonas/[slug] (lg:col-span-1, sticky top-24).
@@ -35,10 +35,12 @@ export default function PrivacidadPage() {
           <ul className="list-disc pl-5 space-y-1.5 leading-relaxed">
             <li>Datos de cuenta: nombre, correo electrónico y contraseña (almacenada siempre cifrada, nunca en texto plano).</li>
             <li>Si inicias sesión con Google o Facebook: el nombre, correo y foto de perfil que esos proveedores nos comparten con tu autorización.</li>
-            <li>Datos de contacto que escribes al enviar un mensaje sobre una propiedad: nombre, teléfono y correo.</li>
+            <li>Datos de contacto que escribes al enviar un mensaje sobre una propiedad: el texto de tu mensaje — tu nombre y correo ya los conocemos por tu cuenta, no se vuelven a pedir.</li>
             <li>Preferencias de búsqueda que guardas como alertas (municipio, tipo de propiedad, precio máximo, etc.).</li>
-            <li>Si publicas una propiedad: los datos de contacto que tú decides mostrar a interesados (nombre, teléfono, correo).</li>
-            <li>Analítica de uso (qué páginas se visitan, qué botones se usan) mediante PostHog — sin usar cookies de rastreo, y sin registrar lo que escribes en ningún formulario (nombre, teléfono, correo, mensajes). Solo mide comportamiento agregado, nunca el contenido de lo que escribes. Adicionalmente, si ocurre un error técnico en nuestro servidor mientras usas la plataforma, se envía a PostHog información técnica del momento del error (tu dirección IP, navegador, y la ruta que estabas usando) — únicamente con fines de diagnóstico, nunca el contenido de lo que escribiste.</li>
+            <li>Si publicas una propiedad: los datos de contacto que tú decides mostrar a interesados (nombre, WhatsApp y/o correo).</li>
+            <li>Las fotos que subes al publicar una propiedad — antes de aceptarlas, un sistema automatizado las analiza para detectar contenido fraudulento; luego se guardan para mostrarse en tu anuncio.</li>
+            <li>Si activas las notificaciones push, un identificador técnico de esa suscripción en tu navegador — sin contenido personal legible, solo lo necesario para poder enviarte el aviso.</li>
+            <li>Analítica de uso (qué páginas se visitan, qué botones se usan) mediante PostHog — sin usar cookies de rastreo, y sin registrar lo que escribes en ningún formulario (nombre, teléfono, correo, mensajes). Solo mide comportamiento agregado, nunca el contenido de lo que escribes.</li>
           </ul>
           <p className="leading-relaxed mt-3">
             Algunas preferencias (propiedades favoritas antes de iniciar sesión, comparador, búsquedas recientes, propiedades vistas recientemente) se guardan únicamente en tu navegador (localStorage), no en nuestros servidores, y desaparecen si borras los datos de ese navegador.
@@ -53,8 +55,9 @@ export default function PrivacidadPage() {
           <ul className="list-disc pl-5 space-y-1.5 leading-relaxed">
             <li>Crear y mantener tu cuenta, y permitirte iniciar sesión.</li>
             <li>Mostrar tus propiedades favoritas y gestionar tus alertas.</li>
-            <li>Enviarte un correo cuando se publique una propiedad que coincide con una alerta que creaste.</li>
-            <li>Permitir que un propietario o agente vea tu mensaje de contacto cuando escribes sobre una de sus propiedades.</li>
+            <li>Avisarte por correo — y por notificación push si la activaste — cuando se publique una propiedad que coincide con una alerta que creaste.</li>
+            <li>Permitir que un propietario o agente vea tu mensaje de contacto cuando escribes sobre una de sus propiedades, y responderte dentro de la misma conversación.</li>
+            <li>Detectar contenido fraudulento en tus publicaciones (texto y fotos) antes de que sean visibles públicamente.</li>
             <li>Mejorar la plataforma (qué se busca más, qué falla).</li>
           </ul>
           <p className="leading-relaxed mt-3">
@@ -72,7 +75,9 @@ export default function PrivacidadPage() {
             <li>Proveedores de autenticación (Google, Facebook) cuando eliges iniciar sesión con ellos.</li>
             <li>PostHog para analítica de uso (nunca para publicidad).</li>
             <li>Cloudinary — almacenamiento de las fotos que subes al publicar una propiedad.</li>
-            <li>OpenRouter (Google Gemini) — procesa el texto de tus publicaciones (título, descripción) para el análisis automático de fraude y la generación de descripciones asistida, y el texto de tus búsquedas para el buscador con IA.</li>
+            <li>OpenRouter — procesa el texto de tus publicaciones (título, descripción) para el análisis automático de fraude y la generación de descripciones asistida, y el texto de tus búsquedas para el buscador con IA.</li>
+            <li>Google (Gemini) — analiza las fotos que subes al publicar, para detectar contenido fraudulento, antes de que la propiedad quede visible.</li>
+            <li>El servicio de notificaciones push de tu navegador (Google, Mozilla u otro, según cuál uses) — recibe un identificador técnico de tu dispositivo para poder entregarte el aviso, solo si activaste las notificaciones push.</li>
           </ul>
         </section>
 
