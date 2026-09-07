@@ -26,10 +26,19 @@ export const MAX_FOTOS = 5;
 // era — elegir "Teléfono" guardaba el mismo número en `tel` Y `whatsapp`
 // (ver construirAgenteContacto más abajo), y AgentCard.tsx muestra un botón
 // "Llamar" por separado siempre que `tel` existe. No había forma de decir
-// "solo mensajes, no me llames" — esta opción guarda el número SOLO como
-// `whatsapp`, así AgentCard nunca renderiza el botón de llamada.
+// "solo mensajes, no me llames".
+//
+// "Teléfono" (llamada real, botón "Llamar") se quitó del todo 2026-09-07 —
+// pedido explícito: nunca fue parte del plan original ("solo WhatsApp o
+// correo o ambos"), se había agregado sin que formara parte de esa
+// decisión. "Ambos" vuelve a significar exactamente eso: WhatsApp +
+// Correo, nunca llamada — `construirAgenteContacto` ya no escribe `tel`
+// para ningún método. Propiedades publicadas ANTES de este cambio que ya
+// tengan `agenteTel` guardado lo conservan hasta que se editen (no se
+// borra retroactivo); al editarlas, `inferirMetodoContacto`
+// (dashboard/propiedades/[id]/editar/page.tsx) las migra a la opción más
+// cercana disponible.
 export const METODO_CONTACTO_OPTIONS = [
-  { value: 'telefono', label: 'Teléfono' },
   { value: 'whatsapp', label: 'Solo WhatsApp' },
   { value: 'correo', label: 'Correo' },
   { value: 'ambos', label: 'Ambos' },
@@ -60,7 +69,7 @@ const baseSchema = z.object({
   // llevan `str()` en vez de un `z.string()` pelón: siguen aceptando
   // `undefined` (son opcionales), pero si por lo que sea llegan como
   // `null` en vez de eso, ya no muestran el mensaje genérico de Zod.
-  metodoContacto:   z.enum(['telefono', 'whatsapp', 'correo', 'ambos'], { error: 'Elige cómo quieres que te contacten' }),
+  metodoContacto:   z.enum(['whatsapp', 'correo', 'ambos'], { error: 'Elige cómo quieres que te contacten' }),
   telefonoContacto: str('Escribe tu número de teléfono').optional(),
   emailContacto:    str('Escribe tu correo electrónico').optional(),
   // Por defecto false: el contacto es instantáneo con sesión iniciada. Ver
@@ -106,16 +115,13 @@ export function construirAgenteContacto(
 ): { nombre: string; tel?: string; whatsapp?: string; email?: string } {
   const necesitaTel = metodoContacto !== 'correo';
   const necesitaEmail = metodoContacto === 'correo' || metodoContacto === 'ambos';
-  // "Solo WhatsApp" guarda el número únicamente en `whatsapp` — nunca en
-  // `tel` — para que AgentCard.tsx (que muestra "Llamar" siempre que `tel`
-  // exista, sin importar el resto) no ofrezca llamar a quien pidió
-  // explícitamente que solo le escriban.
-  const soloWhatsapp = metodoContacto === 'whatsapp';
+  // Nunca escribe `tel` — la opción "Teléfono" (llamada real, botón
+  // "Llamar" en AgentCard.tsx) se quitó del todo 2026-09-07, nunca fue
+  // parte del plan original. Los 3 métodos que quedan (whatsapp/correo/
+  // ambos) solo dan mensaje (WhatsApp) y/o correo, nunca llamada.
   return {
     nombre,
-    ...(necesitaTel && telefono
-      ? soloWhatsapp ? { whatsapp: telefono } : { tel: telefono, whatsapp: telefono }
-      : {}),
+    ...(necesitaTel && telefono ? { whatsapp: telefono } : {}),
     ...(necesitaEmail && email ? { email } : {}),
   };
 }

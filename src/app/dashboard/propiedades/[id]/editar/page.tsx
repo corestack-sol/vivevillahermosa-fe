@@ -54,14 +54,18 @@ const RIESGO_OPTIONS = [
   { value: 'alto', label: 'Alto' },
 ] as const;
 
-/** Infiere qué eligió originalmente a partir de qué campos tiene guardados — no hay un `metodoContacto` persistido aparte. */
+/**
+ * Infiere qué eligió originalmente a partir de qué campos tiene guardados
+ * — no hay un `metodoContacto` persistido aparte. La opción "Teléfono"
+ * (llamada real) se quitó del formulario 2026-09-07 — una propiedad vieja
+ * que ya tenía `tel` guardado (sin correo) migra a "Solo WhatsApp" al
+ * editarla, que es la opción más cercana que sigue existiendo (esas
+ * propiedades ya guardaban el mismo número también en `whatsapp`).
+ */
 function inferirMetodoContacto(agente: Property['agente']): MetodoContacto {
   if (agente.tel && agente.email) return 'ambos';
   if (agente.email) return 'correo';
-  // whatsapp sin tel = "Solo WhatsApp" (agregado 2026-08-21) — con tel
-  // presente ya cae en el 'telefono' de abajo, que sigue guardando ambos.
-  if (agente.whatsapp && !agente.tel) return 'whatsapp';
-  return 'telefono';
+  return 'whatsapp';
 }
 
 export default function EditarPropiedadPage() {
@@ -395,10 +399,12 @@ export default function EditarPropiedadPage() {
           // sí hace falta mandar explícitamente `null` para el campo que ya
           // no aplica — si cambiaste de "Ambos" a "Solo correo", omitir la
           // clave (undefined) no la borraría del lado del servidor.
-          // "Solo WhatsApp" (agregado 2026-08-21) nunca manda agenteTel —
-          // así AgentCard.tsx no ofrece un botón de "Llamar" a quien pidió
-          // explícitamente que solo le escriban.
-          agenteTel: (data.metodoContacto === 'telefono' || data.metodoContacto === 'ambos') ? data.telefonoContacto : null,
+          // agenteTel siempre null — la opción "Teléfono" (llamada real) se
+          // quitó del todo 2026-09-07, ningún método del formulario la
+          // vuelve a escribir. Si esta propiedad ya tenía `agenteTel` de
+          // antes, guardar aquí lo borra (comportamiento correcto: editar
+          // migra a las 3 opciones vigentes, ver inferirMetodoContacto).
+          agenteTel: null,
           agenteEmail: (data.metodoContacto === 'correo' || data.metodoContacto === 'ambos') ? data.emailContacto : null,
           agenteWhatsapp: data.metodoContacto !== 'correo' ? data.telefonoContacto : null,
         }),
@@ -707,7 +713,7 @@ export default function EditarPropiedadPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {watch('metodoContacto') !== 'correo' && (
-            <Input label="Teléfono / WhatsApp" error={errors.telefonoContacto?.message} {...register('telefonoContacto')} />
+            <Input label="WhatsApp" error={errors.telefonoContacto?.message} {...register('telefonoContacto')} />
           )}
           {(watch('metodoContacto') === 'correo' || watch('metodoContacto') === 'ambos') && (
             <Input label="Correo electrónico" error={errors.emailContacto?.message} {...register('emailContacto')} />

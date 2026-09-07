@@ -138,7 +138,7 @@ const ETIQUETAS_CAMPO: Partial<Record<keyof FormData, string>> = {
   descripcion: 'Descripción',
   nombreContacto: 'Tu nombre',
   metodoContacto: 'Método de contacto',
-  telefonoContacto: 'Teléfono',
+  telefonoContacto: 'WhatsApp',
   emailContacto: 'Correo electrónico',
 };
 
@@ -1837,7 +1837,7 @@ export function PublishForm() {
             </div>
 
             {watch('metodoContacto') !== 'correo' && (
-              <Input label="Teléfono / WhatsApp" type="tel" placeholder="993 123 4567" maxLength={12} error={errors.telefonoContacto?.message} {...register('telefonoContacto')} />
+              <Input label="WhatsApp" type="tel" placeholder="993 123 4567" maxLength={12} error={errors.telefonoContacto?.message} {...register('telefonoContacto')} />
             )}
             {/* Informativo, nunca acusatorio — un agente/casero real con
                 varias propiedades activas también da un número aquí. Solo
