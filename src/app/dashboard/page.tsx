@@ -269,16 +269,19 @@ export default function DashboardPage() {
 
       {/* Para profesionales, "Contactos recibidos" ya es real (confirmado
           en vivo 2026-09-02) — solo "Vistas totales" sigue pendiente. Para
-          cuentas normales, "Propiedades vistas/contactadas" es actividad
-          COMO COMPRADOR (una métrica distinta, sin backend todavía) — ese
-          aviso se queda exactamente igual que antes. */}
+          cuentas normales, "Propiedades vistas" pasó a ser real 2026-09-XX
+          (vistasRecientesCount, localStorage — ver el comentario junto a
+          STATS más arriba) — el aviso decía "vistas Y contactos" como si
+          ambos siguieran falsos, ya no es cierto. Corregido 2026-09-07:
+          solo "Propiedades contactadas" (actividad COMO COMPRADOR, value:0
+          hardcodeado, sin backend) sigue sin dato real. */}
       <div className="flex items-start gap-2.5 bg-brand-pale border border-brand/20 rounded-xl px-4 py-3 mb-6">
         <Info size={15} className="text-brand flex-shrink-0 mt-0.5" />
         <p className="text-xs text-brand-dark leading-relaxed">
           {esProfesional ? (
             <><strong>Los contactos recibidos ya son reales</strong> — las vistas totales todavía no, llegan cuando el backend implemente ese conteo.</>
           ) : (
-            <><strong>Vistas y contactos todavía no cuentan actividad real</strong> — cuando exista una tabla de eventos con fecha, estos números reflejarán tu desempeño de verdad.</>
+            <><strong>Propiedades contactadas todavía no cuenta actividad real</strong> — Propiedades vistas sí (tu historial local); contactadas llega cuando exista un registro de a quién le escribiste.</>
           )}
         </p>
       </div>
