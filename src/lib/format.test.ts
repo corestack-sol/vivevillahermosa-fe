@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatPrice, formatPriceShort, formatPropertyCount, formatArea, formatRelativeDate, slugify } from './format';
+import { formatPrice, formatPriceShort, formatPropertyCount, formatArea, formatRelativeDate, formatHora, slugify } from './format';
 
 describe('formatPrice', () => {
   it('formats venta without suffix, no decimals', () => {
@@ -90,6 +90,22 @@ describe('formatRelativeDate', () => {
     const d = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString();
     const result = formatRelativeDate(d);
     expect(result).not.toMatch(/Hace|Hoy|Ayer/);
+  });
+});
+
+describe('formatHora', () => {
+  // No fija zona horaria (el entorno de tests no la pinea) — se verifica
+  // la FORMA del resultado, no un valor de reloj exacto, para no depender
+  // de en qué timezone corre el runner.
+  it('devuelve hora:minuto con 2 dígitos cada uno', () => {
+    const result = formatHora('2026-09-08T14:32:00.000Z');
+    expect(result).toMatch(/^\d{1,2}:\d{2}/);
+  });
+
+  it('horas distintas producen resultados distintos', () => {
+    const a = formatHora('2026-09-08T09:05:00.000Z');
+    const b = formatHora('2026-09-08T21:47:00.000Z');
+    expect(a).not.toBe(b);
   });
 });
 

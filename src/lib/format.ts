@@ -53,6 +53,16 @@ export function formatDate(dateStr: string): string {
   });
 }
 
+/** "14:32" — hora exacta de envío de un mensaje, pedido explícito
+ * 2026-09-08: dentro de un chat, "Hoy" solo (formatRelativeDate) no basta
+ * para saber si un mensaje llegó hace 5 minutos o hace 8 horas. */
+export function formatHora(dateStr: string): string {
+  return new Date(dateStr).toLocaleTimeString('es-MX', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export function formatRelativeDate(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);

@@ -7,7 +7,7 @@ import { ArrowLeft, Send, Building2, MoreVertical, Ban, Flag, ShieldOff } from '
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError, BACKEND_URL } from '@/lib/backendApi';
-import { formatRelativeDate } from '@/lib/format';
+import { formatRelativeDate, formatHora } from '@/lib/format';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import type { MensajeChat, ConversacionResumen } from '@/lib/mensajeria';
@@ -290,7 +290,7 @@ export default function ConversacionPage() {
                   )}
                   <div className={`rounded-2xl px-3.5 py-2 ${esMio ? 'bg-brand text-white rounded-br-sm' : 'bg-gray-100 text-gray-800 rounded-bl-sm'}`}>
                     <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.texto}</p>
-                    <p className={`text-[10px] mt-1 ${esMio ? 'text-white/60' : 'text-gray-400'}`}>{formatRelativeDate(m.createdAt)}</p>
+                    <p className={`text-[10px] mt-1 ${esMio ? 'text-white/60' : 'text-gray-400'}`}>{formatRelativeDate(m.createdAt)} · {formatHora(m.createdAt)}</p>
                   </div>
                 </div>
               </div>
