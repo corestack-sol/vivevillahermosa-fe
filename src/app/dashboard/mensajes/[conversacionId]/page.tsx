@@ -49,6 +49,13 @@ export default function ConversacionPage() {
   // nuevo solo para esto.
   const [propiedad, setPropiedad] = useState<ConversacionResumen['propiedad'] | null>(null);
   const [otraPersona, setOtraPersona] = useState<ConversacionResumen['otraPersona'] | null>(null);
+  // Distingue "esta es tu propiedad" (te escriben a vos) de "tú
+  // contactaste" (le escribiste al dueño) — mismo GET /propiedades/mias
+  // que ya usa OwnerActionsBar.tsx. Pedido explícito 2026-09-08: sin esto,
+  // la mini-ficha se ve idéntica en ambos casos y genera confusión real
+  // (reporte del usuario: "no veo pausar/editar/archivar" en una
+  // propiedad que él mismo había contactado, no publicado).
+  const [esMiPropiedad, setEsMiPropiedad] = useState<boolean | null>(null);
   const toast = useToast();
 
   // Bloquear/reportar — pedido explícito 2026-09-07. Backend nuevo, ver
@@ -83,6 +90,9 @@ export default function ConversacionPage() {
           backendFetch<{ bloqueado: boolean }>(`/usuarios/${conv.otraPersona.id}/bloqueado`)
             .then((d2) => setBloqueado(d2.bloqueado))
             .catch(() => {});
+          backendFetch<{ propiedades: { id: string }[] }>('/propiedades/mias')
+            .then((d2) => setEsMiPropiedad(d2.propiedades.some((p) => p.id === conv.propiedad.id)))
+            .catch(() => setEsMiPropiedad(false));
         }
       })
       .catch(() => {});
@@ -254,7 +264,20 @@ export default function ConversacionPage() {
               <Building2 size={18} className="text-gray-300" />
             )}
           </div>
-          <p className="text-sm font-semibold text-gray-800 truncate min-w-0">{propiedad.titulo}</p>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-gray-800 truncate min-w-0">{propiedad.titulo}</p>
+            {esMiPropiedad !== null && (
+              <span
+                className={`inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border mt-0.5 ${
+                  esMiPropiedad
+                    ? 'bg-brand-pale text-brand-dark border-brand/20'
+                    : 'bg-gray-50 text-gray-500 border-gray-200'
+                }`}
+              >
+                {esMiPropiedad ? 'Tu propiedad' : 'La contactaste tú'}
+              </span>
+            )}
+          </div>
         </Link>
       )}
 
