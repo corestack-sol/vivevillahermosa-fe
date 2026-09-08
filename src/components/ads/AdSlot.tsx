@@ -14,6 +14,12 @@ interface AdSlotProps {
   className?: string;
   /** px — reserva el alto mientras el anuncio real resuelve su tamaño, para no mover el layout debajo (CLS). Ajustar por espacio: banners angostos (sidebar) ~250, horizontales (in-feed/inline) ~120-150. */
   minHeight?: number;
+  /** data-ad-format de AdSense. 'auto' (default) = display estándar responsive. 'fluid' = requerido por los formatos nativos (in-article, in-feed). */
+  adFormat?: 'auto' | 'fluid';
+  /** data-ad-layout — solo lo pide el formato in-article (valor fijo "in-article"). */
+  adLayout?: 'in-article';
+  /** data-ad-layout-key — solo lo pide el formato in-feed, valor exacto que da el panel de AdSense al crear ese bloque (ej. "-fb+5w+4e-db+86"). */
+  adLayoutKey?: string;
 }
 
 /**
@@ -30,7 +36,7 @@ interface AdSlotProps {
  * ya se aplicó al etiquetar "Anuncio" en resultados de búsqueda), y
  * requisito de la propia política de AdSense.
  */
-export function AdSlot({ slot, className = '', minHeight = 120 }: AdSlotProps) {
+export function AdSlot({ slot, className = '', minHeight = 120, adFormat = 'auto', adLayout, adLayoutKey }: AdSlotProps) {
   const insRef = useRef<HTMLModElement>(null);
   const empujado = useRef(false);
   const slotId = ADSENSE_SLOTS[slot];
@@ -73,11 +79,13 @@ export function AdSlot({ slot, className = '', minHeight = 120 }: AdSlotProps) {
       <ins
         ref={insRef}
         className="adsbygoogle"
-        style={{ display: 'block', minHeight }}
+        style={{ display: 'block', textAlign: adLayout === 'in-article' ? 'center' : undefined, minHeight }}
         data-ad-client={ADSENSE_CLIENT_ID}
         data-ad-slot={slotId}
-        data-ad-format="auto"
-        data-full-width-responsive="true"
+        data-ad-format={adFormat}
+        data-ad-layout={adLayout}
+        data-ad-layout-key={adLayoutKey}
+        {...(adFormat === 'auto' ? { 'data-full-width-responsive': 'true' } : {})}
       />
     </div>
   );

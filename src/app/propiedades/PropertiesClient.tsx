@@ -966,7 +966,13 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                         <Fragment key={p.id}>
                           <PropertyCard property={p} landmarkQuery={landmarkQuery} distanciaLabel={distanciaLabel(p)} />
                           {(i + 1) % 9 === 0 && (
-                            <AdSlot slot="propiedadesInFeed" className="col-span-full" minHeight={120} />
+                            <AdSlot
+                              slot="propiedadesInFeed"
+                              className="col-span-full"
+                              minHeight={120}
+                              adFormat="fluid"
+                              adLayoutKey="-fb+5w+4e-db+86"
+                            />
                           )}
                         </Fragment>
                       ))}

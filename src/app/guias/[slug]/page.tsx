@@ -207,7 +207,7 @@ export default async function GuiaPostPage({ params }: Props) {
               antes del CTA: quien llegó hasta acá ya leyó el artículo
               completo, no interrumpe la lectura ni compite con el CTA de
               publicar/buscar propiedades. */}
-          <AdSlot slot="guiaArticulo" className="mb-10" minHeight={140} />
+          <AdSlot slot="guiaArticulo" className="mb-10" minHeight={140} adFormat="fluid" adLayout="in-article" />
 
           {/* CTA */}
           <div className="relative overflow-hidden bg-brand-dark rounded-2xl p-6 sm:p-7 mb-12">
