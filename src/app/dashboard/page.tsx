@@ -155,7 +155,7 @@ export default function DashboardPage() {
         // "—" no afirma nada, solo dice "sin dato" — el aviso de abajo
         // explica por qué.
         { icon: Eye, label: 'Propiedades vistas', value: vistasRecientesCount, href: '/dashboard/recientes', color: 'text-blue-500', bg: 'bg-blue-50' },
-        { icon: TrendingUp, label: 'Propiedades contactadas', value: '—', href: undefined, color: 'text-brand', bg: 'bg-brand-pale' },
+        { icon: TrendingUp, label: 'Tus propiedades contactadas', value: '—', href: undefined, color: 'text-brand', bg: 'bg-brand-pale' },
       ];
 
   async function descargarReporte() {
@@ -287,7 +287,7 @@ export default function DashboardPage() {
           {esProfesional ? (
             <><strong>Los contactos recibidos ya son reales</strong> — las vistas totales todavía no, llegan cuando el backend implemente ese conteo.</>
           ) : (
-            <><strong>Propiedades contactadas todavía no cuenta actividad real</strong> — Propiedades vistas sí (tu historial local); contactadas llega cuando exista un registro de a quién le escribiste.</>
+            <><strong>Tus propiedades contactadas todavía no cuenta actividad real</strong> — Propiedades vistas sí (tu historial local); contactadas llega cuando exista un registro de a quién le escribiste.</>
           )}
         </p>
       </div>
