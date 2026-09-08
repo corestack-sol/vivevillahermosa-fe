@@ -22,6 +22,10 @@ export const ADSENSE_SLOTS = {
   homeInline: process.env.NEXT_PUBLIC_ADSENSE_SLOT_HOME ?? '',
   zonasInline: process.env.NEXT_PUBLIC_ADSENSE_SLOT_ZONAS ?? '',
   propiedadSidebar: process.env.NEXT_PUBLIC_ADSENSE_SLOT_PROPIEDAD_SIDEBAR ?? '',
+  // Gate de /publicar/gracias — pedido explícito 2026-09-08: la 1ra
+  // publicación de cada cuenta no lo muestra, de la 2da en adelante sí
+  // (ver PublishForm.tsx `numeroPublicacion` y AdGatePublicar.tsx).
+  publicarGracias: process.env.NEXT_PUBLIC_ADSENSE_SLOT_GRACIAS ?? '',
 } as const;
 
 export type AdSlotKey = keyof typeof ADSENSE_SLOTS;

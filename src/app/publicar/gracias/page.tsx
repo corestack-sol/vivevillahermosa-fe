@@ -3,9 +3,16 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { CheckCircle, ChevronRight, Home, Smartphone, Bell, Sparkles } from 'lucide-react';
+import { AdGatePublicar } from '@/components/ads/AdGatePublicar';
 
 export default function GraciasPage() {
   const [propId, setPropId] = useState<string | null>(null);
+  // 1ra publicación de la cuenta = null (nunca gatea) — solo se activa el
+  // gate de anuncio cuando SÍ hay un número real y es >= 2 (pedido
+  // explícito 2026-09-08, ver el comentario en PublishForm.tsx). null
+  // también cubre "no sé cuál publicación es esta" (llegó directo a esta
+  // URL, sessionStorage vacío) — nunca gatea de más por datos faltantes.
+  const [numeroPublicacion, setNumeroPublicacion] = useState<number | null>(null);
 
   useEffect(() => {
     function leerPropiedadPublicada() {
@@ -14,11 +21,14 @@ export default function GraciasPage() {
         if (saved) {
           const parsed = JSON.parse(saved);
           setPropId(typeof parsed?.id === 'string' ? parsed.id : null);
+          setNumeroPublicacion(typeof parsed?.numeroPublicacion === 'number' ? parsed.numeroPublicacion : null);
         }
       } catch {}
     }
     leerPropiedadPublicada();
   }, []);
+
+  const requiereAnuncio = numeroPublicacion !== null && numeroPublicacion >= 2;
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4 py-16">
@@ -60,20 +70,22 @@ export default function GraciasPage() {
           </ul>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Link
-            href="/dashboard/propiedades"
-            className="flex-1 flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark text-white font-semibold py-3 rounded-xl transition-colors"
-          >
-            <Home size={18} /> Gestionar mi propiedad
-          </Link>
-          <Link
-            href="/propiedades"
-            className="flex-1 flex items-center justify-center gap-2 border-2 border-brand text-brand font-semibold py-3 rounded-xl hover:bg-brand-pale transition-colors"
-          >
-            Ver propiedades <ChevronRight size={18} />
-          </Link>
-        </div>
+        <AdGatePublicar activo={requiereAnuncio}>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link
+              href="/dashboard/propiedades"
+              className="flex-1 flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark text-white font-semibold py-3 rounded-xl transition-colors"
+            >
+              <Home size={18} /> Gestionar mi propiedad
+            </Link>
+            <Link
+              href="/propiedades"
+              className="flex-1 flex items-center justify-center gap-2 border-2 border-brand text-brand font-semibold py-3 rounded-xl hover:bg-brand-pale transition-colors"
+            >
+              Ver propiedades <ChevronRight size={18} />
+            </Link>
+          </div>
+        </AdGatePublicar>
       </div>
     </div>
   );
