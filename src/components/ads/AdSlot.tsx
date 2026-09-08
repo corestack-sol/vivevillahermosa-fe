@@ -35,6 +35,15 @@ interface AdSlotProps {
  * no lo confunda con contenido propio de la plataforma, mismo criterio que
  * ya se aplicó al etiquetar "Anuncio" en resultados de búsqueda), y
  * requisito de la propia política de AdSense.
+ *
+ * La clase "ad-slot" en el wrapper del bloque real la usa globals.css para
+ * colapsar TODO el bloque (etiqueta + <ins>) cuando Google no tiene
+ * inventario que mostrar (data-ad-status="unfilled") — sin eso, mientras el
+ * sitio no esté aprobado (o cualquier vez que no haya relleno) queda
+ * reservado el espacio completo del formato (hasta ~485px en in-article)
+ * totalmente en blanco, sin borde ni fondo — se ve como la página rota, no
+ * como un anuncio. Confirmado en auditoría en vivo 2026-09-08 en los 5
+ * espacios (mobile real, 390px). Recomendación oficial de Google.
  */
 export function AdSlot({ slot, className = '', minHeight = 120, adFormat = 'auto', adLayout, adLayoutKey }: AdSlotProps) {
   const insRef = useRef<HTMLModElement>(null);
@@ -74,8 +83,8 @@ export function AdSlot({ slot, className = '', minHeight = 120, adFormat = 'auto
   }
 
   return (
-    <div className={className}>
-      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5 text-center">Publicidad</p>
+    <div className={`ad-slot ${className}`}>
+      <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5 text-center">Publicidad</p>
       <ins
         ref={insRef}
         className="adsbygoogle"

@@ -329,3 +329,13 @@
   }
 }
 
+/* AdSlot.tsx (Google AdSense) — Google reserva el espacio completo del
+   formato (hasta ~485px en in-article) aunque no tenga inventario para
+   llenarlo (data-ad-status="unfilled"), sin borde ni fondo — se ve como la
+   página rota, no como un anuncio. Colapsar todo el bloque (etiqueta +
+   <ins>) en ese caso es la práctica recomendada por Google. Hallazgo de
+   auditoría en vivo 2026-09-08 (mobile real, los 5 espacios). */
+.ad-slot:has(> ins.adsbygoogle[data-ad-status="unfilled"]) {
+  display: none;
+}
+
