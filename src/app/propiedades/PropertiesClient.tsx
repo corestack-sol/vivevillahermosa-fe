@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, Fragment } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
@@ -26,6 +26,7 @@ import { ExploreZonasCta } from '@/components/search/ExploreZonasCta';
 import { BUSQUEDA_SIN_INTERPRETAR_KEY } from '@/components/search/SearchBar';
 import { useToast } from '@/context/ToastContext';
 import { PROPERTY_GRID_CLASSES } from '@/lib/gridClasses';
+import { AdSlot } from '@/components/ads/AdSlot';
 import posthog from 'posthog-js';
 
 const PER_PAGE = 12;
@@ -956,8 +957,18 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                       </div>
                     )}
                     <div className={PROPERTY_GRID_CLASSES}>
-                      {restoResultados.map((p) => (
-                        <PropertyCard key={p.id} property={p} landmarkQuery={landmarkQuery} distanciaLabel={distanciaLabel(p)} />
+                      {/* Anuncio in-feed cada 9 tarjetas — pedido explícito
+                          2026-09-08. col-span-full para que ocupe su
+                          propia fila completa (la grilla es auto-fill, sin
+                          columnas fijas, así que "una celda más" se vería
+                          roto entre 2-5 columnas según el ancho). */}
+                      {restoResultados.map((p, i) => (
+                        <Fragment key={p.id}>
+                          <PropertyCard property={p} landmarkQuery={landmarkQuery} distanciaLabel={distanciaLabel(p)} />
+                          {(i + 1) % 9 === 0 && (
+                            <AdSlot slot="propiedadesInFeed" className="col-span-full" minHeight={120} />
+                          )}
+                        </Fragment>
                       ))}
                     </div>
 

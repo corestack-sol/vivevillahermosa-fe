@@ -24,6 +24,30 @@ const posthogAssetsHost = posthogHost.replace(
   'https://$1-assets.i.posthog.com',
 );
 
+// Google AdSense — pedido explícito 2026-09-08, ver src/lib/ads.ts y
+// src/components/ads/AdSlot.tsx para el resto de la implementación. Vacío
+// (ads.txt/script/CSP no se tocan) mientras no exista un client ID real —
+// mismo criterio que backendOrigin/posthogHost arriba: no aflojar el CSP
+// por una integración que todavía no está activa. Lista de dominios
+// verificada EN VIVO contra el script real de AdSense (2026-09-08, consola
+// del navegador con el client ID real puesto) — mismo patrón de bug ya
+// encontrado varias veces en este proyecto con PostHog/backend/
+// OpenFreeMap: CSP bloquea en silencio, sin romper el build.
+// ep1/ep2.adtrafficquality.google (verificación anti-fraude de Google,
+// "sodar2.js") tenía que ir en script-src Y en frame-src, no solo en
+// connect-src — confirmado real: sin esto, el script y el iframe que abre
+// se bloqueaban con errores visibles en consola.
+const adsenseEnabled = !!process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
+const adsenseScriptSrc = adsenseEnabled
+  ? ' https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://adservice.google.com https://www.googletagservices.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google'
+  : '';
+const adsenseConnectSrc = adsenseEnabled
+  ? ' https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://adservice.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google'
+  : '';
+const adsenseFrameSrc = adsenseEnabled
+  ? ' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com https://ep1.adtrafficquality.google https://ep2.adtrafficquality.google'
+  : '';
+
 // Cabeceras de seguridad ausentes antes de esta auditoría (hallazgo H2):
 // sin ellas, el login y el formulario de publicar podían embeberse en un
 // iframe ajeno (clickjacking) y no había ninguna capa de contención ante
@@ -42,7 +66,7 @@ const securityHeaders = [
       // script-src, ese <script> se bloquea (distinto al bloqueo de
       // connect-src de arriba, mismo origen del problema: falta el host
       // de PostHog en CSP). Detectado en el mismo QA manual, 2026-08-18.
-      `script-src 'self' 'unsafe-inline' ${posthogAssetsHost}`.trim(),
+      `script-src 'self' 'unsafe-inline' ${posthogAssetsHost}${adsenseScriptSrc}`.trim(),
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
@@ -60,7 +84,7 @@ const securityHeaders = [
       // arriba: sin esto, el mapa entero se queda en blanco (confirmado en
       // vivo — la consola sí marca la violación de CSP, pero no hay ningún
       // error visible en la UI).
-      `connect-src 'self' data: ${backendOrigin} ${posthogHost} ${posthogAssetsHost} https://accounts.google.com https://graph.facebook.com https://tiles.openfreemap.org`.trim(),
+      `connect-src 'self' data: ${backendOrigin} ${posthogHost} ${posthogAssetsHost} https://accounts.google.com https://graph.facebook.com https://tiles.openfreemap.org${adsenseConnectSrc}`.trim(),
       // MapLibre GL parsea los tiles vectoriales en un Web Worker propio,
       // instanciado desde un blob: URL (su código va empacado en el bundle,
       // no se descarga aparte) — sin worker-src explícito, el navegador cae
@@ -68,6 +92,10 @@ const securityHeaders = [
       // worker nunca arranca (el mapa se queda sin renderizar tiles, sin
       // ningún error obvio salvo la consola).
       "worker-src 'self' blob:",
+      // Sin frame-src, cae al fallback de default-src 'self' — los
+      // anuncios de AdSense se renderizan dentro de iframes de Google,
+      // bloqueados en silencio sin este directive explícito.
+      `frame-src 'self'${adsenseFrameSrc}`.trim(),
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

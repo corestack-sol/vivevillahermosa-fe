@@ -9,6 +9,7 @@ import { SearchBar } from '@/components/search/SearchBar';
 import { ClickableMap } from '@/components/map/ClickableMap';
 import { getFeaturedProperties, getAllProperties, getColoniasOrdenadasPorDemanda, getStats } from '@/lib/api';
 import { ZONA_GRADIENTS } from '@/lib/zonaGradients';
+import { AdSlot } from '@/components/ads/AdSlot';
 import { formatPropertyCount } from '@/lib/format';
 import { buttonClasses } from '@/components/ui/Button';
 import { PublicarCTA } from '@/components/forms/PublicarCTA';
@@ -320,6 +321,13 @@ export default async function HomePage() {
           </Carousel>
         </section>
       )}
+
+      {/* Anuncio — pedido explícito 2026-09-08. Debajo del fold, después de
+          que la persona ya usó el buscador/vio destacadas — nunca arriba
+          compitiendo con el hero. */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <AdSlot slot="homeInline" minHeight={120} />
+      </div>
 
       {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ VISTOS RECIENTEMENTE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <RecentlyViewedSection />

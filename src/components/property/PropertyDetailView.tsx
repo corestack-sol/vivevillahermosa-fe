@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { FavoriteButton } from '@/components/property/FavoriteButton';
 import { ReportButton } from '@/components/property/ReportButton';
+import { AdSlot } from '@/components/ads/AdSlot';
 import { RecentlyViewedTracker } from '@/components/property/RecentlyViewedTracker';
 import { VistaTracker } from '@/components/property/VistaTracker';
 import { OwnerActionsBar } from '@/components/property/OwnerActionsBar';
@@ -399,6 +400,12 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
               <div className="text-center">
                 <ReportButton propiedadId={property.id} />
               </div>
+
+              {/* Anuncio — pedido explícito 2026-09-08. Debajo de todas las
+                  acciones reales (contactar/compartir/reportar), nunca
+                  entre ellas — no debe competir con la decisión de
+                  contactar al dueño. */}
+              <AdSlot slot="propiedadSidebar" minHeight={250} />
 
             </div>
           </div>

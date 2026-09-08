@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
+import Script from 'next/script';
 import { Inter } from 'next/font/google';
 import '@/styles/globals.css';
 import { Navbar, NavbarFallback } from '@/components/layout/Navbar';
@@ -10,6 +11,7 @@ import { ToastProvider } from '@/context/ToastContext';
 import { CompareProvider } from '@/context/CompareContext';
 import { FavoritesProvider } from '@/context/FavoritesContext';
 import { CompareBar } from '@/components/property/CompareBar';
+import { ADSENSE_CLIENT_ID, ADSENSE_ENABLED } from '@/lib/ads';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -30,6 +32,24 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={inter.variable}>
+      <head>
+        {/* Google AdSense — pedido explícito 2026-09-08. Un solo <script>
+            global (nunca uno por AdSlot.tsx, cargarlo N veces por página
+            rompe el conteo de anuncios de Google), condicionado a que
+            existan credenciales reales — mientras NEXT_PUBLIC_ADSENSE_
+            CLIENT_ID esté vacío, no se pide nada a Google ni se planta su
+            cookie de terceros. `afterInteractive` es la estrategia que la
+            propia documentación de AdSense recomienda (no bloquea el
+            render inicial). */}
+        {ADSENSE_ENABLED && (
+          <Script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT_ID}`}
+            crossOrigin="anonymous"
+            strategy="afterInteractive"
+          />
+        )}
+      </head>
       <body className="min-h-screen flex flex-col bg-page">
         <a
           href="#main-content"

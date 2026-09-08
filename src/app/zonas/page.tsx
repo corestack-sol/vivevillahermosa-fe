@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { getMunicipalitiesWithLiveStats, getColoniasOrdenadasPorDemanda } from '@/lib/api';
 import { ZONA_GRADIENTS } from '@/lib/zonaGradients';
+import { AdSlot } from '@/components/ads/AdSlot';
 import { formatPrice } from '@/lib/format';
 import { ExploreZonasCta } from '@/components/search/ExploreZonasCta';
 import { ColoniaChipsList } from '@/components/zonas/ColoniaChipsList';
@@ -256,6 +257,13 @@ export default async function ZonasPage() {
 
         {coloniasChips.length > 0 && <ColoniaChipsList chips={coloniasChips} municipioSlugs={municipioSlugPorNombre} />}
       </section>
+
+      {/* Anuncio — pedido explícito 2026-09-08. Quiebre natural entre las
+          colonias y los 17 municipios, ninguno de los dos bloques queda
+          interrumpido a medias. */}
+      <div className="mb-10">
+        <AdSlot slot="zonasInline" minHeight={120} />
+      </div>
 
       {/* ── Municipios — grid más denso (17 items), tarjetas claras y compactas ── */}
       <section>
