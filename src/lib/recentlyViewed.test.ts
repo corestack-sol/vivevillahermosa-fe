@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getRecentlyViewedIds, addRecentlyViewed } from './recentlyViewed';
+import { getRecentlyViewedIds, addRecentlyViewed, getViewedCount } from './recentlyViewed';
 
 describe('recentlyViewed', () => {
   beforeEach(() => {
@@ -36,5 +36,24 @@ describe('recentlyViewed', () => {
   it('ignores an empty propertyId', () => {
     addRecentlyViewed('');
     expect(getRecentlyViewedIds()).toEqual([]);
+  });
+
+  describe('getViewedCount', () => {
+    it('starts at 0', () => {
+      expect(getViewedCount()).toBe(0);
+    });
+
+    it('keeps growing past the 8-entry cap of the recent list', () => {
+      for (let i = 1; i <= 10; i++) addRecentlyViewed(`prop-${i}`);
+      expect(getRecentlyViewedIds()).toHaveLength(8);
+      expect(getViewedCount()).toBe(10);
+    });
+
+    it('does not double-count a re-viewed property', () => {
+      addRecentlyViewed('prop-1');
+      addRecentlyViewed('prop-2');
+      addRecentlyViewed('prop-1');
+      expect(getViewedCount()).toBe(2);
+    });
   });
 });

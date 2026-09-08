@@ -18,7 +18,7 @@ import { evaluarCartera } from '@/lib/coach';
 import { CoachModal } from '@/components/dashboard/CoachModal';
 import { useLimitePropiedades, MENSAJE_LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
 import { useToast } from '@/context/ToastContext';
-import { getRecentlyViewedIds } from '@/lib/recentlyViewed';
+import { getViewedCount } from '@/lib/recentlyViewed';
 
 // "buscador" se queda mapeado a la nueva etiqueta — el backend todavía no
 // migró el valor default (rename acordado 2026-08-20: buscador -> particular),
@@ -63,7 +63,7 @@ export default function DashboardPage() {
   // datos que solo existen en el navegador).
   const [vistasRecientesCount, setVistasRecientesCount] = useState(0);
   useEffect(() => {
-    function leerVistasRecientes() { setVistasRecientesCount(getRecentlyViewedIds().length); }
+    function leerVistasRecientes() { setVistasRecientesCount(getViewedCount()); }
     leerVistasRecientes();
   }, []);
 
