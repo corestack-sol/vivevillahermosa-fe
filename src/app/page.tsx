@@ -333,10 +333,10 @@ export default async function HomePage() {
                 <Shield size={12} /> Solo en Vive Villahermosa
               </div>
               <h2 className="text-3xl md:text-4xl font-display font-black text-gray-900 leading-tight mb-4">
-                ¿La casa se inunda<br />en temporada de lluvias?
+                ¿La zona se ha inundado<br />en temporada de lluvias?
               </h2>
               <p className="text-gray-500 leading-relaxed mb-6 max-w-md">
-                La información completa beneficia a todos: quien busca llega con certeza, quien publica atrae al comprador indicado. Por eso el nivel de riesgo hídrico va incluido en cada propiedad.
+                La información completa beneficia a todos: quien busca llega con certeza, quien publica atrae al comprador indicado. Por eso el historial de inundación va incluido en cada propiedad.
               </p>
               <div className="space-y-3 mb-7">
                 {[

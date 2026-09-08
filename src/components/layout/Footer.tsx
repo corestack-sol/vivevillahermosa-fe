@@ -107,7 +107,7 @@ function FooterFull() {
               </span>
               <p className="text-xs text-white/70 leading-relaxed">
                 <strong className="block text-white text-sm mb-0.5">¿Sabías?</strong>
-                En Tabasco las lluvias importan. Por eso cada propiedad muestra si su zona se inunda. Solo en Vive Villahermosa.
+                En Tabasco las lluvias importan. Por eso cada propiedad muestra el historial de inundación de su zona. Solo en Vive Villahermosa.
               </p>
             </div>
           </div>

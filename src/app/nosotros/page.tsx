@@ -58,7 +58,7 @@ export default async function NosotrosPage() {
       {/* Mission Statement */}
       <div className="bg-gradient-to-br from-brand-dark to-brand rounded-3xl p-8 md:p-12 text-white text-center mb-16">
         <p className="text-2xl md:text-3xl font-heading font-bold max-w-2xl mx-auto leading-snug">
-          &ldquo;Cada familia merece saber si su futura casa se inunda, antes de mudarse.&rdquo;
+          &ldquo;Cada familia merece conocer el historial de inundación de su próxima casa, antes de mudarse.&rdquo;
         </p>
         <p className="text-white/60 mt-4 text-sm">— Por qué existe Vive Villahermosa</p>
       </div>
