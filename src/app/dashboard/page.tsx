@@ -148,8 +148,14 @@ export default function DashboardPage() {
         // contactadas" se queda SIN href (no clicable) — a diferencia de
         // vistas, no hay ningún dato real detrás todavía (ni siquiera
         // local), así que no hay a dónde mandar sin inventar un destino.
+        // `value: 0` (hasta 2026-09-08) leía como una afirmación real —
+        // "contactaste 0 propiedades" — aunque la persona SÍ hubiera
+        // contactado varias; confundía más que aclaraba. Reporte real de
+        // usuarios: "por qué siempre dice 0 y no es clicable, parece bug".
+        // "—" no afirma nada, solo dice "sin dato" — el aviso de abajo
+        // explica por qué.
         { icon: Eye, label: 'Propiedades vistas', value: vistasRecientesCount, href: '/dashboard/recientes', color: 'text-blue-500', bg: 'bg-blue-50' },
-        { icon: TrendingUp, label: 'Propiedades contactadas', value: 0, href: undefined, color: 'text-brand', bg: 'bg-brand-pale' },
+        { icon: TrendingUp, label: 'Propiedades contactadas', value: '—', href: undefined, color: 'text-brand', bg: 'bg-brand-pale' },
       ];
 
   async function descargarReporte() {
@@ -273,8 +279,8 @@ export default function DashboardPage() {
           (vistasRecientesCount, localStorage — ver el comentario junto a
           STATS más arriba) — el aviso decía "vistas Y contactos" como si
           ambos siguieran falsos, ya no es cierto. Corregido 2026-09-07:
-          solo "Propiedades contactadas" (actividad COMO COMPRADOR, value:0
-          hardcodeado, sin backend) sigue sin dato real. */}
+          solo "Propiedades contactadas" (actividad COMO COMPRADOR, value:'—'
+          sin backend detrás) sigue sin dato real. */}
       <div className="flex items-start gap-2.5 bg-brand-pale border border-brand/20 rounded-xl px-4 py-3 mb-6">
         <Info size={15} className="text-brand flex-shrink-0 mt-0.5" />
         <p className="text-xs text-brand-dark leading-relaxed">
