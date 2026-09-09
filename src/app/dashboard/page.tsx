@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Heart, Bell, Plus, Eye, LayoutDashboard, Lightbulb, MessageCircle, Building2, Download, Loader2, Info, Sparkles, AlertTriangle } from 'lucide-react';
+import { Heart, Bell, Plus, Eye, LayoutDashboard, Lightbulb, MessageCircle, Building2, Download, Loader2, Info, Sparkles, AlertTriangle, UserCog } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { backendFetch } from '@/lib/backendApi';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -182,6 +182,12 @@ export default function DashboardPage() {
             Hola, <strong className="text-gray-700">{user.nombre.split(' ')[0]}</strong> ·{' '}
             <span className="text-brand">{ROL_LABEL[user.rol]}</span>
           </p>
+          {/* Pedido explícito 2026-09-09: se saca del menú del Navbar y se
+              mueve acá — mismo destino (/dashboard/cuenta), solo cambia
+              dónde se accede. */}
+          <Link href="/dashboard/cuenta" className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-brand transition-colors mt-1">
+            <UserCog size={12} /> Mis datos
+          </Link>
         </div>
         {limitePropiedades ? (
           <button

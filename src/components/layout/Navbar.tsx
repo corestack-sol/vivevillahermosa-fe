@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Menu, X, Plus, User, Heart, Bell, LayoutDashboard, LogOut, ChevronDown, ChevronLeft, Building2, Settings,
-  CalendarDays, Users, TrendingUp, UserPlus, ShieldCheck, Home, Trash2, Sparkles, MessageCircle, Download, UserCog, type LucideIcon,
+  CalendarDays, Users, TrendingUp, UserPlus, ShieldCheck, Home, Trash2, Sparkles, MessageCircle, Download, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -58,13 +58,6 @@ const HERRAMIENTAS_ITEMS: MenuItem[] = [
 ];
 
 const PERFIL_ITEMS_BASE: MenuItem[] = [
-  // Rectificar nombre/correo (derecho ARCO, ver /privacidad) — pedido
-  // explícito 2026-09-09. Aplica a CUALQUIER cuenta (a diferencia de
-  // "Perfil de la inmobiliaria", que es solo branding de agencia) — por
-  // eso vive acá, no condicionado a esProfesional. Backend todavía no
-  // tiene el endpoint (docs/BACKEND-RECTIFICAR-DATOS-09092026.md) — la
-  // pantalla ya está lista, conectar en cuanto exista.
-  { href: '/dashboard/cuenta', icon: UserCog, label: 'Mis datos' },
   // Mensajería bidireccional — ver docs/superpowers/specs/2026-09-02-
   // mensajeria-bidireccional-design.md. Aplica a ambos roles (una cuenta
   // puede ser interesada en unas propiedades y dueña de otras a la vez),
