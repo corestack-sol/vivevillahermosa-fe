@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Send, Building2, MoreVertical, Ban, Flag, ShieldOff } from 'lucide-react';
+import { ArrowLeft, Send, Building2, MoreVertical, Ban, Flag, ShieldOff, MessageCircleHeart, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError, BACKEND_URL } from '@/lib/backendApi';
 import { formatRelativeDate, formatHora } from '@/lib/format';
+import { whatsappUrl } from '@/lib/phone';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import type { MensajeChat, ConversacionResumen } from '@/lib/mensajeria';
@@ -56,6 +57,18 @@ export default function ConversacionPage() {
   // (reporte del usuario: "no veo pausar/editar/archivar" en una
   // propiedad que él mismo había contactado, no publicado).
   const [esMiPropiedad, setEsMiPropiedad] = useState<boolean | null>(null);
+  // Compartir WhatsApp desde el chat — pedido explícito 2026-09-08: cuando
+  // el dueño activó "prefiero que me escriban antes" al publicar
+  // (requiereMensajePrimero, ver PublishForm.tsx), su WhatsApp nunca se
+  // revela en la ficha pública (AgentCard.tsx) — la única forma de que el
+  // interesado lo consiga es que el propio dueño decida compartirlo, ya
+  // dentro de esta conversación. Reusa dos endpoints ya reales: GET
+  // /propiedades/:id/contacto (mismo que usa AgentCard, confirmado en vivo
+  // 2026-09-08 que también funciona para el dueño de la propiedad) para
+  // conseguir el número real, y POST /conversaciones/:id/mensajes (el
+  // mismo que ya usa enviar() abajo) para mandarlo como un mensaje más —
+  // cero backend nuevo.
+  const [compartiendoWhatsapp, setCompartiendoWhatsapp] = useState(false);
   const toast = useToast();
 
   // Bloquear/reportar — pedido explícito 2026-09-07. Backend nuevo, ver
@@ -183,6 +196,32 @@ export default function ConversacionPage() {
     }
   }
 
+  async function compartirWhatsapp() {
+    if (!propiedad || compartiendoWhatsapp) return;
+    setCompartiendoWhatsapp(true);
+    try {
+      const contacto = await backendFetch<{ whatsapp: string | null }>(`/propiedades/${propiedad.id}/contacto`);
+      if (!contacto.whatsapp) {
+        toast.error('No hay un WhatsApp configurado en esta propiedad.');
+        return;
+      }
+      const link = whatsappUrl(contacto.whatsapp, `Hola, te escribo por tu interés en ${propiedad.titulo}`);
+      const { mensaje } = await backendFetch<{ mensaje: MensajeChat }>(`/conversaciones/${conversacionId}/mensajes`, {
+        method: 'POST',
+        body: JSON.stringify({ texto: `Aquí puedes escribirme directo por WhatsApp: ${link}` }),
+      });
+      if (!idsVistosRef.current.has(mensaje.id)) {
+        idsVistosRef.current.add(mensaje.id);
+        setMensajes((prev) => [...prev, mensaje]);
+      }
+      toast.success('Compartiste tu WhatsApp en la conversación.');
+    } catch {
+      toast.error('No se pudo compartir el WhatsApp.');
+    } finally {
+      setCompartiendoWhatsapp(false);
+    }
+  }
+
   if (authLoading || !user || loading) {
     return (
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -252,33 +291,53 @@ export default function ConversacionPage() {
           la ficha pública; el resto de la pantalla (leer/responder) se
           queda aquí mismo. */}
       {propiedad && (
-        <Link
-          href={`/propiedades/${propiedad.slug}`}
-          className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-4 py-3 mb-4 flex-shrink-0 hover:border-brand/30 hover:shadow-sm transition-all"
-        >
-          <div className="relative w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center">
-            {propiedad.foto ? (
-              // eslint-disable-next-line @next/next/no-img-element -- mismo patrón que dashboard/mensajes/page.tsx
-              <img src={propiedad.foto} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <Building2 size={18} className="text-gray-300" />
-            )}
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-gray-800 truncate min-w-0">{propiedad.titulo}</p>
-            {esMiPropiedad !== null && (
-              <span
-                className={`inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border mt-0.5 ${
-                  esMiPropiedad
-                    ? 'bg-brand-pale text-brand-dark border-brand/20'
-                    : 'bg-gray-50 text-gray-500 border-gray-200'
-                }`}
-              >
-                {esMiPropiedad ? 'Tu propiedad' : 'La contactaste tú'}
-              </span>
-            )}
-          </div>
-        </Link>
+        <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-4 py-3 mb-4 flex-shrink-0">
+          {/* Link separado del botón de abajo — un <button> anidado dentro
+              de un <a> es HTML inválido y el click de "Compartir WhatsApp"
+              hubiera disparado también la navegación. */}
+          <Link
+            href={`/propiedades/${propiedad.slug}`}
+            className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+          >
+            <div className="relative w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center">
+              {propiedad.foto ? (
+                // eslint-disable-next-line @next/next/no-img-element -- mismo patrón que dashboard/mensajes/page.tsx
+                <img src={propiedad.foto} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <Building2 size={18} className="text-gray-300" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-800 truncate min-w-0">{propiedad.titulo}</p>
+              {esMiPropiedad !== null && (
+                <span
+                  className={`inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border mt-0.5 ${
+                    esMiPropiedad
+                      ? 'bg-brand-pale text-brand-dark border-brand/20'
+                      : 'bg-gray-50 text-gray-500 border-gray-200'
+                  }`}
+                >
+                  {esMiPropiedad ? 'Tu propiedad' : 'La contactaste tú'}
+                </span>
+              )}
+            </div>
+          </Link>
+          {/* Compartir WhatsApp — pedido explícito 2026-09-08: la única
+              forma de que el interesado consiga el WhatsApp de una
+              propiedad con "prefiero que me escriban primero" es que el
+              dueño lo comparta acá, ya dentro de la conversación. */}
+          {esMiPropiedad && (
+            <button
+              type="button"
+              onClick={compartirWhatsapp}
+              disabled={compartiendoWhatsapp}
+              className="flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 px-3 py-2 rounded-xl transition-colors disabled:opacity-60"
+            >
+              {compartiendoWhatsapp ? <Loader2 size={14} className="animate-spin" /> : <MessageCircleHeart size={14} />}
+              <span className="hidden sm:inline">Compartir WhatsApp</span>
+            </button>
+          )}
+        </div>
       )}
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
