@@ -33,7 +33,7 @@ import { Carousel } from '@/components/ui/Carousel';
 export const metadata: Metadata = {
   title: 'Vive Villahermosa | Casas en renta y venta en Villahermosa y Tabasco',
   description:
-    'Casas, departamentos, terrenos y locales en Villahermosa, Paraíso, Cárdenas y todo Tabasco. Sin intermediarios, sin comisiones. Publica gratis.',
+    'Casas, departamentos, terrenos y locales en Villahermosa, Paraíso, Cárdenas y todo Tabasco. Contacto directo, sin comisiones. Publica gratis.',
 };
 
 const QUICK_LINKS: { href: string; label: string; Icon?: typeof Zap }[] = [
@@ -189,14 +189,14 @@ export default async function HomePage() {
               plano en un titular grande, este es más saturado a propósito. */}
           <h1 className="font-display font-black leading-[0.92] mb-6 animate-fade-up"
             style={{ fontSize: 'clamp(2.8rem, 8vw, 5.5rem)', letterSpacing: '-0.03em', color: 'var(--color-brand-headline, #0A4F48)', animationDelay: '90ms' }}>
-            Sin agente.<br />
+            Contacto directo.<br />
             <span className="text-coral">Sin comisión.</span><br />
             Encuentra hoy.
           </h1>
 
           <p className="text-gray-600 text-base md:text-lg mb-8 max-w-lg leading-relaxed animate-fade-up" style={{ animationDelay: '180ms' }}>
             Más de {formatPropertyCount(stats.propiedadesActivas).replace(/\+$/, '')} propiedades disponibles. Hablas directo con el dueño.
-            Sin formularios, sin esperas, sin intermediarios.
+            Sin formularios, sin esperas.
           </p>
 
           {/* Search */}
@@ -489,7 +489,7 @@ export default async function HomePage() {
                   Tu propiedad activa<br />en 5 minutos.
                 </h2>
                 <p className="text-white/50 text-sm leading-relaxed max-w-sm mb-6">
-                  Sin trámites. Sin intermediarios. Tú eliges si el interesado te escribe por WhatsApp, correo, o ambos.
+                  Sin trámites, sin costo. Tú eliges si el interesado te escribe por WhatsApp, correo, o ambos.
                 </p>
                 <PublicarCTA
                   className={buttonClasses('primary', 'xl', 'group shadow-lg')}
