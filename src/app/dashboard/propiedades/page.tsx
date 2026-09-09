@@ -373,6 +373,17 @@ export default function MisPropiedadesPage() {
                       <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${estadoCfg.cls}`}>
                         {estadoCfg.label}
                       </span>
+                      {/* Contacto real por propiedad (docs/BACKEND-VISTAS-CONTACTOS-02092026.md)
+                          — pedido explícito 2026-09-08: reemplaza a la tarjeta
+                          global "Tus propiedades contactadas" que se quitó del
+                          dashboard (no dejaba claro DE QUÉ propiedad hablaba).
+                          Mismo peso visual que un badge de estado (antes era
+                          texto gris chico, se perdía entre el resto) — pedido
+                          explícito: "que se distinga bien", y al lado del
+                          badge de estado (pedido explícito 2026-09-08). */}
+                      <span className="flex items-center gap-1 flex-shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200">
+                        <MessageCircle size={10} /> {contactos} {contactos === 1 ? 'contacto' : 'contactos'}
+                      </span>
                       {p.featured && (
                         <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
                           <Star size={9} className="fill-current" /> Destacada
@@ -383,19 +394,7 @@ export default function MisPropiedadesPage() {
                     <Link href={`/propiedades/${p.slug}`} className="font-semibold text-gray-900 text-sm truncate block hover:text-brand transition-colors">
                       {p.titulo}
                     </Link>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <p className="text-xs text-gray-400 truncate min-w-0">{p.colonia}, {p.municipio === 'Centro' ? 'Villahermosa' : p.municipio}</p>
-                      {/* Contacto real por propiedad (docs/BACKEND-VISTAS-CONTACTOS-02092026.md)
-                          — pedido explícito 2026-09-08: reemplaza a la tarjeta
-                          global "Tus propiedades contactadas" que se quitó del
-                          dashboard (no dejaba claro DE QUÉ propiedad hablaba).
-                          Mismo peso visual que un badge de estado (antes era
-                          texto gris chico, se perdía entre el resto) — pedido
-                          explícito: "que se distinga bien". */}
-                      <span className="flex items-center gap-1 flex-shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200">
-                        <MessageCircle size={10} /> {contactos} {contactos === 1 ? 'contacto' : 'contactos'}
-                      </span>
-                    </div>
+                    <p className="text-xs text-gray-400 truncate mt-0.5">{p.colonia}, {p.municipio === 'Centro' ? 'Villahermosa' : p.municipio}</p>
                   </div>
                 </div>
 
