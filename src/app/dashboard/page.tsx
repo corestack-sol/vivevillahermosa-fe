@@ -3,17 +3,18 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Heart, Bell, Plus, Eye, LayoutDashboard, Lightbulb, MessageCircle, Building2, Download, Loader2, Info, Sparkles, AlertTriangle, UserCog } from 'lucide-react';
+import { Heart, Bell, Plus, Eye, LayoutDashboard, Lightbulb, MessageCircle, Building2, Download, Loader2, Info, Sparkles, AlertTriangle, UserCog, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { backendFetch } from '@/lib/backendApi';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { mapMiaBackend, type MiPropiedad } from '@/lib/misPropiedades';
+import { mapMiaBackend, ESTADO_CFG, type MiPropiedad } from '@/lib/misPropiedades';
 import type { BackendPublicProperty } from '@/lib/api';
+import { getPropertyTypeConfig } from '@/lib/propertyTypeConfig';
 import { generarReporteDesempeno } from '@/lib/reportePdf';
 import { obtenerResumenReporte } from '@/lib/aiClient';
 import { usePerfilInmobiliaria } from '@/hooks/usePerfilInmobiliaria';
 import { useNotificaciones, notificacionHref, agruparNotificaciones } from '@/hooks/useNotificaciones';
-import { formatRelativeDate } from '@/lib/format';
+import { formatRelativeDate, formatPrice } from '@/lib/format';
 import { evaluarCartera } from '@/lib/coach';
 import { CoachModal } from '@/components/dashboard/CoachModal';
 import { useLimitePropiedades, MENSAJE_LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
@@ -160,13 +161,11 @@ export default function DashboardPage() {
         // cuántas veces contactaron CADA propiedad tuya — ahora visible por
         // fila en /dashboard/propiedades (ver ese archivo).
         { icon: Eye, label: 'Propiedades vistas', value: vistasRecientesCount, href: '/dashboard/recientes', color: 'text-blue-500', bg: 'bg-blue-50' },
-        // Pedido explícito 2026-09-09: se quita "Mis propiedades" del menú
-        // del Navbar (vivía ahí solo para cuentas individuales) y se agrega
-        // acá como tarjeta real — mismo lugar y mismo dato (misPropiedades,
-        // ver el fetch de /propiedades/mias más arriba) que ya usan las
-        // cuentas profesionales para su propia tarjeta "Propiedades
-        // publicadas".
-        { icon: Building2, label: 'Mis propiedades', value: misPropiedades.length, href: '/dashboard/propiedades', color: 'text-brand', bg: 'bg-brand-pale' },
+        // La tarjeta "Mis propiedades" (2026-09-09, movida acá desde el
+        // menú del Navbar) se quita de vuelta 2026-09-09 — pedido explícito
+        // del usuario: prefiere ver la lista real de propiedades directo en
+        // Mi panel en vez de un número que solo enlaza a otra página. Ver
+        // la sección "Mis propiedades (lista)" más abajo.
       ];
 
   async function descargarReporte() {
@@ -238,55 +237,6 @@ export default function DashboardPage() {
             {reenviando && <Loader2 size={12} className="animate-spin" />}
             Reenviar correo
           </button>
-        </div>
-      )}
-
-      {/* Notificaciones recientes */}
-      {notificaciones.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-200 mb-8 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
-            <p className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-              <Bell size={15} className="text-amber-500" /> Notificaciones recientes
-            </p>
-            {notificaciones.some((n) => !n.leida) && (
-              <button onClick={marcarNotificacionesLeidas} className="text-xs text-brand font-semibold hover:underline">
-                Marcar todas leídas
-              </button>
-            )}
-          </div>
-          <div className="divide-y divide-gray-50">
-            {notificaciones.slice(0, 5).map((n) => (
-              <Link
-                key={n.id}
-                href={notificacionHref(n)}
-                onClick={() => marcarNotificacionLeida(n.idsAgrupados)}
-                className={`flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors ${!n.leida ? 'bg-brand-pale/20' : ''}`}
-              >
-                {!n.leida && <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0 mt-1.5" />}
-                <div className={`min-w-0 flex-1 ${n.leida ? 'ml-[18px]' : ''}`}>
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-sm font-medium text-gray-800 leading-snug">{n.titulo}</p>
-                    {n.sinLeerCount > 1 && (
-                      <span className="flex-shrink-0 text-[10px] font-bold text-brand bg-brand-pale px-1.5 py-0.5 rounded-full">
-                        {n.sinLeerCount}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-0.5 leading-snug">{n.mensaje}</p>
-                  <p className="text-[11px] text-gray-400 mt-1">{formatRelativeDate(n.createdAt)}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-          {/* Aquí solo se ven las 5 más recientes — el inbox completo
-              (sin ese tope) vive en su propia página, ver
-              dashboard/notificaciones/page.tsx. */}
-          <Link
-            href="/dashboard/notificaciones"
-            className="block text-center text-xs font-semibold text-brand hover:text-brand-dark py-2.5 border-t border-gray-100 hover:bg-gray-50 transition-colors"
-          >
-            Ver todas
-          </Link>
         </div>
       )}
 
@@ -375,6 +325,114 @@ export default function DashboardPage() {
           );
         })}
       </div>
+
+      {/* Mis propiedades (lista) — pedido explícito 2026-09-09: reemplaza
+          a la tarjeta "Mis propiedades" que vivía en el grid de stats de
+          arriba (se quitó) — la persona prefiere ver la lista real acá
+          mismo en vez de un número que solo enlaza a otra página. Mismo
+          patrón que "Notificaciones recientes" más abajo: hasta 5, con
+          "Ver todas" al fondo que manda a la gestión completa
+          (/dashboard/propiedades, donde sí viven pausar/editar/eliminar).
+          Solo cuentas individuales — las profesionales ya tienen su propio
+          bloque más abajo (Tip + botón "Ver mis propiedades" + reporte). */}
+      {!esProfesional && misPropiedades.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 mb-8 overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
+            <p className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+              <Building2 size={15} className="text-brand" /> Mis propiedades
+            </p>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {misPropiedades.slice(0, 5).map((mp) => {
+              const cfg = getPropertyTypeConfig(mp.property.tipo);
+              const estadoCfg = ESTADO_CFG[mp.estado];
+              return (
+                <Link
+                  key={mp.property.id}
+                  href={`/propiedades/${mp.property.slug}`}
+                  className="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center"
+                    style={{ background: `linear-gradient(160deg, ${cfg.from} 0%, ${cfg.to} 100%)` }}>
+                    <cfg.Icon size={18} style={{ color: cfg.accent }} strokeWidth={1.75} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-gray-800 truncate">{mp.property.titulo}</p>
+                      <span className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full border ${estadoCfg.cls}`}>
+                        {estadoCfg.label}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {formatPrice(mp.property.precio, mp.property.operacion)} · {mp.contactos} {mp.contactos === 1 ? 'contacto' : 'contactos'}
+                    </p>
+                  </div>
+                  <ChevronRight size={16} className="text-gray-300 flex-shrink-0" />
+                </Link>
+              );
+            })}
+          </div>
+          <Link
+            href="/dashboard/propiedades"
+            className="block text-center text-xs font-semibold text-brand hover:text-brand-dark py-2.5 border-t border-gray-100 hover:bg-gray-50 transition-colors"
+          >
+            Gestionar todas
+          </Link>
+        </div>
+      )}
+
+      {/* Notificaciones recientes — pedido explícito 2026-09-09: se movió
+          de más arriba (entre el aviso de correo y el grid de stats) a
+          este lugar, para que la lista de propiedades (arriba, lo
+          principal para una cuenta individual) no quede empujada hacia
+          abajo por algo secundario. */}
+      {notificaciones.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200 mb-8 overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
+            <p className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+              <Bell size={15} className="text-amber-500" /> Notificaciones recientes
+            </p>
+            {notificaciones.some((n) => !n.leida) && (
+              <button onClick={marcarNotificacionesLeidas} className="text-xs text-brand font-semibold hover:underline">
+                Marcar todas leídas
+              </button>
+            )}
+          </div>
+          <div className="divide-y divide-gray-50">
+            {notificaciones.slice(0, 5).map((n) => (
+              <Link
+                key={n.id}
+                href={notificacionHref(n)}
+                onClick={() => marcarNotificacionLeida(n.idsAgrupados)}
+                className={`flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors ${!n.leida ? 'bg-brand-pale/20' : ''}`}
+              >
+                {!n.leida && <span className="w-1.5 h-1.5 rounded-full bg-accent flex-shrink-0 mt-1.5" />}
+                <div className={`min-w-0 flex-1 ${n.leida ? 'ml-[18px]' : ''}`}>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-medium text-gray-800 leading-snug">{n.titulo}</p>
+                    {n.sinLeerCount > 1 && (
+                      <span className="flex-shrink-0 text-[10px] font-bold text-brand bg-brand-pale px-1.5 py-0.5 rounded-full">
+                        {n.sinLeerCount}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5 leading-snug">{n.mensaje}</p>
+                  <p className="text-[11px] text-gray-400 mt-1">{formatRelativeDate(n.createdAt)}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+          {/* Aquí solo se ven las 5 más recientes — el inbox completo
+              (sin ese tope) vive en su propia página, ver
+              dashboard/notificaciones/page.tsx. */}
+          <Link
+            href="/dashboard/notificaciones"
+            className="block text-center text-xs font-semibold text-brand hover:text-brand-dark py-2.5 border-t border-gray-100 hover:bg-gray-50 transition-colors"
+          >
+            Ver todas
+          </Link>
+        </div>
+      )}
 
       {/* Tip */}
       {esProfesional ? (
