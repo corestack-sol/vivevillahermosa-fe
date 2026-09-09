@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, UserCog, KeyRound, ChevronRight } from 'lucide-react';
+import { ArrowLeft, UserCog, KeyRound, ChevronRight, Lock } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -16,23 +17,32 @@ import { Skeleton } from '@/components/ui/Skeleton';
  * ningún camino de autoservicio para esto (solo Cancelar — eliminar cuenta
  * — y cambiar contraseña eran reales).
  *
- * El backend TODAVÍA NO tiene el endpoint (`PATCH /auth/me`, confirmado en
- * vivo con cuenta de prueba desechable: 4 variantes probadas, las 4 dan 404
- * de ruta inexistente — ver docs/BACKEND-RECTIFICAR-DATOS-09092026.md).
- * Por eso "Guardar cambios" todavía no llama a ningún backendFetch — solo
- * avisa que falta conectarse, mismo patrón que `pendiente()` en
- * OwnerActionsBar.tsx. El día que el endpoint exista, reemplazar
- * `handleGuardar` por la llamada real y actualizar `AuthContext` (refresh())
- * para reflejar el cambio sin recargar la página — el resto de la pantalla
- * (inputs, validación básica) ya queda listo.
+ * `PATCH /auth/me` confirmado real en vivo 2026-09-09 (cuenta de prueba
+ * desechable): body `{ nombre?, email? }`, responde `{ user: {...} }` con
+ * la misma forma que trae `AuthContext` (salvo `id` en vez de `userId`).
+ * Rechaza con 400 si NINGÚN campo enviado difiere del valor actual
+ * ("Envía un nombre o correo distinto al actual") — por eso solo se manda
+ * lo que de verdad cambió, nunca el valor sin tocar, así nunca se golpea
+ * ese caso por accidente.
+ *
+ * Correo VERIFICADO = bloqueado para siempre — decisión explícita
+ * 2026-09-09: dejarlo editable libremente con solo la sesión iniciada es
+ * una vía real de secuestro de cuenta (sesión robada sin la contraseña
+ * podría cambiar el correo y tomar control). Un correo sin verificar
+ * todavía SÍ se puede corregir (typo antes de haber confirmado nada) — la
+ * restricción es específicamente sobre uno ya probado.
  */
 export default function CuentaPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, refresh } = useAuth();
   const router = useRouter();
   const toast = useToast();
 
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
+  // Snapshot de lo guardado — compara contra esto para saber qué campos
+  // cambiaron de verdad (mismo patrón que dashboard/perfil/page.tsx).
+  const [guardado, setGuardado] = useState({ nombre: '', email: '' });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     function cargarDatos() {
@@ -40,13 +50,46 @@ export default function CuentaPage() {
       if (user) {
         setNombre(user.nombre);
         setEmail(user.email);
+        setGuardado({ nombre: user.nombre, email: user.email });
       }
     }
     cargarDatos();
   }, [user, loading, router]);
 
-  function handleGuardar() {
-    toast.info('Guardar cambios estará disponible en cuanto el backend tenga el endpoint real para actualizar tu cuenta.');
+  const emailBloqueado = !!user?.emailVerificado;
+  const cambioNombre = nombre.trim() !== guardado.nombre;
+  // `!emailBloqueado &&` de más, no solo por defensa — el input queda
+  // disabled cuando está bloqueado, así que en teoría `email` nunca se
+  // mueve de `guardado.email` en ese caso, pero mejor que el propio botón
+  // de guardar no dependa únicamente de que el campo esté deshabilitado.
+  const cambioEmail = !emailBloqueado && email.trim() !== guardado.email;
+  const hayCambios = cambioNombre || cambioEmail;
+
+  async function handleGuardar() {
+    if (!hayCambios || saving) return;
+    setSaving(true);
+    try {
+      const { user: actualizado } = await backendFetch<{
+        user: { nombre: string; email: string; emailVerificado: boolean };
+      }>('/auth/me', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          ...(cambioNombre && { nombre: nombre.trim() }),
+          ...(cambioEmail && { email: email.trim() }),
+        }),
+      });
+      setGuardado({ nombre: actualizado.nombre, email: actualizado.email });
+      await refresh();
+      if (cambioEmail && !actualizado.emailVerificado) {
+        toast.info('Datos actualizados — revisa tu correo nuevo para confirmarlo.');
+      } else {
+        toast.success('Datos actualizados.');
+      }
+    } catch (err) {
+      toast.error(err instanceof BackendApiError ? err.message : 'No se pudieron guardar los cambios.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (loading) {
@@ -82,14 +125,24 @@ export default function CuentaPage() {
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
         />
-        <Input
-          label="Correo electrónico"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          hint="Al cambiarlo probablemente necesites confirmarlo de nuevo."
-        />
-        <Button type="button" onClick={handleGuardar}>
+        <div>
+          <Input
+            label="Correo electrónico"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={emailBloqueado}
+            className={emailBloqueado ? 'disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed' : undefined}
+            hint={emailBloqueado ? undefined : 'Al cambiarlo, tendrás que confirmarlo de nuevo.'}
+          />
+          {emailBloqueado && (
+            <p className="flex items-center gap-1.5 text-xs text-gray-400 mt-1.5">
+              <Lock size={11} className="flex-shrink-0" />
+              Ya está confirmado — por seguridad, no se puede cambiar desde aquí. Si perdiste acceso a este correo, contáctanos.
+            </p>
+          )}
+        </div>
+        <Button type="button" onClick={handleGuardar} disabled={!hayCambios} isLoading={saving}>
           Guardar cambios
         </Button>
       </div>

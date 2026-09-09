@@ -1,10 +1,28 @@
 # Rectificar nombre/correo de mi cuenta — contrato para backend
 
-**Fecha:** 2026-09-09. **Estado:** no existe — confirmado en vivo con
-cuenta de prueba desechable, 4 variantes probadas (`PATCH /auth/me`,
-`PATCH /usuarios/me`, `PUT /auth/me`, `PATCH /auth/perfil`), las 4 dan 404
-de ruta inexistente (`Cannot PATCH/PUT ...`), no 405/401 — el endpoint no
-existe, no es un tema de permisos.
+**Fecha:** 2026-09-07. **Estado (2026-09-09): `PATCH /auth/me` YA ES
+REAL** — no existía en un primer chequeo el mismo 2026-09-09 (4 variantes,
+todas 404 de ruta inexistente), pero un segundo chequeo minutos después ya
+respondió real: `{ user: { id, email, nombre, rol, emailVerificado,
+esAdmin } }`, 200. Confirmado con cuenta de prueba desechable: cambio de
+nombre solo, correo solo, ambos a la vez, y los rechazos reales (sin
+cambios → 400 "Envía un nombre o correo distinto al actual"; campo no
+reconocido → 400 whitelist estricta, mismo patrón que el resto del
+backend). `src/app/dashboard/cuenta/page.tsx` ya está conectado a este
+endpoint real.
+
+⚠️ **Pendiente de confirmar del lado del backend — correo ya verificado**:
+el frontend bloquea cambiar el correo una vez que `emailVerificado` es
+`true` (decisión explícita 2026-09-09, riesgo de secuestro de cuenta con
+sesión robada) — pero esto es SOLO una restricción de interfaz. No se
+probó si el backend también lo rechaza al llamar `PATCH /auth/me`
+directo (sin pasar por el frontend) para una cuenta con correo ya
+verificado — si no lo rechaza, cualquiera con acceso directo a la API
+puede saltarse el bloqueo del frontend por completo. Recomendado: que el
+backend también rechace `email` en el body si `emailVerificado` del
+usuario en sesión ya es `true` (código de error propio, no un 500
+genérico) — la única defensa real es la del servidor, la del frontend es
+solo para no confundir a alguien que no sabía que estaba bloqueado.
 
 **Por qué hace falta:** `/privacidad` (Aviso de privacidad) promete el
 derecho ARCO completo, incluyendo "Rectificar" datos desactualizados. Hoy
@@ -35,10 +53,11 @@ Auditoría real 2026-09-09, hallazgo del usuario.
 
 ## Frontend
 
-Pantalla lista para conectar en cuanto exista el endpoint — no se
-construye "a ciegas" contra un contrato adivinado (mismo criterio que el
-resto de `docs/BACKEND-*.md`). Cuando el endpoint esté real, agregar una
-sección "Mis datos" en `/dashboard` (o página propia `/dashboard/cuenta`)
-con `Input` de nombre/correo, guardado vía `PATCH /auth/me`, y actualizar
-`AuthContext` (`refresh()`) para reflejar el cambio sin recargar la
-página.
+Conectado (2026-09-09), `src/app/dashboard/cuenta/page.tsx` — enlazado
+desde "Mi panel". Solo manda al backend el/los campos que de verdad
+cambiaron (nunca el valor sin tocar, para no pegarle al rechazo de "sin
+cambios"), llama a `refresh()` de `AuthContext` tras guardar, y lee
+`emailVerificado` de la respuesta para avisar si el correo nuevo necesita
+confirmarse. El campo de correo queda deshabilitado por completo si
+`user.emailVerificado` ya era `true` antes de tocar nada — ver el aviso
+de seguridad arriba.
