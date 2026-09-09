@@ -139,16 +139,24 @@ export default function DashboardPage() {
   // reusa `misPropiedades` que este panel ya carga, sin fetch extra.
   const coachPendientes = esProfesional ? evaluarCartera(misPropiedades) : [];
 
+  // `gradient` — pedido explícito 2026-09-09: "un verdadero diferenciador,
+  // otros colores de fondo con degradado". Strings literales completos por
+  // tarjeta (no armados con template strings a partir de un nombre de color)
+  // a propósito — Tailwind solo genera el CSS de una clase si la ve como
+  // texto plano en el código fuente; una construida en runtime (ej.
+  // `from-${nombre}-500`) no se detecta y no genera nada. `brand`/`brand-dark`
+  // son los tokens reales de marca (globals.css @theme), no un verde
+  // genérico de Tailwind — coherente con el resto del sitio.
   const stats = esProfesional
     ? [
-        { icon: Building2, label: 'Propiedades publicadas', value: misPropiedades.length, href: '/dashboard/propiedades', color: 'text-brand', bg: 'bg-brand-pale' },
-        { icon: Eye, label: 'Vistas totales', value: misPropiedades.reduce((s, p) => s + p.vistas, 0), href: '/dashboard/propiedades', color: 'text-blue-500', bg: 'bg-blue-50' },
-        { icon: MessageCircle, label: 'Contactos recibidos', value: misPropiedades.reduce((s, p) => s + p.contactos, 0), href: '/dashboard/propiedades', color: 'text-emerald-500', bg: 'bg-emerald-50' },
-        { icon: Heart, label: 'Favoritos guardados', value: favCount, href: '/favoritos', color: 'text-red-500', bg: 'bg-red-50' },
+        { icon: Building2, label: 'Propiedades publicadas', value: misPropiedades.length, href: '/dashboard/propiedades', gradient: 'from-brand to-brand-dark' },
+        { icon: Eye, label: 'Vistas totales', value: misPropiedades.reduce((s, p) => s + p.vistas, 0), href: '/dashboard/propiedades', gradient: 'from-blue-500 to-indigo-600' },
+        { icon: MessageCircle, label: 'Contactos recibidos', value: misPropiedades.reduce((s, p) => s + p.contactos, 0), href: '/dashboard/propiedades', gradient: 'from-emerald-500 to-teal-600' },
+        { icon: Heart, label: 'Favoritos guardados', value: favCount, href: '/favoritos', gradient: 'from-rose-500 to-red-600' },
       ]
     : [
-        { icon: Heart, label: 'Favoritos guardados', value: favCount, href: '/favoritos', color: 'text-red-500', bg: 'bg-red-50' },
-        { icon: Bell, label: 'Alertas activas', value: alertaCount, href: '/alertas', color: 'text-amber-500', bg: 'bg-amber-50' },
+        { icon: Heart, label: 'Favoritos guardados', value: favCount, href: '/favoritos', gradient: 'from-rose-500 to-red-600' },
+        { icon: Bell, label: 'Alertas activas', value: alertaCount, href: '/alertas', gradient: 'from-amber-400 to-orange-500' },
         // Bug real reportado 2026-09-02: "Propiedades vistas" mandaba a
         // /propiedades (el catálogo completo, no lo que esa persona vio) —
         // ahora manda a la lista real de vistos recientemente
@@ -160,7 +168,7 @@ export default function DashboardPage() {
         // propiedades hablaba) y ya existe el dato real que sí importa —
         // cuántas veces contactaron CADA propiedad tuya — ahora visible por
         // fila en /dashboard/propiedades (ver ese archivo).
-        { icon: Eye, label: 'Propiedades vistas', value: vistasRecientesCount, href: '/dashboard/recientes', color: 'text-blue-500', bg: 'bg-blue-50' },
+        { icon: Eye, label: 'Propiedades vistas', value: vistasRecientesCount, href: '/dashboard/recientes', gradient: 'from-blue-500 to-indigo-600' },
         // La tarjeta "Mis propiedades" (2026-09-09, movida acá desde el
         // menú del Navbar) se quita de vuelta 2026-09-09 — pedido explícito
         // del usuario: prefiere ver la lista real de propiedades directo en
@@ -279,47 +287,53 @@ export default function DashboardPage() {
         </button>
       )}
 
-      {/* Stats — pedido explícito 2026-09-09: "más diseño, que se vean
-          premium". Antes era un rectángulo plano (borde gris, ícono
-          circular liso). Ahora cada tarjeta lleva:
-          - Sombra suave en reposo (no solo al hover) + borde casi
-            invisible en vez de un borde gris marcado — la profundidad
-            reemplaza al borde como señal principal, look más suave.
-          - Un resplandor de color en la esquina, desenfocado (blur-3xl),
-            reusando el MISMO `s.bg` que ya pinta el ícono — coherente por
-            tarjeta, y Tailwind-safe: `s.bg` ya es un string literal que
-            existe en el array `stats` de más arriba, nada generado en
-            runtime que el compilador no pueda ver.
-          - Ícono en un cuadrado redondeado con anillo interior blanco
-            (look "acristalado") en vez de un círculo liso.
-          - Número más grande y con tracking ajustado, label en mayúsculas
-            pequeñas — jerarquía más marcada, más "dashboard premium" que
-            "lista de datos". */}
+      {/* Stats — segunda vuelta, pedido explícito 2026-09-09: "un
+          verdadero diferenciador, otros colores de fondo con degradado,
+          alguna animación leve". La primera versión (blanco + resplandor
+          de esquina) seguía leyéndose como una tarjeta blanca más — esta
+          vez el fondo ES el degradado, no un detalle:
+          - `bg-gradient-to-br ${s.gradient}` — dos tonos reales por
+            tarjeta (ver el comentario junto al array `stats` sobre por
+            qué son strings literales, no armados en runtime). Texto/ícono
+            en blanco encima, no gris sobre blanco.
+          - Ícono en una placa de vidrio (`bg-white/15` + `ring-white/25`)
+            en vez del cuadrado de color sólido de antes — se distingue del
+            fondo aunque ambos sean parte de la misma paleta.
+          - Entrada escalonada (`animate-fade-up`, delay creciente por
+            índice) — la MISMA clase que ya usa el Hero de Home, respeta
+            `prefers-reduced-motion` (globals.css ya la desactiva ahí),
+            nada nuevo que mantener. "Leve" a propósito: una sola vez al
+            cargar, no un loop continuo que distraiga en un dashboard que
+            se mira seguido. */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        {stats.map((s) => {
+        {stats.map((s, i) => {
           const contenido = (
             <>
-              <div className={`absolute -top-8 -right-8 w-24 h-24 ${s.bg} rounded-full blur-3xl opacity-70 pointer-events-none`} aria-hidden="true" />
-              <div className={`relative w-11 h-11 ${s.bg} rounded-2xl flex items-center justify-center mb-4 shadow-inner ring-1 ring-white`}>
-                <s.icon size={19} className={s.color} strokeWidth={2} />
+              <div className="absolute -top-10 -right-10 w-28 h-28 bg-white/10 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
+              <div className="relative w-11 h-11 bg-white/15 rounded-2xl flex items-center justify-center mb-4 ring-1 ring-white/25">
+                <s.icon size={19} className="text-white" strokeWidth={2} />
               </div>
-              <p className="relative text-3xl font-display font-black text-gray-900 tracking-tight">{s.value}</p>
-              <p className="relative text-[11px] font-semibold text-gray-400 uppercase tracking-wide mt-1">{s.label}</p>
+              <p className="relative text-3xl font-display font-black text-white tracking-tight">{s.value}</p>
+              <p className="relative text-[11px] font-semibold text-white/70 uppercase tracking-wide mt-1">{s.label}</p>
             </>
           );
+          const estilo = { animationDelay: `${i * 60}ms` };
           // Sin href — sin ningún dato real detrás todavía (ver el
           // comentario junto al array `stats`), no clicable a propósito
           // en vez de mandar a algo inventado.
           if (!s.href) {
             return (
-              <div key={s.label} className="relative overflow-hidden bg-white rounded-3xl border border-gray-100 shadow-sm p-5 opacity-60 cursor-default">
+              <div key={s.label}
+                className={`relative overflow-hidden bg-gradient-to-br ${s.gradient} rounded-3xl p-5 opacity-50 cursor-default animate-fade-up`}
+                style={estilo}>
                 {contenido}
               </div>
             );
           }
           return (
             <Link key={s.label} href={s.href}
-              className="relative overflow-hidden bg-white rounded-3xl border border-gray-100 shadow-sm p-5 hover:shadow-xl hover:shadow-gray-200/60 hover:-translate-y-1 hover:border-gray-200 transition-all duration-300">
+              className={`relative overflow-hidden bg-gradient-to-br ${s.gradient} rounded-3xl p-5 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-fade-up`}
+              style={estilo}>
               {contenido}
             </Link>
           );
