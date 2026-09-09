@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Send, Building2, MoreVertical, Ban, Flag, ShieldOff, MessageCircleHeart, Loader2 } from 'lucide-react';
+import { ArrowLeft, Send, Building2, MoreVertical, Ban, Flag, ShieldOff, MessageCircleHeart, Loader2, Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError, BACKEND_URL } from '@/lib/backendApi';
 import { formatRelativeDate, formatHora } from '@/lib/format';
 import { whatsappBaseUrl } from '@/lib/phone';
+import { getMensajesOcultos, ocultarMensaje } from '@/lib/mensajesOcultos';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import type { MensajeChat, ConversacionResumen } from '@/lib/mensajeria';
@@ -32,6 +33,12 @@ import { ModeracionUsuarioModal } from '@/components/mensajeria/ModeracionUsuari
  */
 
 const URL_PATTERN = /(https?:\/\/[^\s]+)/g;
+
+// Prefijo exacto que compone compartirWhatsapp() más abajo — se reusa acá
+// para RECONOCER esos mensajes específicos (el único tipo que se puede
+// ocultar, pedido explícito 2026-09-08). El backend no tiene un campo
+// "tipo" de mensaje — no hay otra forma de distinguirlos que por contenido.
+const PREFIJO_COMPARTIR_WHATSAPP = 'Aquí puedes escribirme directo por WhatsApp: ';
 
 /**
  * Pedido explícito 2026-09-08: el link de "Compartir WhatsApp" se veía
@@ -92,6 +99,19 @@ export default function ConversacionPage() {
   // mismo que ya usa enviar() abajo) para mandarlo como un mensaje más —
   // cero backend nuevo.
   const [compartiendoWhatsapp, setCompartiendoWhatsapp] = useState(false);
+  // Ocultar un mensaje de "Compartir WhatsApp" — pedido explícito
+  // 2026-09-08, ver src/lib/mensajesOcultos.ts para el porqué (backend sin
+  // endpoint de borrado, esto es solo "eliminar para mí" vía localStorage).
+  const [mensajesOcultos, setMensajesOcultos] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    function cargarOcultos() {
+      setMensajesOcultos(getMensajesOcultos(conversacionId));
+    }
+    cargarOcultos();
+  }, [conversacionId]);
+  function ocultar(mensajeId: string) {
+    setMensajesOcultos(ocultarMensaje(conversacionId, mensajeId));
+  }
   const toast = useToast();
 
   // Bloquear/reportar — pedido explícito 2026-09-07. Backend nuevo, ver
@@ -236,7 +256,7 @@ export default function ConversacionPage() {
       const link = whatsappBaseUrl(contacto.whatsapp);
       const { mensaje } = await backendFetch<{ mensaje: MensajeChat }>(`/conversaciones/${conversacionId}/mensajes`, {
         method: 'POST',
-        body: JSON.stringify({ texto: `Aquí puedes escribirme directo por WhatsApp: ${link}` }),
+        body: JSON.stringify({ texto: `${PREFIJO_COMPARTIR_WHATSAPP}${link}` }),
       });
       if (!idsVistosRef.current.has(mensaje.id)) {
         idsVistosRef.current.add(mensaje.id);
@@ -258,6 +278,10 @@ export default function ConversacionPage() {
       </div>
     );
   }
+
+  // Oculta los que la persona ya "eliminó" de su propia vista (solo
+  // "Compartir WhatsApp" — ver src/lib/mensajesOcultos.ts).
+  const mensajesVisibles = mensajes.filter((m) => !mensajesOcultos.has(m.id));
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col" style={{ height: 'calc(100dvh - 4rem)' }}>
@@ -376,10 +400,10 @@ export default function ConversacionPage() {
       )}
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
-        {mensajes.length === 0 ? (
+        {mensajesVisibles.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-8">Sin mensajes todavía — escribe el primero.</p>
         ) : (
-          mensajes.map((m, i) => {
+          mensajesVisibles.map((m, i) => {
             const esMio = m.remitenteId === user.userId;
             // Estructura de chat real — pedido explícito 2026-09-07: antes
             // solo cambiaba el color/lado de la burbuja, sin nada que diga
@@ -389,7 +413,8 @@ export default function ConversacionPage() {
             // ("Tú" para los propios) — no se repite en cada burbuja
             // seguida del mismo remitente, para no saturar.
             const nombreRemitente = esMio ? 'Tú' : (otraPersona?.nombre ?? 'Interesado');
-            const cambioDeRemitente = i === 0 || mensajes[i - 1].remitenteId !== m.remitenteId;
+            const cambioDeRemitente = i === 0 || mensajesVisibles[i - 1].remitenteId !== m.remitenteId;
+            const esCompartirWhatsapp = m.texto.startsWith(PREFIJO_COMPARTIR_WHATSAPP);
             // El avatar usa el nombre REAL incluso en los mensajes propios
             // — pedido explícito 2026-09-07 ("¿es de Tú?"): "Tú" es la
             // etiqueta que se lee arriba de la burbuja, pero la inicial del
@@ -427,7 +452,28 @@ export default function ConversacionPage() {
                         cualquier carácter, verificado visualmente con el
                         link real de WhatsApp en mobile (390px). */}
                     <p className="text-sm leading-relaxed whitespace-pre-wrap break-all">{renderTextoConLinks(m.texto)}</p>
-                    <p className={`text-[10px] mt-1 ${esMio ? 'text-white/60' : 'text-gray-400'}`}>{formatRelativeDate(m.createdAt)} · {formatHora(m.createdAt)}</p>
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      <p className={`text-[10px] ${esMio ? 'text-white/60' : 'text-gray-400'}`}>{formatRelativeDate(m.createdAt)} · {formatHora(m.createdAt)}</p>
+                      {/* Solo se puede "eliminar" el mensaje de Compartir
+                          WhatsApp — pedido explícito 2026-09-08. Es un
+                          borrado local (localStorage, ver
+                          src/lib/mensajesOcultos.ts): el backend no tiene
+                          ningún endpoint de borrado todavía (confirmado en
+                          vivo, docs/BACKEND-ELIMINAR-CONVERSACION-07092026.md).
+                          Ninguna persona real ve un botón de basura en un
+                          mensaje de texto normal — solo aplica a este tipo
+                          específico. */}
+                      {esCompartirWhatsapp && (
+                        <button
+                          type="button"
+                          onClick={() => ocultar(m.id)}
+                          aria-label="Eliminar este mensaje (solo de tu vista)"
+                          className={`flex-shrink-0 -m-1 p-1 rounded transition-colors ${esMio ? 'text-white/50 hover:text-white' : 'text-gray-400 hover:text-red-500'}`}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
