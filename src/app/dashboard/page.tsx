@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Heart, Bell, Plus, Eye, TrendingUp, LayoutDashboard, Lightbulb, MessageCircle, Building2, Download, Loader2, Info, Sparkles, AlertTriangle } from 'lucide-react';
+import { Heart, Bell, Plus, Eye, LayoutDashboard, Lightbulb, MessageCircle, Building2, Download, Loader2, Info, Sparkles, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { backendFetch } from '@/lib/backendApi';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -144,18 +144,15 @@ export default function DashboardPage() {
         // Bug real reportado 2026-09-02: "Propiedades vistas" mandaba a
         // /propiedades (el catálogo completo, no lo que esa persona vio) —
         // ahora manda a la lista real de vistos recientemente
-        // (localStorage, ver dashboard/recientes/page.tsx). "Propiedades
-        // contactadas" se queda SIN href (no clicable) — a diferencia de
-        // vistas, no hay ningún dato real detrás todavía (ni siquiera
-        // local), así que no hay a dónde mandar sin inventar un destino.
-        // `value: 0` (hasta 2026-09-08) leía como una afirmación real —
-        // "contactaste 0 propiedades" — aunque la persona SÍ hubiera
-        // contactado varias; confundía más que aclaraba. Reporte real de
-        // usuarios: "por qué siempre dice 0 y no es clicable, parece bug".
-        // "—" no afirma nada, solo dice "sin dato" — el aviso de abajo
-        // explica por qué.
+        // (localStorage, ver dashboard/recientes/page.tsx).
+        //
+        // "Propiedades contactadas" (actividad como comprador, sin backend
+        // detrás) se quitó del todo 2026-09-08 — pedido explícito del
+        // usuario: el nombre "globalizaba" (no dejaba claro DE QUÉ
+        // propiedades hablaba) y ya existe el dato real que sí importa —
+        // cuántas veces contactaron CADA propiedad tuya — ahora visible por
+        // fila en /dashboard/propiedades (ver ese archivo).
         { icon: Eye, label: 'Propiedades vistas', value: vistasRecientesCount, href: '/dashboard/recientes', color: 'text-blue-500', bg: 'bg-blue-50' },
-        { icon: TrendingUp, label: 'Tus propiedades contactadas', value: '—', href: undefined, color: 'text-brand', bg: 'bg-brand-pale' },
       ];
 
   async function descargarReporte() {
@@ -273,24 +270,21 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Para profesionales, "Contactos recibidos" ya es real (confirmado
-          en vivo 2026-09-02) — solo "Vistas totales" sigue pendiente. Para
-          cuentas normales, "Propiedades vistas" pasó a ser real 2026-09-XX
-          (vistasRecientesCount, localStorage — ver el comentario junto a
-          STATS más arriba) — el aviso decía "vistas Y contactos" como si
-          ambos siguieran falsos, ya no es cierto. Corregido 2026-09-07:
-          solo "Propiedades contactadas" (actividad COMO COMPRADOR, value:'—'
-          sin backend detrás) sigue sin dato real. */}
-      <div className="flex items-start gap-2.5 bg-brand-pale border border-brand/20 rounded-xl px-4 py-3 mb-6">
-        <Info size={15} className="text-brand flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-brand-dark leading-relaxed">
-          {esProfesional ? (
-            <><strong>Los contactos recibidos ya son reales</strong> — las vistas totales todavía no, llegan cuando el backend implemente ese conteo.</>
-          ) : (
-            <><strong>Tus propiedades contactadas todavía no cuenta actividad real</strong> — Propiedades vistas sí (tu historial local); contactadas llega cuando exista un registro de a quién le escribiste.</>
-          )}
-        </p>
-      </div>
+      {/* Solo para profesionales — "Contactos recibidos" ya es real
+          (confirmado en vivo 2026-09-02), "Vistas totales" sigue pendiente.
+          Para cuentas normales ya no hace falta este aviso: "Propiedades
+          vistas" es real (localStorage) y "Propiedades contactadas" (la
+          otra mitad del aviso original) se quitó del panel del todo
+          2026-09-08 — sin dato falso que aclarar, no queda nada que decir
+          acá. */}
+      {esProfesional && (
+        <div className="flex items-start gap-2.5 bg-brand-pale border border-brand/20 rounded-xl px-4 py-3 mb-6">
+          <Info size={15} className="text-brand flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-brand-dark leading-relaxed">
+            <strong>Los contactos recibidos ya son reales</strong> — las vistas totales todavía no, llegan cuando el backend implemente ese conteo.
+          </p>
+        </div>
+      )}
 
       {/* Coach de anuncios — no intrusivo a propósito (pedido explícito
           2026-08-22): no es un modal automático ni un banner de alarma,

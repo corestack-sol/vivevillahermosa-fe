@@ -339,7 +339,7 @@ export default function MisPropiedadesPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map(({ property: p, estado, publicadaHace }) => {
+          {filtered.map(({ property: p, estado, publicadaHace, contactos }) => {
             const cfg = getPropertyTypeConfig(p.tipo);
             const estadoCfg = ESTADO_CFG[estado];
             return (
@@ -370,6 +370,14 @@ export default function MisPropiedadesPage() {
                           <Star size={9} className="fill-current" /> Destacada
                         </span>
                       )}
+                      {/* Contacto real por propiedad (docs/BACKEND-VISTAS-CONTACTOS-02092026.md)
+                          — pedido explícito 2026-09-08: reemplaza a la tarjeta
+                          global "Tus propiedades contactadas" que se quitó del
+                          dashboard (no dejaba claro DE QUÉ propiedad hablaba).
+                          Este dato sí es real y sí es específico de ESTA fila. */}
+                      <span className="flex items-center gap-1 text-[10px] font-semibold text-gray-500">
+                        <MessageCircle size={11} /> {contactos} {contactos === 1 ? 'contacto' : 'contactos'}
+                      </span>
                     </div>
                     <Link href={`/propiedades/${p.slug}`} className="font-semibold text-gray-900 text-sm truncate block hover:text-brand transition-colors">
                       {p.titulo}
