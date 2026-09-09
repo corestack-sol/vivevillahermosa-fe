@@ -139,24 +139,31 @@ export default function DashboardPage() {
   // reusa `misPropiedades` que este panel ya carga, sin fetch extra.
   const coachPendientes = esProfesional ? evaluarCartera(misPropiedades) : [];
 
-  // `gradient` — pedido explícito 2026-09-09: "un verdadero diferenciador,
-  // otros colores de fondo con degradado". Strings literales completos por
-  // tarjeta (no armados con template strings a partir de un nombre de color)
-  // a propósito — Tailwind solo genera el CSS de una clase si la ve como
-  // texto plano en el código fuente; una construida en runtime (ej.
-  // `from-${nombre}-500`) no se detecta y no genera nada. `brand`/`brand-dark`
-  // son los tokens reales de marca (globals.css @theme), no un verde
-  // genérico de Tailwind — coherente con el resto del sitio.
+  // Gradiente por tarjeta — segunda vuelta 2026-09-09: "colores muy
+  // intensos, quiero que vayan más acorde a los colores de la plataforma".
+  // La primera versión usaba familias sueltas de Tailwind (blue-500,
+  // rose-500...) que no son parte de la paleta real. Esta versión reusa la
+  // MISMA fórmula que ya pintan las cards de colonia en Home/zonas (ver
+  // src/lib/zonaGradients.ts: color-mix(color 55%, negro) -> color base),
+  // aplicada a los tokens de marca reales (--color-brand/accent/coral/sky/
+  // warning, definidos en globals.css @theme) — nunca a un color inventado.
+  // No se puede expresar con clases `bg-gradient-to-br from-X` (Tailwind no
+  // tiene una utilidad para mezclar dos custom properties arbitrarias), así
+  // que va como `style` inline, igual que ZONA_GRADIENTS.
+  function gradienteMarca(token: string): string {
+    return `linear-gradient(to bottom right, color-mix(in srgb, var(--color-${token}) 55%, black), var(--color-${token}))`;
+  }
+
   const stats = esProfesional
     ? [
-        { icon: Building2, label: 'Propiedades publicadas', value: misPropiedades.length, href: '/dashboard/propiedades', gradient: 'from-brand to-brand-dark' },
-        { icon: Eye, label: 'Vistas totales', value: misPropiedades.reduce((s, p) => s + p.vistas, 0), href: '/dashboard/propiedades', gradient: 'from-blue-500 to-indigo-600' },
-        { icon: MessageCircle, label: 'Contactos recibidos', value: misPropiedades.reduce((s, p) => s + p.contactos, 0), href: '/dashboard/propiedades', gradient: 'from-emerald-500 to-teal-600' },
-        { icon: Heart, label: 'Favoritos guardados', value: favCount, href: '/favoritos', gradient: 'from-rose-500 to-red-600' },
+        { icon: Building2, label: 'Propiedades publicadas', value: misPropiedades.length, href: '/dashboard/propiedades', gradient: gradienteMarca('brand') },
+        { icon: Eye, label: 'Vistas totales', value: misPropiedades.reduce((s, p) => s + p.vistas, 0), href: '/dashboard/propiedades', gradient: gradienteMarca('sky') },
+        { icon: MessageCircle, label: 'Contactos recibidos', value: misPropiedades.reduce((s, p) => s + p.contactos, 0), href: '/dashboard/propiedades', gradient: gradienteMarca('accent') },
+        { icon: Heart, label: 'Favoritos guardados', value: favCount, href: '/favoritos', gradient: gradienteMarca('coral') },
       ]
     : [
-        { icon: Heart, label: 'Favoritos guardados', value: favCount, href: '/favoritos', gradient: 'from-rose-500 to-red-600' },
-        { icon: Bell, label: 'Alertas activas', value: alertaCount, href: '/alertas', gradient: 'from-amber-400 to-orange-500' },
+        { icon: Heart, label: 'Favoritos guardados', value: favCount, href: '/favoritos', gradient: gradienteMarca('coral') },
+        { icon: Bell, label: 'Alertas activas', value: alertaCount, href: '/alertas', gradient: gradienteMarca('warning') },
         // Bug real reportado 2026-09-02: "Propiedades vistas" mandaba a
         // /propiedades (el catálogo completo, no lo que esa persona vio) —
         // ahora manda a la lista real de vistos recientemente
@@ -168,7 +175,7 @@ export default function DashboardPage() {
         // propiedades hablaba) y ya existe el dato real que sí importa —
         // cuántas veces contactaron CADA propiedad tuya — ahora visible por
         // fila en /dashboard/propiedades (ver ese archivo).
-        { icon: Eye, label: 'Propiedades vistas', value: vistasRecientesCount, href: '/dashboard/recientes', gradient: 'from-blue-500 to-indigo-600' },
+        { icon: Eye, label: 'Propiedades vistas', value: vistasRecientesCount, href: '/dashboard/recientes', gradient: gradienteMarca('sky') },
         // La tarjeta "Mis propiedades" (2026-09-09, movida acá desde el
         // menú del Navbar) se quita de vuelta 2026-09-09 — pedido explícito
         // del usuario: prefiere ver la lista real de propiedades directo en
@@ -317,14 +324,14 @@ export default function DashboardPage() {
               <p className="relative text-[11px] font-semibold text-white/70 uppercase tracking-wide mt-1">{s.label}</p>
             </>
           );
-          const estilo = { animationDelay: `${i * 60}ms` };
+          const estilo = { background: s.gradient, animationDelay: `${i * 60}ms` };
           // Sin href — sin ningún dato real detrás todavía (ver el
           // comentario junto al array `stats`), no clicable a propósito
           // en vez de mandar a algo inventado.
           if (!s.href) {
             return (
               <div key={s.label}
-                className={`relative overflow-hidden bg-gradient-to-br ${s.gradient} rounded-3xl p-5 opacity-50 cursor-default animate-fade-up`}
+                className="relative overflow-hidden rounded-3xl p-5 opacity-50 cursor-default animate-fade-up"
                 style={estilo}>
                 {contenido}
               </div>
@@ -332,7 +339,7 @@ export default function DashboardPage() {
           }
           return (
             <Link key={s.label} href={s.href}
-              className={`relative overflow-hidden bg-gradient-to-br ${s.gradient} rounded-3xl p-5 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-fade-up`}
+              className="relative overflow-hidden rounded-3xl p-5 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 animate-fade-up"
               style={estilo}>
               {contenido}
             </Link>
@@ -351,9 +358,12 @@ export default function DashboardPage() {
           bloque más abajo (Tip + botón "Ver mis propiedades" + reporte). */}
       {!esProfesional && misPropiedades.length > 0 && (
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 mb-8 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
-            <p className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-              <Building2 size={15} className="text-brand" /> Mis propiedades
+          {/* Fondo verde — pedido explícito 2026-09-09, mismo verde real
+              del header del sitio (bg-brand-dark, ver Navbar.tsx), no un
+              tono inventado. */}
+          <div className="flex items-center justify-between px-5 py-3.5 bg-brand-dark">
+            <p className="flex items-center gap-2 text-sm font-semibold text-white">
+              <Building2 size={15} className="text-white/80" /> Mis propiedades
             </p>
           </div>
           <div className="divide-y divide-gray-50">
@@ -402,12 +412,15 @@ export default function DashboardPage() {
           abajo por algo secundario. */}
       {notificaciones.length > 0 && (
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 mb-8 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
-            <p className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-              <Bell size={15} className="text-amber-500" /> Notificaciones recientes
+          {/* Fondo verde — pedido explícito 2026-09-09, mismo verde real
+              del header del sitio (bg-brand-dark), igual que "Mis
+              propiedades" arriba. */}
+          <div className="flex items-center justify-between px-5 py-3.5 bg-brand-dark">
+            <p className="flex items-center gap-2 text-sm font-semibold text-white">
+              <Bell size={15} className="text-white/80" /> Notificaciones recientes
             </p>
             {notificaciones.some((n) => !n.leida) && (
-              <button onClick={marcarNotificacionesLeidas} className="text-xs text-brand font-semibold hover:underline">
+              <button onClick={marcarNotificacionesLeidas} className="text-xs text-white/90 font-semibold hover:underline">
                 Marcar todas leídas
               </button>
             )}
