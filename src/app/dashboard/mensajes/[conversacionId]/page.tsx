@@ -319,27 +319,31 @@ export default function ConversacionPage() {
           la ficha pública; el resto de la pantalla (leer/responder) se
           queda aquí mismo. */}
       {propiedad && (
-        <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 mb-4 flex-shrink-0">
+        // Fondo verde degradado — pedido explícito 2026-09-08. Solo en la
+        // franja de arriba (foto+título), no en todo el bloque — el botón
+        // "Compartir WhatsApp" de abajo se queda en blanco, sus colores
+        // (emerald) no se leen bien sobre el degradado oscuro.
+        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden mb-4 flex-shrink-0">
           <Link
             href={`/propiedades/${propiedad.slug}`}
-            className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-3 min-w-0 px-4 py-3 bg-gradient-to-r from-brand to-brand-dark hover:opacity-90 transition-opacity"
           >
-            <div className="relative w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center">
+            <div className="relative w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 bg-white/15 flex items-center justify-center">
               {propiedad.foto ? (
                 // eslint-disable-next-line @next/next/no-img-element -- mismo patrón que dashboard/mensajes/page.tsx
                 <img src={propiedad.foto} alt="" className="w-full h-full object-cover" />
               ) : (
-                <Building2 size={18} className="text-gray-300" />
+                <Building2 size={18} className="text-white/60" />
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-800 truncate min-w-0">{propiedad.titulo}</p>
+              <p className="text-sm font-semibold text-white truncate min-w-0">{propiedad.titulo}</p>
               {esMiPropiedad !== null && (
                 <span
                   className={`inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border mt-0.5 ${
                     esMiPropiedad
-                      ? 'bg-brand-pale text-brand-dark border-brand/20'
-                      : 'bg-gray-50 text-gray-500 border-gray-200'
+                      ? 'bg-white/90 text-brand-dark border-white/40'
+                      : 'bg-white/10 text-white/80 border-white/25'
                   }`}
                 >
                   {esMiPropiedad ? 'Tu propiedad' : 'La contactaste tú'}
@@ -362,7 +366,7 @@ export default function ConversacionPage() {
               type="button"
               onClick={compartirWhatsapp}
               disabled={compartiendoWhatsapp}
-              className="mt-2.5 pt-2.5 border-t border-gray-100 w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition-colors disabled:opacity-60"
+              className="px-4 pt-2.5 pb-3 w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition-colors disabled:opacity-60"
             >
               {compartiendoWhatsapp ? <Loader2 size={14} className="animate-spin" /> : <MessageCircleHeart size={14} />}
               <span>Compartir mi WhatsApp con {otraPersona?.nombre ?? 'el interesado'}</span>
