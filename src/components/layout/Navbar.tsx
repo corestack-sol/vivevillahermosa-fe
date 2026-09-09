@@ -76,7 +76,10 @@ function buildMenuGroups(esProfesional: boolean, esAdmin: boolean): MenuGroup[] 
       items: [
         { href: '/dashboard', icon: LayoutDashboard, label: 'Mi panel' },
         ...(esProfesional ? [{ href: '/dashboard/perfil', icon: Settings, label: 'Perfil de la inmobiliaria' }] : []),
-        ...(!esProfesional ? [{ href: '/dashboard/propiedades', icon: Building2, label: 'Mis propiedades' }] : []),
+        // "Mis propiedades" (cuentas individuales) se quitó de acá — pedido
+        // explícito 2026-09-09: ahora es una tarjeta real en Mi panel
+        // (dashboard/page.tsx), mismo lugar que ya usan las cuentas
+        // profesionales para "Propiedades publicadas".
         ...PERFIL_ITEMS_BASE,
       ],
     },

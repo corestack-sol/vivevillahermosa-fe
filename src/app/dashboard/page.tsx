@@ -89,16 +89,23 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!loading && !user) { router.push('/auth/login'); return; }
     if (!user) return;
+    // /propiedades/mias ya no se gatea por esProfesional — pedido explícito
+    // 2026-09-09: "Mis propiedades" se quita del menú del Navbar (vivía ahí
+    // solo para cuentas individuales) y se agrega como tarjeta real acá en
+    // Mi panel, mismo lugar que ya usan las cuentas profesionales. Cuentas
+    // individuales también pueden tener propiedades (mismo límite gratuito
+    // de 3, ver useLimitePropiedades.ts) — sin este fetch, esa tarjeta
+    // mostraría 0 siempre así hubiera propiedades reales.
     Promise.all([
       backendFetch<{ favoritos: string[] }>('/favoritos'),
       backendFetch<{ alertas: unknown[] }>('/alertas'),
-      esProfesional ? backendFetch<{ propiedades: BackendPublicProperty[] }>('/propiedades/mias') : Promise.resolve(null),
+      backendFetch<{ propiedades: BackendPublicProperty[] }>('/propiedades/mias'),
     ]).then(([favData, alertData, propiedadesData]) => {
       setFavCount(favData.favoritos?.length ?? 0);
       setAlertaCount(alertData.alertas?.length ?? 0);
       setMisPropiedades(propiedadesData?.propiedades.map(mapMiaBackend) ?? []);
     }).catch(() => {});
-  }, [user, loading, router, esProfesional]);
+  }, [user, loading, router]);
 
   if (loading) {
     return (
@@ -153,6 +160,13 @@ export default function DashboardPage() {
         // cuántas veces contactaron CADA propiedad tuya — ahora visible por
         // fila en /dashboard/propiedades (ver ese archivo).
         { icon: Eye, label: 'Propiedades vistas', value: vistasRecientesCount, href: '/dashboard/recientes', color: 'text-blue-500', bg: 'bg-blue-50' },
+        // Pedido explícito 2026-09-09: se quita "Mis propiedades" del menú
+        // del Navbar (vivía ahí solo para cuentas individuales) y se agrega
+        // acá como tarjeta real — mismo lugar y mismo dato (misPropiedades,
+        // ver el fetch de /propiedades/mias más arriba) que ya usan las
+        // cuentas profesionales para su propia tarjeta "Propiedades
+        // publicadas".
+        { icon: Building2, label: 'Mis propiedades', value: misPropiedades.length, href: '/dashboard/propiedades', color: 'text-brand', bg: 'bg-brand-pale' },
       ];
 
   async function descargarReporte() {
