@@ -32,9 +32,16 @@ export default function PrivacidadPage() {
 
         <section>
           <h2 className="text-lg font-heading font-bold text-gray-900 mb-2">2. Qué datos recolectamos</h2>
+          {/* Facebook quitado de esta lista — auditoría 2026-09-09: el botón
+              de login con Facebook está oculto en producción
+              (FACEBOOK_LOGIN_ENABLED = false en auth/login/page.tsx y
+              auth/registro/page.tsx) y no se va a activar (decisión
+              explícita del usuario 2026-09-09) — nadie inicia sesión así,
+              no hay ese flujo de datos real. No mencionarlo aquí ni en la
+              sección 4 de abajo. */}
           <ul className="list-disc pl-5 space-y-1.5 leading-relaxed">
             <li>Datos de cuenta: nombre, correo electrónico y contraseña (almacenada siempre cifrada, nunca en texto plano).</li>
-            <li>Si inicias sesión con Google o Facebook: el nombre, correo y foto de perfil que esos proveedores nos comparten con tu autorización.</li>
+            <li>Si inicias sesión con Google: el nombre, correo y foto de perfil que ese proveedor nos comparte con tu autorización.</li>
             <li>Datos de contacto que escribes al enviar un mensaje sobre una propiedad: el texto de tu mensaje — tu nombre y correo ya los conocemos por tu cuenta, no se vuelven a pedir.</li>
             <li>Preferencias de búsqueda que guardas como alertas (municipio, tipo de propiedad, precio máximo, etc.).</li>
             <li>Si publicas una propiedad: los datos de contacto que tú decides mostrar a interesados (nombre, WhatsApp y/o correo).</li>
@@ -72,7 +79,7 @@ export default function PrivacidadPage() {
           </p>
           <ul className="list-disc pl-5 space-y-1.5 leading-relaxed mt-2">
             <li>Un proveedor de correo transaccional para enviar las notificaciones de alertas.</li>
-            <li>Proveedores de autenticación (Google, Facebook) cuando eliges iniciar sesión con ellos.</li>
+            <li>Google, como proveedor de autenticación, cuando eliges iniciar sesión con esa opción.</li>
             <li>PostHog para analítica de uso (nunca para publicidad).</li>
             <li>Cloudinary — almacenamiento de las fotos que subes al publicar una propiedad.</li>
             <li>OpenRouter — procesa el texto de tus publicaciones (título, descripción) para el análisis automático de fraude y la generación de descripciones asistida, y el texto de tus búsquedas para el buscador con IA.</li>
