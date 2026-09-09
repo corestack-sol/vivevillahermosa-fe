@@ -304,10 +304,24 @@
   animation: sparkPopRed 1.4s ease-out infinite;
 }
 
+/* "Efecto de agua" en el resplandor de esquina de las tarjetas de stats de
+   Mi panel — pedido explícito 2026-09-09. Solo mueve/escala el blob blanco
+   translúcido ya existente (nunca el texto/ícono encima, que se queda
+   quieto) — lento (6s) y suave (ease-in-out) a propósito, para que lea
+   como luz reflejándose en agua, no como algo llamativo que distraiga en
+   un panel que se mira seguido. */
+@keyframes waterDrift {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
+  50%      { transform: translate(-10px, 8px) scale(1.2); opacity: 0.75; }
+}
+.animate-water {
+  animation: waterDrift 6s ease-in-out infinite;
+}
+
 /* Respeta la preferencia del sistema de reducir movimiento — aplica a todas
    las animaciones decorativas de la app (hallazgo de accesibilidad). */
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-up, .animate-slide-in, .animate-count, .animate-shimmer, .animate-toast-in, .animate-marquee, .animate-flame {
+  .animate-fade-up, .animate-slide-in, .animate-count, .animate-shimmer, .animate-toast-in, .animate-marquee, .animate-flame, .animate-water {
     animation: none !important;
   }
   .animate-spark, .animate-spark-b, .animate-spark-slow {

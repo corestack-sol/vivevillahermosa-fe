@@ -316,7 +316,7 @@ export default function DashboardPage() {
         {stats.map((s, i) => {
           const contenido = (
             <>
-              <div className="absolute -top-10 -right-10 w-28 h-28 bg-white/10 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
+              <div className="absolute -top-10 -right-10 w-28 h-28 bg-white/10 rounded-full blur-2xl pointer-events-none animate-water" aria-hidden="true" />
               <div className="relative w-11 h-11 bg-white/15 rounded-2xl flex items-center justify-center mb-4 ring-1 ring-white/25">
                 <s.icon size={19} className="text-white" strokeWidth={2} />
               </div>
