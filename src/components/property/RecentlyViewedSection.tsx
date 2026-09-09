@@ -5,6 +5,7 @@ import { ArrowRight, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { getAllProperties } from '@/lib/api';
 import { getRecentlyViewedIds } from '@/lib/recentlyViewed';
+import { useAuth } from '@/context/AuthContext';
 import { PropertyCard } from './PropertyCard';
 import { Carousel } from '@/components/ui/Carousel';
 import type { Property } from '@/types/property';
@@ -22,11 +23,12 @@ interface RecentlyViewedSectionProps {
  * montarlo en cualquier página sin afectar el SSR estático.
  */
 export function RecentlyViewedSection({ excludeId, limit = 4 }: RecentlyViewedSectionProps) {
+  const { user } = useAuth();
   const [properties, setProperties] = useState<Property[] | null>(null);
 
   useEffect(() => {
     function cargarVistosRecientemente() {
-      const ids = getRecentlyViewedIds().filter((id) => id !== excludeId);
+      const ids = getRecentlyViewedIds(user?.userId ?? null).filter((id) => id !== excludeId);
       if (ids.length === 0) { setProperties([]); return; }
       getAllProperties().then((all) => {
         const found = ids
@@ -37,7 +39,7 @@ export function RecentlyViewedSection({ excludeId, limit = 4 }: RecentlyViewedSe
       });
     }
     cargarVistosRecientemente();
-  }, [excludeId, limit]);
+  }, [excludeId, limit, user?.userId]);
 
   if (!properties || properties.length === 0) return null;
 

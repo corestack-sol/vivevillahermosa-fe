@@ -21,7 +21,9 @@ import type { Property } from '@/types/property';
  * Lo que SÍ existe y es real: "vistos recientemente" en localStorage
  * (recentlyViewed.ts, ya usado en el Home). No necesita backend nuevo —
  * esta pantalla es esa misma lista completa (hasta 8), no el resumen de
- * 4 que muestra el carrusel del Home.
+ * 4 que muestra el carrusel del Home. Escaneada por `user.userId` — ver
+ * recentlyViewed.ts para el bug real que corrigió (historial mezclado
+ * entre cuentas del mismo navegador).
  */
 export default function RecientesPage() {
   const { user, loading: authLoading } = useAuth();
@@ -31,8 +33,9 @@ export default function RecientesPage() {
   useEffect(() => {
     if (!authLoading && !user) { router.push('/auth/login'); return; }
     if (!user) return;
+    const userId = user.userId;
     function cargarVistosRecientemente() {
-      const ids = getRecentlyViewedIds();
+      const ids = getRecentlyViewedIds(userId);
       if (ids.length === 0) { setProperties([]); return; }
       getAllProperties().then((all) => {
         const found = ids
@@ -63,7 +66,7 @@ export default function RecientesPage() {
         </Link>
         <div>
           <h1 className="text-2xl font-heading font-bold text-gray-900">Propiedades vistas</h1>
-          <p className="text-sm text-gray-500">Las últimas que abriste en este navegador</p>
+          <p className="text-sm text-gray-500">Las últimas que abriste con esta cuenta</p>
         </div>
       </div>
 

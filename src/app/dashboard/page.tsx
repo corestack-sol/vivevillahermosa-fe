@@ -64,9 +64,9 @@ export default function DashboardPage() {
   // datos que solo existen en el navegador).
   const [vistasRecientesCount, setVistasRecientesCount] = useState(0);
   useEffect(() => {
-    function leerVistasRecientes() { setVistasRecientesCount(getViewedCount()); }
+    function leerVistasRecientes() { setVistasRecientesCount(getViewedCount(user?.userId ?? null)); }
     leerVistasRecientes();
-  }, []);
+  }, [user?.userId]);
 
   // Verificación de correo — pedido explícito 2026-09-03, cierra el hallazgo
   // de seguridad más grave que quedaba pendiente en la auditoría de Fase 1
