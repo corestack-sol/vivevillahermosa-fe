@@ -329,16 +329,32 @@ export default function DashboardPage() {
         </button>
       )}
 
-      {/* Stats */}
+      {/* Stats — pedido explícito 2026-09-09: "más diseño, que se vean
+          premium". Antes era un rectángulo plano (borde gris, ícono
+          circular liso). Ahora cada tarjeta lleva:
+          - Sombra suave en reposo (no solo al hover) + borde casi
+            invisible en vez de un borde gris marcado — la profundidad
+            reemplaza al borde como señal principal, look más suave.
+          - Un resplandor de color en la esquina, desenfocado (blur-3xl),
+            reusando el MISMO `s.bg` que ya pinta el ícono — coherente por
+            tarjeta, y Tailwind-safe: `s.bg` ya es un string literal que
+            existe en el array `stats` de más arriba, nada generado en
+            runtime que el compilador no pueda ver.
+          - Ícono en un cuadrado redondeado con anillo interior blanco
+            (look "acristalado") en vez de un círculo liso.
+          - Número más grande y con tracking ajustado, label en mayúsculas
+            pequeñas — jerarquía más marcada, más "dashboard premium" que
+            "lista de datos". */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         {stats.map((s) => {
           const contenido = (
             <>
-              <div className={`w-10 h-10 ${s.bg} rounded-xl flex items-center justify-center mb-3`}>
-                <s.icon size={20} className={s.color} />
+              <div className={`absolute -top-8 -right-8 w-24 h-24 ${s.bg} rounded-full blur-3xl opacity-70 pointer-events-none`} aria-hidden="true" />
+              <div className={`relative w-11 h-11 ${s.bg} rounded-2xl flex items-center justify-center mb-4 shadow-inner ring-1 ring-white`}>
+                <s.icon size={19} className={s.color} strokeWidth={2} />
               </div>
-              <p className="text-2xl font-display font-black text-gray-900">{s.value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
+              <p className="relative text-3xl font-display font-black text-gray-900 tracking-tight">{s.value}</p>
+              <p className="relative text-[11px] font-semibold text-gray-400 uppercase tracking-wide mt-1">{s.label}</p>
             </>
           );
           // Sin href — sin ningún dato real detrás todavía (ver el
@@ -346,14 +362,14 @@ export default function DashboardPage() {
           // en vez de mandar a algo inventado.
           if (!s.href) {
             return (
-              <div key={s.label} className="bg-white rounded-2xl border border-gray-200 p-5 opacity-60 cursor-default">
+              <div key={s.label} className="relative overflow-hidden bg-white rounded-3xl border border-gray-100 shadow-sm p-5 opacity-60 cursor-default">
                 {contenido}
               </div>
             );
           }
           return (
             <Link key={s.label} href={s.href}
-              className="bg-white rounded-2xl border border-gray-200 p-5 hover:border-brand/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+              className="relative overflow-hidden bg-white rounded-3xl border border-gray-100 shadow-sm p-5 hover:shadow-xl hover:shadow-gray-200/60 hover:-translate-y-1 hover:border-gray-200 transition-all duration-300">
               {contenido}
             </Link>
           );
