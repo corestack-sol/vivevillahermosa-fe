@@ -66,7 +66,13 @@ export function formatHora(dateStr: string): string {
 export function formatRelativeDate(dateStr: string): string {
   const now = new Date();
   const date = new Date(dateStr);
-  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+  // Bug real reportado 2026-09-08: "Hace -1 días" en un mensaje recién
+  // enviado. Si el reloj del servidor va unos milisegundos adelantado al
+  // del cliente (drift normal, sin nada raro detrás), `now - date` da
+  // negativo y Math.floor(-0.000x) redondea a -1, no a 0 — pasa de largo
+  // el check `< 7` de abajo tal cual. Un mensaje "del futuro" por drift de
+  // reloj sigue siendo de hoy.
+  const diffDays = Math.max(0, Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)));
 
   if (diffDays === 0) return 'Hoy';
   if (diffDays === 1) return 'Ayer';

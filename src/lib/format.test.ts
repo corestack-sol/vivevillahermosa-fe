@@ -91,6 +91,13 @@ describe('formatRelativeDate', () => {
     const result = formatRelativeDate(d);
     expect(result).not.toMatch(/Hace|Hoy|Ayer/);
   });
+  // Bug real reportado 2026-09-08: "Hace -1 días" en un mensaje recién
+  // enviado — el reloj del servidor iba unos milisegundos adelantado al
+  // del cliente, Math.floor(negativo cerca de 0) daba -1 en vez de 0.
+  it('clamps a date slightly in the future (clock drift) to "Hoy" instead of negative days', () => {
+    const futuro = new Date(Date.now() + 5000).toISOString();
+    expect(formatRelativeDate(futuro)).toBe('Hoy');
+  });
 });
 
 describe('formatHora', () => {
