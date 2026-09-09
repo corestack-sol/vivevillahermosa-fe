@@ -23,6 +23,7 @@ import { distanciaKm } from '@/lib/colonias';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { resizeImageToDataUrl, MAX_SOURCE_BYTES } from '@/lib/imageResize';
 import { generarTituloAutomatico } from '@/lib/tituloGenerator';
+import { formatTelefonoInput } from '@/lib/phone';
 import type { Coords } from '@/components/forms/MapPicker';
 import type { Property } from '@/types/property';
 
@@ -713,7 +714,21 @@ export default function EditarPropiedadPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {watch('metodoContacto') !== 'correo' && (
-            <Input label="WhatsApp" error={errors.telefonoContacto?.message} {...register('telefonoContacto')} />
+            // Formato en vivo "993 123 4567" — pedido explícito 2026-09-08
+            // tras un caso real de typo (9→6, teclas adyacentes) que se
+            // coló sin que nadie lo notara en 10 dígitos corridos. Mismo
+            // criterio que PublishForm.tsx, ver formatTelefonoInput() en
+            // src/lib/phone.ts.
+            <Input
+              label="WhatsApp"
+              type="tel"
+              inputMode="numeric"
+              placeholder="993 123 4567"
+              maxLength={12}
+              error={errors.telefonoContacto?.message}
+              {...register('telefonoContacto')}
+              onChange={(e) => setValue('telefonoContacto', formatTelefonoInput(e.target.value), { shouldValidate: true })}
+            />
           )}
           {(watch('metodoContacto') === 'correo' || watch('metodoContacto') === 'ambos') && (
             <Input label="Correo electrónico" error={errors.emailContacto?.message} {...register('emailContacto')} />

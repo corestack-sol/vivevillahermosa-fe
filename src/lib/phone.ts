@@ -21,3 +21,19 @@ export function whatsappBaseUrl(numero: string): string {
   const conCodigoPais = digits.length === 10 ? `52${digits}` : digits;
   return `https://wa.me/${conCodigoPais}`;
 }
+
+// Formatea EN VIVO mientras la persona escribe — pedido explícito
+// 2026-09-08, tras un caso real: una propiedad quedó con "663" en vez de
+// "993" en el WhatsApp guardado (9→6, un typo de tecla adyacente en el
+// teclado numérico). El campo antes era texto libre sin agrupar — un typo
+// así se pierde fácil a simple vista en 10 dígitos corridos. Agrupado como
+// "993 123 4567" (mismo formato que ya pedía el placeholder) es más fácil
+// de revisar antes de publicar. Nunca deja escribir más de 10 dígitos —
+// letras/símbolos se descartan solos, no hace falta que el campo los
+// rechace con un error después.
+export function formatTelefonoInput(valor: string): string {
+  const digits = valor.replace(/\D/g, '').slice(0, 10);
+  if (digits.length > 6) return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+  if (digits.length > 3) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+  return digits;
+}

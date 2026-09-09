@@ -20,6 +20,7 @@ import { evaluarCalidadFoto, type CalidadFoto } from '@/lib/calidadFoto';
 import { generarTituloAutomatico } from '@/lib/tituloGenerator';
 import { detectarLenguajeSensible } from '@/lib/contentModeration';
 import { detectarRiesgoInundacion } from '@/lib/zonas-inundacion';
+import { formatTelefonoInput } from '@/lib/phone';
 import type { RiesgoInundacion } from '@/lib/zonas-inundacion';
 import type { Coords } from './MapPicker';
 import { FloodRiskBadge } from '@/components/property/FloodRiskBadge';
@@ -1848,7 +1849,20 @@ export function PublishForm() {
             </div>
 
             {watch('metodoContacto') !== 'correo' && (
-              <Input label="WhatsApp" type="tel" placeholder="993 123 4567" maxLength={12} error={errors.telefonoContacto?.message} {...register('telefonoContacto')} />
+              // Formato en vivo "993 123 4567" — pedido explícito 2026-09-08
+              // tras un caso real de typo (9→6, teclas adyacentes) que se
+              // coló sin que nadie lo notara en 10 dígitos corridos. Ver
+              // formatTelefonoInput() en src/lib/phone.ts.
+              <Input
+                label="WhatsApp"
+                type="tel"
+                inputMode="numeric"
+                placeholder="993 123 4567"
+                maxLength={12}
+                error={errors.telefonoContacto?.message}
+                {...register('telefonoContacto')}
+                onChange={(e) => setValue('telefonoContacto', formatTelefonoInput(e.target.value), { shouldValidate: true })}
+              />
             )}
             {/* Informativo, nunca acusatorio — un agente/casero real con
                 varias propiedades activas también da un número aquí. Solo
