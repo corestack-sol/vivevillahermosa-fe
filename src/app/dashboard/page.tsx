@@ -336,7 +336,7 @@ export default function DashboardPage() {
           Solo cuentas individuales — las profesionales ya tienen su propio
           bloque más abajo (Tip + botón "Ver mis propiedades" + reporte). */}
       {!esProfesional && misPropiedades.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-200 mb-8 overflow-hidden">
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 mb-8 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
             <p className="flex items-center gap-2 text-sm font-semibold text-gray-800">
               <Building2 size={15} className="text-brand" /> Mis propiedades
@@ -387,7 +387,7 @@ export default function DashboardPage() {
           principal para una cuenta individual) no quede empujada hacia
           abajo por algo secundario. */}
       {notificaciones.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-200 mb-8 overflow-hidden">
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300 mb-8 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
             <p className="flex items-center gap-2 text-sm font-semibold text-gray-800">
               <Bell size={15} className="text-amber-500" /> Notificaciones recientes
