@@ -351,8 +351,17 @@ export default function MisPropiedadesPage() {
               // Ahora en móvil la info ocupa su propia fila completa y las
               // acciones bajan a una segunda fila alineada a la derecha;
               // desde sm: vuelve al layout original de una sola fila.
+              //
+              // `flex-1` en el bloque de info (abajo) — pedido explícito
+              // 2026-09-08: sin él, precio/herramientas no quedaban en una
+              // posición fija — se corrían según qué tan largo fuera el
+              // título de CADA fila, así que ninguna columna alineaba
+              // verticalmente entre propiedades. Con el bloque de info
+              // absorbiendo el espacio sobrante y precio/herramientas con
+              // ancho fijo, las tres columnas quedan en la misma posición
+              // en todas las filas sin importar el contenido.
               <div key={p.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 bg-white border border-gray-100 rounded-2xl p-3.5 hover:border-brand/30 hover:shadow-sm transition-all">
-                <div className="flex items-center gap-4 min-w-0">
+                <div className="flex items-center gap-4 min-w-0 flex-1">
                   <Link href={`/propiedades/${p.slug}`}
                     className="flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center"
                     style={{ background: `linear-gradient(160deg, ${cfg.from} 0%, ${cfg.to} 100%)` }}>
@@ -360,33 +369,37 @@ export default function MisPropiedadesPage() {
                   </Link>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${estadoCfg.cls}`}>
                         {estadoCfg.label}
                       </span>
-                      <span className="text-xs text-gray-400">Publicada {publicadaHace}</span>
                       {p.featured && (
                         <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
                           <Star size={9} className="fill-current" /> Destacada
                         </span>
                       )}
-                      {/* Contacto real por propiedad (docs/BACKEND-VISTAS-CONTACTOS-02092026.md)
-                          — pedido explícito 2026-09-08: reemplaza a la tarjeta
-                          global "Tus propiedades contactadas" que se quitó del
-                          dashboard (no dejaba claro DE QUÉ propiedad hablaba).
-                          Este dato sí es real y sí es específico de ESTA fila. */}
-                      <span className="flex items-center gap-1 text-[10px] font-semibold text-gray-500">
-                        <MessageCircle size={11} /> {contactos} {contactos === 1 ? 'contacto' : 'contactos'}
-                      </span>
+                      <span className="text-xs text-gray-400">Publicada {publicadaHace}</span>
                     </div>
                     <Link href={`/propiedades/${p.slug}`} className="font-semibold text-gray-900 text-sm truncate block hover:text-brand transition-colors">
                       {p.titulo}
                     </Link>
-                    <p className="text-xs text-gray-400 truncate">{p.colonia}, {p.municipio === 'Centro' ? 'Villahermosa' : p.municipio}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-xs text-gray-400 truncate min-w-0">{p.colonia}, {p.municipio === 'Centro' ? 'Villahermosa' : p.municipio}</p>
+                      {/* Contacto real por propiedad (docs/BACKEND-VISTAS-CONTACTOS-02092026.md)
+                          — pedido explícito 2026-09-08: reemplaza a la tarjeta
+                          global "Tus propiedades contactadas" que se quitó del
+                          dashboard (no dejaba claro DE QUÉ propiedad hablaba).
+                          Mismo peso visual que un badge de estado (antes era
+                          texto gris chico, se perdía entre el resto) — pedido
+                          explícito: "que se distinga bien". */}
+                      <span className="flex items-center gap-1 flex-shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200">
+                        <MessageCircle size={10} /> {contactos} {contactos === 1 ? 'contacto' : 'contactos'}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <p className="hidden sm:block flex-shrink-0 font-bold text-gray-900 text-sm w-28 text-right">
+                <p className="hidden sm:block flex-shrink-0 font-bold text-gray-900 text-sm w-32 text-right">
                   {fmtMoney(p.precio)}{p.operacion === 'renta' && <span className="text-xs font-normal text-gray-400">/mes</span>}
                 </p>
 
