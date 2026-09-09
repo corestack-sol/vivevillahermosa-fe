@@ -291,13 +291,10 @@ export default function ConversacionPage() {
           la ficha pública; el resto de la pantalla (leer/responder) se
           queda aquí mismo. */}
       {propiedad && (
-        <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-2xl px-4 py-3 mb-4 flex-shrink-0">
-          {/* Link separado del botón de abajo — un <button> anidado dentro
-              de un <a> es HTML inválido y el click de "Compartir WhatsApp"
-              hubiera disparado también la navegación. */}
+        <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 mb-4 flex-shrink-0">
           <Link
             href={`/propiedades/${propiedad.slug}`}
-            className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
           >
             <div className="relative w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center">
               {propiedad.foto ? (
@@ -325,16 +322,22 @@ export default function ConversacionPage() {
           {/* Compartir WhatsApp — pedido explícito 2026-09-08: la única
               forma de que el interesado consiga el WhatsApp de una
               propiedad con "prefiero que me escriban primero" es que el
-              dueño lo comparta acá, ya dentro de la conversación. */}
+              dueño lo comparta acá, ya dentro de la conversación. Fila
+              propia, no al lado del título — con un título largo (real,
+              verificado visualmente: "Departamento en renta en Heriberto
+              Kehoe...") el botón lo apretaba a "Departa..." y el badge de
+              "Tu propiedad" quedaba encimado. Ancho completo evita competir
+              por espacio horizontal con el título, sin importar qué tan
+              largo sea. */}
           {esMiPropiedad && (
             <button
               type="button"
               onClick={compartirWhatsapp}
               disabled={compartiendoWhatsapp}
-              className="flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 px-3 py-2 rounded-xl transition-colors disabled:opacity-60"
+              className="mt-2.5 pt-2.5 border-t border-gray-100 w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800 transition-colors disabled:opacity-60"
             >
               {compartiendoWhatsapp ? <Loader2 size={14} className="animate-spin" /> : <MessageCircleHeart size={14} />}
-              <span className="hidden sm:inline">Compartir WhatsApp</span>
+              <span>Compartir mi WhatsApp con {otraPersona?.nombre ?? 'el interesado'}</span>
             </button>
           )}
         </div>
