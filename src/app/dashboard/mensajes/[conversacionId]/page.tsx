@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError, BACKEND_URL } from '@/lib/backendApi';
 import { formatRelativeDate, formatHora } from '@/lib/format';
-import { whatsappUrl } from '@/lib/phone';
+import { whatsappBaseUrl } from '@/lib/phone';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import type { MensajeChat, ConversacionResumen } from '@/lib/mensajeria';
@@ -30,6 +30,29 @@ import { ModeracionUsuarioModal } from '@/components/mensajeria/ModeracionUsuari
  * eventos`, `GET`/`POST /conversaciones/:id/mensajes`, `POST
  * /propiedades/:id/mensajes` para el primer contacto).
  */
+
+const URL_PATTERN = /(https?:\/\/[^\s]+)/g;
+
+/**
+ * Pedido explícito 2026-09-08: el link de "Compartir WhatsApp" se veía
+ * como texto plano sin poder tocarlo. `texto.split()` con un patrón que
+ * tiene un grupo de captura devuelve los tramos que NO matchean intercalados
+ * con los que SÍ — usar índices de React array, no dangerouslySetInnerHTML
+ * (serían nodos de texto separados igual, sin riesgo de inyectar HTML de
+ * un mensaje ajeno).
+ */
+function renderTextoConLinks(texto: string) {
+  return texto.split(URL_PATTERN).map((parte, i) =>
+    /^https?:\/\//.test(parte) ? (
+      <a key={i} href={parte} target="_blank" rel="noopener noreferrer" className="underline">
+        {parte}
+      </a>
+    ) : (
+      <span key={i}>{parte}</span>
+    ),
+  );
+}
+
 export default function ConversacionPage() {
   const { conversacionId } = useParams<{ conversacionId: string }>();
   const { user, loading: authLoading } = useAuth();
@@ -205,7 +228,12 @@ export default function ConversacionPage() {
         toast.error('No hay un WhatsApp configurado en esta propiedad.');
         return;
       }
-      const link = whatsappUrl(contacto.whatsapp, `Hola, te escribo por tu interés en ${propiedad.titulo}`);
+      // Sin `?text=` — pedido explícito 2026-09-08: ese parámetro se veía
+      // como basura codificada (%2C, %20...) dentro del mensaje, no tiene
+      // sentido como texto visible en ESTE chat (solo lo interpreta
+      // WhatsApp al abrir el link). whatsappUrl() con prefill sigue
+      // usándose tal cual en AgentCard.tsx, donde sí aplica.
+      const link = whatsappBaseUrl(contacto.whatsapp);
       const { mensaje } = await backendFetch<{ mensaje: MensajeChat }>(`/conversaciones/${conversacionId}/mensajes`, {
         method: 'POST',
         body: JSON.stringify({ texto: `Aquí puedes escribirme directo por WhatsApp: ${link}` }),
@@ -394,7 +422,7 @@ export default function ConversacionPage() {
                         (word-break: break-all) sí fuerza el corte en
                         cualquier carácter, verificado visualmente con el
                         link real de WhatsApp en mobile (390px). */}
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-all">{m.texto}</p>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-all">{renderTextoConLinks(m.texto)}</p>
                     <p className={`text-[10px] mt-1 ${esMio ? 'text-white/60' : 'text-gray-400'}`}>{formatRelativeDate(m.createdAt)} · {formatHora(m.createdAt)}</p>
                   </div>
                 </div>

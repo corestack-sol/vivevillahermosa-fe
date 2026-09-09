@@ -8,3 +8,16 @@ export function whatsappUrl(numero: string, texto: string): string {
   const conCodigoPais = digits.length === 10 ? `52${digits}` : digits;
   return `https://wa.me/${conCodigoPais}?text=${encodeURIComponent(texto)}`;
 }
+
+// Sin `?text=` — pensado para compartir el número PELADO como texto plano
+// dentro de un mensaje de chat (ver "Compartir WhatsApp" en
+// dashboard/mensajes/[conversacionId]/page.tsx). Reporte real 2026-09-08:
+// el link con `?text=` prellenado se veía como basura codificada
+// (%2C, %20, etc.) dentro del cuerpo del mensaje — ese parámetro solo tiene
+// sentido cuando WhatsApp lo interpreta al abrir el link, no como texto
+// visible en otro chat.
+export function whatsappBaseUrl(numero: string): string {
+  const digits = numero.replace(/\D/g, '');
+  const conCodigoPais = digits.length === 10 ? `52${digits}` : digits;
+  return `https://wa.me/${conCodigoPais}`;
+}

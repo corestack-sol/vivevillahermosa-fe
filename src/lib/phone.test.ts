@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { whatsappUrl } from './phone';
+import { whatsappUrl, whatsappBaseUrl } from './phone';
 
 describe('whatsappUrl', () => {
   it('adds the 52 country code to a bare 10-digit number', () => {
@@ -22,5 +22,17 @@ describe('whatsappUrl', () => {
     // prepended. Anything else (partial, too long) is passed through as-is
     // rather than guessed at.
     expect(whatsappUrl('12345', 'x')).toBe('https://wa.me/12345?text=x');
+  });
+});
+
+describe('whatsappBaseUrl', () => {
+  it('adds the 52 country code, no query string', () => {
+    expect(whatsappBaseUrl('9931234567')).toBe('https://wa.me/529931234567');
+  });
+  it('strips non-digit formatting', () => {
+    expect(whatsappBaseUrl('(993) 123-4567')).toBe('https://wa.me/529931234567');
+  });
+  it('does NOT double-prefix a number that already includes 52', () => {
+    expect(whatsappBaseUrl('529931234567')).toBe('https://wa.me/529931234567');
   });
 });
