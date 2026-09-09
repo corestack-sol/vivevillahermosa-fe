@@ -366,12 +366,32 @@ export default function ConversacionPage() {
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0 ${esMio ? 'bg-brand text-white' : 'bg-gray-200 text-gray-600'}`}>
                   {inicial}
                 </div>
-                <div className={`flex flex-col max-w-[75%] ${esMio ? 'items-end' : 'items-start'}`}>
+                {/* min-w-0 — bug real reportado 2026-09-08: un mensaje con
+                    una URL larga sin espacios reales (todo %20 codificado,
+                    ej. el link de "Compartir WhatsApp") no tenía dónde
+                    partirse — un hijo flex por defecto tiene min-width:auto,
+                    que gana sobre max-w-[75%] cuando el contenido es más
+                    ancho, así que la burbuja se salía del contenedor del
+                    chat en vez de respetar el máximo. Con min-w-0 el hijo
+                    SÍ puede encogerse hasta el máximo, y ahí break-words
+                    (ya estaba en el <p> de abajo) parte la URL en varias
+                    líneas como corresponde. */}
+                <div className={`flex flex-col max-w-[75%] min-w-0 ${esMio ? 'items-end' : 'items-start'}`}>
                   {cambioDeRemitente && (
                     <p className={`text-[11px] font-semibold mb-1 px-1 ${esMio ? 'text-brand' : 'text-gray-500'}`}>{nombreRemitente}</p>
                   )}
                   <div className={`rounded-2xl px-3.5 py-2 ${esMio ? 'bg-brand text-white rounded-br-sm' : 'bg-gray-100 text-gray-800 rounded-bl-sm'}`}>
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{m.texto}</p>
+                    {/* break-all, no break-words — bug real reportado
+                        2026-09-08: un link como el de "Compartir WhatsApp"
+                        (https://wa.me/...?text=...%20...) no tiene ESPACIOS
+                        reales (todo %20 codificado), así que para el
+                        navegador es una sola "palabra" gigante — break-words
+                        (overflow-wrap: break-word) solo parte donde ya hay
+                        oportunidad de corte, no alcanza. break-all
+                        (word-break: break-all) sí fuerza el corte en
+                        cualquier carácter, verificado visualmente con el
+                        link real de WhatsApp en mobile (390px). */}
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-all">{m.texto}</p>
                     <p className={`text-[10px] mt-1 ${esMio ? 'text-white/60' : 'text-gray-400'}`}>{formatRelativeDate(m.createdAt)} · {formatHora(m.createdAt)}</p>
                   </div>
                 </div>
