@@ -305,17 +305,22 @@
 }
 
 /* "Efecto de agua" en el resplandor de esquina de las tarjetas de stats de
-   Mi panel — pedido explícito 2026-09-09. Solo mueve/escala el blob blanco
-   translúcido ya existente (nunca el texto/ícono encima, que se queda
-   quieto) — lento (6s) y suave (ease-in-out) a propósito, para que lea
-   como luz reflejándose en agua, no como algo llamativo que distraiga en
-   un panel que se mira seguido. */
+   Mi panel — pedido explícito 2026-09-09. Reporte real: la primera versión
+   no se percibía — opacidad de base muy baja (10%) + blur muy fuerte
+   (blur-2xl, 40px) sobre un fondo ya saturado, más el blob recortado a
+   medias por el overflow-hidden de la tarjeta, dejaban casi nada visible
+   por mover. Recorrido más amplio y opacidad de base más alta (ver
+   className en dashboard/page.tsx: bg-white/25 + blur-xl en vez de
+   bg-white/10 + blur-2xl) para que el "brillo" en sí ya se note en reposo,
+   y la animación sea la deriva de ALGO visible, no de algo que ya era
+   invisible. Sigue lento (5s) y en loop suave — más notorio, no
+   parpadeante. */
 @keyframes waterDrift {
-  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
-  50%      { transform: translate(-10px, 8px) scale(1.2); opacity: 0.75; }
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.6; }
+  50%      { transform: translate(-18px, 14px) scale(1.35); opacity: 0.9; }
 }
 .animate-water {
-  animation: waterDrift 6s ease-in-out infinite;
+  animation: waterDrift 5s ease-in-out infinite;
 }
 
 /* Respeta la preferencia del sistema de reducir movimiento — aplica a todas
