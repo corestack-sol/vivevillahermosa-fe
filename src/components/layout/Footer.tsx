@@ -52,7 +52,7 @@ function FooterFull() {
               </span>
             </div>
             <p className="text-sm text-white/70 leading-relaxed mb-4">
-              Encontrar dónde vivir en Tabasco no debería ser difícil. Casas, departamentos,
+              El lugar para encontrar dónde vivir en Tabasco. Casas, departamentos,
               terrenos, locales comerciales y habitaciones en los 17 municipios del estado. Gratis para todos.
             </p>
             <div className="space-y-2">

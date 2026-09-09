@@ -25,10 +25,16 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-const VARIANT_STYLES: Record<ToastVariant, { icon: typeof CheckCircle2; iconCls: string; borderCls: string }> = {
-  success: { icon: CheckCircle2, iconCls: 'text-emerald-500', borderCls: 'border-emerald-100' },
-  error:   { icon: AlertCircle,  iconCls: 'text-red-500',     borderCls: 'border-red-100' },
-  info:    { icon: Info,         iconCls: 'text-blue-500',    borderCls: 'border-blue-100' },
+// Rediseño 2026-09-09 — pedido explícito: "se pierden con lo demás del UI
+// en blanco". Antes era borde de 1px casi del mismo blanco que el fondo
+// (border-emerald-100/etc) — imperceptible. Ahora franja de color sólida a
+// la izquierda + ícono en chip de color + sombra más fuerte, con los
+// tokens de marca reales (success/danger/sky), no colores Tailwind
+// genéricos sin relación con la paleta de la app.
+const VARIANT_STYLES: Record<ToastVariant, { icon: typeof CheckCircle2; iconCls: string; chipCls: string; borderCls: string }> = {
+  success: { icon: CheckCircle2, iconCls: 'text-success', chipCls: 'bg-success/10', borderCls: 'border-success' },
+  error:   { icon: AlertCircle,  iconCls: 'text-danger',  chipCls: 'bg-danger/10',  borderCls: 'border-danger' },
+  info:    { icon: Info,         iconCls: 'text-sky-600', chipCls: 'bg-sky/15',     borderCls: 'border-sky' },
 };
 
 const DURATION_MS = 4000;
@@ -70,16 +76,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         aria-atomic="false"
       >
         {toasts.map((t) => {
-          const { icon: Icon, iconCls, borderCls } = VARIANT_STYLES[t.variant];
+          const { icon: Icon, iconCls, chipCls, borderCls } = VARIANT_STYLES[t.variant];
           return (
             <div
               key={t.id}
               role="status"
-              className={`pointer-events-auto flex items-start gap-2.5 w-full bg-white border ${borderCls} rounded-2xl shadow-xl px-4 py-3 animate-toast-in`}
+              className={`pointer-events-auto flex items-start gap-3 w-full bg-white border-l-4 ${borderCls} rounded-2xl shadow-2xl ring-1 ring-black/5 px-4 py-3.5 animate-toast-in`}
             >
-              <Icon size={18} className={`flex-shrink-0 mt-0.5 ${iconCls}`} />
+              <span className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${chipCls}`}>
+                <Icon size={16} className={iconCls} />
+              </span>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-700 leading-snug">{t.message}</p>
+                <p className="text-sm font-medium text-gray-900 leading-snug">{t.message}</p>
                 {t.action && (
                   <button
                     onClick={() => { t.action!.onClick(); remove(t.id); }}

@@ -141,10 +141,20 @@ function RecuperarPasswordContent() {
           <Input
             label="Código de 6 dígitos"
             inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="one-time-code"
             maxLength={6}
             placeholder="123456"
             error={confirmarForm.formState.errors.codigo?.message}
             {...confirmarForm.register('codigo')}
+            // El navegador solo SUGIERE teclado numérico con inputMode — no
+            // bloquea letras al escribir/pegar, así que se filtra a mano.
+            // Bug real reportado 2026-09-09: sin autoComplete, Chrome
+            // autocompletaba este input con el correo guardado (heurística
+            // de "campo de usuario" por tener un input de contraseña debajo
+            // en el mismo form) — one-time-code es el valor estándar para
+            // evitarlo.
+            onChange={(e) => confirmarForm.setValue('codigo', e.target.value.replace(/\D/g, '').slice(0, 6), { shouldValidate: true })}
           />
 
           <div>

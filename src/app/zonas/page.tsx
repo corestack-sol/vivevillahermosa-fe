@@ -187,6 +187,15 @@ export default async function ZonasPage() {
         <h2 className="text-xl font-heading font-bold text-gray-900 mb-5">
           {porDemanda ? 'Colonias más buscadas' : 'Colonias con más propiedades'}
         </h2>
+        {coloniasCards.length === 0 ? (
+          // Plataforma sin ninguna propiedad publicada todavía — antes esto
+          // dejaba el grid vacío sin ningún aviso, caja en blanco bajo el
+          // título. Pedido explícito 2026-09-09.
+          <div className="text-center py-14 bg-gray-50 rounded-3xl">
+            <MapIcon size={28} className="mx-auto mb-3 text-gray-300" strokeWidth={1.5} />
+            <p className="text-sm text-gray-400">Todavía no hay propiedades publicadas por colonia</p>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {coloniasCards.map((colonia, i) => {
             const href = colonia.slug ? `/zonas/${colonia.slug}` : `/propiedades?q=${encodeURIComponent(colonia.nombre)}`;
@@ -254,6 +263,7 @@ export default async function ZonasPage() {
             );
           })}
         </div>
+        )}
 
         {coloniasChips.length > 0 && <ColoniaChipsList chips={coloniasChips} municipioSlugs={municipioSlugPorNombre} />}
       </section>
