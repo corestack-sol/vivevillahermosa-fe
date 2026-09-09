@@ -64,12 +64,17 @@ function MensajesContent() {
   const propiedadFiltro = searchParams.get('propiedad');
   const [items, setItems] = useState<ItemBandejaMensajes[]>([]);
   const [loading, setLoading] = useState(true);
-  // Eliminar chat completo — pedido explícito 2026-09-07. Backend nuevo,
-  // no existe todavía (confirmado en vivo: DELETE /conversaciones/:id y
-  // DELETE /propiedades/:id/mensajes/:mensajeId, ambos 404) — ver
-  // docs/BACKEND-ELIMINAR-CONVERSACION-07092026.md. "Eliminar" borra solo
-  // de TU bandeja (semántica documentada), no destruye el historial de la
-  // otra persona.
+  // Eliminar chat completo — pedido explícito 2026-09-07. `DELETE
+  // /conversaciones/:id` ya es real — confirmado en vivo 2026-09-09 con 2
+  // cuentas de prueba desechables y una conversación real: borra solo de
+  // TU bandeja (la otra persona la sigue viendo completa, semántica
+  // "eliminar para mí" tal cual quedó documentada en
+  // docs/BACKEND-ELIMINAR-CONVERSACION-07092026.md — ya desactualizado,
+  // ver ese archivo). `DELETE /propiedades/:id/mensajes/:mensajeId`
+  // (sistema legado) no se volvió a probar end-to-end con un mensaje real
+  // — el 404 de una llamada con id inventado ya no trae el texto "Cannot
+  // DELETE ..." de antes, lo cual sugiere que también existe, pero eso
+  // solo no alcanza para darlo por confirmado.
   const [itemAEliminar, setItemAEliminar] = useState<ItemBandejaMensajes | null>(null);
   const [eliminando, setEliminando] = useState(false);
   // Paginado — pedido explícito 2026-09-07. El backend no pagina
