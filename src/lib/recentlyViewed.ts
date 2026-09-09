@@ -24,7 +24,17 @@ export function getViewedCount(): number {
   if (typeof window === 'undefined') return 0;
   try {
     const raw = localStorage.getItem(KEY_TOTAL);
-    return raw ? (JSON.parse(raw) as string[]).length : 0;
+    const todas = new Set<string>(raw ? (JSON.parse(raw) as string[]) : []);
+    // Bug real reportado 2026-09-09: KEY_TOTAL se agregó recién (2026-09-08)
+    // — para cuentas con historial de ANTES de ese cambio, arrancaba en 0
+    // aunque el carrusel de "vistos recientemente" (KEY, ya venía llenándose
+    // hace rato) mostrara hasta 8 propiedades reales. El panel mostraba "3
+    // propiedades vistas" en la tarjeta pero 8 tarjetas al entrar — dos
+    // fuentes de la misma info, desincronizadas por la migración. Unir con
+    // KEY acá (en la LECTURA, sin reescribir nada) garantiza que el
+    // contador nunca sea menor que lo que la persona ya puede ver en pantalla.
+    for (const id of getRecentlyViewedIds()) todas.add(id);
+    return todas.size;
   } catch {
     return 0;
   }

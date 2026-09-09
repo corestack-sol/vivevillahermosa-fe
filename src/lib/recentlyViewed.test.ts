@@ -55,5 +55,27 @@ describe('recentlyViewed', () => {
       addRecentlyViewed('prop-1');
       expect(getViewedCount()).toBe(2);
     });
+
+    // Bug real reportado 2026-09-09: cuentas con historial de ANTES de que
+    // KEY_TOTAL existiera (2026-09-08) veían "3 propiedades vistas" en el
+    // dashboard pero 8 tarjetas reales al entrar al carrusel — KEY_TOTAL
+    // arrancaba en 0 sin importar cuánto historial ya hubiera en KEY.
+    it('backfills from the pre-existing recent list, never counting less than what is already visible', () => {
+      // Simula el localStorage viejo: solo KEY tiene datos (8 propiedades
+      // reales de antes del 2026-09-08), KEY_TOTAL nunca existió para esta
+      // cuenta.
+      localStorage.setItem(
+        'recentlyViewedProperties',
+        JSON.stringify(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']),
+      );
+      expect(getViewedCount()).toBe(8);
+    });
+
+    it('merges old and new sources without double-counting overlapping ids', () => {
+      localStorage.setItem('recentlyViewedProperties', JSON.stringify(['a', 'b']));
+      addRecentlyViewed('a'); // ya estaba en la lista vieja — no debe sumar de más
+      addRecentlyViewed('c');
+      expect(getViewedCount()).toBe(3); // a, b, c
+    });
   });
 });
