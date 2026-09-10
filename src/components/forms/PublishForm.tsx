@@ -30,6 +30,7 @@ import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { getAllProperties } from '@/lib/api';
 import posthog from 'posthog-js';
 import { matchColonia, distanciaKm, precargarColoniasDescubiertas, type ColoniaCoord } from '@/lib/colonias';
+import { coordsAutoDesdeColonia } from '@/lib/mapPin';
 import { landmarksCercanos, precargarLandmarks } from '@/lib/landmarks';
 import {
   clasificarGPSFoto, esPublicacionBloqueada, debeReevaluarFraude, contarContactoReutilizado,
@@ -172,6 +173,12 @@ export function PublishForm() {
   // — ver sugerirPinDesdeFoto() más abajo. Solo cambia el texto de ayuda
   // bajo el mapa, nunca bloquea que la persona lo mueva.
   const [pinDesdeFoto, setPinDesdeFoto] = useState(false);
+  // true cuando `coords` vino de la colonia escrita (centroide del
+  // catálogo, ver coordsAutoDesdeColonia en mapPin.ts), no de un clic
+  // manual ni de EXIF — permite que el pin se siga corrigiendo solo
+  // mientras nadie lo haya tocado a mano, y que EXIF (más preciso) sí
+  // pueda pisarlo si llega después.
+  const [pinDesdeColonia, setPinDesdeColonia] = useState(false);
   // Colonia catalogada más cercana al GPS de una foto, cuando difiere de lo
   // que la persona ya escribió — ver sugerirPinDesdeFoto() más abajo. Nunca
   // se aplica sola, solo se ofrece un botón para corregir.
@@ -389,12 +396,15 @@ export function PublishForm() {
       });
     });
 
-    // Sugerencia de pin por EXIF (solo si todavía no hay ninguno puesto,
-    // nunca sobreescribe uno ya elegido) y detección de contradicción
-    // (corre SIEMPRE, sin importar si ya hay pin — es una señal de fraude,
-    // no una conveniencia). `habiaCoordsAlInicio`/`yaSugerido` evitan que
-    // dos fotos del mismo lote se pisen entre sí.
-    const habiaCoordsAlInicio = !!coords;
+    // Sugerencia de pin por EXIF (solo si todavía no hay ninguno puesto O
+    // el que hay es solo una sugerencia por colonia, nunca sobreescribe uno
+    // puesto a mano) y detección de contradicción (corre SIEMPRE, sin
+    // importar si ya hay pin — es una señal de fraude, no una
+    // conveniencia). GPS real de una foto es más preciso que el centroide
+    // de una colonia, así que sí puede pisar esa sugerencia — nunca al
+    // revés. `habiaPinManualAlInicio`/`yaSugerido` evitan que dos fotos del
+    // mismo lote se pisen entre sí.
+    const habiaPinManualAlInicio = !!coords && !pinDesdeColonia;
     let yaSugerido = false;
     toAdd.forEach((item) => {
       analizarGPSFoto(item.file).then((resultado) => {
@@ -404,10 +414,11 @@ export function PublishForm() {
           gpsContradiccionRef.current = resultado.distanciaKm;
           return;
         }
-        if (habiaCoordsAlInicio || yaSugerido) return;
+        if (habiaPinManualAlInicio || yaSugerido) return;
         yaSugerido = true;
         setCoords(resultado.coords);
         setPinDesdeFoto(true);
+        setPinDesdeColonia(false);
         // Toast, no solo el estado — la persona está viendo el paso de
         // Fotos en este momento, no el mapa (eso vive en el paso de
         // Ubicación, anterior). Sin este aviso, el pin se movería solo
@@ -555,6 +566,21 @@ export function PublishForm() {
     ? distanciaKm(coords.lat, coords.lng, coloniaVerificada.lat, coloniaVerificada.lng)
     : null;
   const pinLejosDeColonia = distanciaPinColonia !== null && distanciaPinColonia > 3;
+
+  // Bug real reportado 2026-09-09: escribir una colonia que no coincidía
+  // con el pin no indicaba ni corregía nada — solo se avisaba (arriba,
+  // pinLejosDeColonia) cuando YA había un pin puesto. Ahora, mientras no
+  // haya pin manual ni de foto, el pin se coloca solo en el centroide de
+  // la colonia escrita, y se sigue corrigiendo si la persona la cambia —
+  // en cuanto toca el mapa a mano (o llega un GPS real de foto, ver
+  // habiaPinManualAlInicio arriba) esta sugerencia deja de aplicar.
+  useEffect(() => {
+    function aplicarPinAutoDesdeColonia() {
+      const nueva = coordsAutoDesdeColonia({ coordsActual: coords, pinEsAutoColonia: pinDesdeColonia, coloniaVerificada });
+      if (nueva) { setCoords(nueva); setPinDesdeColonia(true); }
+    }
+    aplicarPinAutoDesdeColonia();
+  }, [coloniaVerificada]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Lugares reales catalogados cerca de la propiedad, que TODAVÍA no se
   // mencionan en la descripción — son los mismos nombres que ya resuelve la
@@ -1680,7 +1706,7 @@ export function PublishForm() {
               <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: 220 }}>
                 <MapPicker
                   value={coords}
-                  onChange={(c) => { setCoords(c); setPinDesdeFoto(false); }}
+                  onChange={(c) => { setCoords(c); setPinDesdeFoto(false); setPinDesdeColonia(false); }}
                   center={mapCenter}
                   onRejected={() => toast.error('Ese punto queda fuera de Tabasco — solo se pueden publicar propiedades dentro del estado.')}
                 />
@@ -1694,9 +1720,14 @@ export function PublishForm() {
                       Sugerido desde tu foto
                     </span>
                   )}
+                  {!pinDesdeFoto && pinDesdeColonia && (
+                    <span className="text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded-full font-sans font-semibold">
+                      Según tu colonia — ajústalo si no es exacto
+                    </span>
+                  )}
                   <button
                     type="button"
-                    onClick={() => { setCoords(null); setPinDesdeFoto(false); }}
+                    onClick={() => { setCoords(null); setPinDesdeFoto(false); setPinDesdeColonia(false); }}
                     aria-label="Quitar ubicación seleccionada"
                     className="ml-auto p-1.5 -m-1.5 text-gray-300 hover:text-red-500 transition-colors"
                   >

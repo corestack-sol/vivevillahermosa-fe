@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -19,7 +19,8 @@ import {
 } from '@/lib/publishSchema';
 import { AMENIDADES_OPTIONS } from '@/lib/amenidades';
 import { SERVICIOS_RENTA } from '@/lib/servicios';
-import { distanciaKm } from '@/lib/colonias';
+import { distanciaKm, matchColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
+import { dentroDeRadioPermitido, RADIO_MAXIMO_PIN_KM } from '@/lib/mapPin';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { resizeImageToDataUrl, MAX_SOURCE_BYTES } from '@/lib/imageResize';
 import { generarTituloAutomatico } from '@/lib/tituloGenerator';
@@ -33,16 +34,6 @@ const MapPicker = dynamic(
   () => import('@/components/forms/MapPicker').then((m) => m.MapPicker),
   { ssr: false, loading: () => <div className="h-full rounded-2xl bg-gray-100 animate-pulse" /> },
 );
-
-// Pedido explícito 2026-08-30: el pin SÍ se puede corregir después de
-// publicar (antes no había forma de arreglar "lo puse mal"), pero acotado
-// — no libre. Mover el pin cambia distancias reales en búsquedas "cerca
-// de X" (Dos Bocas, colonias, landmarks) y dónde aparece el marcador en
-// /mapa; sin este límite, alguien podría arrastrar su propiedad hacia un
-// landmark deseado para aparecer en más búsquedas sin haberse mudado de
-// verdad. 1km cubre "me equivoqué de cuadra/lado de la calle", no
-// "reubicar la propiedad a otra colonia".
-const RADIO_MAXIMO_PIN_KM = 1;
 
 const OPERACION_OPTIONS = [
   { value: 'venta', label: 'Venta' },
@@ -81,6 +72,15 @@ export default function EditarPropiedadPage() {
     formState: { errors, isSubmitting },
   } = useForm<PublishFormData>({ resolver: zodResolver(publishSchema) });
   const tipoActual = watch('tipo');
+  const coloniaActual = watch('colonia');
+  const municipioActual = watch('municipio');
+
+  // Catálogo de colonias descubiertas dinámicamente (mismo criterio que
+  // PublishForm.tsx) — sin esto, matchColonia solo conoce las 70 colonias
+  // del catálogo estático hasta que otra pantalla (/propiedades, /mapa)
+  // ya lo haya precargado en la misma sesión.
+  const [coloniasReady, setColoniasReady] = useState(false);
+  useEffect(() => { precargarColoniasDescubiertas().then(() => setColoniasReady(true)); }, []);
 
   // Mismo criterio que PublishForm.tsx (auditoría 2026-08-20: "pregunta
   // recámaras y baños, lo cual no aplica" para terreno) — un terreno vacío
@@ -153,16 +153,31 @@ export default function EditarPropiedadPage() {
     }
   }, [property]);
 
+  // Bug real reportado 2026-09-09: MapPicker ya rechaza (y ahora también
+  // regresa visualmente, ver MapPicker.tsx) cualquier punto fuera del
+  // radio permitido ANTES de llamar a onChange — moverPin ya no necesita
+  // volver a validar, solo aplicar lo que ya se aceptó.
   function moverPin(c: Coords) {
-    if (original) {
-      const distancia = distanciaKm(original.lat, original.lng, c.lat, c.lng);
-      if (distancia > RADIO_MAXIMO_PIN_KM) {
-        toast.error(`Solo puedes mover el pin hasta ${RADIO_MAXIMO_PIN_KM} km desde su ubicación original, para evitar que una propiedad aparezca más cerca de una zona de lo que realmente está. Si de verdad está más lejos, contáctanos.`);
-        return;
-      }
-    }
     setCoords(c);
   }
+
+  // Aviso (no bloqueante) si el texto de "colonia" no coincide con dónde
+  // está el pin — antes no se indicaba ni corregía nada (bug real
+  // reportado 2026-09-09). A diferencia de PublishForm.tsx (donde el pin
+  // SÍ se re-coloca automáticamente según la colonia, ver
+  // coordsAutoDesdeColonia en mapPin.ts), aquí el pin está anclado a
+  // RADIO_MAXIMO_PIN_KM de la ubicación original — si el texto no
+  // coincide, lo más probable es que el texto tenga el error, no el pin
+  // (que no se puede mover lo suficiente para "perseguir" una colonia
+  // lejana), así que solo se avisa, nunca se mueve el pin solo.
+  const coloniaVerificada = useMemo(
+    () => (coloniaActual ? matchColonia(coloniaActual, municipioActual) : undefined),
+    [coloniaActual, municipioActual, coloniasReady], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const distanciaPinColonia = coords && coloniaVerificada
+    ? distanciaKm(coords.lat, coords.lng, coloniaVerificada.lat, coloniaVerificada.lng)
+    : null;
+  const pinLejosDeColonia = distanciaPinColonia !== null && distanciaPinColonia > 3;
 
   // Fotos — auditoría 2026-08-30: Editar no tenía forma de agregar,
   // quitar, ni reemplazar fotos después de publicar. `fotos` guarda URLs
@@ -338,12 +353,17 @@ export default function EditarPropiedadPage() {
 
   async function onSubmit(data: PublishFormData) {
     if (!property) return;
-    // Última validación antes de persistir — mismo criterio que
-    // PublishForm.tsx: MapPicker ya rechaza clics/arrastres fuera de
-    // Tabasco y moverPin() ya acota a RADIO_MAXIMO_PIN_KM, pero esta es la
-    // comprobación real, nunca confiar en que el navegador ya lo hizo.
+    // Última validación antes de persistir — MapPicker ya rechaza clics/
+    // arrastres fuera de Tabasco o fuera del radio permitido, pero esta es
+    // la comprobación real, nunca confiar en que el navegador ya lo hizo
+    // (bug real reportado 2026-09-09: antes solo se re-validaba Tabasco
+    // aquí, el radio de 1km no tenía este mismo respaldo).
     if (coords && !estaEnTabasco(coords.lat, coords.lng)) {
       toast.error('El punto marcado en el mapa queda fuera de Tabasco.');
+      return;
+    }
+    if (coords && original && !dentroDeRadioPermitido(original, coords)) {
+      toast.error(`El punto marcado queda a más de ${RADIO_MAXIMO_PIN_KM} km de la ubicación original.`);
       return;
     }
     // Defensa en profundidad — quitarFoto() ya no deja bajar de 1, pero
@@ -600,12 +620,14 @@ export default function EditarPropiedadPage() {
           </div>
         </div>
 
-        {/* Pin del mapa — acotado a RADIO_MAXIMO_PIN_KM del punto original,
-            ver moverPin() arriba y su comentario para el porqué. */}
+        {/* Pin del mapa — acotado a RADIO_MAXIMO_PIN_KM del punto original.
+            MapPicker ya rechaza (y regresa visualmente) cualquier punto
+            fuera de ese radio antes de llamar a onChange, ver
+            MapPicker.tsx y mapPin.ts. */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Ubicación exacta</label>
           <p className="text-xs text-gray-400 mb-2">
-            Solo puedes mover el pin hasta {RADIO_MAXIMO_PIN_KM} km desde su ubicación original, para evitar que una propiedad aparezca más cerca de una zona de lo que realmente está.
+            El pin solo se puede mover hasta {RADIO_MAXIMO_PIN_KM} km del punto donde publicaste, para que la distancia mostrada a cada zona sea siempre real, no exagerada. ¿De verdad se mudó más lejos? Contáctanos.
           </p>
           <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: 220 }}>
             {coords && (
@@ -613,7 +635,14 @@ export default function EditarPropiedadPage() {
                 value={coords}
                 onChange={moverPin}
                 center={[coords.lat, coords.lng]}
-                onRejected={() => toast.error('Ese punto queda fuera de Tabasco — solo se pueden publicar propiedades dentro del estado.')}
+                esValido={(c) => dentroDeRadioPermitido(original, c)}
+                onRejected={(c) => {
+                  if (!estaEnTabasco(c.lat, c.lng)) {
+                    toast.error('Ese punto queda fuera de Tabasco — solo se pueden publicar propiedades dentro del estado.');
+                  } else {
+                    toast.error(`Ese punto queda a más de ${RADIO_MAXIMO_PIN_KM} km de donde publicaste originalmente. Si tu propiedad de verdad está más lejos, contáctanos para corregirlo.`);
+                  }
+                }}
               />
             )}
           </div>
@@ -637,6 +666,17 @@ export default function EditarPropiedadPage() {
             <p className="flex items-start gap-1.5 text-[10px] text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-2.5 py-2 mt-2">
               <Info size={11} className="flex-shrink-0 mt-0.5" />
               Moviste el pin {distanciaKm(original.lat, original.lng, coords.lat, coords.lng).toFixed(2)} km de su ubicación original.
+            </p>
+          )}
+          {/* Bug real reportado 2026-09-09: escribir una colonia que no
+              coincide con dónde está el pin no indicaba ni corregía nada.
+              El pin no se mueve solo aquí (está anclado, ver comentario de
+              moverPin arriba) — se avisa para que la persona corrija el
+              TEXTO si tiene un error de tecleo. */}
+          {pinLejosDeColonia && (
+            <p className="flex items-start gap-1.5 text-[10px] text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-2.5 py-2 mt-2">
+              <Info size={11} className="flex-shrink-0 mt-0.5" />
+              El pin está a {distanciaPinColonia!.toFixed(1)} km de &quot;{coloniaVerificada!.label}&quot; — revisa que la colonia escrita sea la correcta.
             </p>
           )}
         </div>

@@ -27,11 +27,25 @@ export interface MapPickerProps {
   value: Coords | null;
   onChange: (c: Coords) => void;
   center?: [number, number];
-  /** Se llama cuando se intenta colocar/arrastrar el pin fuera de Tabasco — para mostrar un aviso, ver PublishForm.tsx. */
-  onRejected?: () => void;
+  /**
+   * Validación extra además del chequeo de frontera de Tabasco (que
+   * MapPicker siempre aplica) — ej. el radio máximo de 1km desde el punto
+   * original al editar una propiedad ya publicada (ver
+   * dashboard/propiedades/[id]/editar/page.tsx). Si no se da, solo se
+   * valida Tabasco.
+   */
+  esValido?: (c: Coords) => boolean;
+  /**
+   * Se llama con el punto rechazado — por salir de Tabasco o por no pasar
+   * `esValido` — para que quien lo use decida qué aviso mostrar (el
+   * llamador puede volver a chequear `estaEnTabasco(c)` para distinguir el
+   * motivo). El pin SIEMPRE vuelve visualmente a su última posición
+   * aceptada, sin importar el motivo del rechazo.
+   */
+  onRejected?: (c: Coords) => void;
 }
 
-export function MapPicker({ value, onChange, center = [17.9869, -92.9303], onRejected }: MapPickerProps) {
+export function MapPicker({ value, onChange, center = [17.9869, -92.9303], esValido, onRejected }: MapPickerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef        = useRef<MaplibreMap | null>(null);
   const markerRef      = useRef<MaplibreMarker | null>(null);
@@ -47,12 +61,24 @@ export function MapPicker({ value, onChange, center = [17.9869, -92.9303], onRej
   // mutable fuera del ciclo de render de React).
   const valueRef = useRef(value);
   const onChangeRef = useRef(onChange);
+  const esValidoRef = useRef(esValido);
   const onRejectedRef = useRef(onRejected);
   useEffect(() => {
     valueRef.current = value;
     onChangeRef.current = onChange;
+    esValidoRef.current = esValido;
     onRejectedRef.current = onRejected;
   });
+
+  // true justo antes de llamar a onChange por un clic/arrastre directo del
+  // propio mapa — el efecto que sincroniza `value` (más abajo) lo revisa
+  // para saber si el pin YA está a la vista (no hace falta mover la
+  // cámara) o si el cambio vino de AFUERA (colonia escrita, GPS de una
+  // foto, "deshacer", etc.), donde sí hace falta recentrar. Bug real
+  // reportado 2026-09-09: escribir una colonia distinta cuando el pin ya
+  // existía (por una colonia anterior) sí movía el pin pero la cámara se
+  // quedaba donde estaba — solo el primer pin de la sesión recentraba.
+  const cambioPorInteraccionRef = useRef(false);
 
   /** Crea el pin arrastrable y engancha su `dragend` — usado tanto al montar (si ya hay `value`) como cuando `value` aparece después. */
   function crearPin(map: MaplibreMap, MarkerCtor: typeof MaplibreMarker, coords: Coords): MaplibreMarker {
@@ -63,15 +89,28 @@ export function MapPicker({ value, onChange, center = [17.9869, -92.9303], onRej
       .addTo(map);
     marker.on('dragend', () => {
       const p = marker.getLngLat();
-      if (estaEnTabasco(p.lat, p.lng)) {
-        onChangeRef.current({ lat: p.lat, lng: p.lng });
+      const candidato = { lat: p.lat, lng: p.lng };
+      // Bug real reportado 2026-09-09: este chequeo antes solo miraba la
+      // frontera de Tabasco — si `onChange` (ej. moverPin() en
+      // editar/page.tsx, que además acota a RADIO_MAXIMO_PIN_KM) rechazaba
+      // el punto por CUALQUIER OTRO motivo, el marcador se quedaba
+      // arrastrado visualmente en el punto rechazado (MapLibre ya lo movió
+      // ahí de verdad, es nativo del drag) aunque el estado de React nunca
+      // cambiara — el pin parecía haberse movido fuera del radio permitido
+      // aunque en realidad no se guardó ahí. Ahora la validación completa
+      // (Tabasco + `esValido`) se hace ACÁ, antes de aceptar, así el
+      // marcador siempre vuelve a su última posición válida sin importar
+      // el motivo del rechazo.
+      if (estaEnTabasco(p.lat, p.lng) && (!esValidoRef.current || esValidoRef.current(candidato))) {
+        cambioPorInteraccionRef.current = true;
+        onChangeRef.current(candidato);
       } else {
         // Regresa el pin a su última posición válida en vez de dejarlo
-        // "perdido" fuera del estado — arrastrar y soltar fuera de Tabasco
-        // no debe silenciosamente mover el pin ahí.
+        // "perdido" — arrastrar y soltar a un punto rechazado no debe
+        // silenciosamente dejarlo ahí.
         const last = valueRef.current;
         if (last) marker.setLngLat([last.lng, last.lat]);
-        onRejectedRef.current?.();
+        onRejectedRef.current?.(candidato);
       }
     });
     return marker;
@@ -126,15 +165,22 @@ export function MapPicker({ value, onChange, center = [17.9869, -92.9303], onRej
 
       map.on('click', (e) => {
         const { lat, lng } = e.lngLat;
+        const candidato = { lat, lng };
         // Rechaza el clic en vez de colocar el pin cuando cae fuera de la
         // frontera real de Tabasco (src/lib/tabascoBoundary.ts) —
         // `maxBounds` de arriba ya impide navegar MUY lejos del estado,
         // pero es un rectángulo con margen (ni Leaflet ni MapLibre
         // restringen panning a un polígono real), así que sin este chequeo
         // alguien todavía podría hacer clic en una esquina del rectángulo
-        // que en realidad ya es Veracruz/Chiapas/Campeche.
-        if (estaEnTabasco(lat, lng)) onChangeRef.current({ lat, lng });
-        else onRejectedRef.current?.();
+        // que en realidad ya es Veracruz/Chiapas/Campeche. `esValido`
+        // agrega cualquier validación extra del formulario que lo use (ej.
+        // el radio máximo al editar).
+        if (estaEnTabasco(lat, lng) && (!esValidoRef.current || esValidoRef.current(candidato))) {
+          cambioPorInteraccionRef.current = true;
+          onChangeRef.current(candidato);
+        } else {
+          onRejectedRef.current?.(candidato);
+        }
       });
 
       if (valueRef.current) {
@@ -153,29 +199,33 @@ export function MapPicker({ value, onChange, center = [17.9869, -92.9303], onRej
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Sincroniza el pin cuando `value` cambia desde fuera (GPS de foto
-  //    sugerido, "usar mi ubicación", etc.) — crea el marcador la primera
-  //    vez que aparece un valor, solo mueve la posición después. ──
+  // ── Sincroniza el pin cuando `value` cambia — crea el marcador la
+  //    primera vez que aparece un valor, solo mueve la posición después.
+  //    La cámara solo sigue al pin cuando el cambio vino de AFUERA (GPS de
+  //    foto, colonia escrita, "deshacer", carga inicial): un clic/arrastre
+  //    directo del usuario no necesita recentrar, ya está viendo ese punto
+  //    (`cambioPorInteraccionRef`, marcado en crearPin()/el listener de
+  //    clic arriba). ──
   useEffect(() => {
     const map = mapRef.current;
     const MarkerCtor = MarkerCtorRef.current;
     if (!map || !MarkerCtor) return;
     if (!value) { markerRef.current?.remove(); markerRef.current = null; return; }
 
+    const fueInteraccionDirecta = cambioPorInteraccionRef.current;
+    cambioPorInteraccionRef.current = false;
+
     if (markerRef.current) {
       markerRef.current.setLngLat([value.lng, value.lat]);
     } else {
       markerRef.current = crearPin(map, MarkerCtor, value);
-      // Mueve la cámara al punto nuevo — bug real reportado 2026-09-01:
-      // cuando el pin llega solo (GPS de una foto, ver
-      // sugerirPinDesdeFoto() en PublishForm.tsx), el mapa se quedaba
-      // centrado donde estaba antes (el centro del municipio escrito a
-      // mano) y el pin real podía aparecer bien lejos de ahí, fuera de
-      // vista — quien publica tenía que navegar el mapa a ciegas para
-      // encontrarlo. Un primer clic manual también entra por esta misma
-      // rama (el marcador tampoco existía antes), pero ahí no cambia
-      // nada en la práctica: la persona ya está viendo el punto exacto
-      // donde acaba de tocar.
+    }
+
+    if (!fueInteraccionDirecta) {
+      // Bug real reportado 2026-09-01 (GPS de foto) y 2026-09-09 (colonia
+      // escrita, cuando YA había un pin de una colonia anterior): sin
+      // recentrar aquí, el mapa se quedaba mirando donde estaba antes y el
+      // pin nuevo podía aparecer bien lejos, fuera de vista.
       map.flyTo({ center: [value.lng, value.lat], zoom: Math.max(map.getZoom(), 15), duration: 800 });
     }
   }, [value]);
