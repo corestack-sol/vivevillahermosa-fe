@@ -190,6 +190,14 @@ export function Navbar() {
       toast.error('Cerraste sesión en este dispositivo, pero hubo un problema al avisar al servidor.');
     }
     router.push('/');
+    // Bug real reportado 2026-09-10: tras cerrar sesión, el toast de éxito
+    // aparecía pero navegar a otra página después "no hacía nada". Causa:
+    // el Router Cache de Next.js sigue sirviendo las páginas que ya se
+    // habían prefetcheado (hover sobre <Link>) MIENTRAS la sesión seguía
+    // activa — un clic posterior reusaba esa copia vieja en vez de pedir
+    // datos frescos con la sesión ya cerrada. router.refresh() invalida
+    // ese caché completo, sin perder el estado del cliente.
+    router.refresh();
   }
 
   const isActive = (link: typeof navLinks[number]) => {
