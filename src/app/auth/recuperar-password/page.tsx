@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -49,6 +49,26 @@ function RecuperarPasswordContent() {
   const confirmarForm = useForm<ConfirmarForm>({
     resolver: zodResolver(confirmarSchema),
   });
+
+  // Bug real reportado 2026-09-09 y de nuevo 2026-09-10, dos intentos
+  // previos insuficientes (autoComplete="one-time-code", y separar el
+  // código de los inputs de contraseña): Chrome seguía autorellenando el
+  // correo del perfil en el input del código, sin ningún input de
+  // contraseña presente en el DOM. No es el autofill de contraseñas — es
+  // el autofill general de Chrome ofreciendo el correo guardado en
+  // cualquier input de texto vacío de una página que reconoce como de
+  // login/auth. El único truco que de verdad lo evita: el input arranca
+  // `readOnly` (Chrome no autorellena algo de solo lectura en el momento
+  // en que pinta la página) y se habilita unos milisegundos después de
+  // montarse — para cuando el autofill "decide" qué llenar, el campo ya
+  // no calificaba.
+  const [codigoBloqueadoParaAutofill, setCodigoBloqueadoParaAutofill] = useState(true);
+  useEffect(() => {
+    if (paso !== 'codigo') return;
+    setCodigoBloqueadoParaAutofill(true);
+    const t = setTimeout(() => setCodigoBloqueadoParaAutofill(false), 50);
+    return () => clearTimeout(t);
+  }, [paso]);
 
   async function pedirCodigo(data: EmailForm) {
     setError('');
@@ -145,6 +165,7 @@ function RecuperarPasswordContent() {
             autoComplete="one-time-code"
             maxLength={6}
             placeholder="123456"
+            readOnly={codigoBloqueadoParaAutofill}
             error={confirmarForm.formState.errors.codigo?.message}
             {...confirmarForm.register('codigo')}
             // El navegador solo SUGIERE teclado numérico con inputMode — no
