@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -50,25 +50,75 @@ function RecuperarPasswordContent() {
     resolver: zodResolver(confirmarSchema),
   });
 
-  // Bug real reportado 2026-09-09 y de nuevo 2026-09-10, dos intentos
-  // previos insuficientes (autoComplete="one-time-code", y separar el
-  // código de los inputs de contraseña): Chrome seguía autorellenando el
-  // correo del perfil en el input del código, sin ningún input de
-  // contraseña presente en el DOM. No es el autofill de contraseñas — es
-  // el autofill general de Chrome ofreciendo el correo guardado en
-  // cualquier input de texto vacío de una página que reconoce como de
-  // login/auth. El único truco que de verdad lo evita: el input arranca
-  // `readOnly` (Chrome no autorellena algo de solo lectura en el momento
-  // en que pinta la página) y se habilita unos milisegundos después de
-  // montarse — para cuando el autofill "decide" qué llenar, el campo ya
-  // no calificaba.
+  // Bug real reportado 2026-09-09, y de nuevo DOS veces más el 2026-09-10
+  // pese a dos intentos previos (autoComplete="one-time-code" solo, y
+  // luego separar el código de los inputs de contraseña + readOnly hasta
+  // montarse) — Chrome seguía autorellenando el correo del perfil en el
+  // campo. No es el autofill de contraseñas: es el autofill general de
+  // Chrome ("Direcciones y más"), que ofrece el correo guardado en
+  // cualquier input de texto de longitud "normal" en una página que
+  // reconoce como de login/auth, sin importar autoComplete/readOnly. El
+  // único patrón que de verdad lo esquiva (usado por Stripe, bancos,
+  // etc.): partir el código en 6 casillas de UN dígito cada una — un
+  // input maxLength={1} nunca coincide con el patrón que ese autofill
+  // busca. Ver `digitos`/`inputsRef` más abajo.
+  const [digitos, setDigitos] = useState<string[]>(['', '', '', '', '', '']);
+  const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
   const [codigoBloqueadoParaAutofill, setCodigoBloqueadoParaAutofill] = useState(true);
   useEffect(() => {
+    function reiniciarCasillasDeCodigo() {
+      if (paso !== 'codigo') return;
+      setDigitos(['', '', '', '', '', '']);
+      setCodigoBloqueadoParaAutofill(true);
+    }
+    reiniciarCasillasDeCodigo();
     if (paso !== 'codigo') return;
-    setCodigoBloqueadoParaAutofill(true);
     const t = setTimeout(() => setCodigoBloqueadoParaAutofill(false), 50);
     return () => clearTimeout(t);
   }, [paso]);
+
+  useEffect(() => {
+    function sincronizarCodigoConForm() {
+      const valor = digitos.join('');
+      confirmarForm.setValue('codigo', valor, { shouldValidate: valor.length === 6 });
+    }
+    sincronizarCodigoConForm();
+  }, [digitos]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function cambiarDigito(idx: number, valorCrudo: string) {
+    const limpio = valorCrudo.replace(/\D/g, '');
+    if (!limpio) {
+      setDigitos((prev) => { const next = [...prev]; next[idx] = ''; return next; });
+      return;
+    }
+    setDigitos((prev) => {
+      const next = [...prev];
+      let i = idx;
+      for (const c of limpio) {
+        if (i > 5) break;
+        next[i] = c;
+        i++;
+      }
+      return next;
+    });
+    inputsRef.current[Math.min(idx + limpio.length, 5)]?.focus();
+  }
+
+  function teclaDigito(idx: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Backspace' && !digitos[idx] && idx > 0) {
+      inputsRef.current[idx - 1]?.focus();
+    }
+  }
+
+  function pegarCodigo(e: React.ClipboardEvent<HTMLInputElement>) {
+    const limpio = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!limpio) return;
+    e.preventDefault();
+    const next = limpio.split('');
+    while (next.length < 6) next.push('');
+    setDigitos(next);
+    inputsRef.current[Math.min(limpio.length, 5)]?.focus();
+  }
 
   async function pedirCodigo(data: EmailForm) {
     setError('');
@@ -158,33 +208,31 @@ function RecuperarPasswordContent() {
         </div>
 
         <form onSubmit={confirmarForm.handleSubmit(confirmarNuevaPassword)} className="space-y-4">
-          <Input
-            label="Código de 6 dígitos"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            autoComplete="one-time-code"
-            maxLength={6}
-            placeholder="123456"
-            readOnly={codigoBloqueadoParaAutofill}
-            error={confirmarForm.formState.errors.codigo?.message}
-            {...confirmarForm.register('codigo')}
-            // El navegador solo SUGIERE teclado numérico con inputMode — no
-            // bloquea letras al escribir/pegar, así que se filtra a mano.
-            onChange={(e) => confirmarForm.setValue('codigo', e.target.value.replace(/\D/g, '').slice(0, 6), { shouldValidate: true })}
-          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Código de 6 dígitos</label>
+            <div className="flex gap-2">
+              {digitos.map((d, i) => (
+                <input
+                  key={i}
+                  ref={(el) => { inputsRef.current[i] = el; }}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]"
+                  maxLength={1}
+                  autoComplete={i === 0 ? 'one-time-code' : 'off'}
+                  readOnly={codigoBloqueadoParaAutofill}
+                  value={d}
+                  onChange={(e) => cambiarDigito(i, e.target.value)}
+                  onKeyDown={(e) => teclaDigito(i, e)}
+                  onPaste={i === 0 ? pegarCodigo : undefined}
+                  className={`w-11 h-12 text-center text-lg font-bold rounded-xl border focus:outline-none focus:ring-2 focus:ring-brand/40 transition-shadow ${confirmarForm.formState.errors.codigo ? 'border-danger' : 'border-gray-200 focus:border-brand'}`}
+                />
+              ))}
+            </div>
+            {confirmarForm.formState.errors.codigo && <p className="mt-1 text-xs text-danger">{confirmarForm.formState.errors.codigo.message}</p>}
+          </div>
 
-          {/* Bug real reportado 2026-09-09 Y de nuevo 2026-09-10:
-              `autoComplete="one-time-code"` en el input de arriba NO basta —
-              Chrome autorellenaba igual el correo guardado ahí. La causa
-              real no es el atributo del campo, es que este input vive en el
-              MISMO <form> que dos inputs type="password" — Chrome detecta
-              "formulario de cambio de contraseña" y ofrece autorellenar el
-              correo/usuario de la cuenta en el primer campo de texto que
-              encuentra, sin importar qué autoComplete tenga ESE campo en
-              particular. Único fix real: que los inputs de contraseña NO
-              existan en el DOM todavía mientras se escribe el código —
-              aparecen solo hasta que el código ya tiene sus 6 dígitos. */}
-          {confirmarForm.watch('codigo')?.length === 6 && (
+          {digitos.join('').length === 6 && (
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nueva contraseña</label>
