@@ -133,7 +133,7 @@ function RecuperarPasswordContent() {
           </div>
           <h1 className="text-xl font-heading font-bold text-gray-900">Revisa tu correo</h1>
           <p className="text-sm text-gray-500 mt-1.5 leading-relaxed">
-            Si <strong className="text-gray-700">{email}</strong> tiene una cuenta con nosotros, le mandamos un código de 6 dígitos. Escríbelo abajo junto con tu nueva contraseña.
+            Si <strong className="text-gray-700">{email}</strong> tiene una cuenta con nosotros, le mandamos un código de 6 dígitos. Escríbelo abajo para continuar.
           </p>
         </div>
 
@@ -149,48 +149,58 @@ function RecuperarPasswordContent() {
             {...confirmarForm.register('codigo')}
             // El navegador solo SUGIERE teclado numérico con inputMode — no
             // bloquea letras al escribir/pegar, así que se filtra a mano.
-            // Bug real reportado 2026-09-09: sin autoComplete, Chrome
-            // autocompletaba este input con el correo guardado (heurística
-            // de "campo de usuario" por tener un input de contraseña debajo
-            // en el mismo form) — one-time-code es el valor estándar para
-            // evitarlo.
             onChange={(e) => confirmarForm.setValue('codigo', e.target.value.replace(/\D/g, '').slice(0, 6), { shouldValidate: true })}
           />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nueva contraseña</label>
-            <div className="relative">
-              <input
+          {/* Bug real reportado 2026-09-09 Y de nuevo 2026-09-10:
+              `autoComplete="one-time-code"` en el input de arriba NO basta —
+              Chrome autorellenaba igual el correo guardado ahí. La causa
+              real no es el atributo del campo, es que este input vive en el
+              MISMO <form> que dos inputs type="password" — Chrome detecta
+              "formulario de cambio de contraseña" y ofrece autorellenar el
+              correo/usuario de la cuenta en el primer campo de texto que
+              encuentra, sin importar qué autoComplete tenga ESE campo en
+              particular. Único fix real: que los inputs de contraseña NO
+              existan en el DOM todavía mientras se escribe el código —
+              aparecen solo hasta que el código ya tiene sus 6 dígitos. */}
+          {confirmarForm.watch('codigo')?.length === 6 && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nueva contraseña</label>
+                <div className="relative">
+                  <input
+                    type={showPass ? 'text' : 'password'}
+                    {...confirmarForm.register('password')}
+                    placeholder="Mínimo 10 caracteres"
+                    autoComplete="new-password"
+                    className={`w-full rounded-xl border px-4 py-2.5 pr-11 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand/40 transition-shadow ${confirmarForm.formState.errors.password ? 'border-danger' : 'border-gray-200 focus:border-brand'}`}
+                  />
+                  <button type="button" onClick={() => setShowPass(!showPass)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                    {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                {confirmarForm.formState.errors.password && <p className="mt-1 text-xs text-danger">{confirmarForm.formState.errors.password.message}</p>}
+              </div>
+
+              <Input
+                label="Confirma tu nueva contraseña"
                 type={showPass ? 'text' : 'password'}
-                {...confirmarForm.register('password')}
-                placeholder="Mínimo 10 caracteres"
+                placeholder="Repite tu contraseña"
                 autoComplete="new-password"
-                className={`w-full rounded-xl border px-4 py-2.5 pr-11 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand/40 transition-shadow ${confirmarForm.formState.errors.password ? 'border-danger' : 'border-gray-200 focus:border-brand'}`}
+                error={confirmarForm.formState.errors.confirmarPassword?.message}
+                {...confirmarForm.register('confirmarPassword')}
               />
-              <button type="button" onClick={() => setShowPass(!showPass)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
-                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-            {confirmarForm.formState.errors.password && <p className="mt-1 text-xs text-danger">{confirmarForm.formState.errors.password.message}</p>}
-          </div>
 
-          <Input
-            label="Confirma tu nueva contraseña"
-            type={showPass ? 'text' : 'password'}
-            placeholder="Repite tu contraseña"
-            autoComplete="new-password"
-            error={confirmarForm.formState.errors.confirmarPassword?.message}
-            {...confirmarForm.register('confirmarPassword')}
-          />
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">{error}</div>
+              )}
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">{error}</div>
+              <Button type="submit" isLoading={confirmarForm.formState.isSubmitting} className="w-full justify-center">
+                Cambiar contraseña
+              </Button>
+            </>
           )}
-
-          <Button type="submit" isLoading={confirmarForm.formState.isSubmitting} className="w-full justify-center">
-            Cambiar contraseña
-          </Button>
         </form>
 
         <button
@@ -222,15 +232,17 @@ function RecuperarPasswordContent() {
         {/* Aclaración pedida explícita 2026-09-10, confirmada con backend
             (docs/BACKEND-RECUPERAR-PASSWORD-CUENTAS-OAUTH-10092026.md): si
             te registraste con correo, esto SÍ recupera esa contraseña. Si
-            te registraste con Google/Facebook, nunca podemos tocar la
-            contraseña de esa cuenta (es de Google/Facebook, no nuestra) —
-            pero este mismo formulario te sirve para crear una contraseña
-            propia y poder entrar también con tu correo, sin depender de
-            Google/Facebook. */}
+            te registraste con Google, nunca podemos tocar la contraseña de
+            esa cuenta (es de Google, no nuestra) — pero este mismo
+            formulario te sirve para crear una contraseña propia y poder
+            entrar también con tu correo, sin depender de Google. Solo
+            Google — Facebook login sigue sin implementarse
+            (FACEBOOK_LOGIN_ENABLED en auth/login/page.tsx), no mencionarlo
+            aquí. */}
         <p className="flex items-start gap-1.5 text-xs text-sky-700 bg-sky-50 border border-sky-100 rounded-lg px-3 py-2.5 mt-3 leading-relaxed">
           <Info size={13} className="flex-shrink-0 mt-0.5" />
           <span>
-            ¿Te registraste con Google o Facebook? No podemos cambiar esa contraseña — pero puedes usar este formulario para crear una contraseña propia y entrar también con tu correo.
+            ¿Te registraste con Google? No podemos cambiar esa contraseña — pero puedes usar este formulario para crear una contraseña propia y entrar también con tu correo.
           </span>
         </p>
       </div>
