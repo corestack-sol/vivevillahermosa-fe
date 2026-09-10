@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { KeyRound, MailCheck, ArrowLeft, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { KeyRound, MailCheck, ArrowLeft, Eye, EyeOff, CheckCircle2, Info } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
@@ -218,6 +218,20 @@ function RecuperarPasswordContent() {
         <h1 className="text-xl font-heading font-bold text-gray-900">Recuperar contraseña</h1>
         <p className="text-sm text-gray-500 mt-1.5 leading-relaxed">
           Escribe el correo de tu cuenta — te mandamos un código para crear una contraseña nueva.
+        </p>
+        {/* Aclaración pedida explícita 2026-09-10, confirmada con backend
+            (docs/BACKEND-RECUPERAR-PASSWORD-CUENTAS-OAUTH-10092026.md): si
+            te registraste con correo, esto SÍ recupera esa contraseña. Si
+            te registraste con Google/Facebook, nunca podemos tocar la
+            contraseña de esa cuenta (es de Google/Facebook, no nuestra) —
+            pero este mismo formulario te sirve para crear una contraseña
+            propia y poder entrar también con tu correo, sin depender de
+            Google/Facebook. */}
+        <p className="flex items-start gap-1.5 text-xs text-sky-700 bg-sky-50 border border-sky-100 rounded-lg px-3 py-2.5 mt-3 leading-relaxed">
+          <Info size={13} className="flex-shrink-0 mt-0.5" />
+          <span>
+            ¿Te registraste con Google o Facebook? No podemos cambiar esa contraseña — pero puedes usar este formulario para crear una contraseña propia y entrar también con tu correo.
+          </span>
         </p>
       </div>
 
