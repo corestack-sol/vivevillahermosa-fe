@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ChevronRight, Save, MapPin, Info, X, ImagePlus, Loader2, Sparkles, Tag } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ChevronDown, Save, MapPin, Info, X, ImagePlus, Loader2, Sparkles, Tag } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button, buttonClasses } from '@/components/ui/Button';
@@ -56,7 +56,15 @@ const RIESGO_OPTIONS = [
  * propiedades ya guardaban el mismo número también en `whatsapp`).
  */
 function inferirMetodoContacto(agente: Property['agente']): MetodoContacto {
-  if (agente.tel && agente.email) return 'ambos';
+  // Bug real reportado 2026-09-11: `agenteTel` se guarda SIEMPRE null desde
+  // que se quitó la opción "Teléfono" (2026-09-07, ver comentario en
+  // onSubmit más abajo) — revisar `agente.tel` aquí nunca era cierto para
+  // ninguna propiedad guardada después de esa fecha, así que "Ambos" nunca
+  // se inferían y se mostraba "Solo correo" aunque también tuviera
+  // WhatsApp. El dato real vive en `agente.whatsapp`; `agente.tel` se deja
+  // como respaldo solo por si alguna propiedad muy vieja aún no migró.
+  const tieneWhatsapp = !!(agente.whatsapp || agente.tel);
+  if (tieneWhatsapp && agente.email) return 'ambos';
   if (agente.email) return 'correo';
   return 'whatsapp';
 }
@@ -140,6 +148,13 @@ export default function EditarPropiedadPage() {
       prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key]
     );
   }
+
+  // Amenidades/servicios retráctiles — pedido explícito 2026-09-11:
+  // colapsados por defecto, solo título + badges de lo ya seleccionado;
+  // el picker completo (grid de botones) se abre a demanda en vez de
+  // ocupar toda la pantalla siempre.
+  const [amenidadesAbiertas, setAmenidadesAbiertas] = useState(false);
+  const [serviciosAbiertos, setServiciosAbiertos] = useState(false);
 
   // Pin del mapa — auditoría 2026-08-30: antes no existía forma de
   // corregir un pin mal puesto al publicar. `original` nunca cambia
@@ -333,7 +348,11 @@ export default function EditarPropiedadPage() {
       // campo que PublishForm.tsx, mismo default (false = revelado
       // instantáneo) cuando la propiedad no lo trae.
       requiereMensajePrimero: property.requiereMensajePrimero ?? false,
-      telefonoContacto: property.agente.tel,
+      // Mismo bug que inferirMetodoContacto arriba: `agente.tel` está
+      // siempre vacío desde 2026-09-07, el número real vive en
+      // `agente.whatsapp`. Sin este fix el campo WhatsApp aparecía vacío
+      // al editar, aunque la propiedad sí tuviera un número guardado.
+      telefonoContacto: property.agente.whatsapp || property.agente.tel,
       emailContacto: property.agente.email,
       // Ya se aceptaron los Términos al publicar por primera vez — este
       // formulario de edición no los vuelve a pedir, pero el schema
@@ -521,56 +540,97 @@ export default function EditarPropiedadPage() {
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Amenidades</label>
-          <p className="text-xs text-gray-400 mb-3">Toca para seleccionar las características de tu propiedad</p>
-          <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-            {AMENIDADES_OPTIONS.map(({ key, label, Icon }) => {
-              const active = amenidades.includes(label);
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  title={label}
-                  onClick={() => toggleAmenidad(label)}
-                  className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border-2 transition-colors ${
-                    active ? 'border-brand bg-brand-pale text-brand' : 'border-gray-200 text-gray-500 hover:border-brand/40'
-                  }`}
-                >
-                  <Icon size={18} />
-                  <span className="text-[9px] font-medium leading-tight text-center line-clamp-2">
-                    {label.split('/')[0].trim()}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          <button
+            type="button"
+            onClick={() => setAmenidadesAbiertas((v) => !v)}
+            className="w-full flex items-center justify-between mb-1"
+          >
+            <span className="text-sm font-medium text-gray-700">Amenidades</span>
+            <ChevronDown size={16} className={`text-gray-400 transition-transform ${amenidadesAbiertas ? 'rotate-180' : ''}`} />
+          </button>
+          {amenidadesAbiertas ? (
+            <>
+              <p className="text-xs text-gray-400 mb-3">Toca para seleccionar las características de tu propiedad</p>
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                {AMENIDADES_OPTIONS.map(({ key, label, Icon }) => {
+                  const active = amenidades.includes(label);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      title={label}
+                      onClick={() => toggleAmenidad(label)}
+                      className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border-2 transition-colors ${
+                        active ? 'border-brand bg-brand-pale text-brand' : 'border-gray-200 text-gray-500 hover:border-brand/40'
+                      }`}
+                    >
+                      <Icon size={18} />
+                      <span className="text-[9px] font-medium leading-tight text-center line-clamp-2">
+                        {label.split('/')[0].trim()}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : amenidades.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {amenidades.map((a) => (
+                <span key={a} className="text-xs font-medium text-brand bg-brand-pale px-2.5 py-1 rounded-full">{a}</span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">Sin amenidades seleccionadas</p>
+          )}
         </div>
 
         {watch('operacion') === 'renta' && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Servicios incluidos</label>
-            <p className="text-xs text-gray-400 mb-3">Toca para seleccionar lo que incluye tu propiedad</p>
-            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-              {SERVICIOS_RENTA.map(({ key, label, Icon }) => {
-                const active = servicios.includes(key);
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    title={label}
-                    onClick={() => toggleServicio(key)}
-                    className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border-2 transition-colors ${
-                      active ? 'border-brand bg-brand-pale text-brand' : 'border-gray-200 text-gray-500 hover:border-brand/40'
-                    }`}
-                  >
-                    <Icon size={18} />
-                    <span className="text-[9px] font-medium leading-tight text-center line-clamp-2">
-                      {label.split('/')[0].trim()}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            <button
+              type="button"
+              onClick={() => setServiciosAbiertos((v) => !v)}
+              className="w-full flex items-center justify-between mb-1"
+            >
+              <span className="text-sm font-medium text-gray-700">Servicios incluidos</span>
+              <ChevronDown size={16} className={`text-gray-400 transition-transform ${serviciosAbiertos ? 'rotate-180' : ''}`} />
+            </button>
+            {serviciosAbiertos ? (
+              <>
+                <p className="text-xs text-gray-400 mb-3">Toca para seleccionar lo que incluye tu propiedad</p>
+                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                  {SERVICIOS_RENTA.map(({ key, label, Icon }) => {
+                    const active = servicios.includes(key);
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        title={label}
+                        onClick={() => toggleServicio(key)}
+                        className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border-2 transition-colors ${
+                          active ? 'border-brand bg-brand-pale text-brand' : 'border-gray-200 text-gray-500 hover:border-brand/40'
+                        }`}
+                      >
+                        <Icon size={18} />
+                        <span className="text-[9px] font-medium leading-tight text-center line-clamp-2">
+                          {label.split('/')[0].trim()}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : servicios.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {servicios.map((s) => {
+                  const opt = SERVICIOS_RENTA.find((o) => o.key === s);
+                  return (
+                    <span key={s} className="text-xs font-medium text-brand bg-brand-pale px-2.5 py-1 rounded-full">{opt?.label ?? s}</span>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400">Sin servicios seleccionados</p>
+            )}
           </div>
         )}
 
