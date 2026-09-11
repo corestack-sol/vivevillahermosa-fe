@@ -20,12 +20,7 @@ import { EliminarPropiedadModal } from '@/components/property/EliminarPropiedadM
 import { PausarPropiedadModal } from '@/components/property/PausarPropiedadModal';
 import { DestacarPropiedadModal } from '@/components/property/DestacarPropiedadModal';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { MENSAJE_LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
-
-// Debe coincidir con el límite real del backend — solo para el mensaje,
-// el servidor lo hace cumplir de verdad (código LIMITE_PROPIEDADES_ALCANZADO).
-// 2026-08-10: bajado de 4 a 3, ver docs/PLAN-AUDITORIA-FASE1-MVP.md punto 0.
-const LIMITE_PROPIEDADES = 3;
+import { LIMITE_PROPIEDADES, MENSAJE_LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
 
 type FiltroEstado = EstadoPublicacion | 'todas' | 'archivada';
 

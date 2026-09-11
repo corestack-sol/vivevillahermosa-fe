@@ -13,12 +13,7 @@ import { EliminarPropiedadModal } from '@/components/property/EliminarPropiedadM
 import { PausarPropiedadModal } from '@/components/property/PausarPropiedadModal';
 import { DestacarPropiedadModal } from '@/components/property/DestacarPropiedadModal';
 import { useRouter } from 'next/navigation';
-
-// Debe coincidir con el límite real del backend — solo se usa para el
-// mensaje de error, el servidor es quien de verdad lo hace cumplir
-// (código LIMITE_PROPIEDADES_ALCANZADO).
-// 2026-08-10: bajado de 4 a 3, ver docs/PLAN-AUDITORIA-FASE1-MVP.md punto 0.
-const LIMITE_PROPIEDADES = 3;
+import { LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
 
 interface MiaBackend {
   id: string;

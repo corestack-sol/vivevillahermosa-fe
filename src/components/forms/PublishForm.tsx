@@ -841,6 +841,24 @@ export function PublishForm() {
   const [fraudCheck, setFraudCheck] = useState<{
     riesgo: string; señales: string[]; bloqueado?: boolean; motivoBloqueo?: string;
   } | null>(null);
+  // Auditoría 2026-09-11 — 2 bugs reales encontrados en este bloque:
+  // (1) `fraudCheck` arranca en `null` y `esPublicacionBloqueada(null)` es
+  // `false` — sin este estado, alguien que llena el formulario rápido
+  // (autofill/pegar texto + clics rápidos) podía llegar a "Publicar" y
+  // enviarlo ANTES de que la primera llamada a /ia/analizar-fraude
+  // resolviera, sin ningún bypass externo, solo por la latencia normal de
+  // red+modelo. `fraudCheckPendiente` bloquea el submit mientras hay una
+  // evaluación en vuelo, igual que ya se hace con `sinFotos`/`fotoNoApta`.
+  // (2) Sin numerar las llamadas, dos evaluaciones en vuelo a la vez
+  // (la inicial + una re-disparada por el debounce) podían resolver fuera
+  // de orden — la última en RESPONDER ganaba sin importar cuál se lanzó
+  // después, y como el modelo de IA no es determinista (ver comentario de
+  // `debeReevaluarFraude` en publishFraudGuard.ts, mismo hallazgo de
+  // 2026-08-31), una respuesta tardía más benigna podía pisar un "alto"
+  // correcto justo antes de publicar. `evaluarSeqRef` descarta cualquier
+  // respuesta que no sea la de la llamada más reciente.
+  const [fraudCheckPendiente, setFraudCheckPendiente] = useState(false);
+  const evaluarSeqRef = useRef(0);
   useEffect(() => {
     if (step < 3) return;
 
@@ -848,6 +866,8 @@ export function PublishForm() {
       const titulo = values.titulo || '';
       const descripcion = values.descripcion || '';
       if (!titulo.trim() && !descripcion.trim()) return;
+      const seq = ++evaluarSeqRef.current;
+      setFraudCheckPendiente(true);
       // Señales que el texto por sí solo no puede evadir reescribiéndose
       // (pedido explícito 2026-08-31) — se mandan como query params, no en
       // el body: el backend hoy los ignora sin romper la llamada
@@ -870,8 +890,14 @@ export function PublishForm() {
           operacion: values.operacion || '',
         }),
       })
-        .then((data) => { if (data.riesgo) setFraudCheck(data); })
-        .catch(() => {});
+        .then((data) => {
+          if (seq !== evaluarSeqRef.current) return; // respuesta obsoleta, descartar
+          if (data.riesgo) setFraudCheck(data);
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (seq === evaluarSeqRef.current) setFraudCheckPendiente(false);
+        });
     }
 
     evaluar(getValues());
@@ -1106,6 +1132,10 @@ export function PublishForm() {
     if (sinFotos) {
       toast.error('Agrega al menos una foto real de la propiedad antes de publicar.');
       setStep(4);
+      return;
+    }
+    if (fraudCheckPendiente) {
+      toast.error('Estamos terminando de revisar tu anuncio, espera un momento y vuelve a presionar Publicar.');
       return;
     }
     if (publicacionBloqueada) {
@@ -1359,11 +1389,11 @@ export function PublishForm() {
 
         {/* Banner de error al intentar avanzar sin completar campos */}
         {stepError && (
-          <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-            <AlertCircle size={15} className="text-red-500 mt-0.5 flex-shrink-0" />
+          <div className="flex items-start gap-2.5 bg-danger/10 border border-danger/30 rounded-xl px-4 py-3">
+            <AlertCircle size={15} className="text-danger mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-red-700">Completa los campos marcados</p>
-              <p className="text-xs text-red-500 mt-0.5">Revisa los mensajes en rojo antes de continuar</p>
+              <p className="text-sm font-semibold text-danger">Completa los campos marcados</p>
+              <p className="text-xs text-danger/80 mt-0.5">Revisa los mensajes en rojo antes de continuar</p>
             </div>
           </div>
         )}
@@ -1618,13 +1648,13 @@ export function PublishForm() {
             </div>
 
             {camposConError.length > 0 && (
-              <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-                <AlertCircle size={15} className="text-red-500 mt-0.5 flex-shrink-0" />
+              <div className="flex items-start gap-2.5 bg-danger/10 border border-danger/30 rounded-xl px-4 py-3">
+                <AlertCircle size={15} className="text-danger mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-semibold text-red-700">
+                  <p className="text-sm font-semibold text-danger">
                     {camposConError.length === 1 ? 'Falta corregir este campo:' : 'Faltan corregir estos campos:'}
                   </p>
-                  <ul className="text-xs text-red-500 mt-1 list-disc list-inside space-y-0.5">
+                  <ul className="text-xs text-danger/80 mt-1 list-disc list-inside space-y-0.5">
                     {camposConError.map((campo) => <li key={campo}>{campo}</li>)}
                   </ul>
                 </div>
@@ -1849,7 +1879,7 @@ export function PublishForm() {
             )}
 
             {sinFotos && (
-              <p className="flex items-center justify-center gap-1.5 text-xs text-red-700 text-center bg-red-50 border border-red-200 rounded-xl py-3">
+              <p className="flex items-center justify-center gap-1.5 text-xs text-danger text-center bg-danger/10 border border-danger/30 rounded-xl py-3">
                 <AlertCircle size={13} className="flex-shrink-0" /> Agrega al menos 1 foto real de la propiedad para poder publicar
               </p>
             )}
@@ -2156,7 +2186,7 @@ export function PublishForm() {
               Siguiente <ChevronRight size={16} />
             </Button>
           ) : (
-            <Button type="submit" variant="primary" className="flex-1" isLoading={isSubmitting}>
+            <Button type="submit" variant="primary" className="flex-1" isLoading={isSubmitting || fraudCheckPendiente}>
               <CheckCircle size={16} /> Publicar propiedad
             </Button>
           )}

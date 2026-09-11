@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { backendFetch } from '@/lib/backendApi';
 
-// Debe coincidir con el límite real del backend y con la misma constante
-// duplicada en PublishForm.tsx/OwnerActionsBar.tsx/
-// dashboard/propiedades/page.tsx — el servidor es quien de verdad lo hace
-// cumplir (código LIMITE_PROPIEDADES_ALCANZADO).
+// Debe coincidir con el límite real del backend — el servidor es quien de
+// verdad lo hace cumplir (código LIMITE_PROPIEDADES_ALCANZADO). Única
+// fuente de verdad (auditoría 2026-09-11: PublishForm.tsx/
+// OwnerActionsBar.tsx/dashboard/propiedades/page.tsx la tenían copiada
+// localmente por su cuenta — ahora los tres la importan de aquí).
 export const LIMITE_PROPIEDADES = 3;
 
 // Cambio de política confirmado en vivo 2026-09-02
