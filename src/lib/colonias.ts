@@ -134,12 +134,19 @@ export const COLONIAS_COORDS: ColoniaCoord[] = [
   // de Serra" — un lugar real, pero a ~2.1km del centro histórico
   // verdadero, y NADA que ver con esta colonia. Se descubrió al verificar
   // por qué "cerca de la catedral de tabasco" no encontraba una propiedad
-  // que sí estaba ahí. Nueva coordenada: la Catedral del Señor de Tabasco
-  // (verificada vía Nominatim, ver 'catedral' en landmarks.ts), el ancla
-  // más defendible para "el centro histórico" de una ciudad mexicana — no
-  // se encontró un nodo de OSM etiquetado específicamente
-  // place/neighbourhood="Centro Histórico" para usar en su lugar.
-  { key: 'centro-historico', label: 'Centro Histórico', municipio: 'Centro', lat: 17.9896, lng: -92.9282, radioKm: RADIO_COLONIA_KM, aliases: ['Zona Luz'] },
+  // que sí estaba ahí. No se encontró un nodo de OSM etiquetado
+  // específicamente place/neighbourhood="Centro Histórico" para usar, así
+  // que se ancló a la Catedral (17.9896, -92.9282) como sustituto
+  // defendible.
+  //
+  // Corregida de nuevo 2026-09-10: el usuario verificó a mano en Google
+  // Maps un punto sobre Av. Francisco I. Madero (confirmado por
+  // reverse-geocode Nominatim como "Centro", Villahermosa — la misma zona)
+  // y pidió usarlo en vez de la Catedral. ⚠️ Efecto conocido: la Catedral
+  // ya NO es el centroide de esta colonia, así que "cerca de la catedral
+  // de tabasco" (el caso real que motivó el fix de 2026-08-06) puede volver
+  // a perder precisión — se acepta el trade-off a pedido explícito.
+  { key: 'centro-historico', label: 'Centro Histórico', municipio: 'Centro', lat: 17.99154641547893, lng: -92.91686241281937, radioKm: RADIO_COLONIA_KM, aliases: ['Zona Luz'] },
   { key: 'olmeca', label: 'Olmeca', municipio: 'Centro', lat: 17.9812, lng: -92.9502, radioKm: RADIO_COLONIA_KM },
   { key: 'gil-y-saenz', label: 'Gil y Sáenz', municipio: 'Centro', lat: 17.9867, lng: -92.9356, radioKm: RADIO_COLONIA_KM },
   { key: 'col-del-parque', label: 'Col. del Parque', municipio: 'Centro', lat: 17.9734, lng: -92.9267, radioKm: RADIO_COLONIA_KM },
