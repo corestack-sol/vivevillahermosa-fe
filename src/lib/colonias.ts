@@ -496,6 +496,12 @@ export const COLONIAS_COORDS: ColoniaCoord[] = [
   { key: 'la-selva', label: 'La Selva', municipio: 'Centro', lat: 18.019938724156624, lng: -92.96672577812265, radioKm: RADIO_COLONIA_KM },
   { key: 'saloya-segunda-seccion', label: 'Saloya Segunda Sección', municipio: 'Centro', lat: 18.05118402287288, lng: -92.92873073624416, radioKm: RADIO_COLONIA_KM },
   { key: 'real-del-sur', label: 'Real del Sur', municipio: 'Centro', lat: 17.963522851964786, lng: -92.94527697311437, radioKm: RADIO_COLONIA_KM },
+
+  // Lote agregado 2026-09-10 (tercera ronda) — mismo criterio que las dos
+  // rondas anteriores.
+  { key: 'tierra-amarilla-3ra-secc', label: 'Tierra Amarilla 3ra Secc', municipio: 'Centro', lat: 18.065484467144834, lng: -92.89771888301505, radioKm: RADIO_COLONIA_KM },
+  { key: 'los-sauces', label: 'Los Sauces', municipio: 'Centro', lat: 18.034253796033813, lng: -92.91538668085549, radioKm: RADIO_COLONIA_KM },
+  { key: 'medellin-y-pigua-tercera-seccion', label: 'Medellín y Pigua Tercera Sección', municipio: 'Centro', lat: 18.061015771781125, lng: -92.8782815419739, radioKm: RADIO_COLONIA_KM },
 ];
 
 function normalizarBase(s: string): string {
