@@ -18,7 +18,7 @@ import { MapViewDynamic } from '@/components/map/MapViewDynamic';
 import { SelectedPropertyCard } from '@/components/map/SelectedPropertyCard';
 import type { MapMarker } from '@/components/map/MapView';
 import { getLandmark, distanciaKm, CATEGORIAS_GENERICAS, precargarLandmarks } from '@/lib/landmarks';
-import { matchColonia, normalizarNombreColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
+import { matchColonia, normalizarNombreColonia, precargarColoniasDescubiertas, buscarColoniaEnTexto } from '@/lib/colonias';
 import { interpretarBusqueda, esOracionLarga, MAX_QUERY_LENGTH } from '@/lib/interpretarBusqueda';
 import { getColoniasRankedByPropiedades, searchProperties } from '@/lib/api';
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches';
@@ -319,6 +319,21 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
       const textoLower = texto.toLowerCase();
       const lugarMencionado = places.some((p) => textoLower.includes(p.toLowerCase()));
       if (lugarMencionado) filtros = await interpretarBusqueda(texto);
+    }
+    // Bug real reportado 2026-09-11: "centro histórico" resolvía solo a
+    // `municipio: 'Centro'` (palabra fuerte, la IA la agarra segura) sin
+    // extraer la colonia — la búsqueda mostraba TODO el municipio en vez
+    // de priorizar la colonia real. `buscarColoniaEnTexto` (colonias.ts)
+    // ya existía como red de seguridad determinística para justo este
+    // caso (con tests, ver colonias.test.ts) pero nunca se conectó aquí.
+    // Solo rellena `colonia` cuando la IA no la dio — nunca pisa una
+    // colonia que la IA sí extrajo, y nunca puede inventar una que no
+    // esté verificada en el catálogo. Mismo criterio que SearchBar.tsx.
+    if (!filtros.colonia) {
+      const coloniaEnTexto = buscarColoniaEnTexto(texto);
+      if (coloniaEnTexto) {
+        filtros = { ...filtros, colonia: coloniaEnTexto.label, municipio: coloniaEnTexto.municipio };
+      }
     }
     setBuscandoIA(false);
 

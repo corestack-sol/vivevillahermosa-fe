@@ -213,6 +213,16 @@ describe('buscarColoniaEnTexto', () => {
   it('does not throw on regex special characters in the input text', () => {
     expect(() => buscarColoniaEnTexto('casa (con parentesis) [y corchetes] $100')).not.toThrow();
   });
+  // Bug real reportado 2026-09-11: buscar "centro histórico" mostraba TODAS
+  // las propiedades del municipio Centro (la IA solo extraía el municipio,
+  // nunca la colonia) en vez de priorizar la colonia real. Esta función ya
+  // existía y ya cubría el caso — el bug era que SearchBar.tsx/
+  // PropertiesClient.tsx nunca la llamaban como red de seguridad.
+  it('resolves "centro histórico" to the colonia, not just the municipio', () => {
+    const c = buscarColoniaEnTexto('casas en renta cerca del centro histórico');
+    expect(c?.key).toBe('centro-historico');
+    expect(c?.municipio).toBe('Centro');
+  });
 });
 
 describe('jitterCoord', () => {

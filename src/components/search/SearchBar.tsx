@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, MapPin, Clock, X, Loader2 } from 'lucide-react';
 import { getAllProperties } from '@/lib/api';
+import { buscarColoniaEnTexto } from '@/lib/colonias';
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches';
 import { interpretarBusqueda, esOracionLarga, MAX_QUERY_LENGTH, type FiltrosIA } from '@/lib/interpretarBusqueda';
 import type { Property } from '@/types/property';
@@ -327,6 +328,21 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
       const sLower = s.toLowerCase();
       const lugarMencionado = places.some((p) => sLower.includes(p.toLowerCase()));
       if (lugarMencionado) filtros = await interpretarBusqueda(s);
+    }
+    // Bug real reportado 2026-09-11: "centro histórico" resolvía solo a
+    // `municipio: 'Centro'` (palabra fuerte, la IA la agarra segura) sin
+    // extraer la colonia — la búsqueda mostraba TODO el municipio en vez
+    // de priorizar la colonia real. `buscarColoniaEnTexto` (colonias.ts)
+    // ya existía como red de seguridad determinística para justo este
+    // caso (con tests, ver colonias.test.ts) pero nunca se conectó aquí.
+    // Solo rellena `colonia` cuando la IA no la dio — nunca pisa una
+    // colonia que la IA sí extrajo, y nunca puede inventar una que no
+    // esté verificada en el catálogo.
+    if (!filtros.colonia) {
+      const coloniaEnTexto = buscarColoniaEnTexto(s);
+      if (coloniaEnTexto) {
+        filtros = { ...filtros, colonia: coloniaEnTexto.label, municipio: coloniaEnTexto.municipio };
+      }
     }
     setBuscando(false);
     // PR #89 del backend (ya deployado, confirmado en vivo 2026-09-03) —
