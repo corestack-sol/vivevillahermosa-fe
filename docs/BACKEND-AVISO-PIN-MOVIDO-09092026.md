@@ -1,6 +1,12 @@
 # Aviso "el pin se movió" en la página pública — contrato para backend
 
-**Fecha:** 2026-09-09. **Estado: NO implementado, falta dato del backend.**
+**Fecha:** 2026-09-09. **Estado (2026-09-11): IMPLEMENTADO, en producción.**
+El backend ya manda `pinMovidoAt` (confirmado en vivo vía curl real,
+ISO 8601 o `null`) — Opción B de las dos propuestas abajo. El frontend
+solo no lo tenía conectado; ya se agregó a `Property`/`BackendPublicProperty`
+(`src/types/property.ts`, `src/lib/api.ts`) y `PropertyDetailView.tsx`
+muestra "El propietario actualizó esta ubicación · hace X días" junto al
+mapa cuando el campo no es `null`. Sin acción pendiente del backend.
 
 **Por qué hace falta:** al editar una propiedad ya publicada, el dueño
 puede corregir el pin del mapa hasta 1km de su ubicación original

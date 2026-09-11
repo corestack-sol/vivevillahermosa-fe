@@ -212,6 +212,17 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
                   <ShieldCheck size={11} className="flex-shrink-0" />
                   Por seguridad del propietario, el mapa muestra la zona aproximada — la dirección exacta se comparte al contactar.
                 </p>
+                {/* Pedido explícito 2026-09-09 (docs/BACKEND-AVISO-PIN-MOVIDO-
+                    09092026.md) — transparencia cuando el dueño corrigió la
+                    ubicación después de publicar. El backend ya manda
+                    `pinMovidoAt` (confirmado en vivo 2026-09-11), solo
+                    faltaba conectarlo aquí. */}
+                {property.pinMovidoAt && (
+                  <p className="flex items-center gap-1 text-[11px] text-amber-600 mt-1.5">
+                    <Calendar size={11} className="flex-shrink-0" />
+                    El propietario actualizó esta ubicación · {formatRelativeDate(property.pinMovidoAt)}
+                  </p>
+                )}
                 <div className="flex items-center justify-between mt-2">
                   <p className="flex items-center gap-1 text-xs text-gray-400">
                     <MapPin size={12} className="flex-shrink-0" /> {property.colonia}, {property.municipio}

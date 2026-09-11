@@ -81,6 +81,15 @@ export interface Property {
    */
   latPublico: number;
   lngPublico: number;
+  /**
+   * ISO 8601 de la última vez que el dueño movió el pin al editar
+   * (`lat`/`lng` cambiaron respecto al valor guardado), o `null` si nunca
+   * se movió desde que se publicó. Confirmado en vivo 2026-09-11 (curl
+   * real) que el backend ya lo manda — antes documentado como pendiente
+   * en docs/BACKEND-AVISO-PIN-MOVIDO-09092026.md, solo faltaba conectarlo
+   * en el frontend.
+   */
+  pinMovidoAt?: string | null;
   riesgoInundacion: FloodRisk;
   /**
    * Derivado por el backend (no lo calcula el frontend) comparando

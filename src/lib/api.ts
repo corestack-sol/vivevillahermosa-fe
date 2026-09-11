@@ -41,6 +41,7 @@ export interface BackendPublicProperty {
   direccion: string;
   latPublico: number;
   lngPublico: number;
+  pinMovidoAt?: string | null;
   riesgoInundacion: FloodRisk;
   riesgoInundacionFuente?: 'atlas' | 'propietario';
   zonaEcologica: boolean;
@@ -103,6 +104,7 @@ export function mapBackendProperty(bp: BackendPublicProperty): Property {
     lng: bp.lng ?? bp.lngPublico,
     latPublico: bp.latPublico,
     lngPublico: bp.lngPublico,
+    pinMovidoAt: bp.pinMovidoAt,
     riesgoInundacion: bp.riesgoInundacion,
     riesgoInundacionFuente: bp.riesgoInundacionFuente,
     zonaEcologica: bp.zonaEcologica,
