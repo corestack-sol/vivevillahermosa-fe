@@ -25,6 +25,7 @@ import type { RiesgoInundacion } from '@/lib/zonas-inundacion';
 import type { Coords } from './MapPicker';
 import { FloodRiskBadge } from '@/components/property/FloodRiskBadge';
 import { TermsModal } from './TermsModal';
+import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { getAllProperties } from '@/lib/api';
@@ -39,6 +40,8 @@ import {
 } from '@/lib/publishFraudGuard';
 import { hashImagenDesdeFile, hashImagenDesdeUrl, distanciaHamming, UMBRAL_HASH_SIMILAR } from '@/lib/fotoHash';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
+import { useAuth } from '@/context/AuthContext';
+import { guardarBorrador, leerBorrador, borrarBorrador, borradorTieneContenido, type PublishDraft } from '@/lib/publishDraft';
 import { LIMITE_PROPIEDADES, contarPropiedadesVivas } from '@/hooks/useLimitePropiedades';
 import { resizeImageToDataUrl, MAX_SOURCE_BYTES } from '@/lib/imageResize';
 import {
@@ -208,6 +211,16 @@ export function PublishForm() {
   const fileInputRef            = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const toast  = useToast();
+  const { user, loading: authLoading } = useAuth();
+
+  // Borrador (2026-09-11): pedido explícito tras el caso de una foto que
+  // falla al subir y la propiedad se publica incompleta. `borradorPendiente`
+  // es lo que se encontró guardado (si acaso), a la espera de que la persona
+  // decida continuar o empezar de cero. El autoguardado NO corre hasta que
+  // `borradorResuelto` sea true — si no, sobrescribiría un borrador real con
+  // el formulario vacío del primer render, antes de preguntar.
+  const [borradorPendiente, setBorradorPendiente] = useState<PublishDraft | null>(null);
+  const [borradorResuelto, setBorradorResuelto] = useState(false);
 
   // Límite gratuito de propiedades activas — pre-chequeo contra
   // GET /propiedades/mias real (BACKEND.md §3 punto 13), el servidor es
@@ -499,6 +512,7 @@ export function PublishForm() {
     watch,
     setValue,
     getValues,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(publishSchema),
@@ -511,6 +525,57 @@ export function PublishForm() {
     // la segunda capa de esta misma corrección.
     defaultValues: { recamaras: 0, banos: 0, m2Construidos: 0, m2Terreno: 0, aceptaTerminos: false, metodoContacto: 'ambos', operacion: '' },
   });
+
+  // Espera a que AuthContext resuelva `user` (login vs anónimo usan baldes
+  // separados, ver publishDraft.ts) antes de buscar un borrador — si se
+  // busca con `user` todavía en null durante la carga inicial, alguien con
+  // sesión iniciada vería el balde `anon` vacío en vez del suyo.
+  useEffect(() => {
+    function revisarBorrador() {
+      if (authLoading) return;
+      const encontrado = leerBorrador(user?.userId ?? null);
+      if (encontrado && borradorTieneContenido(encontrado)) {
+        setBorradorPendiente(encontrado);
+      } else {
+        setBorradorResuelto(true);
+      }
+    }
+    revisarBorrador();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading]);
+
+  function continuarBorrador() {
+    if (!borradorPendiente) return;
+    reset(borradorPendiente.valores);
+    setAmenidades(borradorPendiente.amenidades);
+    setServicios(borradorPendiente.servicios);
+    setCoords(borradorPendiente.coords);
+    setStep(borradorPendiente.step);
+    setBorradorPendiente(null);
+    setBorradorResuelto(true);
+  }
+
+  function descartarBorrador() {
+    borrarBorrador(user?.userId ?? null);
+    setBorradorPendiente(null);
+    setBorradorResuelto(true);
+  }
+
+  // Autoguardado — no arranca hasta resolver el borrador pendiente (ver
+  // arriba). Sin fotos (no sobreviven a localStorage, ver publishDraft.ts).
+  useEffect(() => {
+    if (!borradorResuelto) return;
+    function autoguardar() {
+      const suscripcion = watch((valores) => {
+        if (!borradorTieneContenido({ valores, amenidades, servicios, coords, step, guardadoEn: '' })) return;
+        guardarBorrador(user?.userId ?? null, { valores, amenidades, servicios, coords, step });
+      });
+      return suscripcion;
+    }
+    const { unsubscribe } = autoguardar();
+    return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [borradorResuelto, amenidades, servicios, coords, step]);
 
   const tipo        = watch('tipo');
   // Un terreno vacío no tiene m² construidos, recámaras ni baños — pedirlos
@@ -1158,6 +1223,10 @@ export function PublishForm() {
       toast.error('No se pudo publicar tu propiedad. Intenta de nuevo.');
       return;
     }
+
+    // Publicación completada — el borrador ya cumplió su propósito, no
+    // debe seguir ofreciéndose para "continuar" una propiedad que ya existe.
+    borrarBorrador(user?.userId ?? null);
 
     // No se guarda nombreContacto/telefonoContacto/emailContacto en
     // sessionStorage: son datos personales que la página de "gracias" no
@@ -2142,6 +2211,23 @@ export function PublishForm() {
       </div>{/* end grid */}
 
       <TermsModal isOpen={termsModalOpen} onClose={() => setTermsModalOpen(false)} />
+
+      <Modal isOpen={!!borradorPendiente} onClose={descartarBorrador} title="Tienes un borrador guardado">
+        <p className="text-sm text-gray-500 leading-relaxed mb-2">
+          Encontramos una publicación que dejaste a medias{borradorPendiente ? ` el ${new Date(borradorPendiente.guardadoEn).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}` : ''}. ¿Quieres continuar donde te quedaste o empezar una nueva?
+        </p>
+        <p className="text-xs text-gray-400 leading-relaxed mb-6">
+          Las fotos no se guardan en el borrador — tendrás que volver a seleccionarlas.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button type="button" variant="primary" className="flex-1" onClick={continuarBorrador}>
+            Continuar donde me quedé
+          </Button>
+          <Button type="button" variant="outline" className="flex-1" onClick={descartarBorrador}>
+            Empezar de nuevo
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

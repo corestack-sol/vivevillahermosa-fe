@@ -546,7 +546,7 @@ export default function EditarPropiedadPage() {
             className="w-full flex items-center justify-between mb-1"
           >
             <span className="text-sm font-medium text-gray-700">Amenidades</span>
-            <ChevronDown size={16} className={`text-gray-400 transition-transform ${amenidadesAbiertas ? 'rotate-180' : ''}`} />
+            <ChevronDown size={16} className={`pointer-events-none text-gray-400 transition-transform ${amenidadesAbiertas ? 'rotate-180' : ''}`} />
           </button>
           {amenidadesAbiertas ? (
             <>
@@ -592,7 +592,7 @@ export default function EditarPropiedadPage() {
               className="w-full flex items-center justify-between mb-1"
             >
               <span className="text-sm font-medium text-gray-700">Servicios incluidos</span>
-              <ChevronDown size={16} className={`text-gray-400 transition-transform ${serviciosAbiertos ? 'rotate-180' : ''}`} />
+              <ChevronDown size={16} className={`pointer-events-none text-gray-400 transition-transform ${serviciosAbiertos ? 'rotate-180' : ''}`} />
             </button>
             {serviciosAbiertos ? (
               <>
