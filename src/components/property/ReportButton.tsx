@@ -54,7 +54,7 @@ export function ReportButton({ propiedadId }: ReportButtonProps) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-500 transition-colors"
+        className="flex items-center gap-1.5 text-xs text-cta hover:text-cta-dark transition-colors"
       >
         <Flag size={12} /> Reportar este anuncio
       </button>
