@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Flag, CheckCircle } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
+import { yaReportada, marcarReportada } from '@/lib/reportedProperties';
 
 interface ReportButtonProps {
   propiedadId: string;
@@ -25,6 +26,16 @@ export function ReportButton({ propiedadId }: ReportButtonProps) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Arranca en `false` (evita mismatch de hidratación SSR) y se corrige en
+  // cuanto monta — si esta propiedad ya se reportó desde este navegador en
+  // OTRA visita, el modal muestra el aviso directo en vez del formulario.
+  const [yaEnviadoAntes, setYaEnviadoAntes] = useState(false);
+  useEffect(() => {
+    function revisarSiYaReportada() {
+      setYaEnviadoAntes(yaReportada(propiedadId));
+    }
+    revisarSiYaReportada();
+  }, [propiedadId]);
 
   function close() {
     setOpen(false);
@@ -42,6 +53,7 @@ export function ReportButton({ propiedadId }: ReportButtonProps) {
         body: JSON.stringify({ propiedadId, motivo, comentario: comentario || undefined }),
       });
       setSent(true);
+      marcarReportada(propiedadId);
     } catch (err) {
       setError(err instanceof BackendApiError ? err.message : 'No se pudo enviar el reporte, intenta de nuevo.');
     } finally {
@@ -60,14 +72,20 @@ export function ReportButton({ propiedadId }: ReportButtonProps) {
       </button>
 
       <Modal isOpen={open} onClose={close} title="Reportar anuncio" maxWidth="sm">
-        {sent ? (
+        {sent || (yaEnviadoAntes && !sending) ? (
           <div className="text-center py-4">
             <CheckCircle className="mx-auto mb-3 text-success" size={36} />
-            <p className="font-semibold text-gray-800 mb-1">Gracias por avisarnos</p>
+            <p className="font-semibold text-gray-800 mb-1">
+              {sent ? 'Gracias por avisarnos' : 'Ya reportaste este anuncio'}
+            </p>
             {/* POST /propiedades/reportar (backend real, BACKEND.md §10) ya
                 persiste el reporte y, si se acumulan 3+ de fraude/info falsa,
                 marca la propiedad requiereModeracion=true automáticamente. */}
-            <p className="text-sm text-gray-500">Recibimos tu reporte y quedó registrado. Si varias personas reportan lo mismo, la publicación se marca para revisión automáticamente.</p>
+            <p className="text-sm text-gray-500">
+              {sent
+                ? 'Recibimos tu reporte y quedó registrado. Si varias personas reportan lo mismo, la publicación se marca para revisión automáticamente.'
+                : 'Ya quedó registrado desde este navegador — no hace falta enviarlo de nuevo.'}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">

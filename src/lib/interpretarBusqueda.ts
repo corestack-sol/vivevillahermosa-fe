@@ -102,7 +102,11 @@ async function llamarBusquedaIA(query: string): Promise<{ ok: true; filtros: Fil
  * hacer con el resultado.
  */
 export async function interpretarBusqueda(query: string): Promise<FiltrosIA> {
-  query = query.slice(0, MAX_QUERY_LENGTH);
+  // Array.from itera por code point, no por unidad UTF-16 — `.slice()`
+  // plano puede cortar un emoji/carácter fuera del BMP a la mitad (par
+  // suplente roto), generando un carácter inválido en el JSON mandado al
+  // backend (hallazgo de auditoría 2026-09-11).
+  query = Array.from(query).slice(0, MAX_QUERY_LENGTH).join('');
   const primero = await llamarBusquedaIA(query);
   if (primero.ok) return primero.filtros;
   if (primero.status !== undefined) return {};

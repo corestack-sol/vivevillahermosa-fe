@@ -43,14 +43,16 @@ depósito antes de la visita, propietario "fuera del país" sin poder
 mostrar el inmueble) siguen siendo señales fuertes y correctas — el
 problema es específico a esta.
 
-## Nota aparte (frontend, ya resuelta hace tiempo, revisar si sigue aplicando)
+## Nota aparte (frontend, ACTUALIZADA — ya resuelta también para "medio")
 
 Para riesgo "alto"/bloqueado, el frontend deliberadamente NO le muestra
 las señales a quien publica (evita enseñarle a un defraudador real qué
-frase evitar la próxima vez). Para riesgo "medio" (no bloquea, solo
-marca "En revisión"), las señales SÍ se listan completas — decisión
-consciente para que alguien honesto pueda corregir algo concreto. Es un
-trade-off real: mostrar el motivo en "medio" también le sirve a
-alguien deshonesto para reescribir y evadir. Se documenta aquí para que
-quede registrado, no se cambió nada de este lado en esta ronda —
-pendiente de que el usuario decida si también quiere ocultarlas ahí.
+frase evitar la próxima vez). Esta nota decía que para riesgo "medio"
+las señales SÍ se listaban completas — eso cambió el mismo día
+(2026-09-11, ver `PublishForm.tsx` y `FraudAlertBadge.tsx`): con el
+mismo criterio que "alto", "medio" ahora también oculta las señales
+exactas tanto a quien publica como al público, mostrando un aviso
+neutral ("en revisión") en su lugar. El reemplazo real es la revisión
+manual de un administrador (`/admin/fraude`, ver
+`docs/BACKEND-APROBAR-REVISION-FRAUDE-11092026.md`), no la persona
+corrigiendo a ciegas.
