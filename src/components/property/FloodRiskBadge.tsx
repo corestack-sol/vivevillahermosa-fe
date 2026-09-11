@@ -4,11 +4,27 @@ import { Droplets, Info } from 'lucide-react';
 interface FloodRiskBadgeProps {
   nivel: FloodRisk;
   compact?: boolean;
+  /**
+   * 'atlas' cuando el valor viene de la detección automática real contra
+   * el Atlas de Riesgos Municipal; 'propietario' cuando lo reportó o
+   * ajustó a mano quien publicó (ver PublishForm.tsx — el dueño SIEMPRE
+   * puede sobreescribir el valor detectado, incluso bajarlo). Bug real
+   * reportado 2026-09-11: antes se afirmaba "según el Atlas de Riesgos
+   * Municipal" con cita específica (página incluida) para CUALQUIER
+   * valor, sin importar su origen real — un dato 100% auto-reportado por
+   * el dueño podía quedar atribuido a un documento oficial que nunca lo
+   * dijo. `Property.riesgoInundacion` que manda el backend hoy es solo
+   * el valor final, no trae la fuente — ver
+   * docs/BACKEND-FUENTE-RIESGO-INUNDACION-11092026.md. Sin este dato
+   * (siempre, por ahora) se usa una leyenda honesta que no afirma
+   * ninguna de las dos fuentes en particular.
+   */
+  fuente?: 'atlas' | 'propietario';
 }
 
 // Mismo criterio que src/lib/floodColors.ts: describe el registro
-// histórico (Atlas de Riesgos), no una predicción de la plataforma —
-// "Riesgo Alto/Medio/Bajo" sonaba a que estuviéramos pronosticando algo.
+// histórico, no una predicción de la plataforma — "Riesgo Alto/Medio/
+// Bajo" sonaba a que estuviéramos pronosticando algo.
 //
 // Colores del badge sin tocar — pedido explícito 2026-08-21: "mantén los
 // colores originales de los badges, solo te pedí cambiar el fondo de esa
@@ -18,7 +34,7 @@ interface FloodRiskBadgeProps {
 const config = {
   alto: {
     label: 'Históricamente inundable',
-    description: 'Esta zona tiene historial de inundaciones severas según el Atlas de Riesgos Municipal.',
+    description: 'Esta zona tiene historial de inundaciones severas.',
     classes: 'bg-red-50 text-red-700 border-red-200',
     iconClass: 'text-red-500',
     dot: 'bg-red-500',
@@ -26,7 +42,7 @@ const config = {
   },
   medio: {
     label: 'Inundaciones menores ocasionales',
-    description: 'Zona con anegamiento ocasional en temporada de lluvias según el Atlas de Riesgos Municipal.',
+    description: 'Zona con anegamiento ocasional en temporada de lluvias.',
     classes: 'bg-amber-50 text-amber-700 border-amber-200',
     iconClass: 'text-amber-500',
     dot: 'bg-amber-400',
@@ -34,7 +50,7 @@ const config = {
   },
   bajo: {
     label: 'Bajo historial de inundaciones',
-    description: 'Zona con bajo historial de inundaciones según el Atlas de Riesgos Municipal.',
+    description: 'Zona con bajo historial de inundaciones.',
     classes: 'bg-green-50 text-green-700 border-green-200',
     iconClass: 'text-green-500',
     dot: 'bg-emerald-400',
@@ -42,7 +58,7 @@ const config = {
   },
 };
 
-export function FloodRiskBadge({ nivel, compact = false }: FloodRiskBadgeProps) {
+export function FloodRiskBadge({ nivel, compact = false, fuente }: FloodRiskBadgeProps) {
   const c = config[nivel];
 
   if (compact) {
@@ -68,7 +84,11 @@ export function FloodRiskBadge({ nivel, compact = false }: FloodRiskBadgeProps) 
           <p className="font-bold text-xl leading-tight">{c.label}</p>
           <p className="text-base mt-1 opacity-80">{c.description}</p>
           <p className="text-xs opacity-40 mt-2 leading-relaxed">
-            Atlas de Riesgos del Municipio de Centro, 2023. Ayuntamiento de Centro. P 377
+            {fuente === 'atlas'
+              ? 'Según el Atlas de Riesgos del Municipio de Centro, 2023. Ayuntamiento de Centro. P 377.'
+              : fuente === 'propietario'
+              ? 'Este nivel fue reportado por quien publicó la propiedad, no proviene del Atlas de Riesgos Municipal.'
+              : 'Este dato proviene de registros públicos de inundación y/o de lo reportado por quien publicó la propiedad.'}
           </p>
         </div>
       </div>
@@ -78,7 +98,7 @@ export function FloodRiskBadge({ nivel, compact = false }: FloodRiskBadgeProps) 
         <div className="text-sm text-gray-500 leading-relaxed space-y-1.5">
           <p>
             <span className="font-semibold">Dato informativo.</span>{' '}
-            Esta clasificación se basa en registros históricos y modelos de simulación. Te recomendamos verificar directamente con el H. Ayuntamiento de Centro o IMPLAN antes de tomar una decisión.
+            Esta clasificación se basa en registros históricos y modelos de simulación, o en lo reportado por quien publicó. Te recomendamos verificar directamente con el H. Ayuntamiento de Centro o IMPLAN antes de tomar una decisión.
           </p>
           <p>
             El precio de la propiedad no está condicionado por la zona de riesgo — puede estar justificado por acabados, servicios, ubicación u otras características propias del inmueble.

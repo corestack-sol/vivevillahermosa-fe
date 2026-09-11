@@ -1942,14 +1942,21 @@ export function PublishForm() {
               // Nivel 2 del sistema de 3 niveles — se marca, no bloquea.
               // 'alto' ya no llega aquí (lo atrapa publicacionBloqueada
               // arriba); 'bajo' nunca entra (excluido desde antes).
+              //
+              // Deliberadamente NO se listan las señales aquí (pedido
+              // explícito 2026-09-11, mismo criterio ya usado en 'alto'
+              // más arriba) — "medio" no bloquea, así que mostrar el motivo
+              // exacto le daba a cualquiera (honesto o no) un oráculo
+              // gratis para probar variantes del texto hasta dejar de
+              // activar la detección, sin pasar nunca por una revisión
+              // real. Quien crea que es un error tiene un camino real:
+              // pedir revisión a un administrador (ver /admin/fraude).
               <div className="flex items-start gap-2.5 rounded-xl px-4 py-3 border bg-amber-50 border-amber-200 text-amber-700">
                 <AlertCircle size={15} className="flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-semibold">Tu anuncio tiene señales que suelen asociarse con publicaciones fraudulentas</p>
-                  <ul className="text-xs mt-1 opacity-80 list-disc list-inside space-y-0.5">
-                    {fraudCheck.señales.map((s) => <li key={s}>{s}</li>)}
-                  </ul>
-                  <p className="text-xs mt-1.5 opacity-70">Antes de continuar, revisa que la información sea correcta — no bloquea tu publicación, pero la ficha se mostrará con un aviso de &quot;En revisión&quot; para que quien la vea verifique con cuidado.</p>
+                  <p className="text-xs mt-1 opacity-80">Revisa que el título y la descripción describan honestamente la propiedad real que estás publicando.</p>
+                  <p className="text-xs mt-1.5 opacity-70">No bloquea tu publicación, pero la ficha se mostrará con un aviso de &quot;En revisión&quot; para que quien la vea verifique con cuidado. Si crees que es un error, contáctanos para que un administrador lo revise.</p>
                 </div>
               </div>
             )}

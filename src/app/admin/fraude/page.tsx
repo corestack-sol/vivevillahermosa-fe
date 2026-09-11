@@ -62,6 +62,19 @@ export default function AdminFraudePage() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
 
+  // Quitar marca de revisión — pedido explícito 2026-09-11: junto con
+  // ocultar las señales exactas de quien publica (PublishForm.tsx) y del
+  // público (FraudAlertBadge.tsx), hacía falta un camino real para que
+  // alguien marcado por error (falso positivo — el análisis de IA puede
+  // equivocarse) recupere su anuncio sin depender de reescribirlo a
+  // ciegas. Mismo patrón "honesto si el backend aún no lo tiene" que el
+  // resto de esta página.
+  const [aprobando, setAprobando] = useState<IntentoFraude | null>(null);
+  const [motivoAprobar, setMotivoAprobar] = useState('');
+  const [enviandoAprobar, setEnviandoAprobar] = useState(false);
+  const [errorAprobar, setErrorAprobar] = useState('');
+  const [aprobarNoImplementado, setAprobarNoImplementado] = useState(false);
+
   const cargar = useCallback(async () => {
     setLoading(true);
     setNoImplementado(false);
@@ -104,6 +117,37 @@ export default function AdminFraudePage() {
     setBloqueando(i);
     setMotivo(`Reincidencia en posible fraude (${i.intentosMismoUsuario} intento${i.intentosMismoUsuario !== 1 ? 's' : ''} nivel medio/alto)`);
     setError('');
+  }
+
+  function abrirAprobar(i: IntentoFraude) {
+    setAprobando(i);
+    setMotivoAprobar('');
+    setErrorAprobar('');
+    setAprobarNoImplementado(false);
+  }
+
+  async function confirmarAprobar() {
+    if (!aprobando || !aprobando.propiedadId) return;
+    setEnviandoAprobar(true);
+    setErrorAprobar('');
+    try {
+      // Endpoint nuevo, todavía no existe del lado del backend — ver
+      // docs/BACKEND-APROBAR-REVISION-FRAUDE-11092026.md.
+      await backendFetch(`/admin/propiedades/${aprobando.propiedadId}/aprobar-revision`, {
+        method: 'POST',
+        body: JSON.stringify({ motivo: motivoAprobar }),
+      });
+      setAprobando(null);
+      cargar();
+    } catch (err) {
+      if (err instanceof BackendApiError && err.status === 404) {
+        setAprobarNoImplementado(true);
+        return;
+      }
+      setErrorAprobar(err instanceof BackendApiError ? err.message : 'Ocurrió un error');
+    } finally {
+      setEnviandoAprobar(false);
+    }
   }
 
   async function confirmarBloqueo() {
@@ -216,6 +260,11 @@ export default function AdminFraudePage() {
                             Ver <ArrowUpRight size={11} />
                           </a>
                         )}
+                        {i.propiedadId && (
+                          <Button size="sm" variant="outline" onClick={() => abrirAprobar(i)}>
+                            <CheckCircle2 size={12} /> Quitar marca
+                          </Button>
+                        )}
                         {i.user.bloqueado ? (
                           <span className="inline-flex items-center gap-1 text-xs text-gray-400"><CheckCircle2 size={11} /> Ya bloqueado</span>
                         ) : (
@@ -281,6 +330,13 @@ export default function AdminFraudePage() {
                 {detalle.intentosMismoUsuario} intento{detalle.intentosMismoUsuario !== 1 ? 's' : ''} nivel medio/alto en total — incluye anuncios reescritos después de un aviso previo.
               </p>
             </div>
+            {detalle.propiedadId && (
+              <div className="flex justify-end pt-1 border-t border-gray-100">
+                <Button size="sm" variant="outline" onClick={() => { const d = detalle; setDetalle(null); abrirAprobar(d); }}>
+                  <CheckCircle2 size={12} /> Quitar marca de revisión
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </Modal>
@@ -308,6 +364,39 @@ export default function AdminFraudePage() {
               <Button variant="ghost" onClick={() => setBloqueando(null)}>Cancelar</Button>
               <Button variant="danger" onClick={confirmarBloqueo} isLoading={enviando}>Confirmar bloqueo</Button>
             </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal isOpen={!!aprobando} onClose={() => setAprobando(null)} title="Quitar marca de revisión">
+        {aprobando && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Vas a quitar el aviso &quot;En revisión&quot; del anuncio <strong className="text-gray-800">{aprobando.titulo}</strong>. Úsalo cuando ya verificaste que la propiedad es real y las señales detectadas no aplican — un falso positivo.
+            </p>
+            {aprobarNoImplementado ? (
+              <p className="text-sm text-amber-700 bg-amber-50 rounded-xl p-3">
+                El backend todavía no tiene esta acción — falta <code className="text-xs bg-white px-1 py-0.5 rounded">POST /admin/propiedades/:id/aprobar-revision</code>. Ver <code className="text-xs bg-white px-1 py-0.5 rounded">docs/BACKEND-APROBAR-REVISION-FRAUDE-11092026.md</code>.
+              </p>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nota (opcional, visible para el equipo)</label>
+                  <textarea
+                    value={motivoAprobar}
+                    onChange={(e) => setMotivoAprobar(e.target.value)}
+                    rows={3}
+                    placeholder="Ej. Verifiqué la propiedad por teléfono, es real."
+                    className="w-full rounded-xl border border-gray-200 text-base sm:text-sm px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
+                  />
+                </div>
+                {errorAprobar && <p className="text-sm text-danger">{errorAprobar}</p>}
+                <div className="flex justify-end gap-2">
+                  <Button variant="ghost" onClick={() => setAprobando(null)}>Cancelar</Button>
+                  <Button variant="primary" onClick={confirmarAprobar} isLoading={enviandoAprobar}>Quitar marca</Button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </Modal>
