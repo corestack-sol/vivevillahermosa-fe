@@ -587,6 +587,33 @@ export function PublishForm() {
     : null;
   const pinLejosDeColonia = distanciaPinColonia !== null && distanciaPinColonia > 3;
 
+  // Pedido explícito 2026-09-10: capturar cuándo el punto de una colonia
+  // en el catálogo (colonias.ts) resulta estar mal — si la persona
+  // corrige a mano un pin que empezó como sugerencia automática por
+  // colonia, eso es una señal real de que el centroide catalogado no
+  // coincide con el lugar real. Una corrección aislada no prueba nada
+  // (pudo ser un typo de colonia, no el catálogo) — la idea es revisar
+  // después en PostHog qué `colonia_key` acumula varias correcciones
+  // consistentes, y ahí sí corregir colonias.ts. Sin PII: solo
+  // coordenadas y el nombre/llave de la colonia.
+  function manejarCambioPinManual(c: Coords) {
+    if (pinDesdeColonia && coloniaVerificada) {
+      posthog.capture('colonia_pin_corregido', {
+        colonia_key: coloniaVerificada.key,
+        colonia_label: coloniaVerificada.label,
+        municipio: coloniaVerificada.municipio,
+        lat_catalogo: coloniaVerificada.lat,
+        lng_catalogo: coloniaVerificada.lng,
+        lat_corregido: c.lat,
+        lng_corregido: c.lng,
+        distancia_km: Math.round(distanciaKm(coloniaVerificada.lat, coloniaVerificada.lng, c.lat, c.lng) * 100) / 100,
+      });
+    }
+    setCoords(c);
+    setPinDesdeFoto(false);
+    setPinDesdeColonia(false);
+  }
+
   // Bug real reportado 2026-09-09: escribir una colonia que no coincidía
   // con el pin no indicaba ni corregía nada — solo se avisaba (arriba,
   // pinLejosDeColonia) cuando YA había un pin puesto. Ahora, mientras no
@@ -1773,7 +1800,7 @@ export function PublishForm() {
               <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: 220 }}>
                 <MapPicker
                   value={coords}
-                  onChange={(c) => { setCoords(c); setPinDesdeFoto(false); setPinDesdeColonia(false); }}
+                  onChange={manejarCambioPinManual}
                   center={mapCenter}
                   onRejected={() => toast.error('Ese punto queda fuera de Tabasco — solo se pueden publicar propiedades dentro del estado.')}
                 />
