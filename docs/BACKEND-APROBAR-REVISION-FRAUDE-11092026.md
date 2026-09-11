@@ -1,6 +1,20 @@
 # Quitar marca "En revisión" de una propiedad — contrato para backend
 
-**Fecha:** 2026-09-11. **Estado: NO implementado, frontend ya listo.**
+**Fecha:** 2026-09-11. **Estado (2026-09-11, mismo día): IMPLEMENTADO,
+en producción.**
+
+**Hallazgo real que salió al implementar esto (avisado por el backend):**
+el mecanismo que este documento asumía (`alertaFraude` marcándose en
+riesgo "medio") estaba muerto desde el 31 de agosto — `riesgo: 'alto'`
+siempre rechazaba la publicación con `400` antes de guardar nada, y
+"medio" no tocaba ningún campo. El backend lo revivió apuntándolo a
+"medio" (el único caso que de verdad se publica) — ahora si funciona
+como se pedía. Esto significa que en la práctica ESTA cola/acción solo
+aplica a intentos "medio" — "alto" nunca llega a tener una propiedad real
+que aprobar, consistente con lo que ya decía la página
+("Nivel alto ya bloquea publicar").
+
+**Contrato final del endpoint** (igual al propuesto, confirmado):
 
 **Por qué hace falta:** junto con este pedido se ocultaron las señales
 exactas de fraude tanto de quien publica (`PublishForm.tsx`, riesgo
@@ -16,33 +30,30 @@ ya construido y confirmado en vivo que el backend ya expone `GET
 /admin/intentos-fraude`) puede revisar el caso y, si es un falso
 positivo, quitar la marca manualmente.
 
-## Endpoint necesario
-
 | Ruta | Método | Body | Qué hace |
 |---|---|---|---|
-| `/admin/propiedades/:id/aprobar-revision` | POST | `{ motivo?: string }` | Quita el aviso "En revisión" de la propiedad — limpia `alertaFraude` (o el campo equivalente que hoy alimenta `BackendPublicProperty.alertaFraude`) para que `FraudAlertBadge` deje de mostrarse en la ficha pública. Requiere `esAdmin`, mismo guard que el resto de `/admin/**`. |
+| `/admin/propiedades/:id/aprobar-revision` | POST | `{ motivo?: string }` (opcional, máx 500 caracteres) | Requiere `esAdmin`. Limpia `alertaFraude` de la propiedad → `FraudAlertBadge` deja de mostrarse en la ficha pública. Responde `200 { ok: true }`. `404` si la propiedad no existe. `409` si la propiedad no tiene ninguna marca de fraude que quitar (ya se aprobó antes, o nunca tuvo una). |
 
-## Puntos a decidir del lado del backend
+**Decisiones que tomó el backend** (las 3 preguntas que este doc dejaba
+abiertas):
+- El registro en `/admin/intentos-fraude` se marca resuelto, no se borra
+  — nuevos campos `resueltoEn: string | null` (ISO) y
+  `resueltoPor: { id, nombre, email } | null`.
+- `intentosMismoUsuario` ya EXCLUYE del lado del servidor los intentos
+  con `resueltoEn` distinto de null — un falso positivo aprobado deja de
+  contar como reincidencia hacia adelante, como se recomendaba.
+- `GET /admin/intentos-fraude` gana un filtro aditivo opcional
+  `?estado=pendiente|resuelto` (sin mandarlo, trae todo).
+- **Efecto colateral útil, avisado por el backend:** si el dueño reescribe
+  el contenido y el nuevo análisis ya no da riesgo "medio", la marca se
+  limpia sola — no hace falta que un admin la apruebe manualmente en ese
+  caso.
 
-- **Qué pasa con el registro en la cola de `/admin/intentos-fraude`** —
-  ¿se marca como "resuelto"/"aprobado" (recomendado, para no perder el
-  historial ni la reincidencia) o se borra? Reincidencia
-  (`intentosMismoUsuario`) se calcula sobre esa tabla — borrar registros
-  aprobados legítimamente no debería contar como "reincidencia" hacia
-  adelante.
-- **Auditoría** — mismo patrón que `AccionAdmin` ya usado para bloqueos
-  de cuenta: guardar quién aprobó, cuándo, y el `motivo` opcional.
-- **¿Debe bajar `riesgo` a "bajo" en el registro histórico, o solo
-  limpiar `alertaFraude` de la propiedad?** Recomendado: NO reescribir
-  el `riesgo` original del intento (es un dato histórico real de lo que
-  la IA detectó en su momento) — solo limpiar el campo que controla si
-  la ficha pública muestra el aviso.
+## Frontend (ya conectado, en producción)
 
-## Frontend (ya conectado, esperando el endpoint)
-
-`src/app/admin/fraude/page.tsx` — botón "Quitar marca" en cada fila
-(y en el modal de detalle) cuando el intento tiene `propiedadId`. Llama
-a `POST /admin/propiedades/:id/aprobar-revision`; si el backend
-responde 404 (ruta inexistente), muestra un aviso honesto en vez de
-fallar en silencio — mismo criterio que el resto de esta página con
-`GET /admin/intentos-fraude` mientras no existía.
+`src/app/admin/fraude/page.tsx` — filtro de estado (pendiente/resuelto/
+todos) además del de riesgo, botón "Quitar marca" quitado y reemplazado
+por un badge "Resuelto · hace X días (por Fulano)" en las filas ya
+resueltas, manejo específico del `409` con mensaje propio en vez del
+genérico de `BackendApiError`. El fallback "el backend no lo tiene
+todavía" se quitó del modal — ya no aplica.

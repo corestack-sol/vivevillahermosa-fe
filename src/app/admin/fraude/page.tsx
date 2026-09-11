@@ -14,16 +14,17 @@ import { useAuth } from '@/context/AuthContext';
 /**
  * Cola de "posibles fraudes" (pedido explícito 2026-08-31) — usuarios cuyos
  * anuncios el backend clasificó como riesgo medio/alto, o que el backend
- * bloqueó directamente. Backend pendiente de construir, ver
- * docs/BACKEND-FRAUDE-NIVELES-31082026.md — este endpoint todavía no existe,
- * la página muestra un estado vacío honesto en vez de tronar mientras tanto
- * (mismo criterio que el resto del panel admin).
+ * bloqueó directamente. `GET /admin/intentos-fraude` es real (confirmado
+ * en vivo esta sesión); `noImplementado` de abajo queda como defensa por
+ * si acaso, no como estado esperado.
  *
  * `intentosMismoUsuario` — reincidencia (punto 4 de la propuesta): cuántas
  * veces esta MISMA cuenta ha aparecido aquí, sin importar si reescribió el
  * texto entre intentos. Viene precalculado del backend a propósito — hacerlo
  * bien (contar sobre TODO el historial, no solo la página actual) necesita
  * la base de datos completa, no los ~20 registros que trae esta pantalla.
+ * Confirmado 2026-09-11: ya excluye del lado del servidor los intentos con
+ * `resueltoEn` (un falso positivo aprobado no cuenta como reincidencia).
  */
 interface IntentoFraude {
   id: string;
@@ -39,12 +40,24 @@ interface IntentoFraude {
   createdAt: string;
   intentosMismoUsuario: number;
   user: { id: string; email: string; nombre: string; bloqueado: boolean };
+  // Confirmado por el backend 2026-09-11 junto con el endpoint de abajo —
+  // `intentosMismoUsuario` ya excluye del lado del servidor los intentos
+  // con `resueltoEn` distinto de null (un falso positivo aprobado deja de
+  // contar como reincidencia).
+  resueltoEn: string | null;
+  resueltoPor: { id: string; nombre: string; email: string } | null;
 }
 
 const RIESGOS = [
   { value: '', label: 'Medio y alto' },
   { value: 'alto', label: 'Solo alto' },
   { value: 'medio', label: 'Solo medio' },
+];
+
+const ESTADOS = [
+  { value: 'pendiente', label: 'Pendientes' },
+  { value: 'resuelto', label: 'Resueltos' },
+  { value: '', label: 'Todos' },
 ];
 
 export default function AdminFraudePage() {
@@ -54,6 +67,7 @@ export default function AdminFraudePage() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(30);
   const [riesgo, setRiesgo] = useState('');
+  const [estado, setEstado] = useState('pendiente');
   const [loading, setLoading] = useState(true);
   const [noImplementado, setNoImplementado] = useState(false);
   const [detalle, setDetalle] = useState<IntentoFraude | null>(null);
@@ -67,13 +81,15 @@ export default function AdminFraudePage() {
   // público (FraudAlertBadge.tsx), hacía falta un camino real para que
   // alguien marcado por error (falso positivo — el análisis de IA puede
   // equivocarse) recupere su anuncio sin depender de reescribirlo a
-  // ciegas. Mismo patrón "honesto si el backend aún no lo tiene" que el
-  // resto de esta página.
+  // ciegas. Backend implementado el mismo día
+  // (docs/BACKEND-APROBAR-REVISION-FRAUDE-11092026.md) — de paso reveló y
+  // corrigió que riesgo "medio" nunca había estado marcando `alertaFraude`
+  // desde el 31 de agosto (riesgo "alto" siempre rechazó con 400 sin
+  // guardar nada, así que "medio" es el único caso real que llega aquí).
   const [aprobando, setAprobando] = useState<IntentoFraude | null>(null);
   const [motivoAprobar, setMotivoAprobar] = useState('');
   const [enviandoAprobar, setEnviandoAprobar] = useState(false);
   const [errorAprobar, setErrorAprobar] = useState('');
-  const [aprobarNoImplementado, setAprobarNoImplementado] = useState(false);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -81,6 +97,10 @@ export default function AdminFraudePage() {
     try {
       const params = new URLSearchParams({ page: String(page) });
       if (riesgo) params.set('riesgo', riesgo);
+      // Filtro aditivo confirmado por el backend 2026-09-11 — sin mandarlo
+      // trae todo (pendientes + resueltos mezclados), por eso el default
+      // de este panel es 'pendiente' explícito.
+      if (estado) params.set('estado', estado);
       const data = await backendFetch<{
         intentos: IntentoFraude[];
         total: number;
@@ -91,12 +111,10 @@ export default function AdminFraudePage() {
       setTotal(data.total ?? 0);
       setPerPage(data.perPage ?? 30);
     } catch (err) {
-      // 404 = el endpoint todavía no existe del lado del backend — estado
-      // honesto, no un error real de la persona usando el panel. Cualquier
-      // otro código (401/403/500) SÍ es un error real y debe propagarse
-      // igual que en el resto del panel admin (ver admin/usuarios/page.tsx)
-      // — antes este catch los tragaba a todos por igual y los mostraba
-      // como "Sin anuncios marcados", ocultando un fallo real del backend.
+      // 404 ya no debería pasar (confirmado implementado 2026-09-11), pero
+      // se deja el mismo manejo honesto por si el filtro `estado` mismo
+      // llegara a no existir en algún ambiente — cualquier otro código
+      // (401/403/500) sí es un error real y debe propagarse.
       if (err instanceof BackendApiError && err.status === 404) {
         setNoImplementado(true);
         setIntentos([]);
@@ -107,7 +125,7 @@ export default function AdminFraudePage() {
     } finally {
       setLoading(false);
     }
-  }, [page, riesgo]);
+  }, [page, riesgo, estado]);
 
   useEffect(() => { function cargarInicial() { cargar(); } cargarInicial(); }, [cargar]);
 
@@ -123,7 +141,6 @@ export default function AdminFraudePage() {
     setAprobando(i);
     setMotivoAprobar('');
     setErrorAprobar('');
-    setAprobarNoImplementado(false);
   }
 
   async function confirmarAprobar() {
@@ -131,17 +148,22 @@ export default function AdminFraudePage() {
     setEnviandoAprobar(true);
     setErrorAprobar('');
     try {
-      // Endpoint nuevo, todavía no existe del lado del backend — ver
-      // docs/BACKEND-APROBAR-REVISION-FRAUDE-11092026.md.
+      // POST /admin/propiedades/:id/aprobar-revision — implementado por el
+      // backend 2026-09-11 (docs/BACKEND-APROBAR-REVISION-FRAUDE-
+      // 11092026.md). `motivo` es opcional del lado del backend; solo se
+      // manda si de verdad se escribió algo.
       await backendFetch(`/admin/propiedades/${aprobando.propiedadId}/aprobar-revision`, {
         method: 'POST',
-        body: JSON.stringify({ motivo: motivoAprobar }),
+        body: JSON.stringify({ motivo: motivoAprobar.trim() || undefined }),
       });
       setAprobando(null);
       cargar();
     } catch (err) {
-      if (err instanceof BackendApiError && err.status === 404) {
-        setAprobarNoImplementado(true);
+      // 409 = la propiedad no tiene ninguna marca de fraude que quitar
+      // (ya se aprobó antes, o nunca tuvo una) — confirmado por el backend,
+      // mensaje propio en vez del genérico de BackendApiError.
+      if (err instanceof BackendApiError && err.status === 409) {
+        setErrorAprobar('Esta propiedad ya no tiene ninguna marca de fraude que quitar — puede que ya se haya aprobado, o que la reescritura del dueño la haya limpiado sola.');
         return;
       }
       setErrorAprobar(err instanceof BackendApiError ? err.message : 'Ocurrió un error');
@@ -178,8 +200,13 @@ export default function AdminFraudePage() {
         Anuncios que el análisis automático clasificó como riesgo medio o alto, con las señales que no dependen solo del texto (GPS de foto que no coincide, mismo contacto reutilizado, reincidencia de la cuenta) — reescribir el título no las borra. Nivel alto ya bloquea publicar; esto es la cola de revisión, no un reemplazo de esa barrera.
       </p>
 
-      <div className="w-52 mb-5">
-        <Select options={RIESGOS} value={riesgo} onChange={(e) => { setPage(1); setRiesgo(e.target.value); }} placeholder="" />
+      <div className="flex flex-wrap gap-3 mb-5">
+        <div className="w-52">
+          <Select options={ESTADOS} value={estado} onChange={(e) => { setPage(1); setEstado(e.target.value); }} placeholder="" />
+        </div>
+        <div className="w-52">
+          <Select options={RIESGOS} value={riesgo} onChange={(e) => { setPage(1); setRiesgo(e.target.value); }} placeholder="" />
+        </div>
       </div>
 
       {loading ? (
@@ -260,7 +287,11 @@ export default function AdminFraudePage() {
                             Ver <ArrowUpRight size={11} />
                           </a>
                         )}
-                        {i.propiedadId && (
+                        {i.resueltoEn ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-emerald-600" title={i.resueltoPor ? `Por ${i.resueltoPor.nombre}` : undefined}>
+                            <CheckCircle2 size={11} /> Resuelto {formatRelativeDate(i.resueltoEn)}
+                          </span>
+                        ) : i.propiedadId && (
                           <Button size="sm" variant="outline" onClick={() => abrirAprobar(i)}>
                             <CheckCircle2 size={12} /> Quitar marca
                           </Button>
@@ -330,7 +361,11 @@ export default function AdminFraudePage() {
                 {detalle.intentosMismoUsuario} intento{detalle.intentosMismoUsuario !== 1 ? 's' : ''} nivel medio/alto en total — incluye anuncios reescritos después de un aviso previo.
               </p>
             </div>
-            {detalle.propiedadId && (
+            {detalle.resueltoEn ? (
+              <p className="flex items-center gap-1.5 text-sm text-emerald-600 pt-1 border-t border-gray-100">
+                <CheckCircle2 size={14} /> Resuelto {formatRelativeDate(detalle.resueltoEn)}{detalle.resueltoPor ? ` por ${detalle.resueltoPor.nombre}` : ''}
+              </p>
+            ) : detalle.propiedadId && (
               <div className="flex justify-end pt-1 border-t border-gray-100">
                 <Button size="sm" variant="outline" onClick={() => { const d = detalle; setDetalle(null); abrirAprobar(d); }}>
                   <CheckCircle2 size={12} /> Quitar marca de revisión
@@ -374,29 +409,22 @@ export default function AdminFraudePage() {
             <p className="text-sm text-gray-600">
               Vas a quitar el aviso &quot;En revisión&quot; del anuncio <strong className="text-gray-800">{aprobando.titulo}</strong>. Úsalo cuando ya verificaste que la propiedad es real y las señales detectadas no aplican — un falso positivo.
             </p>
-            {aprobarNoImplementado ? (
-              <p className="text-sm text-amber-700 bg-amber-50 rounded-xl p-3">
-                El backend todavía no tiene esta acción — falta <code className="text-xs bg-white px-1 py-0.5 rounded">POST /admin/propiedades/:id/aprobar-revision</code>. Ver <code className="text-xs bg-white px-1 py-0.5 rounded">docs/BACKEND-APROBAR-REVISION-FRAUDE-11092026.md</code>.
-              </p>
-            ) : (
-              <>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nota (opcional, visible para el equipo)</label>
-                  <textarea
-                    value={motivoAprobar}
-                    onChange={(e) => setMotivoAprobar(e.target.value)}
-                    rows={3}
-                    placeholder="Ej. Verifiqué la propiedad por teléfono, es real."
-                    className="w-full rounded-xl border border-gray-200 text-base sm:text-sm px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
-                  />
-                </div>
-                {errorAprobar && <p className="text-sm text-danger">{errorAprobar}</p>}
-                <div className="flex justify-end gap-2">
-                  <Button variant="ghost" onClick={() => setAprobando(null)}>Cancelar</Button>
-                  <Button variant="primary" onClick={confirmarAprobar} isLoading={enviandoAprobar}>Quitar marca</Button>
-                </div>
-              </>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nota (opcional, visible para el equipo)</label>
+              <textarea
+                value={motivoAprobar}
+                onChange={(e) => setMotivoAprobar(e.target.value)}
+                rows={3}
+                maxLength={500}
+                placeholder="Ej. Verifiqué la propiedad por teléfono, es real."
+                className="w-full rounded-xl border border-gray-200 text-base sm:text-sm px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
+              />
+            </div>
+            {errorAprobar && <p className="text-sm text-danger">{errorAprobar}</p>}
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setAprobando(null)}>Cancelar</Button>
+              <Button variant="primary" onClick={confirmarAprobar} isLoading={enviandoAprobar}>Quitar marca</Button>
+            </div>
           </div>
         )}
       </Modal>
