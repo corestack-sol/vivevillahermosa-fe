@@ -5,19 +5,19 @@ interface FloodRiskBadgeProps {
   nivel: FloodRisk;
   compact?: boolean;
   /**
-   * 'atlas' cuando el valor viene de la detección automática real contra
-   * el Atlas de Riesgos Municipal; 'propietario' cuando lo reportó o
-   * ajustó a mano quien publicó (ver PublishForm.tsx — el dueño SIEMPRE
-   * puede sobreescribir el valor detectado, incluso bajarlo). Bug real
-   * reportado 2026-09-11: antes se afirmaba "según el Atlas de Riesgos
-   * Municipal" con cita específica (página incluida) para CUALQUIER
-   * valor, sin importar su origen real — un dato 100% auto-reportado por
-   * el dueño podía quedar atribuido a un documento oficial que nunca lo
-   * dijo. `Property.riesgoInundacion` que manda el backend hoy es solo
-   * el valor final, no trae la fuente — ver
-   * docs/BACKEND-FUENTE-RIESGO-INUNDACION-11092026.md. Sin este dato
-   * (siempre, por ahora) se usa una leyenda honesta que no afirma
-   * ninguna de las dos fuentes en particular.
+   * 'atlas' SOLO si `riesgoInundacion` coincide exacto con lo que el
+   * backend registró como detección automática al publicar/editar
+   * (`riesgoInundacionDetectado`, ver docs/BACKEND-FUENTE-RIESGO-
+   * INUNDACION-11092026.md). 'propietario' en CUALQUIER otro caso — y eso
+   * incluye más de un escenario real, no solo "el dueño lo escribió a
+   * mano": también cubre una propiedad publicada ANTES de que este campo
+   * existiera (el backend no hizo backfill, decisión suya, "lectura
+   * conservadora") y una colonia sin registro en el Atlas. Por eso el
+   * texto de 'propietario' de abajo NO afirma que la persona lo haya
+   * reportado — sería la misma "cita falsa" que este sistema entero
+   * existe para evitar, solo que en la dirección contraria (aseverar
+   * origen NO-Atlas cuando en realidad sí pudo venir de ahí). Hallazgo
+   * real 2026-09-11: el texto anterior sí lo afirmaba en automático.
    */
   fuente?: 'atlas' | 'propietario';
 }
@@ -87,7 +87,7 @@ export function FloodRiskBadge({ nivel, compact = false, fuente }: FloodRiskBadg
             {fuente === 'atlas'
               ? 'Según el Atlas de Riesgos del Municipio de Centro, 2023. Ayuntamiento de Centro. P 377.'
               : fuente === 'propietario'
-              ? 'Este nivel fue reportado por quien publicó la propiedad, no proviene del Atlas de Riesgos Municipal.'
+              ? 'No podemos confirmar este nivel contra el Atlas de Riesgos Municipal — puede que quien publicó lo haya ajustado, o que la propiedad sea de antes de que pudiéramos verificarlo.'
               : 'Este dato proviene de registros públicos de inundación y/o de lo reportado por quien publicó la propiedad.'}
           </p>
         </div>

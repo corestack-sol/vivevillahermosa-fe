@@ -27,6 +27,29 @@ llamadas (badge completo y compacto). El import CSV masivo
 tecleado en un CSV no es una detección automática, cae en
 `'propietario'`, que es lo correcto.
 
+**Corrección de copy, mismo día:** el texto de `FloodRiskBadge.tsx` para
+`fuente === 'propietario'` decía "Este nivel fue reportado por quien
+publicó la propiedad" — una afirmación específica que NO siempre es
+cierta. `'propietario'` cubre "sin backfill" (propiedades de antes de
+este cambio, cuyo valor SÍ pudo venir de una detección automática real
+en su momento, solo que el backend no tiene forma de confirmarlo) además
+de "ajustado a mano" — afirmar la segunda como si fuera la única causa es
+la misma "cita falsa" que este sistema entero existe para evitar, solo
+que en la dirección contraria. Corregido a un texto que no afirma
+ninguna causa específica: "No podemos confirmar este nivel contra el
+Atlas de Riesgos Municipal — puede que quien publicó lo haya ajustado, o
+que la propiedad sea de antes de que pudiéramos verificarlo."
+
+**Pendiente, del lado del backend, si se quiere reducir cuántas
+propiedades caen en este caso ambiguo:** correr un backfill real —
+recalcular `riesgoInundacionDetectado` para las propiedades existentes
+usando la MISMA lógica que hoy corre en el frontend al publicar
+(`zonas-inundacion.ts`, ya restringida a municipio Centro desde la
+auditoría 2026-09-11) y comparar contra el `riesgoInundacion` guardado.
+No es necesario — el backend ya decidió conscientemente no hacerlo
+("lectura conservadora") — pero queda anotado como opción si en algún
+momento se prioriza.
+
 ---
 
 **Estado original de este documento (histórico, ya resuelto):**
