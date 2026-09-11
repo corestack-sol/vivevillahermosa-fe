@@ -485,6 +485,17 @@ export const COLONIAS_COORDS: ColoniaCoord[] = [
   { key: 'el-zapotal-1a-secc', label: 'El Zapotal 1a Secc', municipio: 'Centro', lat: 18.082065644657323, lng: -92.86347142668707, radioKm: RADIO_COLONIA_KM }, // El Zapotal 1a Secc
   { key: 'platano-y-cacao-1a-secc', label: 'Plátano y Cacao 1a Secc', municipio: 'Centro', lat: 17.97743620776993, lng: -93.1495856789774, radioKm: RADIO_COLONIA_KM }, // Plátano y Cacao 1a Secc
   { key: 'jose-maria-pino-suarez-1a-seccion', label: 'José María Pino Suárez (1a Sección)', municipio: 'Centro', lat: 18.351581997457185, lng: -93.38224852975947, radioKm: RADIO_COLONIA_KM }, // Jose Maria Pino Suarez 1a Secc
+
+  // Lote agregado 2026-09-10 (segunda ronda) — coordenadas dadas por el
+  // usuario SIN nombre, identificadas por reverse-geocode (Nominatim) y
+  // confirmadas contra el catálogo existente antes de agregarlas (se
+  // descartaron ~10 por resultar el mismo lugar ya catalogado).
+  { key: 'la-manga-iii', label: 'La Manga III', municipio: 'Centro', lat: 17.994848069712475, lng: -92.90680100919647, radioKm: RADIO_COLONIA_KM },
+  { key: 'gaviotas-sur-sector-san-jose', label: 'Gaviotas Sur Sector San José', municipio: 'Centro', lat: 17.97760645519637, lng: -92.90856256534332, radioKm: RADIO_COLONIA_KM },
+  { key: 'brisas-del-carrizal', label: 'Brisas del Carrizal', municipio: 'Centro', lat: 18.014223164422585, lng: -92.97075464538145, radioKm: RADIO_COLONIA_KM },
+  { key: 'la-selva', label: 'La Selva', municipio: 'Centro', lat: 18.019938724156624, lng: -92.96672577812265, radioKm: RADIO_COLONIA_KM },
+  { key: 'saloya-segunda-seccion', label: 'Saloya Segunda Sección', municipio: 'Centro', lat: 18.05118402287288, lng: -92.92873073624416, radioKm: RADIO_COLONIA_KM },
+  { key: 'real-del-sur', label: 'Real del Sur', municipio: 'Centro', lat: 17.963522851964786, lng: -92.94527697311437, radioKm: RADIO_COLONIA_KM },
 ];
 
 function normalizarBase(s: string): string {
