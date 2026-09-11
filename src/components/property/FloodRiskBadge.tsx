@@ -8,16 +8,13 @@ interface FloodRiskBadgeProps {
    * 'atlas' SOLO si `riesgoInundacion` coincide exacto con lo que el
    * backend registró como detección automática al publicar/editar
    * (`riesgoInundacionDetectado`, ver docs/BACKEND-FUENTE-RIESGO-
-   * INUNDACION-11092026.md). 'propietario' en CUALQUIER otro caso — y eso
-   * incluye más de un escenario real, no solo "el dueño lo escribió a
-   * mano": también cubre una propiedad publicada ANTES de que este campo
-   * existiera (el backend no hizo backfill, decisión suya, "lectura
-   * conservadora") y una colonia sin registro en el Atlas. Por eso el
-   * texto de 'propietario' de abajo NO afirma que la persona lo haya
-   * reportado — sería la misma "cita falsa" que este sistema entero
-   * existe para evitar, solo que en la dirección contraria (aseverar
-   * origen NO-Atlas cuando en realidad sí pudo venir de ahí). Hallazgo
-   * real 2026-09-11: el texto anterior sí lo afirmaba en automático.
+   * INUNDACION-11092026.md). 'propietario' en CUALQUIER otro caso —
+   * técnicamente incluye más de un escenario (ajuste manual real,
+   * propiedad de antes de que este campo existiera sin backfill, colonia
+   * sin registro en el Atlas), pero pedido explícito 2026-09-11: el texto
+   * de abajo se simplifica a "quien publicó lo ajustó" sin enumerar los
+   * demás casos — se acepta la imprecisión de los casos legado a cambio
+   * de un mensaje corto y directo.
    */
   fuente?: 'atlas' | 'propietario';
 }
@@ -87,7 +84,7 @@ export function FloodRiskBadge({ nivel, compact = false, fuente }: FloodRiskBadg
             {fuente === 'atlas'
               ? 'Según el Atlas de Riesgos del Municipio de Centro, 2023. Ayuntamiento de Centro. P 377.'
               : fuente === 'propietario'
-              ? 'No podemos confirmar este nivel contra el Atlas de Riesgos Municipal — puede que quien publicó lo haya ajustado, o que la propiedad sea de antes de que pudiéramos verificarlo.'
+              ? 'No podemos confirmar este nivel contra el Atlas de Riesgos Municipal — quien publicó lo ajustó.'
               : 'Este dato proviene de registros públicos de inundación y/o de lo reportado por quien publicó la propiedad.'}
           </p>
         </div>
