@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Users, FileWarning, FlagTriangleRight, Heart, Bell, CalendarDays, Wrench, Ban, Mail, Cpu, Eye, Home, ShieldX } from 'lucide-react';
+import { Users, FileWarning, FlagTriangleRight, Heart, Bell, CalendarDays, Wrench, Ban, Mail, Cpu, Eye, Home, ShieldX, MapPinned } from 'lucide-react';
 import { getSession } from '@/lib/auth';
 import { backendFetchServer } from '@/lib/backendApiServer';
 
@@ -14,6 +14,10 @@ interface MetricasBackend {
   // opcional a propósito: la tarjeta de abajo se oculta sola mientras no
   // exista, en vez de mostrar un 0 falso.
   intentosFraude?: number;
+  // Pendiente del backend (docs/BACKEND-SOLICITUDES-CAMBIO-PIN-11092026.md)
+  // — mismo criterio que intentosFraude arriba: opcional a propósito, la
+  // tarjeta se oculta sola mientras no exista, en vez de un 0 falso.
+  solicitudesPin?: { total: number; pendientes: number };
   favoritos: number;
   alertas: number;
   citas: number;
@@ -56,6 +60,9 @@ export default async function AdminPage() {
     { icon: Eye, label: 'Intentos sospechosos', value: m.intentosSospechosos, color: 'text-purple-500', bg: 'bg-purple-50', href: '/admin/intentos-sospechosos' },
     ...(m.intentosFraude !== undefined
       ? [{ icon: ShieldX, label: 'Posibles fraudes', value: m.intentosFraude, color: 'text-red-500', bg: 'bg-red-50', href: '/admin/fraude' }]
+      : []),
+    ...(m.solicitudesPin !== undefined
+      ? [{ icon: MapPinned, label: 'Cambios de ubicación pendientes', value: m.solicitudesPin.pendientes, color: 'text-amber-500', bg: 'bg-amber-50', href: '/admin/solicitudes-pin' }]
       : []),
     { icon: Heart, label: 'Favoritos guardados', value: m.favoritos, color: 'text-pink-500', bg: 'bg-pink-50' },
     { icon: Bell, label: 'Alertas activas', value: m.alertas, color: 'text-orange-500', bg: 'bg-orange-50' },

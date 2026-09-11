@@ -25,6 +25,7 @@ import { ColoniaAutocomplete } from '@/components/forms/ColoniaAutocomplete';
 import { dentroDeRadioPermitido, RADIO_MAXIMO_PIN_KM } from '@/lib/mapPin';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { resizeImageToDataUrl, MAX_SOURCE_BYTES } from '@/lib/imageResize';
+import { SolicitarCambioPinModal } from '@/components/property/SolicitarCambioPinModal';
 import { generarTituloAutomatico } from '@/lib/tituloGenerator';
 import { formatTelefonoInput } from '@/lib/phone';
 import type { Coords } from '@/components/forms/MapPicker';
@@ -163,6 +164,11 @@ export default function EditarPropiedadPage() {
   // `coords` es lo que se ve/edita en el mapa.
   const [coords, setCoords] = useState<Coords | null>(null);
   const [original, setOriginal] = useState<Coords | null>(null);
+  // Pedido explícito 2026-09-11: antes, rechazar un pin fuera del radio
+  // (ver MapPicker onRejected abajo) solo mostraba un toast con "contáctanos"
+  // sin ningún canal real — ahora abre este modal con el punto rechazado,
+  // ver SolicitarCambioPinModal.tsx.
+  const [solicitudPinAbierta, setSolicitudPinAbierta] = useState<Coords | null>(null);
   useEffect(() => {
     if (property) {
       setCoords({ lat: property.lat, lng: property.lng });
@@ -703,7 +709,7 @@ export default function EditarPropiedadPage() {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Ubicación exacta</label>
           <p className="text-xs text-gray-400 mb-2">
-            El pin solo se puede mover hasta {RADIO_MAXIMO_PIN_KM} km del punto donde publicaste, para que la distancia mostrada a cada zona sea siempre real, no exagerada. ¿De verdad se mudó más lejos? Contáctanos.
+            El pin solo se puede mover hasta {RADIO_MAXIMO_PIN_KM} km del punto donde publicaste, para que la distancia mostrada a cada zona sea siempre real, no exagerada. ¿De verdad se mudó más lejos? Te dejamos solicitar el cambio.
           </p>
           <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: 220 }}>
             {coords && (
@@ -716,7 +722,7 @@ export default function EditarPropiedadPage() {
                   if (!estaEnTabasco(c.lat, c.lng)) {
                     toast.error('Ese punto queda fuera de Tabasco — solo se pueden publicar propiedades dentro del estado.');
                   } else {
-                    toast.error(`Ese punto queda a más de ${RADIO_MAXIMO_PIN_KM} km de donde publicaste originalmente. Si tu propiedad de verdad está más lejos, contáctanos para corregirlo.`);
+                    setSolicitudPinAbierta(c);
                   }
                 }}
               />
@@ -879,6 +885,17 @@ export default function EditarPropiedadPage() {
           </Button>
         </div>
       </form>
+
+      {original && solicitudPinAbierta && (
+        <SolicitarCambioPinModal
+          isOpen={!!solicitudPinAbierta}
+          onClose={() => setSolicitudPinAbierta(null)}
+          propiedadId={property.id}
+          propiedadTitulo={property.titulo}
+          original={original}
+          solicitada={solicitudPinAbierta}
+        />
+      )}
     </div>
   );
 }

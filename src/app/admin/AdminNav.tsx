@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShieldCheck, LayoutDashboard, Users, FileWarning, FlagTriangleRight, ShieldAlert, ShieldX, Wrench, ScrollText, MapPin } from 'lucide-react';
+import { ShieldCheck, LayoutDashboard, Users, FileWarning, FlagTriangleRight, ShieldAlert, ShieldX, Wrench, ScrollText, MapPin, MapPinned } from 'lucide-react';
 
 const LINKS = [
   { href: '/admin', icon: LayoutDashboard, label: 'Métricas', exact: true },
   { href: '/admin/usuarios', icon: Users, label: 'Usuarios' },
   { href: '/admin/solicitudes', icon: FileWarning, label: 'Solicitudes de revisión' },
+  { href: '/admin/solicitudes-pin', icon: MapPinned, label: 'Cambios de ubicación' },
   { href: '/admin/reportes', icon: FlagTriangleRight, label: 'Reportes' },
   { href: '/admin/fraude', icon: ShieldX, label: 'Posibles fraudes' },
   { href: '/admin/intentos-sospechosos', icon: ShieldAlert, label: 'Intentos sospechosos' },
