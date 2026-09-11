@@ -278,6 +278,23 @@ export function detectarRiesgoInundacion(
   colonia: string,
   municipio?: string,
 ): DeteccionRiesgo | null {
+  // Bug real de integridad de datos (auditoría 2026-09-11): la FUENTE
+  // PRIMARIA de este archivo (comentario arriba) es exclusivamente el
+  // Atlas de Riesgos del Municipio de CENTRO — pero solo un subconjunto de
+  // los patrones de abajo llevaba `municipio: 'Centro'` explícito, el resto
+  // matcheaba sin importar el municipio real de la propiedad. Nombres de
+  // colonia se repiten entre municipios con hidrología totalmente distinta
+  // (confirmado: "Framboyanes" existe en Centro, Macuspana Y Paraíso) — sin
+  // esto, una propiedad en Macuspana podía heredar un nivel de riesgo
+  // calculado para el vaso regulador de Laguna Covadonga en Centro, algo
+  // que ni siquiera existe ahí. Como TODO el contenido de `ZONAS` describe
+  // distritos hidráulicos de Centro (ver comentario "Dist. I-XII" arriba),
+  // la fuente nunca cubrió otro municipio — restringir aquí, una sola vez,
+  // en vez de auditar 150 patrones contra el catálogo real INEGI uno por
+  // uno. Los 4 llamadores reales (PublishForm.tsx, editar/page.tsx,
+  // coach.ts, zonas/[slug]/page.tsx) ya conocen el municipio al llamar.
+  if (municipio !== 'Centro') return null;
+
   const normColonia = normalizar(colonia);
   if (normColonia.length < 4) return null;
 
