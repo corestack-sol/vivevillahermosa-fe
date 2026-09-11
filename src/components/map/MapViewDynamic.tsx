@@ -2,7 +2,6 @@
 
 import dynamic from 'next/dynamic';
 import { Map } from 'lucide-react';
-import { Skeleton } from '@/components/ui/Skeleton';
 
 export const MapViewDynamic = dynamic(
   () => import('./MapView').then((m) => m.MapView),

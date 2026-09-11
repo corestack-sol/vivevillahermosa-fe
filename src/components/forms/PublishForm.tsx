@@ -586,7 +586,10 @@ export function PublishForm() {
   // pide confirmarlo con un checkbox — solo entonces se muestran.
   const [terrenoConstruido, setTerrenoConstruido] = useState(false);
   useEffect(() => {
-    if (tipo !== 'terreno') setTerrenoConstruido(false);
+    function limpiarTerrenoConstruido() {
+      if (tipo !== 'terreno') setTerrenoConstruido(false);
+    }
+    limpiarTerrenoConstruido();
   }, [tipo]);
   // m² construidos y baños son parte de "área techada" — no aplican a un
   // terreno vacío, sí a cualquier otro tipo (local/oficina/bodega/habitación
@@ -800,8 +803,11 @@ export function PublishForm() {
   // Text detection from colony name — GPS coords se guardan con la propiedad
   // pero no se usan para clasificar riesgo hasta tener shapefiles oficiales de IMPLAN.
   useEffect(() => {
-    const txt = detectarRiesgoInundacion(colonia ?? '', municipio);
-    applyDeteccion(txt ? { ...txt, metodo: 'texto' } : null);
+    function detectarPorTexto() {
+      const txt = detectarRiesgoInundacion(colonia ?? '', municipio);
+      applyDeteccion(txt ? { ...txt, metodo: 'texto' } : null);
+    }
+    detectarPorTexto();
   }, [colonia, municipio]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const riesgoActual  = watch('riesgoInundacion');

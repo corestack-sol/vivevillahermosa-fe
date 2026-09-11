@@ -79,8 +79,8 @@ export function SelectedPropertyCard({ marker, onClose }: { marker: MapMarker; o
           `,
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         {showImg && (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={cloudinaryTransform(marker.foto!, 'thumb')}
             alt={marker.titulo}
