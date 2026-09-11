@@ -123,7 +123,7 @@ function MensajesContent() {
               // legado como leído (confirmado en vivo 2026-09-06) — se
               // completa con lo que este navegador recuerda haber abierto
               // (ver marcarLegadoLeido en mensajesLegadoLeidos.ts).
-              mensaje: { ...mensaje, leido: mensaje.leido || estaLegadoLeido(mensaje.id) },
+              mensaje: { ...mensaje, leido: mensaje.leido || estaLegadoLeido(mensaje.id, user?.userId ?? null) },
             })))
             .catch(() => []),
         ),
@@ -206,7 +206,7 @@ function MensajesContent() {
             // mensaje legado no tiene backend que lo recuerde, así que
             // además queda guardado en este navegador.
             function marcarLeidoAlAbrir() {
-              if (it.tipo === 'legado') marcarLegadoLeido(it.mensajeId);
+              if (it.tipo === 'legado') marcarLegadoLeido(it.mensajeId, user?.userId ?? null);
               setItems((prev) => prev.map((x) => (x.id === it.id ? { ...x, noLeidos: 0 } : x)));
             }
             return (

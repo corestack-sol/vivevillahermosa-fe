@@ -9,6 +9,7 @@ import { interpretarBusqueda, esOracionLarga, MAX_QUERY_LENGTH, type FiltrosIA }
 import type { Property } from '@/types/property';
 import { AMENIDADES_OPTIONS } from '@/lib/amenidades';
 import { useToast } from '@/context/ToastContext';
+import { useAuth } from '@/context/AuthContext';
 import posthog from 'posthog-js';
 
 // Bandera de un solo uso para avisar en /propiedades que la búsqueda que
@@ -148,6 +149,7 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
   const containerRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
   const toast = useToast();
+  const { user } = useAuth();
 
   // Antes esta lista era 14 colonias hardcodeadas, algunas sin ninguna
   // propiedad real detrás. Ahora las sugerencias salen del catálogo real
@@ -172,10 +174,10 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
 
   useEffect(() => {
     function cargarRecientes() {
-      setRecent(getRecentSearches());
+      setRecent(getRecentSearches(user?.userId ?? null));
     }
     cargarRecientes();
-  }, []);
+  }, [user?.userId]);
 
   // Solo rota cuando nadie pasó un `placeholder` fijo por prop (algunas
   // pantallas necesitan un texto específico, no genérico) y cuando el
@@ -251,8 +253,8 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
 
   function irA(q: string, filtros: FiltrosIA = {}) {
     setOpen(false);
-    addRecentSearch(q);
-    setRecent(getRecentSearches());
+    addRecentSearch(q, user?.userId ?? null);
+    setRecent(getRecentSearches(user?.userId ?? null));
     if (onSearch) {
       onSearch(q);
       return;
@@ -379,7 +381,7 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
 
   function handleClearRecent(e: React.MouseEvent) {
     e.stopPropagation();
-    clearRecentSearches();
+    clearRecentSearches(user?.userId ?? null);
     setRecent([]);
   }
 

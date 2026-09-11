@@ -57,7 +57,7 @@ export default function ConversacionLegadoPage() {
         // Por si se llega aquí directo (link guardado, notificación) sin
         // pasar por el clic de la tarjeta en la bandeja — ver
         // mensajesLegadoLeidos.ts, el backend no tiene endpoint para esto.
-        marcarLegadoLeido(mensajeId);
+        marcarLegadoLeido(mensajeId, user?.userId ?? null);
       })
       .catch(() => { if (!cancelado) setNoEncontrado(true); })
       .finally(() => { if (!cancelado) setLoading(false); });

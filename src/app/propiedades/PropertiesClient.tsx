@@ -22,6 +22,7 @@ import { matchColonia, normalizarNombreColonia, precargarColoniasDescubiertas } 
 import { interpretarBusqueda, esOracionLarga, MAX_QUERY_LENGTH } from '@/lib/interpretarBusqueda';
 import { getColoniasRankedByPropiedades, searchProperties } from '@/lib/api';
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches';
+import { useAuth } from '@/context/AuthContext';
 import { ExploreZonasCta } from '@/components/search/ExploreZonasCta';
 import { BUSQUEDA_SIN_INTERPRETAR_KEY } from '@/components/search/SearchBar';
 import { useToast } from '@/context/ToastContext';
@@ -119,6 +120,7 @@ function heroLabel(sort: SearchFilters['sort']): string | null {
 }
 
 export function PropertiesClient({ initialProperties, initialTotal }: Props) {
+  const { user } = useAuth();
   const { filters, updateFilters, clearFilters, activeCount } = useFilters();
   // Para el link "Ver en mapa" de abajo — reenvía los filtros activos tal
   // cual, sin reconstruir el query string a mano: /mapa usa el mismo
@@ -228,10 +230,10 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
 
   useEffect(() => {
     function cargarRecientes() {
-      setRecent(getRecentSearches());
+      setRecent(getRecentSearches(user?.userId ?? null));
     }
     cargarRecientes();
-  }, []);
+  }, [user?.userId]);
 
   // Mismo motivo que en SearchBar.tsx: comparar contra el <form> completo
   // (input + dropdown), no solo el input — un mousedown sobre un botón del
@@ -251,8 +253,8 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
     // SearchBar.tsx.
     setSearchOpen(false);
     updateFilters({ q: s });
-    addRecentSearch(s);
-    setRecent(getRecentSearches());
+    addRecentSearch(s, user?.userId ?? null);
+    setRecent(getRecentSearches(user?.userId ?? null));
   }
 
   function handleRecentClick(s: string) {
@@ -262,7 +264,7 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
 
   function handleClearRecent(e: React.MouseEvent) {
     e.stopPropagation();
-    clearRecentSearches();
+    clearRecentSearches(user?.userId ?? null);
     setRecent([]);
   }
 
@@ -304,8 +306,8 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
   async function aplicarBusquedaIA(query: string) {
     const texto = query.trim();
     if (!texto) return;
-    addRecentSearch(texto);
-    setRecent(getRecentSearches());
+    addRecentSearch(texto, user?.userId ?? null);
+    setRecent(getRecentSearches(user?.userId ?? null));
     setBuscandoIA(true);
     let filtros = await interpretarBusqueda(texto);
     // Auditoría en vivo 2026-09-03: bajo latencia alta contra OpenRouter,

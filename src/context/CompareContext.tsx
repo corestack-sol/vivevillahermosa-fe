@@ -2,9 +2,17 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { useToast } from './ToastContext';
+import { useAuth } from './AuthContext';
 
-const KEY = 'compareProperties';
 export const MAX_COMPARE = 4;
+
+// Escaneado por cuenta (mismo criterio que recentlyViewed.ts/publishDraft.ts,
+// bug real de esta sesión: sin esto, cerrar sesión en una computadora
+// compartida dejaba la lista de comparación visible para la siguiente
+// persona que iniciara sesión en el mismo navegador).
+function clave(userId: string | null): string {
+  return userId ? `compareProperties:${userId}` : 'compareProperties:anon';
+}
 
 interface CompareContextValue {
   ids: string[];
@@ -16,10 +24,10 @@ interface CompareContextValue {
 
 const CompareContext = createContext<CompareContextValue | null>(null);
 
-function readStored(): string[] {
+function readStored(userId: string | null): string[] {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(clave(userId));
     return raw ? (JSON.parse(raw) as string[]) : [];
   } catch {
     return [];
@@ -28,23 +36,25 @@ function readStored(): string[] {
 
 export function CompareProvider({ children }: { children: ReactNode }) {
   const toast = useToast();
+  const { user, loading: authLoading } = useAuth();
   const [ids, setIds] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     function cargarDesdeStorage() {
-      setIds(readStored());
+      if (authLoading) return;
+      setIds(readStored(user?.userId ?? null));
       setHydrated(true);
     }
     cargarDesdeStorage();
-  }, []);
+  }, [authLoading, user?.userId]);
 
   useEffect(() => {
     if (!hydrated) return; // evita pisar localStorage con [] antes de leerlo
     try {
-      localStorage.setItem(KEY, JSON.stringify(ids));
+      localStorage.setItem(clave(user?.userId ?? null), JSON.stringify(ids));
     } catch {}
-  }, [ids, hydrated]);
+  }, [ids, hydrated, user?.userId]);
 
   function toggle(id: string) {
     setIds((prev) => {
