@@ -29,6 +29,12 @@ interface UbicacionReporte {
   municipio: string;
   lat: number;
   lng: number;
+  // Pedido explícito 2026-09-11: ni la lista ni el mapa mostraban quién
+  // publicó la propiedad reportada, solo el motivo del reporte y un link
+  // "Ver publicación" — había que entrar a la ficha para saber a quién
+  // corresponde. `getPropertyById` ya trae `agente` en la misma llamada
+  // que se hacía para resolver título/colonia/lat/lng, solo se descartaba.
+  agente: { nombre: string; email?: string | null; whatsapp?: string | null };
 }
 
 const ESTADOS = [
@@ -98,10 +104,14 @@ export default function AdminReportesPage() {
 
   useEffect(() => { function cargarInicial() { cargar(); } cargarInicial(); }, [cargar]);
 
-  // Resuelve ubicación solo mientras la vista de mapa está activa — no
-  // tiene sentido pagar 20 fetches de propiedad si nadie va a verlos.
+  // Antes solo se resolvía mientras la vista de mapa estaba activa ("no
+  // tiene sentido pagar 20 fetches de propiedad si nadie va a verlos") —
+  // pero la vista de lista (la que se ve por defecto) tampoco mostraba
+  // quién publicó la propiedad reportada, y esos mismos fetches ya traen
+  // `agente`. Ahora corre siempre que cambian los reportes, sin importar
+  // la vista — el costo es el mismo N fetches, solo que ahora sí se usan
+  // en las dos vistas.
   useEffect(() => {
-    if (vista !== 'mapa') return;
     const ids = Array.from(new Set(reportes.map((r) => r.propiedadId)));
     if (ids.length === 0) return;
     let cancelado = false;
@@ -111,13 +121,13 @@ export default function AdminReportesPage() {
       props.forEach((p, i) => {
         // p es undefined si la propiedad ya no existe (borrada) — el
         // reporte se conserva (ver el aviso de la card de arriba), pero
-        // no hay dónde ponerle un pin.
-        if (p) next[ids[i]] = { titulo: p.titulo, colonia: p.colonia, municipio: p.municipio, lat: p.latPublico, lng: p.lngPublico };
+        // no hay dónde ponerle un pin ni a quién atribuirlo.
+        if (p) next[ids[i]] = { titulo: p.titulo, colonia: p.colonia, municipio: p.municipio, lat: p.latPublico, lng: p.lngPublico, agente: p.agente };
       });
       setUbicaciones(next);
     });
     return () => { cancelado = true; };
-  }, [vista, reportes]);
+  }, [reportes]);
 
   const totalPages = Math.max(1, Math.ceil(total / perPage));
 
@@ -202,6 +212,7 @@ export default function AdminReportesPage() {
                       {MOTIVO_LABEL[reporteSeleccionado.motivo] ?? reporteSeleccionado.motivo}
                     </span>
                     <p className="text-sm font-semibold text-gray-800">{ubicacionSeleccionada.titulo}</p>
+                    <p className="text-xs text-gray-500">Publicada por <strong className="font-semibold text-gray-700">{ubicacionSeleccionada.agente.nombre}</strong></p>
                     <p className="text-xs text-gray-400">{ubicacionSeleccionada.colonia}, {ubicacionSeleccionada.municipio} · {formatRelativeDate(reporteSeleccionado.createdAt)}</p>
                   </div>
                   <button type="button" onClick={() => setSeleccionadoId(null)} aria-label="Cerrar" className="flex-shrink-0 text-gray-300 hover:text-gray-500">
@@ -241,11 +252,24 @@ export default function AdminReportesPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {reportes.map((r) => (
+          {reportes.map((r) => {
+            const prop = ubicaciones[r.propiedadId];
+            return (
             <div key={r.id} className="bg-white rounded-2xl border border-gray-200 p-5">
               <div className="flex items-start justify-between gap-4 mb-2">
-                <div>
+                <div className="min-w-0">
                   <span className="inline-block text-xs font-semibold text-brand bg-brand-pale px-2 py-0.5 rounded-full mb-1.5">{MOTIVO_LABEL[r.motivo] ?? r.motivo}</span>
+                  {prop ? (
+                    <p className="text-sm font-medium text-gray-800 truncate">{prop.titulo}</p>
+                  ) : (
+                    <p className="text-sm text-gray-400 italic">La propiedad ya no existe</p>
+                  )}
+                  {prop?.agente && (
+                    <p className="text-xs text-gray-500">
+                      Publicada por <strong className="font-semibold text-gray-700">{prop.agente.nombre}</strong>
+                      {prop.agente.email && <span className="text-gray-400"> · {prop.agente.email}</span>}
+                    </p>
+                  )}
                   <p className="text-xs text-gray-400">{r.userId ? 'Reportado por un usuario con sesión' : 'Reportado de forma anónima'} · {formatRelativeDate(r.createdAt)}</p>
                 </div>
                 <Link
@@ -268,7 +292,8 @@ export default function AdminReportesPage() {
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -287,7 +312,14 @@ export default function AdminReportesPage() {
               {confirmar.nuevoEstado === 'revisado'
                 ? 'Vas a marcar como revisado el reporte sobre'
                 : 'Vas a descartar el reporte sobre'}{' '}
-              <code className="bg-gray-50 px-1 py-0.5 rounded text-gray-800">{confirmar.reporte.propiedadId}</code>
+              {ubicaciones[confirmar.reporte.propiedadId] ? (
+                <>
+                  <strong className="text-gray-800">{ubicaciones[confirmar.reporte.propiedadId].titulo}</strong>
+                  {' '}(publicada por {ubicaciones[confirmar.reporte.propiedadId].agente.nombre})
+                </>
+              ) : (
+                <code className="bg-gray-50 px-1 py-0.5 rounded text-gray-800">{confirmar.reporte.propiedadId}</code>
+              )}
               {' '}({MOTIVO_LABEL[confirmar.reporte.motivo] ?? confirmar.reporte.motivo}). Esta acción no se puede deshacer desde aquí.
             </p>
             {error && <p className="text-sm text-danger">{error}</p>}
