@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
-  matchColonia, getColoniaByKey, buscarColoniaEnTexto, jitterCoord, getPuntoPublico,
+  matchColonia, matchColoniaCandidates, sugerirColonias, getColoniaByKey, buscarColoniaEnTexto, jitterCoord, getPuntoPublico,
   normalizarNombreColonia, RADIO_COLONIA_KM,
 } from './colonias';
 
@@ -117,6 +117,73 @@ describe('matchColonia', () => {
       expect(matchColonia('Magisteral')).toBeUndefined(); // still ambiguous without a hint
       expect(matchColonia('Magisteral', 'Paraíso')?.key).toBe('magisterial-paraiso');
     });
+  });
+});
+
+describe('matchColoniaCandidates', () => {
+  it('empty string returns no candidates', () => {
+    expect(matchColoniaCandidates('')).toEqual([]);
+  });
+
+  it('an unambiguous name returns a single candidate', () => {
+    const result = matchColoniaCandidates('Atasta');
+    expect(result).toHaveLength(1);
+    expect(result[0].key).toBe('atasta');
+  });
+
+  it('a name that repeats across municipios returns ALL of them, without a hint', () => {
+    const result = matchColoniaCandidates('Magisterial');
+    expect(result.length).toBeGreaterThanOrEqual(6);
+    expect(result.map((c) => c.municipio)).toContain('Centro');
+    expect(result.map((c) => c.municipio)).toContain('Cunduacán');
+  });
+
+  it('with a municipio hint, narrows down to just that one', () => {
+    const result = matchColoniaCandidates('Magisterial', 'Cunduacán');
+    expect(result).toHaveLength(1);
+    expect(result[0].key).toBe('magisterial-cunduacan');
+  });
+
+  it('a name not in the catalog returns no candidates', () => {
+    expect(matchColoniaCandidates('Esta Colonia No Existe De Verdad')).toEqual([]);
+  });
+});
+
+describe('sugerirColonias', () => {
+  it('returns nothing for a query shorter than 2 characters', () => {
+    expect(sugerirColonias('a')).toEqual([]);
+    expect(sugerirColonias('')).toEqual([]);
+  });
+
+  it('matches by substring, not just prefix', () => {
+    const result = sugerirColonias('gaviota');
+    expect(result.length).toBeGreaterThan(0);
+    expect(result.every((c) => c.label.toLowerCase().includes('gaviota'))).toBe(true);
+  });
+
+  it('is accent/case-insensitive', () => {
+    expect(sugerirColonias('MAGISTERIAL').length).toBeGreaterThan(0);
+    expect(sugerirColonias('gil y saenz').length).toBeGreaterThan(0); // "Gil y Sáenz" real
+  });
+
+  it('respects the limite parameter', () => {
+    const result = sugerirColonias('re', undefined, 3);
+    expect(result.length).toBeLessThanOrEqual(3);
+  });
+
+  it('de-duplicates homonyms across municipios into a single suggestion', () => {
+    const result = sugerirColonias('magisterial');
+    const labels = result.map((c) => c.label.toLowerCase());
+    expect(new Set(labels).size).toBe(labels.length);
+  });
+
+  it('prioritizes the given municipio when there are homonyms', () => {
+    const result = sugerirColonias('magisterial', 'Cunduacán');
+    expect(result[0]?.municipio).toBe('Cunduacán');
+  });
+
+  it('a query with no match returns an empty list', () => {
+    expect(sugerirColonias('xyzxyzxyz-no-existe')).toEqual([]);
   });
 });
 

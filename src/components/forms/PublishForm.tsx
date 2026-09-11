@@ -29,7 +29,8 @@ import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { getAllProperties } from '@/lib/api';
 import posthog from 'posthog-js';
-import { matchColonia, distanciaKm, precargarColoniasDescubiertas, type ColoniaCoord } from '@/lib/colonias';
+import { matchColonia, matchColoniaCandidates, distanciaKm, precargarColoniasDescubiertas, type ColoniaCoord } from '@/lib/colonias';
+import { ColoniaAutocomplete } from './ColoniaAutocomplete';
 import { coordsAutoDesdeColonia } from '@/lib/mapPin';
 import { landmarksCercanos, precargarLandmarks } from '@/lib/landmarks';
 import {
@@ -558,10 +559,29 @@ export function PublishForm() {
   const [coloniasReady, setColoniasReady] = useState(false);
   useEffect(() => { precargarColoniasDescubiertas().then(() => setColoniasReady(true)); }, []);
 
-  const coloniaVerificada = useMemo(
-    () => (colonia ? matchColonia(colonia, municipio) : undefined),
+  // Desambiguación — pedido explícito 2026-09-10: el catálogo ya tiene
+  // nombres reales repetidos (ej. "Pino Suárez", "La Ceiba" existen más de
+  // una vez, en puntos distintos). matchColonia() por sí solo elegiría el
+  // primero en silencio; aquí se detecta cuándo hay más de un candidato
+  // exacto y se le pide a la persona que elija, en vez de adivinar.
+  const coloniaCandidatas = useMemo(
+    () => (colonia ? matchColoniaCandidates(colonia, municipio) : []),
     [colonia, municipio, coloniasReady], // eslint-disable-line react-hooks/exhaustive-deps
   );
+  const coloniaEsAmbigua = coloniaCandidatas.length > 1;
+  const [coloniaElegidaKey, setColoniaElegidaKey] = useState<string | null>(null);
+  useEffect(() => {
+    function olvidarEleccionAlCambiarTexto() { setColoniaElegidaKey(null); }
+    olvidarEleccionAlCambiarTexto();
+  }, [colonia]);
+
+  const coloniaVerificada = useMemo(() => {
+    if (!colonia) return undefined;
+    if (coloniaEsAmbigua) {
+      return coloniaElegidaKey ? coloniaCandidatas.find((c) => c.key === coloniaElegidaKey) : undefined;
+    }
+    return matchColonia(colonia, municipio);
+  }, [colonia, municipio, coloniasReady, coloniaEsAmbigua, coloniaElegidaKey, coloniaCandidatas]); // eslint-disable-line react-hooks/exhaustive-deps
   const distanciaPinColonia = coords && coloniaVerificada
     ? distanciaKm(coords.lat, coords.lng, coloniaVerificada.lat, coloniaVerificada.lng)
     : null;
@@ -577,7 +597,14 @@ export function PublishForm() {
   useEffect(() => {
     function aplicarPinAutoDesdeColonia() {
       const nueva = coordsAutoDesdeColonia({ coordsActual: coords, pinEsAutoColonia: pinDesdeColonia, coloniaVerificada });
-      if (nueva) { setCoords(nueva); setPinDesdeColonia(true); }
+      if (!nueva) return;
+      setCoords(nueva);
+      setPinDesdeColonia(true);
+      // Bug real reportado 2026-09-10: sin ningún aviso, la persona no
+      // tenía forma de saber si esto había funcionado o no (el mapa vive
+      // en un paso posterior, Fotos) — ahora se confirma en el momento,
+      // igual que ya hace la sugerencia por GPS de foto.
+      toast.success(`Colocamos el pin en "${coloniaVerificada!.label}" — puedes ajustarlo en el paso de Fotos.`);
     }
     aplicarPinAutoDesdeColonia();
   }, [coloniaVerificada]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -1329,7 +1356,47 @@ export function PublishForm() {
         {step === 2 && (
           <>
             <Select label="Municipio" options={MUNICIPIO_OPTIONS} placeholder="Selecciona..." error={errors.municipio?.message} {...register('municipio')} />
-            <Input label="Colonia" placeholder="Nombre de la colonia" error={errors.colonia?.message} {...register('colonia')} />
+            <ColoniaAutocomplete
+              label="Colonia"
+              placeholder="Nombre de la colonia"
+              error={errors.colonia?.message}
+              value={colonia ?? ''}
+              municipio={municipio}
+              onChange={(texto) => setValue('colonia', texto, { shouldValidate: true, shouldDirty: true })}
+            />
+
+            {/* Desambiguación — pedido explícito 2026-09-10, ver
+                coloniaCandidatas/coloniaEsAmbigua arriba. */}
+            {coloniaEsAmbigua && !coloniaElegidaKey && (
+              <div className="-mt-2 text-xs text-gray-600 bg-accent-pale/40 border border-accent-pale rounded-lg px-3 py-2.5">
+                <p className="mb-1.5 font-medium">Encontramos más de una colonia con ese nombre — ¿cuál es la tuya?</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {coloniaCandidatas.map((c) => (
+                    <button
+                      key={c.key}
+                      type="button"
+                      onClick={() => setColoniaElegidaKey(c.key)}
+                      className="px-2.5 py-1 rounded-full border border-gray-200 bg-white hover:border-brand hover:text-brand transition-colors"
+                    >
+                      {c.label} <span className="text-gray-400">· {c.municipio}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Bug real reportado 2026-09-10: si la colonia escrita no
+                coincide con ninguna del catálogo (estático o descubierto de
+                propiedades reales, ver colonias.ts), antes no pasaba
+                NADA — ni se colocaba el pin ni se avisaba por qué. Ahora,
+                mientras no exista ya un pin por otro medio, se avisa dónde
+                colocarlo a mano en vez de quedar en silencio. */}
+            {colonia && colonia.trim().length >= 3 && !coloniaVerificada && !coloniaEsAmbigua && !coords && (
+              <p className="flex items-start gap-1.5 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 -mt-2">
+                <MapPin size={13} className="flex-shrink-0 mt-0.5 text-gray-400" />
+                No reconocemos automáticamente esa colonia — en el paso de Fotos podrás marcar el pin a mano en el mapa.
+              </p>
+            )}
 
             {/* El selector de pin en mapa vive ahora en el paso de Fotos, no
                 aquí — ver el comentario grande en ese bloque (step === 4)

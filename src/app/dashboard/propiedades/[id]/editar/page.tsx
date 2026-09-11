@@ -20,6 +20,7 @@ import {
 import { AMENIDADES_OPTIONS } from '@/lib/amenidades';
 import { SERVICIOS_RENTA } from '@/lib/servicios';
 import { distanciaKm, matchColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
+import { ColoniaAutocomplete } from '@/components/forms/ColoniaAutocomplete';
 import { dentroDeRadioPermitido, RADIO_MAXIMO_PIN_KM } from '@/lib/mapPin';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { resizeImageToDataUrl, MAX_SOURCE_BYTES } from '@/lib/imageResize';
@@ -575,7 +576,13 @@ export default function EditarPropiedadPage() {
 
         <div className="grid grid-cols-2 gap-3">
           <Select label="Municipio" options={MUNICIPIO_OPTIONS} error={errors.municipio?.message} {...register('municipio')} />
-          <Input label="Colonia" error={errors.colonia?.message} {...register('colonia')} />
+          <ColoniaAutocomplete
+            label="Colonia"
+            error={errors.colonia?.message}
+            value={coloniaActual ?? ''}
+            municipio={municipioActual}
+            onChange={(texto) => setValue('colonia', texto, { shouldValidate: true, shouldDirty: true })}
+          />
         </div>
 
         {/* Fotos — auditoría 2026-08-30, ver agregarFotos()/quitarFoto()

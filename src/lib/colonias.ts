@@ -721,6 +721,65 @@ export function matchColonia(nombre: string, municipioHint?: string): ColoniaCoo
   return candidatos.length === 1 ? candidatos[0] : undefined;
 }
 
+/**
+ * Como `matchColonia`, pero devuelve TODOS los candidatos con match exacto
+ * de nombre (no solo el primero) — para que quien llama pueda ofrecer
+ * desambiguación real en vez de adivinar en silencio. `matchColonia` en sí
+ * no cambia (lo siguen usando filters.ts, PropertiesClient.tsx, etc. sin
+ * ningún cambio de comportamiento) — esto es solo para el selector de
+ * colonia de PublishForm.tsx, pedido explícito 2026-09-10 tras encontrar
+ * varios nombres reales repetidos en el catálogo (ej. "Pino Suárez",
+ * "La Ceiba") mientras se ampliaba a 269 colonias.
+ */
+export function matchColoniaCandidates(nombre: string, municipioHint?: string): ColoniaCoord[] {
+  const n = normalizarNombreColonia(nombre);
+  if (!n) return [];
+  const municipioNorm = municipioHint ? normalizarBase(municipioHint) : undefined;
+  const exactos = todasLasColonias().filter((c) => nombreColoniaCoincide(c, n));
+  if (municipioNorm) {
+    const enMunicipio = exactos.filter((c) => normalizarBase(c.municipio) === municipioNorm);
+    if (enMunicipio.length > 0) return enMunicipio;
+  }
+  return exactos;
+}
+
+/**
+ * Sugerencias para autocompletar mientras se escribe — coincidencia por
+ * substring, no exige match exacto ni tolera typos (eso ya lo hace
+ * `matchColonia` al confirmar el nombre completo). Pedido explícito
+ * 2026-09-10: reducir colonias no reconocidas desde el origen (antes solo
+ * se avisaba DESPUÉS de escribir el nombre completo, ver PublishForm.tsx).
+ * Prioriza el municipio ya elegido si se da, y agrupa homónimas de
+ * distinto municipio en una sola sugerencia (elegir el municipio correcto
+ * sigue siendo trabajo de `matchColonia` al validar, no de este listado).
+ */
+export function sugerirColonias(textoParcial: string, municipioHint?: string, limite = 8): ColoniaCoord[] {
+  const q = normalizarBase(textoParcial).trim();
+  if (q.length < 2) return [];
+  const municipioNorm = municipioHint ? normalizarBase(municipioHint) : undefined;
+  const coincide = (c: ColoniaCoord) =>
+    normalizarBase(c.label).includes(q) || (c.aliases ?? []).some((a) => normalizarBase(a).includes(q));
+  const candidatos = todasLasColonias().filter(coincide);
+  const ordenados = municipioNorm
+    ? [...candidatos].sort((a, b) => {
+        const aEnMunicipio = normalizarBase(a.municipio) === municipioNorm ? 0 : 1;
+        const bEnMunicipio = normalizarBase(b.municipio) === municipioNorm ? 0 : 1;
+        return aEnMunicipio - bEnMunicipio;
+      })
+    : candidatos;
+
+  const vistos = new Set<string>();
+  const resultado: ColoniaCoord[] = [];
+  for (const c of ordenados) {
+    const clave = normalizarBase(c.label);
+    if (vistos.has(clave)) continue;
+    vistos.add(clave);
+    resultado.push(c);
+    if (resultado.length >= limite) break;
+  }
+  return resultado;
+}
+
 /** Busca por key exacta (ej. desde `?cercaColonia=magisterial` en la URL) — mismo patrón que getLandmark(). */
 export function getColoniaByKey(key: string): ColoniaCoord | undefined {
   return todasLasColonias().find((c) => c.key === key);
