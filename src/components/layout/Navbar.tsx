@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
-  Menu, X, Plus, User, Heart, Bell, LayoutDashboard, LogOut, ChevronDown, ChevronLeft, Building2, Settings,
+  Menu, X, Plus, User, Heart, LayoutDashboard, LogOut, ChevronDown, ChevronLeft, Building2, Settings,
   CalendarDays, Users, TrendingUp, UserPlus, ShieldCheck, Home, Trash2, Sparkles, MessageCircle, Download, type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -65,7 +65,7 @@ const PERFIL_ITEMS_BASE: MenuItem[] = [
   // profesional).
   { href: '/dashboard/mensajes', icon: MessageCircle, label: 'Mensajes' },
   { href: '/favoritos', icon: Heart, label: 'Mis favoritos' },
-  { href: '/alertas', icon: Bell, label: 'Mis alertas' },
+  // "Mis alertas" se quitó del menú — pedido explícito 2026-09-11.
 ];
 
 function buildMenuGroups(esProfesional: boolean, esAdmin: boolean): MenuGroup[] {
@@ -76,10 +76,12 @@ function buildMenuGroups(esProfesional: boolean, esAdmin: boolean): MenuGroup[] 
       items: [
         { href: '/dashboard', icon: LayoutDashboard, label: 'Mi panel' },
         ...(esProfesional ? [{ href: '/dashboard/perfil', icon: Settings, label: 'Perfil de la inmobiliaria' }] : []),
-        // "Mis propiedades" (cuentas individuales) se quitó de acá — pedido
-        // explícito 2026-09-09: ahora es una tarjeta real en Mi panel
-        // (dashboard/page.tsx), mismo lugar que ya usan las cuentas
-        // profesionales para "Propiedades publicadas".
+        // "Mis propiedades" de vuelta en el menú — pedido explícito
+        // 2026-09-11. Solo para cuentas individuales: las profesionales ya
+        // tienen el botón "Panel profesional" en el header (línea ~145),
+        // agregarlo aquí también sería el mismo destino duplicado dos veces
+        // (mismo motivo por el que se excluye de HERRAMIENTAS_ITEMS arriba).
+        ...(esProfesional ? [] : [{ href: '/dashboard/propiedades', icon: Building2, label: 'Mis propiedades' }]),
         ...PERFIL_ITEMS_BASE,
       ],
     },
