@@ -82,6 +82,15 @@ export interface Property {
   latPublico: number;
   lngPublico: number;
   riesgoInundacion: FloodRisk;
+  /**
+   * Derivado por el backend (no lo calcula el frontend) comparando
+   * `riesgoInundacion` contra lo que se mandó como `riesgoInundacionDetectado`
+   * al publicar/editar — 'atlas' solo si coinciden exacto, 'propietario' en
+   * cualquier otro caso (ajustado a mano, sin detección, o propiedad previa
+   * a este cambio, sin backfill). Ver
+   * docs/BACKEND-FUENTE-RIESGO-INUNDACION-11092026.md.
+   */
+  riesgoInundacionFuente?: 'atlas' | 'propietario';
   zonaEcologica: boolean;
   cercaDosoBocas: boolean;
   featured: boolean;

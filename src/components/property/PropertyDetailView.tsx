@@ -266,7 +266,7 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
                 <h2 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-gray-500 mb-3">
                   <Droplets size={13} className="flex-shrink-0" /> Historial de inundación
                 </h2>
-                <FloodRiskBadge nivel={property.riesgoInundacion} />
+                <FloodRiskBadge nivel={property.riesgoInundacion} fuente={property.riesgoInundacionFuente} />
               </div>
 
             </div>
@@ -332,7 +332,7 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
                       <span className="flex items-center gap-1.5 text-sm text-white/60 flex-shrink-0">
                         <Droplets size={13} className="text-white/40" /> Inundación
                       </span>
-                      <FloodRiskBadge nivel={property.riesgoInundacion} compact />
+                      <FloodRiskBadge nivel={property.riesgoInundacion} fuente={property.riesgoInundacionFuente} compact />
                     </div>
                     {property.cercaDosoBocas && (
                       <div className="flex items-center justify-between gap-3">

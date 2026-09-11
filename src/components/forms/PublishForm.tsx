@@ -760,7 +760,7 @@ export function PublishForm() {
 
   // ── Detección automática de riesgo de inundación ───────────────────────────
   const [deteccion, setDeteccion] = useState<DeteccionUI | null>(null);
-  const [autoRiesgo, setAutoRiesgo] = useState<string | null>(null);
+  const [autoRiesgo, setAutoRiesgo] = useState<RiesgoInundacion | null>(null);
   // Checkbox obligatorio solo cuando la persona BAJA el riesgo respecto al
   // detectado por el Atlas de Riesgos (ver esDowngrade más abajo) — subirlo
   // (marcar "alto" cuando el Atlas dice "medio") nunca requiere esto, ser
@@ -1202,6 +1202,15 @@ export function PublishForm() {
           lat,
           lng,
           riesgoInundacion: data.riesgoInundacion,
+          // Contrato 2026-09-11 (docs/BACKEND-FUENTE-RIESGO-INUNDACION-11092026.md):
+          // el backend deriva `riesgoInundacionFuente` comparando este valor
+          // contra `riesgoInundacion` — no confía en una etiqueta de fuente
+          // que nosotros calculemos y mandemos directo (mismo problema de
+          // "cita falsa" que motivó el pedido, solo que vía un flag). `null`
+          // y "no mandar el campo" se tratan igual del lado del backend, así
+          // que no hace falta distinguir "sin colonia todavía" de "colonia
+          // sin registro en el Atlas" — `autoRiesgo` ya es null en ambos casos.
+          riesgoInundacionDetectado: autoRiesgo,
           cercaDosoBocas: data.municipio === 'Paraíso',
           agenteNombre: agente.nombre,
           agenteTel: agente.tel,

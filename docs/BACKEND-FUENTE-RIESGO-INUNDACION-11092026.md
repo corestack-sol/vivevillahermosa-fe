@@ -1,6 +1,35 @@
 # Fuente del nivel de inundación (Atlas vs. reportado por el propietario)
 
-**Fecha:** 2026-09-11. **Estado: NO implementado, falta dato del backend.**
+**Fecha:** 2026-09-11. **Estado: IMPLEMENTADO (backend + frontend), en producción.**
+
+**Contrato final** (decisión del backend, no la propuesta original de
+este documento): el backend NO acepta una etiqueta de fuente calculada
+por el frontend — eso reabriría el mismo problema de "cita falsa" vía
+un flag en vez de una cita, si el flag se manda mal. En cambio:
+
+- `POST /propiedades` y `PATCH /propiedades/:id` reciben
+  `riesgoInundacionDetectado?: 'alto'|'medio'|'bajo'|null` — lo que
+  `zonas-inundacion.ts` detectó para la colonia/municipio ANTES de que
+  la persona lo ajustara a mano. `null` y "no mandar el campo" se
+  tratan igual (sin intento de detección).
+- `GET /propiedades/:id` (pública y de dueño) devuelve
+  `riesgoInundacionFuente: 'atlas'|'propietario'` — `'atlas'` solo si
+  `riesgoInundacion` coincide exacto con lo mandado en
+  `riesgoInundacionDetectado`; `'propietario'` en cualquier otro caso,
+  incluyendo propiedades previas a este cambio (sin backfill).
+
+Frontend ya manda `riesgoInundacionDetectado` en `PublishForm.tsx`
+(`autoRiesgo`, recalculado en cada cambio de colonia/municipio) y en
+`editar/page.tsx` (recalculado al guardar). `PropertyDetailView.tsx` ya
+pasa `property.riesgoInundacionFuente` a `FloodRiskBadge` en las dos
+llamadas (badge completo y compacto). El import CSV masivo
+(`importar/page.tsx`) deliberadamente NO manda el campo — un valor
+tecleado en un CSV no es una detección automática, cae en
+`'propietario'`, que es lo correcto.
+
+---
+
+**Estado original de este documento (histórico, ya resuelto):**
 
 **Por qué hace falta:** `Property.riesgoInundacion` (`alto|medio|bajo`)
 es el único dato que manda el backend hoy — no dice si ese valor vino

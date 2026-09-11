@@ -20,6 +20,7 @@ import {
 import { AMENIDADES_OPTIONS } from '@/lib/amenidades';
 import { SERVICIOS_RENTA } from '@/lib/servicios';
 import { distanciaKm, matchColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
+import { detectarRiesgoInundacion } from '@/lib/zonas-inundacion';
 import { ColoniaAutocomplete } from '@/components/forms/ColoniaAutocomplete';
 import { dentroDeRadioPermitido, RADIO_MAXIMO_PIN_KM } from '@/lib/mapPin';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
@@ -409,6 +410,12 @@ export default function EditarPropiedadPage() {
           municipio: data.municipio,
           colonia: data.colonia,
           riesgoInundacion: data.riesgoInundacion,
+          // Contrato 2026-09-11 (docs/BACKEND-FUENTE-RIESGO-INUNDACION-11092026.md):
+          // el backend deriva `riesgoInundacionFuente` comparando esto contra
+          // `riesgoInundacion` — se recalcula de la colonia/municipio ACTUALES
+          // del formulario en cada guardado, nunca del valor que la persona
+          // eligió a mano en los radios de arriba.
+          riesgoInundacionDetectado: detectarRiesgoInundacion(data.colonia ?? '', data.municipio)?.riesgo ?? null,
           amenidades,
           servicios,
           fotos,
