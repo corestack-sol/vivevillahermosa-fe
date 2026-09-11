@@ -299,6 +299,185 @@ export const COLONIAS_COORDS: ColoniaCoord[] = [
   { key: 'sabina', label: 'Sabina', municipio: 'Centro', lat: 17.9517864, lng: -92.9524085, radioKm: RADIO_COLONIA_KM },
   { key: 'santa-elena', label: 'Santa Elena', municipio: 'Centro', lat: 17.9719048, lng: -92.9905229, radioKm: RADIO_COLONIA_KM },
   { key: 'vicente-guerrero', label: 'Vicente Guerrero', municipio: 'Centro', lat: 18.0315138, lng: -92.8975353, radioKm: RADIO_COLONIA_KM },
+
+  // Lote agregado 2026-09-10 — 172 colonias de Centro verificadas a mano
+  // por el usuario en Google Maps (coordenada real, no jitter), cruzadas
+  // contra el listado oficial de SEPOMEX/Heraldo de Tabasco. Algunas venían
+  // como calle/avenida ("Periferico Carlos Pellicer", "Cda Revolución") —
+  // el label usa el nombre de la colonia/zona real, no el de la calle; el
+  // comentario al final de cada línea conserva el texto original tal como
+  // se verificó, por trazabilidad.
+  { key: 'agraria', label: 'Agraria', municipio: 'Centro', lat: 17.8323792809621, lng: -92.89048590768462, radioKm: RADIO_COLONIA_KM }, // Agraria
+  { key: 'alambrada', label: 'Alambrada', municipio: 'Centro', lat: 18.15985462873963, lng: -92.79072332857668, radioKm: RADIO_COLONIA_KM }, // Alambrada
+  { key: 'alfa-y-omega', label: 'Alfa y Omega', municipio: 'Centro', lat: 18.021173753930228, lng: -92.88478906753816, radioKm: RADIO_COLONIA_KM }, // Alfa y Omega
+  { key: 'alvarado-guardacosta', label: 'Alvarado Guardacosta', municipio: 'Centro', lat: 17.83768259724057, lng: -92.98936614739193, radioKm: RADIO_COLONIA_KM }, // Alvarado Guardacosta
+  { key: 'angeles-ixtacomitan', label: 'Ángeles Ixtacomitan', municipio: 'Centro', lat: 17.95877541666211, lng: -92.97033426245417, radioKm: RADIO_COLONIA_KM }, // Ángeles Ixtacomitan
+  { key: 'aniceto', label: 'Aniceto', municipio: 'Centro', lat: 18.15765275886932, lng: -92.78757106728078, radioKm: RADIO_COLONIA_KM }, // Aniceto
+  { key: 'aurora', label: 'Aurora', municipio: 'Centro', lat: 17.976835604957472, lng: -92.94775922958841, radioKm: RADIO_COLONIA_KM }, // Fracc. Aurora
+  { key: 'benito-juarez', label: 'Benito Juárez', municipio: 'Centro', lat: 18.02282050678436, lng: -92.96675970011177, radioKm: RADIO_COLONIA_KM }, // Benito Juárez
+  { key: 'bicentenario', label: 'Bicentenario', municipio: 'Centro', lat: 18.00884120650027, lng: -92.97565598101188, radioKm: RADIO_COLONIA_KM }, // Boulevard Bicentenario
+  { key: 'boca-de-aztlan-2da-seccion', label: 'Boca de Aztlán 2da Seccion', municipio: 'Centro', lat: 18.090851764225512, lng: -92.71461390732239, radioKm: RADIO_COLONIA_KM }, // Boca de Aztlán 2da Seccion
+  { key: 'bosques-de-araba', label: 'Bosques de Araba', municipio: 'Centro', lat: 17.92635630286076, lng: -93.00080385404746, radioKm: RADIO_COLONIA_KM }, // Bosques de Araba
+  { key: 'bugambilias', label: 'Bugambilias', municipio: 'Centro', lat: 18.048221500840214, lng: -92.92527817678064, radioKm: RADIO_COLONIA_KM }, // Fracc Bugambilias
+  { key: 'carlos-pellicer', label: 'Carlos Pellicer', municipio: 'Centro', lat: 17.974931125434306, lng: -92.97166020888619, radioKm: RADIO_COLONIA_KM }, // Periferico Carlos Pellicer
+  { key: 'carrizal', label: 'Carrizal', municipio: 'Centro', lat: 17.989624602086334, lng: -92.96525392853185, radioKm: RADIO_COLONIA_KM }, // Carrizal
+  { key: 'casa-del-arbol', label: 'Casa del Árbol', municipio: 'Centro', lat: 17.924451937953105, lng: -92.9019081573241, radioKm: RADIO_COLONIA_KM }, // Casa del Árbol
+  { key: 'casas-para-todos', label: 'Casas Para Todos', municipio: 'Centro', lat: 17.905328922907817, lng: -92.92077558237145, radioKm: RADIO_COLONIA_KM }, // Casas Para Todos (Parrilla 1ra Secc.)
+  { key: 'cedros', label: 'Cedros', municipio: 'Centro', lat: 17.94376332273434, lng: -92.94679463445291, radioKm: RADIO_COLONIA_KM }, // Cedros
+  { key: 'chacte', label: 'Chacte', municipio: 'Centro', lat: 17.97181066062797, lng: -92.7184573812405, radioKm: RADIO_COLONIA_KM }, // Chacte
+  { key: 'chilam-balam', label: 'Chilam Balam', municipio: 'Centro', lat: 17.91817417994389, lng: -92.88872435777807, radioKm: RADIO_COLONIA_KM }, // Fraccc Chilam Balam
+  { key: 'ciudad-industrial', label: 'Ciudad Industrial', municipio: 'Centro', lat: 18.030861629759336, lng: -92.90858969177333, radioKm: RADIO_COLONIA_KM }, // Ciudad Industrial
+  { key: 'club-de-lago', label: 'Club de Lago', municipio: 'Centro', lat: 18.00457905316006, lng: -92.94539492326895, radioKm: RADIO_COLONIA_KM }, // Fracc Club de Lago
+  { key: 'colinas-de-santo-domingo', label: 'Colinas de Santo Domingo', municipio: 'Centro', lat: 18.119101626095333, lng: -92.86472198755979, radioKm: RADIO_COLONIA_KM }, // Colinas de Santo Domingo
+  { key: 'constitucion', label: 'Constitución', municipio: 'Centro', lat: 18.07234475074817, lng: -92.87217329867791, radioKm: RADIO_COLONIA_KM }, // Constitución
+  { key: 'eden-premier', label: 'Edén Premier', municipio: 'Centro', lat: 17.954214546869686, lng: -92.9602476225357, radioKm: RADIO_COLONIA_KM }, // Edén Premier
+  { key: 'rio-viejo-1a-secc', label: 'Rio Viejo 1a Secc', municipio: 'Centro', lat: 17.940446801929877, lng: -92.98378076578402, radioKm: RADIO_COLONIA_KM }, // Rio Viejo 1a Secc
+  { key: 'el-almendro', label: 'El Almendro', municipio: 'Centro', lat: 17.95162759488834, lng: -92.98637577278049, radioKm: RADIO_COLONIA_KM }, // El Almendro
+  { key: 'el-amate', label: 'El Amate', municipio: 'Centro', lat: 18.049372703094278, lng: -92.92689802095792, radioKm: RADIO_COLONIA_KM }, // El Amate
+  { key: 'jose-maria-pino-suarez-zona-norte', label: 'José María Pino Suárez (zona norte)', municipio: 'Centro', lat: 18.018742458422263, lng: -92.93452761910213, radioKm: RADIO_COLONIA_KM }, // Jose Maria Pino Suarez
+  { key: 'el-cedro', label: 'El Cedro', municipio: 'Centro', lat: 18.03028056018996, lng: -92.9450218037573, radioKm: RADIO_COLONIA_KM }, // El Cedro
+  { key: 'el-censo', label: 'El Censo', municipio: 'Centro', lat: 17.878227368267886, lng: -92.8677864654194, radioKm: RADIO_COLONIA_KM }, // El Censo
+  { key: 'el-country', label: 'El Country', municipio: 'Centro', lat: 18.019411392827507, lng: -92.99333091104322, radioKm: RADIO_COLONIA_KM }, // Residencial El Country
+  { key: 'el-eden', label: 'El Edén', municipio: 'Centro', lat: 17.9643462815521, lng: -92.97478175164271, radioKm: RADIO_COLONIA_KM }, // El Edén
+  { key: 'el-encanto', label: 'El Encanto', municipio: 'Centro', lat: 17.9953076511033, lng: -92.91793101911038, radioKm: RADIO_COLONIA_KM }, // El Encanto (Centro)
+  { key: 'el-espejo-1', label: 'El Espejo 1', municipio: 'Centro', lat: 17.99080835553127, lng: -92.95703659156726, radioKm: RADIO_COLONIA_KM }, // El Espejo 1
+  { key: 'el-espejo-2', label: 'El Espejo 2', municipio: 'Centro', lat: 17.996923497013956, lng: -92.95645965949272, radioKm: RADIO_COLONIA_KM }, // El Espejo 2
+  { key: 'el-espino', label: 'El Espino', municipio: 'Centro', lat: 18.247564932246615, lng: -92.83268533677183, radioKm: RADIO_COLONIA_KM }, // El Espino
+  { key: 'el-manguito', label: 'El Manguito', municipio: 'Centro', lat: 17.92514214609746, lng: -92.99900850818412, radioKm: RADIO_COLONIA_KM }, // El Manguito (Ixtacomitan 2a Secc)
+  { key: 'el-manzano', label: 'El Manzano', municipio: 'Centro', lat: 17.85776827591009, lng: -92.90687591657124, radioKm: RADIO_COLONIA_KM }, // El Manzano
+  { key: 'encrucijada', label: 'Encrucijada', municipio: 'Centro', lat: 17.92683167657752, lng: -92.47835635585335, radioKm: RADIO_COLONIA_KM }, // Encrucijada
+  { key: 'espinoza-galindo', label: 'Espinoza Galindo', municipio: 'Centro', lat: 17.923139564769606, lng: -92.91198210192132, radioKm: RADIO_COLONIA_KM }, // Espinoza Galindo
+  { key: 'flamingos', label: 'Flamingos', municipio: 'Centro', lat: 18.001956262414705, lng: -92.95246201651351, radioKm: RADIO_COLONIA_KM }, // Flamingos
+  { key: 'fovissste-parrilla', label: 'Fovissste Parrilla', municipio: 'Centro', lat: 17.929747473520013, lng: -92.91211624517696, radioKm: RADIO_COLONIA_KM }, // Fovissste Parrilla
+  { key: 'golondrinas', label: 'Golondrinas', municipio: 'Centro', lat: 17.975768765184405, lng: -92.92668149027521, radioKm: RADIO_COLONIA_KM }, // Golondrinas (Guayabal)
+  { key: 'gracias-mexico', label: 'Gracias México', municipio: 'Centro', lat: 17.85055905452638, lng: -92.92412379166187, radioKm: RADIO_COLONIA_KM }, // Fracc Gracias México
+  { key: 'hacienda-buena-vista', label: 'Hacienda Buena Vista', municipio: 'Centro', lat: 17.949749542662197, lng: -93.02045180122282, radioKm: RADIO_COLONIA_KM }, // Fracc Hacienda Buena Vista
+  { key: 'hacienda-casa-blanca', label: 'Hacienda Casa Blanca', municipio: 'Centro', lat: 18.007614631926806, lng: -92.96930452715598, radioKm: RADIO_COLONIA_KM }, // Fracc Hacienda Casa Blanca
+  { key: 'hacienda-esmeralda', label: 'Hacienda Esmeralda', municipio: 'Centro', lat: 17.945665664226315, lng: -92.97452474545015, radioKm: RADIO_COLONIA_KM }, // Hacienda Esmeralda
+  { key: 'huapinol', label: 'Huapinol', municipio: 'Centro', lat: 17.92273655896449, lng: -92.9102706883557, radioKm: RADIO_COLONIA_KM }, // Huapinol (Guapinol)
+  { key: 'hueso-de-puerco', label: 'Hueso de Puerco', municipio: 'Centro', lat: 17.788679685148022, lng: -92.89645116513857, radioKm: RADIO_COLONIA_KM }, // Hueso de Puerco
+  { key: 'indeco-unidad', label: 'Indeco Unidad', municipio: 'Centro', lat: 18.01977847686832, lng: -92.89967973328112, radioKm: RADIO_COLONIA_KM }, // Indeco Unidad (Progresivo ciudad industrial)
+  { key: 'infonavit-parrilla', label: 'Infonavit Parrilla', municipio: 'Centro', lat: 17.91033631353764, lng: -92.91539598136548, radioKm: RADIO_COLONIA_KM }, // Infonavit Parrilla
+  { key: 'invitab', label: 'Invitab', municipio: 'Centro', lat: 18.00636833636063, lng: -92.9464166123292, radioKm: RADIO_COLONIA_KM }, // Invitab
+  { key: 'jardines-de-buenavista', label: 'Jardines de Buenavista', municipio: 'Centro', lat: 17.962736542302583, lng: -93.00235790150087, radioKm: RADIO_COLONIA_KM }, // Fracc Jardines de Buenavista
+  { key: 'jardines-de-huapinol', label: 'Jardines de Huapinol', municipio: 'Centro', lat: 17.926351030967258, lng: -92.90136110987012, radioKm: RADIO_COLONIA_KM }, // Fracc Jardines de Huapinol
+  { key: 'j-a-sibilla-zurita', label: 'J A Sibilla Zurita', municipio: 'Centro', lat: 17.95972984911851, lng: -93.02095039067409, radioKm: RADIO_COLONIA_KM }, // J A Sibilla Zurita
+  { key: 'jolochero', label: 'Jolochero', municipio: 'Centro', lat: 18.13777182472216, lng: -92.7833905407074, radioKm: RADIO_COLONIA_KM }, // Jolochero (Boca de Culebra)
+  { key: 'jornaleros-y-aparceros-del-maluco', label: 'Jornaleros y Aparceros Del Maluco', municipio: 'Centro', lat: 18.027667789779635, lng: -92.96928963914458, radioKm: RADIO_COLONIA_KM }, // Jornaleros y Aparceros Del Maluco
+  { key: 'joyas-de-buena-vista', label: 'Joyas de Buena Vista', municipio: 'Centro', lat: 17.92557866610232, lng: -93.04946104784179, radioKm: RADIO_COLONIA_KM }, // Fracc Joyas de Buena Vista
+  { key: 'la-ceiba', label: 'La Ceiba', municipio: 'Centro', lat: 18.144880887459575, lng: -92.77546705630077, radioKm: RADIO_COLONIA_KM }, // La Ceiba
+  { key: 'la-cruz-del-bajio', label: 'La Cruz del Bajío', municipio: 'Centro', lat: 17.970948027299155, lng: -92.78782497745446, radioKm: RADIO_COLONIA_KM }, // La Cruz del Bajío
+  { key: 'lagartera-1a-secc', label: 'Lagartera 1a Secc', municipio: 'Centro', lat: 18.062591732420003, lng: -92.88532599969379, radioKm: RADIO_COLONIA_KM }, // Lagartera 1a Secc
+  { key: 'la-gloria', label: 'La Gloria', municipio: 'Centro', lat: 17.985327377083937, lng: -93.01594336054097, radioKm: RADIO_COLONIA_KM }, // La Gloria
+  { key: 'lago-ilusiones', label: 'Lago Ilusiones', municipio: 'Centro', lat: 18.000012443180484, lng: -92.93417833270273, radioKm: RADIO_COLONIA_KM }, // Lago Ilusiones
+  { key: 'la-gran-villa', label: 'La Gran Villa', municipio: 'Centro', lat: 18.002897335867686, lng: -92.945304947268, radioKm: RADIO_COLONIA_KM }, // La Gran Villa
+  { key: 'la-huerta-residencial', label: 'La Huerta Residencial', municipio: 'Centro', lat: 18.074481656724917, lng: -92.8755496257859, radioKm: RADIO_COLONIA_KM }, // Fracc La Huerta Residencial
+  { key: 'la-joya', label: 'La Joya', municipio: 'Centro', lat: 17.999948476492026, lng: -92.95638447437703, radioKm: RADIO_COLONIA_KM }, // La Joya (El Espejo II)
+  { key: 'la-lima', label: 'La Lima', municipio: 'Centro', lat: 17.90897391518166, lng: -92.93091746506826, radioKm: RADIO_COLONIA_KM }, // La Lima
+  { key: 'la-loma', label: 'La Loma', municipio: 'Centro', lat: 18.170265259790995, lng: -92.80371750531461, radioKm: RADIO_COLONIA_KM }, // La Loma
+  { key: 'la-majahua', label: 'La Majahua', municipio: 'Centro', lat: 17.968428235449093, lng: -92.84614880822771, radioKm: RADIO_COLONIA_KM }, // Puente La Majahua
+  { key: 'la-palma', label: 'La Palma', municipio: 'Centro', lat: 17.985659978876527, lng: -92.80260710007227, radioKm: RADIO_COLONIA_KM }, // La Palma (pajonal)
+  { key: 'la-pigua', label: 'La Pigua', municipio: 'Centro', lat: 18.02504461494626, lng: -92.96593079766748, radioKm: RADIO_COLONIA_KM }, // La Pigua
+  { key: 'privada-giraldas', label: 'Privada Giraldas', municipio: 'Centro', lat: 18.013568773183657, lng: -92.94602039871035, radioKm: RADIO_COLONIA_KM }, // Privada Giraldas
+  { key: 'las-lomas', label: 'Las Lomas', municipio: 'Centro', lat: 17.949917888895587, lng: -92.98136927031312, radioKm: RADIO_COLONIA_KM }, // Fracc Las Lomas
+  { key: 'las-margaritas', label: 'Las Margaritas', municipio: 'Centro', lat: 17.900962467884877, lng: -92.92450349437043, radioKm: RADIO_COLONIA_KM }, // Las Margaritas
+  { key: 'las-mercedes', label: 'Las Mercedes', municipio: 'Centro', lat: 17.863876398426996, lng: -92.9283261255928, radioKm: RADIO_COLONIA_KM }, // Las Mercedes
+  { key: 'las-raices', label: 'Las Raíces', municipio: 'Centro', lat: 17.984937906535276, lng: -92.91211877429814, radioKm: RADIO_COLONIA_KM }, // Las Raíces
+  { key: 'las-rosas', label: 'Las Rosas', municipio: 'Centro', lat: 17.958301619679748, lng: -92.99954648144569, radioKm: RADIO_COLONIA_KM }, // Las Rosas
+  { key: 'las-torres', label: 'Las Torres', municipio: 'Centro', lat: 18.020086418177822, lng: -92.91967997734857, radioKm: RADIO_COLONIA_KM }, // Las Torres (jose maria pino suarez)
+  { key: 'la-venta', label: 'La Venta', municipio: 'Centro', lat: 18.002221925631083, lng: -92.94807791583878, radioKm: RADIO_COLONIA_KM }, // La Venta
+  { key: 'la-vuelta', label: 'La Vuelta', municipio: 'Centro', lat: 18.010044444966542, lng: -92.66896836238978, radioKm: RADIO_COLONIA_KM }, // La Vuelta (laguna)
+  { key: 'lidia-esther-monica-de-portilla', label: 'Lidia Esther Mónica de Portilla', municipio: 'Centro', lat: 17.996039231900397, lng: -92.92896344621839, radioKm: RADIO_COLONIA_KM }, // Lidia Esther Mónica de Portilla
+  { key: 'logistico-industrial-tabasco', label: 'Logístico Industrial Tabasco', municipio: 'Centro', lat: 17.99349161675486, lng: -92.9834535522789, radioKm: RADIO_COLONIA_KM }, // Logístico Industrial Tabasco
+  { key: 'loma-bonita', label: 'Loma Bonita', municipio: 'Centro', lat: 17.952705631832455, lng: -93.03368878657905, radioKm: RADIO_COLONIA_KM }, // Loma Bonita
+  { key: 'loma-real', label: 'Loma Real', municipio: 'Centro', lat: 17.9507997882762, lng: -93.0348645056174, radioKm: RADIO_COLONIA_KM }, // Loma Real
+  { key: 'lomas-de-bella-vista', label: 'Lomas de Bella Vista', municipio: 'Centro', lat: 17.95150520725049, lng: -93.03380245219891, radioKm: RADIO_COLONIA_KM }, // Lomas de Bella Vista
+  { key: 'lomas-de-ocuiltzapotlan', label: 'Lomas de Ocuiltzapotlan', municipio: 'Centro', lat: 18.12652463231998, lng: -92.8650807270576, radioKm: RADIO_COLONIA_KM }, // Fracc Lomas de Ocuiltzapotlan
+  { key: 'los-alamos', label: 'Los Álamos', municipio: 'Centro', lat: 17.988932810569462, lng: -92.95247576748457, radioKm: RADIO_COLONIA_KM }, // Conjunto habitacional Los Álamos
+  { key: 'los-angeles', label: 'Los Ángeles', municipio: 'Centro', lat: 18.13145956501844, lng: -92.86775029720782, radioKm: RADIO_COLONIA_KM }, // Los Ángeles (Ocuitzapotlan)
+  { key: 'las-huertas', label: 'Las Huertas', municipio: 'Centro', lat: 17.950770568555427, lng: -92.9784935865791, radioKm: RADIO_COLONIA_KM }, // Fracc Las Huertas
+  { key: 'los-mezquites', label: 'Los Mezquites', municipio: 'Centro', lat: 17.95973857394754, lng: -92.96876670007259, radioKm: RADIO_COLONIA_KM }, // Cda Los Mezquites
+  { key: 'los-pinos', label: 'Los Pinos', municipio: 'Centro', lat: 17.943889500469236, lng: -92.97439509369838, radioKm: RADIO_COLONIA_KM }, // Los Pinos
+  { key: 'los-rios', label: 'Los Ríos', municipio: 'Centro', lat: 18.000697498902056, lng: -92.94622208083622, radioKm: RADIO_COLONIA_KM }, // Los Ríos
+  { key: 'luis-gil-perez', label: 'Luis Gil Perez', municipio: 'Centro', lat: 17.874311644855265, lng: -93.07374946679658, radioKm: RADIO_COLONIA_KM }, // Luis Gil Perez
+  { key: 'macuili', label: 'Macuili', municipio: 'Centro', lat: 18.00650076363893, lng: -93.00779084554154, radioKm: RADIO_COLONIA_KM }, // Macuili (Anacleto Canabal 3a Secc)
+  { key: 'macultepec', label: 'Macultepec', municipio: 'Centro', lat: 18.149767436313336, lng: -92.85934834959383, radioKm: RADIO_COLONIA_KM }, // Macultepec
+  { key: 'manuel-andrade-diaz', label: 'Manuel Andrade Díaz', municipio: 'Centro', lat: 17.95979019613748, lng: -92.99823541558767, radioKm: RADIO_COLONIA_KM }, // Manuel Andrade Díaz
+  { key: 'mayito', label: 'Mayito', municipio: 'Centro', lat: 17.985457523647785, lng: -92.92654600376865, radioKm: RADIO_COLONIA_KM }, // Mayito
+  { key: 'monteceibas', label: 'Monteceibas', municipio: 'Centro', lat: 17.87533237181988, lng: -92.89750499818643, radioKm: RADIO_COLONIA_KM }, // Fracc Monteceibas
+  { key: 'nueva-invitab', label: 'Nueva Invitab', municipio: 'Centro', lat: 18.006260501332193, lng: -92.94628877582934, radioKm: RADIO_COLONIA_KM }, // Nueva Invitab
+  { key: 'nueva-pensiones', label: 'Nueva Pensiones', municipio: 'Centro', lat: 17.971825135701728, lng: -92.96453893103339, radioKm: RADIO_COLONIA_KM }, // Nueva Pensiones
+  { key: 'ocuiltzapotlan', label: 'Ocuiltzapotlan', municipio: 'Centro', lat: 18.135642222746114, lng: -92.86495481113023, radioKm: RADIO_COLONIA_KM }, // Ocuiltzapotlan
+  { key: 'olimpo', label: 'Olimpo', municipio: 'Centro', lat: 17.96601833265473, lng: -92.98059392926127, radioKm: RADIO_COLONIA_KM }, // Fracc Olimpo
+  { key: 'pablo-l-sidar', label: 'Pablo L Sidar', municipio: 'Centro', lat: 17.910515260611835, lng: -93.03131021198759, radioKm: RADIO_COLONIA_KM }, // Pablo L Sidar
+  { key: 'pajonal', label: 'Pajonal', municipio: 'Centro', lat: 17.994596682930755, lng: -92.79666166761731, radioKm: RADIO_COLONIA_KM }, // Pajonal
+  { key: 'palma-real', label: 'Palma Real', municipio: 'Centro', lat: 17.966673767934292, lng: -92.90898326328805, radioKm: RADIO_COLONIA_KM }, // Palma Real
+  { key: 'palmeiras', label: 'Palmeiras', municipio: 'Centro', lat: 17.963332905988185, lng: -92.9198465614399, radioKm: RADIO_COLONIA_KM }, // Residencial Palmeiras
+  { key: 'parque-tabasco', label: 'Parque Tabasco', municipio: 'Centro', lat: 18.007021855229464, lng: -92.96330543871834, radioKm: RADIO_COLONIA_KM }, // Parque Tabasco
+  { key: 'paseo-las-palmas', label: 'Paseo las Palmas', municipio: 'Centro', lat: 17.962597053004597, lng: -92.91754303317458, radioKm: RADIO_COLONIA_KM }, // Av Paseo las Palmas
+  { key: 'paseos-del-usumacinta', label: 'Paseos Del Usumacinta', municipio: 'Centro', lat: 17.988758392683952, lng: -92.9416427032127, radioKm: RADIO_COLONIA_KM }, // Prol Paseos Del Usumacinta
+  { key: 'paso-real', label: 'Paso Real', municipio: 'Centro', lat: 18.13799055765255, lng: -92.87724883449563, radioKm: RADIO_COLONIA_KM }, // Paso Real
+  { key: 'paso-real-de-la-victoria', label: 'Paso Real de La Victoria', municipio: 'Centro', lat: 18.138128300612983, lng: -92.87969515623081, radioKm: RADIO_COLONIA_KM }, // Paso Real de La Victoria
+  { key: 'periodista', label: 'Periodista', municipio: 'Centro', lat: 17.974211798600855, lng: -92.93272417080821, radioKm: RADIO_COLONIA_KM }, // Calle del Periodista
+  { key: 'pino-suarez-centro', label: 'Pino Suárez (Centro)', municipio: 'Centro', lat: 17.98990245642267, lng: -92.9155950601473, radioKm: RADIO_COLONIA_KM }, // Pino Suárez (Centro)
+  { key: 'playas-del-rosario', label: 'Playas Del Rosario', municipio: 'Centro', lat: 18.150978144730534, lng: -92.86306216096116, radioKm: RADIO_COLONIA_KM }, // Playas Del Rosario
+  { key: 'plaza-jardin', label: 'Plaza Jardín', municipio: 'Centro', lat: 17.96477646587936, lng: -92.94895391407256, radioKm: RADIO_COLONIA_KM }, // Plaza Jardín
+  { key: 'plaza-villahermosa', label: 'Plaza Villahermosa', municipio: 'Centro', lat: 17.96354050889884, lng: -92.9455200545573, radioKm: RADIO_COLONIA_KM }, // Plaza Villahermosa
+  { key: 'popular-manuel-silva', label: 'Popular Manuel Silva', municipio: 'Centro', lat: 17.922259107174508, lng: -92.90673833660145, radioKm: RADIO_COLONIA_KM }, // Popular Manuel Silva
+  { key: 'popular-pedro-c-colorado', label: 'Popular Pedro C Colorado', municipio: 'Centro', lat: 17.986275559991096, lng: -92.92263811171759, radioKm: RADIO_COLONIA_KM }, // Popular Pedro C Colorado
+  { key: 'portal-del-agua', label: 'Portal Del Agua', municipio: 'Centro', lat: 17.996584149846814, lng: -92.92512641541393, radioKm: RADIO_COLONIA_KM }, // Portal Del Agua
+  { key: 'privada-de-lagunas-del-maurel', label: 'Privada de Lagunas del Maurel', municipio: 'Centro', lat: 18.039017808755176, lng: -92.89599754843455, radioKm: RADIO_COLONIA_KM }, // Privada de Lagunas del Maurel
+  { key: 'proclama', label: 'Proclama', municipio: 'Centro', lat: 17.931786458516502, lng: -92.9978579083924, radioKm: RADIO_COLONIA_KM }, // Proclama
+  { key: 'pueblo-nuevo-de-las-raices', label: 'Pueblo Nuevo de las Raíces', municipio: 'Centro', lat: 17.845285336606477, lng: -92.87696925826492, radioKm: RADIO_COLONIA_KM }, // Pueblo Nuevo de las Raíces
+  { key: 'puerta-de-hierro', label: 'Puerta de Hierro', municipio: 'Centro', lat: 18.011639413577047, lng: -92.98950500192011, radioKm: RADIO_COLONIA_KM }, // Fracc Puerta de Hierro
+  { key: 'puerta-grande', label: 'Puerta Grande', municipio: 'Centro', lat: 18.010445652036765, lng: -92.99012727437687, radioKm: RADIO_COLONIA_KM }, // Fracc Puerta Grande
+  { key: 'real-diamante', label: 'Real Diamante', municipio: 'Centro', lat: 18.145686109690505, lng: -92.86850493445966, radioKm: RADIO_COLONIA_KM }, // Real Diamante
+  { key: 'real-del-angel', label: 'Real Del Ángel', municipio: 'Centro', lat: 17.962608495700994, lng: -92.95932416553481, radioKm: RADIO_COLONIA_KM }, // Real Del Ángel
+  { key: 'real-del-valle', label: 'Real del Valle', municipio: 'Centro', lat: 17.960776459211353, lng: -92.98759831514938, radioKm: RADIO_COLONIA_KM }, // Fracc Real del Valle
+  { key: 'real-de-sabina', label: 'Real de Sabina', municipio: 'Centro', lat: 17.95664408911885, lng: -92.95020970192081, radioKm: RADIO_COLONIA_KM }, // Real de Sabina
+  { key: 'real-de-san-jorge', label: 'Real de San Jorge', municipio: 'Centro', lat: 17.962383595309355, lng: -92.96133395589518, radioKm: RADIO_COLONIA_KM }, // Real de San Jorge
+  { key: 'real-de-tabasco', label: 'Real de Tabasco', municipio: 'Centro', lat: 18.003244076755692, lng: -92.94597570905083, radioKm: RADIO_COLONIA_KM }, // Real de Tabasco
+  { key: 'real-hidalgo', label: 'Real Hidalgo', municipio: 'Centro', lat: 17.979713981185355, lng: -92.97453500376876, radioKm: RADIO_COLONIA_KM }, // Fracc Real Hidalgo
+  { key: 'reforma', label: 'Reforma', municipio: 'Centro', lat: 17.98242456720471, lng: -92.92931797054057, radioKm: RADIO_COLONIA_KM }, // Reforma
+  { key: 'residencial-esmeralda', label: 'Residencial Esmeralda', municipio: 'Centro', lat: 17.969568112008815, lng: -92.91903496551083, radioKm: RADIO_COLONIA_KM }, // Residencial Esmeralda
+  { key: 'las-puertas', label: 'Las Puertas', municipio: 'Centro', lat: 18.012356984429346, lng: -92.99016726670595, radioKm: RADIO_COLONIA_KM }, // Residencial las Puertas
+  { key: 'puerta-real', label: 'Puerta Real', municipio: 'Centro', lat: 18.012708245988154, lng: -92.98733419027471, radioKm: RADIO_COLONIA_KM }, // Residencial Puerta Real
+  { key: 'villas-del-sol', label: 'Villas del Sol', municipio: 'Centro', lat: 17.994665063882127, lng: -92.95131865774302, radioKm: RADIO_COLONIA_KM }, // Residencial Villas del Sol
+  { key: 'revolucion', label: 'Revolución', municipio: 'Centro', lat: 17.981793878778994, lng: -92.95795220192045, radioKm: RADIO_COLONIA_KM }, // Cda Revolución
+  { key: 'samarkanda', label: 'Samarkanda', municipio: 'Centro', lat: 18.043922819202475, lng: -92.91073142068306, radioKm: RADIO_COLONIA_KM }, // Samarkanda
+  { key: 'san-angel', label: 'San Ángel', municipio: 'Centro', lat: 18.018399482563378, lng: -92.89831037897594, radioKm: RADIO_COLONIA_KM }, // Fracc San Ángel
+  { key: 'sol-campestre', label: 'Sol Campestre', municipio: 'Centro', lat: 18.01665003563684, lng: -92.98737132890727, radioKm: RADIO_COLONIA_KM }, // Fracc Sol Campestre
+  { key: 'subteniente-garcia', label: 'Subteniente Garcia', municipio: 'Centro', lat: 17.856133859404714, lng: -92.9306263888084, radioKm: RADIO_COLONIA_KM }, // Subteniente Garcia
+  { key: 'tamulte-de-las-barrancas', label: 'Tamulte de las Barrancas', municipio: 'Centro', lat: 17.96952736498271, lng: -92.96072019694901, radioKm: RADIO_COLONIA_KM }, // Tamulte de las Barrancas
+  { key: 'tamulte-de-las-sabanas-real', label: 'Tamulte de las Sabanas Real', municipio: 'Centro', lat: 18.15805048272921, lng: -92.78401055474882, radioKm: RADIO_COLONIA_KM }, // Tamulte de las Sabanas Real
+  { key: 'tercer-milenio', label: 'Tercer Milenio', municipio: 'Centro', lat: 18.142488996983346, lng: -92.87018239912281, radioKm: RADIO_COLONIA_KM }, // Tercer Milenio
+  { key: 'tocoal', label: 'Tocoal', municipio: 'Centro', lat: 18.155447409405912, lng: -92.7849452472185, radioKm: RADIO_COLONIA_KM }, // Tocoal
+  { key: 'triangulo-industrial', label: 'Triangulo Industrial', municipio: 'Centro', lat: 18.01865295651364, lng: -92.89595542606952, radioKm: RADIO_COLONIA_KM }, // Triangulo Industrial
+  { key: 'tumbulushal', label: 'Tumbulushal', municipio: 'Centro', lat: 17.821060092032255, lng: -92.93155690506305, radioKm: RADIO_COLONIA_KM }, // Tumbulushal
+  { key: 'union-hace-la-fuerza', label: 'Unión Hace La Fuerza', municipio: 'Centro', lat: 17.925989973002764, lng: -92.90793533337109, radioKm: RADIO_COLONIA_KM }, // Unión Hace La Fuerza
+  { key: 'villa-floresta', label: 'Villa Floresta', municipio: 'Centro', lat: 17.902517158425475, lng: -92.92031077397054, radioKm: RADIO_COLONIA_KM }, // Villa Floresta
+  { key: 'villa-las-torres', label: 'Villa las Torres', municipio: 'Centro', lat: 17.964773138641593, lng: -92.99513884008131, radioKm: RADIO_COLONIA_KM }, // Fracc Villa las Torres
+  { key: 'villa-los-claustros', label: 'Villa los Claustros', municipio: 'Centro', lat: 17.87478067915452, lng: -92.92077635489133, radioKm: RADIO_COLONIA_KM }, // Villa los Claustros
+  { key: 'villa-parrilla', label: 'Villa Parrilla', municipio: 'Centro', lat: 18.150815025333518, lng: -92.86434962121656, radioKm: RADIO_COLONIA_KM }, // Villa Parrilla
+  { key: 'villa-union', label: 'Villa Unión', municipio: 'Centro', lat: 18.10157729967323, lng: -92.86620086632169, radioKm: RADIO_COLONIA_KM }, // Villa Unión
+  { key: '27-de-octubre', label: '27 de Octubre', municipio: 'Centro', lat: 17.85130434716627, lng: -92.92489580977751, radioKm: RADIO_COLONIA_KM }, // 27 de Octubre (Playas del rosario)
+  { key: '2-montes', label: '2 Montes', municipio: 'Centro', lat: 17.986577990167955, lng: -92.82877008566028, radioKm: RADIO_COLONIA_KM }, // 2 Montes
+  { key: 'acachapan-y-colmena-2a', label: 'Acachapan y Colmena 2a', municipio: 'Centro', lat: 18.0655797558823, lng: -92.80838766038335, radioKm: RADIO_COLONIA_KM }, // Acachapan y Colmena 2a (El Maluco)
+  { key: 'barranca-y-guanal-seccion', label: 'Barranca y Guanal Sección', municipio: 'Centro', lat: 18.01570386229353, lng: -92.80822424002746, radioKm: RADIO_COLONIA_KM }, // Barranca y Guanal Sección (López Portillo)
+  { key: 'coronel-traconis-2a', label: 'Coronel Traconis 2a', municipio: 'Centro', lat: 17.943376288856253, lng: -92.80197895758863, radioKm: RADIO_COLONIA_KM }, // Coronel Traconis 2a (El Zapote)
+  { key: 'coronel-traconis-3a', label: 'Coronel Traconis 3a', municipio: 'Centro', lat: 17.943376288856253, lng: -92.80197895758863, radioKm: RADIO_COLONIA_KM }, // Coronel Traconis 3a (Guerrero)
+  { key: 'coronel-traconis-4a', label: 'Coronel Traconis 4a', municipio: 'Centro', lat: 17.943376288856253, lng: -92.80197895758863, radioKm: RADIO_COLONIA_KM }, // Coronel Traconis 4a (San Francisco)
+  { key: 'coronel-traconis-5a', label: 'Coronel Traconis 5a', municipio: 'Centro', lat: 17.943376288856253, lng: -92.80197895758863, radioKm: RADIO_COLONIA_KM }, // Coronel Traconis 5a (San Rafael y San Diego)
+  { key: 'ismate-y-chilpilla-1a', label: 'Ismate y Chilpilla 1a', municipio: 'Centro', lat: 17.965185718171355, lng: -92.64071875162514, radioKm: RADIO_COLONIA_KM }, // Ismate y Chilpilla 1a (San Antonio)
+  { key: 'isset', label: 'Isset', municipio: 'Centro', lat: 17.990301590005533, lng: -92.92156864336371, radioKm: RADIO_COLONIA_KM }, // Isset
+  { key: 'miraflores-1a', label: 'Miraflores 1a', municipio: 'Centro', lat: 17.91721255239231, lng: -92.77860674432856, radioKm: RADIO_COLONIA_KM }, // Miraflores 1a (Arroyo Grande)
+  { key: 'plutarco-elias-calles-3a', label: 'Plutarco Elias Calles 3a', municipio: 'Centro', lat: 17.95340093436296, lng: -92.91478767720407, radioKm: RADIO_COLONIA_KM }, // Plutarco Elias Calles 3a (La Providencia)
+  { key: 'plutarco-elias-calles-cura-hueso', label: 'Plutarco Elias Calles Cura Hueso', municipio: 'Centro', lat: 17.962160448082123, lng: -92.91983503736536, radioKm: RADIO_COLONIA_KM }, // Plutarco Elias Calles Cura Hueso
+  { key: 'plutarco-elias-calles', label: 'Plutarco Elías Calles', municipio: 'Centro', lat: 17.955805355912165, lng: -92.91611509772886, radioKm: RADIO_COLONIA_KM }, // Plutarco Elías Calles (La Majahua)
+  { key: 'buena-vista', label: 'Buena Vista', municipio: 'Centro', lat: 18.145649431554276, lng: -92.74904905836635, radioKm: RADIO_COLONIA_KM }, // Buena Vista
+  { key: 'el-zapotal-1a-secc', label: 'El Zapotal 1a Secc', municipio: 'Centro', lat: 18.082065644657323, lng: -92.86347142668707, radioKm: RADIO_COLONIA_KM }, // El Zapotal 1a Secc
+  { key: 'platano-y-cacao-1a-secc', label: 'Plátano y Cacao 1a Secc', municipio: 'Centro', lat: 17.97743620776993, lng: -93.1495856789774, radioKm: RADIO_COLONIA_KM }, // Plátano y Cacao 1a Secc
+  { key: 'jose-maria-pino-suarez-1a-seccion', label: 'José María Pino Suárez (1a Sección)', municipio: 'Centro', lat: 18.351581997457185, lng: -93.38224852975947, radioKm: RADIO_COLONIA_KM }, // Jose Maria Pino Suarez 1a Secc
 ];
 
 function normalizarBase(s: string): string {
