@@ -550,6 +550,7 @@ export default function EditarPropiedadPage() {
           <button
             type="button"
             onClick={() => setAmenidadesAbiertas((v) => !v)}
+            aria-expanded={amenidadesAbiertas}
             className="w-full flex items-center justify-between mb-1"
           >
             <span className="text-sm font-medium text-gray-700">Amenidades</span>
@@ -596,6 +597,7 @@ export default function EditarPropiedadPage() {
             <button
               type="button"
               onClick={() => setServiciosAbiertos((v) => !v)}
+              aria-expanded={serviciosAbiertos}
               className="w-full flex items-center justify-between mb-1"
             >
               <span className="text-sm font-medium text-gray-700">Servicios incluidos</span>

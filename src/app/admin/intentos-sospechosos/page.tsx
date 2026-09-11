@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Ban, CheckCircle2 } from 'lucide-react';
 import { formatRelativeDate } from '@/lib/format';
-import { backendFetch } from '@/lib/backendApi';
+import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { Modal } from '@/components/ui/Modal';
+import { Button } from '@/components/ui/Button';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { Pagination } from '@/components/ui/Pagination';
 
@@ -24,6 +25,7 @@ export default function AdminIntentosSospechososPage() {
   const [perPage, setPerPage] = useState(30);
   const [loading, setLoading] = useState(true);
   const [detalle, setDetalle] = useState<Intento | null>(null);
+  const [errorCarga, setErrorCarga] = useState('');
 
   // BACKEND-AUDITORIA-EXHAUSTIVA-20082026: GET /admin/intentos-sospechosos
   // pasó de un array plano con techo fijo de 200 a { intentos, total, page,
@@ -31,16 +33,27 @@ export default function AdminIntentosSospechososPage() {
   // not a function" porque seguía esperando el array plano.
   const cargar = useCallback(async () => {
     setLoading(true);
-    const data = await backendFetch<{
-      intentos: Intento[];
-      total: number;
-      page: number;
-      perPage: number;
-    }>(`/admin/intentos-sospechosos?page=${page}`);
-    setIntentos(data.intentos ?? []);
-    setTotal(data.total ?? 0);
-    setPerPage(data.perPage ?? 30);
-    setLoading(false);
+    setErrorCarga('');
+    try {
+      const data = await backendFetch<{
+        intentos: Intento[];
+        total: number;
+        page: number;
+        perPage: number;
+      }>(`/admin/intentos-sospechosos?page=${page}`);
+      setIntentos(data.intentos ?? []);
+      setTotal(data.total ?? 0);
+      setPerPage(data.perPage ?? 30);
+    } catch (err) {
+      // Auditoría 2026-09-11: antes un error real (401 de sesión vencida,
+      // 500) dejaba `loading` en `true` para siempre — skeleton infinito
+      // sin ningún aviso, sin forma de reintentar sin recargar la página.
+      setErrorCarga(err instanceof BackendApiError ? err.message : 'No se pudieron cargar los intentos.');
+      setIntentos([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
   }, [page]);
 
   useEffect(() => { function cargarInicial() { cargar(); } cargarInicial(); }, [cargar]);
@@ -56,6 +69,11 @@ export default function AdminIntentosSospechososPage() {
 
       {loading ? (
         <TableSkeleton headers={['Usuario', 'Búsqueda', 'Marcador', 'Estado', 'Fecha']} />
+      ) : errorCarga ? (
+        <div className="text-center py-10 text-sm">
+          <p className="text-danger mb-3">{errorCarga}</p>
+          <Button size="sm" variant="outline" onClick={() => cargar()}>Reintentar</Button>
+        </div>
       ) : intentos.length === 0 ? (
         <div className="text-center py-10 text-gray-400 text-sm">Sin intentos registrados</div>
       ) : (

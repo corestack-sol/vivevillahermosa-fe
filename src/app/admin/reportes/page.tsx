@@ -55,6 +55,7 @@ export default function AdminReportesPage() {
   const [enviando, setEnviando] = useState(false);
   const [confirmar, setConfirmar] = useState<{ reporte: Reporte; nuevoEstado: 'revisado' | 'descartado' } | null>(null);
   const [error, setError] = useState('');
+  const [errorCarga, setErrorCarga] = useState('');
 
   // Vista "Mapa" — pedido explícito 2026-09-01, para ver los reportes por
   // ubicación real en vez de solo una lista. `GET /admin/reportes` hoy
@@ -72,16 +73,27 @@ export default function AdminReportesPage() {
   // function" porque seguía esperando el array plano.
   const cargar = useCallback(async () => {
     setLoading(true);
-    const data = await backendFetch<{
-      reportes: Reporte[];
-      total: number;
-      page: number;
-      perPage: number;
-    }>(`/admin/reportes?estado=${estado}&page=${page}`);
-    setReportes(data.reportes ?? []);
-    setTotal(data.total ?? 0);
-    setPerPage(data.perPage ?? 20);
-    setLoading(false);
+    setErrorCarga('');
+    try {
+      const data = await backendFetch<{
+        reportes: Reporte[];
+        total: number;
+        page: number;
+        perPage: number;
+      }>(`/admin/reportes?estado=${estado}&page=${page}`);
+      setReportes(data.reportes ?? []);
+      setTotal(data.total ?? 0);
+      setPerPage(data.perPage ?? 20);
+    } catch (err) {
+      // Auditoría 2026-09-11: antes un error real (401 de sesión vencida,
+      // 500) dejaba `loading` en `true` para siempre — skeleton infinito
+      // sin ningún aviso, sin forma de reintentar sin recargar la página.
+      setErrorCarga(err instanceof BackendApiError ? err.message : 'No se pudieron cargar los reportes.');
+      setReportes([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
   }, [estado, page]);
 
   useEffect(() => { function cargarInicial() { cargar(); } cargarInicial(); }, [cargar]);
@@ -170,6 +182,11 @@ export default function AdminReportesPage() {
 
       {loading ? (
         <CardListSkeleton />
+      ) : errorCarga ? (
+        <div className="text-center py-10 text-sm">
+          <p className="text-danger mb-3">{errorCarga}</p>
+          <Button size="sm" variant="outline" onClick={() => cargar()}>Reintentar</Button>
+        </div>
       ) : reportes.length === 0 ? (
         <div className="text-center py-10 text-gray-400 text-sm">Sin reportes {estado === 'pendiente' ? 'pendientes' : `en estado "${estado}"`}</div>
       ) : vista === 'mapa' ? (
