@@ -21,7 +21,7 @@ export const TERMS_SECTIONS: { title: string; body: string }[] = [
   },
   {
     title: '3. Responsabilidad del usuario sobre el contenido publicado',
-    body: 'Quien publica una propiedad declara, bajo su exclusiva responsabilidad, que: (a) tiene derecho legal para publicarla, venderla o rentarla; (b) la información, fotografías, precio y características publicadas son veraces, exactas y no engañosas; y (c) cuenta con el consentimiento de cualquier tercero cuya información o imagen se incluya en la publicación. Vive Villahermosa no revisa, valida ni garantiza la exactitud de ningún contenido publicado por los usuarios y no asume responsabilidad alguna por errores, omisiones o falsedades en dicho contenido.',
+    body: 'Quien publica una propiedad declara, bajo su exclusiva responsabilidad, que: (a) tiene derecho legal para publicarla, venderla o rentarla; (b) la información, fotografías, precio y características publicadas son veraces, exactas y no engañosas; y (c) cuenta con el consentimiento de cualquier tercero cuya información o imagen se incluya en la publicación. Vive Villahermosa puede aplicar sistemas automatizados de detección de señales de fraude sobre el texto y las fotografías antes de su publicación, pero esto no constituye una revisión, validación ni garantía de la exactitud de ningún contenido publicado por los usuarios, y no asume responsabilidad alguna por errores, omisiones o falsedades en dicho contenido.',
   },
   {
     title: '4. Exclusión de responsabilidad sobre transacciones entre usuarios',

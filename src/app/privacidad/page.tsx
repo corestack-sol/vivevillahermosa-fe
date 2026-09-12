@@ -15,7 +15,7 @@ export default function PrivacidadPage() {
         <ShieldCheck size={22} className="text-brand" />
         <h1 className="text-3xl font-heading font-bold text-gray-900">Aviso de privacidad</h1>
       </div>
-      <p className="text-sm text-gray-400 mb-10">Última actualización: 7 de septiembre de 2026</p>
+      <p className="text-sm text-gray-400 mb-10">Última actualización: 12 de septiembre de 2026</p>
 
       {/* Grid principal + mascota fija a la derecha — mismo patrón sticky
           que el sidebar de /zonas/[slug] (lg:col-span-1, sticky top-24).
@@ -48,12 +48,21 @@ export default function PrivacidadPage() {
             <li>Las fotos que subes al publicar una propiedad — antes de aceptarlas, un sistema automatizado las analiza para detectar contenido fraudulento; luego se guardan para mostrarse en tu anuncio.</li>
             <li>Si activas las notificaciones push, un identificador técnico de esa suscripción en tu navegador — sin contenido personal legible, solo lo necesario para poder enviarte el aviso.</li>
             <li>Analítica de uso (qué páginas se visitan, qué botones se usan) mediante PostHog — sin usar cookies de rastreo, y sin registrar lo que escribes en ningún formulario (nombre, teléfono, correo, mensajes). Solo mide comportamiento agregado, nunca el contenido de lo que escribes.</li>
+            {/* Google AdSense — auditoría 2026-09-12: estaba activo en
+                producción (NEXT_PUBLIC_ADSENSE_CLIENT_ID configurado) pero
+                no se mencionaba aquí, y la sección de cookies de abajo
+                afirmaba justo lo contrario ("no usamos ninguna otra
+                cookie"). Sin configuración de anuncios no personalizados/
+                consentimiento en el código (src/lib/ads.ts, AdSlot.tsx) —
+                corre en el modo default de Google, que sí personaliza con
+                cookies propias. */}
+            <li>Anuncios de Google AdSense en algunas páginas — Google puede colocar sus propias cookies para mostrarte anuncios según tu actividad de navegación. No le compartimos tu nombre, correo ni mensajes para esto; es Google quien decide el anuncio con su propio sistema.</li>
           </ul>
           <p className="leading-relaxed mt-3">
-            Algunas preferencias (propiedades favoritas antes de iniciar sesión, comparador, búsquedas recientes, propiedades vistas recientemente) se guardan únicamente en tu navegador (localStorage), no en nuestros servidores, y desaparecen si borras los datos de ese navegador.
+            Algunas preferencias (comparador, búsquedas recientes, propiedades vistas recientemente) se guardan únicamente en tu navegador (localStorage), no en nuestros servidores, y desaparecen si borras los datos de ese navegador.
           </p>
           <p className="leading-relaxed mt-3">
-            Usamos una única cookie técnica, estrictamente necesaria, para mantener tu sesión iniciada mientras usas la plataforma — no la usamos para rastrearte ni para publicidad, y no requiere tu consentimiento bajo la ley aplicable. No usamos ninguna otra cookie.
+            Usamos una cookie técnica, estrictamente necesaria, para mantener tu sesión iniciada mientras usas la plataforma — no la usamos para rastrearte ni para publicidad, y no requiere tu consentimiento bajo la ley aplicable. Además de esa, Google AdSense puede colocar sus propias cookies de publicidad cuando hay anuncios en la página (ver arriba) — puedes desactivar la personalización de esos anuncios desde <a href="https://adssettings.google.com" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">la configuración de anuncios de Google</a>.
           </p>
         </section>
 
@@ -68,7 +77,7 @@ export default function PrivacidadPage() {
             <li>Mejorar la plataforma (qué se busca más, qué falla).</li>
           </ul>
           <p className="leading-relaxed mt-3">
-            No usamos tus datos para publicidad de terceros ni los vendemos a nadie.
+            No compartimos tu nombre, correo ni mensajes con nadie para publicidad, y no vendemos tus datos a nadie. Sí mostramos anuncios de Google AdSense en algunas páginas — ver la sección 2 sobre cómo funcionan sus cookies.
           </p>
         </section>
 
@@ -85,6 +94,7 @@ export default function PrivacidadPage() {
             <li>OpenRouter — procesa el texto de tus publicaciones (título, descripción) para el análisis automático de fraude y la generación de descripciones asistida, y el texto de tus búsquedas para el buscador con IA.</li>
             <li>Google (Gemini) — analiza las fotos que subes al publicar, para detectar contenido fraudulento, antes de que la propiedad quede visible.</li>
             <li>El servicio de notificaciones push de tu navegador (Google, Mozilla u otro, según cuál uses) — recibe un identificador técnico de tu dispositivo para poder entregarte el aviso, solo si activaste las notificaciones push.</li>
+            <li>Google AdSense — muestra los anuncios en algunas páginas y coloca sus propias cookies de publicidad para personalizarlos; no recibe tu nombre, correo ni mensajes de nuestra parte.</li>
           </ul>
         </section>
 
