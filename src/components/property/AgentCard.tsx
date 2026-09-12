@@ -116,6 +116,13 @@ export function AgentCard({ agent, propiedadId, propertyTitle, requiereMensajePr
           <infoNoDisponible.Icon size={14} className="flex-shrink-0" />
           {infoNoDisponible.titulo} — sin contacto disponible
         </p>
+      ) : requiereMensajePrimero ? (
+        // Mensaje primero: el único camino de contacto es el formulario de
+        // ContactCard más abajo (incluye su propio login gate) — pedido
+        // explícito 2026-09-12, antes esta card mostraba un botón de
+        // "ver correo de contacto" a la vez que aparecía el formulario,
+        // dos caminos de contacto compitiendo en la misma ficha.
+        null
       ) : !user ? (
         // Sin sesión no hay ningún camino para ver tel/whatsapp/correo —
         // ni siquiera se intenta el fetch, el servidor lo rechazaría igual.
@@ -129,70 +136,6 @@ export function AgentCard({ agent, propiedadId, propertyTitle, requiereMensajePr
             <LogIn size={16} />
             Inicia sesión para ver el contacto
           </Link>
-        </div>
-      ) : requiereMensajePrimero ? (
-        <div className="space-y-2">
-          {contacto ? (
-            contacto.email ? (
-              <a
-                href={`mailto:${contacto.email}?subject=${encodeURIComponent(`Consulta: ${propertyTitle}`)}`}
-                className={`flex items-center justify-center gap-2 w-full text-sm font-semibold py-2.5 rounded-xl transition-all active:scale-[0.98] border ${
-                  dark
-                    ? 'border-white/30 text-white hover:bg-white/10'
-                    : 'border-brand text-brand hover:bg-brand-pale'
-                }`}
-              >
-                <Mail size={16} />
-                Correo
-              </a>
-            ) : (
-              // Defensivo: propiedades publicadas antes del 2026-08-22 podían
-              // guardar "solo WhatsApp" + "mensaje primero" a la vez — sin
-              // correo que revelar aquí, antes esto se quedaba vacío en
-              // silencio tras un fetch "exitoso". El hint de abajo ya cubre
-              // el único camino real que le queda a quien visita (ContactForm).
-              <p className={`text-xs text-center py-1 ${dark ? 'text-white/50' : 'text-gray-400'}`}>
-                Este propietario prefiere que le escribas primero.
-              </p>
-            )
-          ) : (
-            <div>
-              <button
-                type="button"
-                onClick={revelar}
-                disabled={loading}
-                className={`flex items-center justify-center gap-2 w-full text-sm font-semibold py-2.5 rounded-xl transition-all active:scale-[0.98] disabled:opacity-60 disabled:active:scale-100 ${
-                  dark
-                    ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
-                    : 'bg-brand hover:bg-brand-dark text-white'
-                }`}
-              >
-                {loading ? <Loader2 size={16} className="animate-spin" /> : <Eye size={16} />}
-                {loading ? 'Cargando...' : 'Ver correo de contacto'}
-              </button>
-              {error && (
-                <p className={`text-xs mt-2 text-center ${dark ? 'text-red-300' : 'text-red-500'}`}>
-                  No se pudo cargar el contacto. Intenta de nuevo.
-                </p>
-              )}
-            </div>
-          )}
-          {/* Bug real reportado 2026-08-30: este hint se mostraba SIEMPRE
-              que requiereMensajePrimero era true, sin importar si el
-              propietario en realidad tenía WhatsApp configurado — una
-              propiedad con "solo contacto por correo" igual invitaba a
-              escribir por WhatsApp. `contacto` solo existe después de
-              revelar (botón de arriba), y únicamente entonces se sabe de
-              verdad si hay un `whatsapp` real que ofrecer — antes de eso,
-              no se afirma nada. El propietario activó "mensaje primero" al
-              publicar — su WhatsApp no se revela aquí, hay que escribirle
-              y es él quien decide si responde y comparte su número. */}
-          {contacto?.whatsapp && (
-            <p className={`flex items-center justify-center gap-1.5 text-xs text-center ${dark ? 'text-white/50' : 'text-gray-400'}`}>
-              <MessageCircle size={13} className="flex-shrink-0" />
-              ¿Prefieres WhatsApp? Escríbele un mensaje abajo.
-            </p>
-          )}
         </div>
       ) : contacto ? (
         <div className="space-y-2">

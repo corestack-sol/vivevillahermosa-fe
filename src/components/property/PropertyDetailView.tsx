@@ -396,14 +396,27 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
                 </div>
               </div>
 
-              {/* ② Card de contacto */}
-              <ContactCard propertyId={property.id} propertyTitle={property.titulo} ownerName={property.agente.nombre} />
+              {/* ② Card de contacto — solo cuando el propietario pidió
+                  "mensaje primero" (Property.requiereMensajePrimero). Con
+                  contacto directo, el botón de la card verde de arriba
+                  (AgentCard) ya es el único camino — mostrar esta card
+                  también duplicaba el CTA de contactar (pedido explícito
+                  2026-09-12). */}
+              {property.requiereMensajePrimero && (
+                <ContactCard propertyId={property.id} propertyTitle={property.titulo} ownerName={property.agente.nombre} />
+              )}
 
               {/* ③ Compartir */}
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex gap-2">
                 <FavoriteButton propiedadId={property.id} />
+                {/* Verde real de WhatsApp (#25D366, mismo hex que ya usa
+                    AgentCard.tsx para el botón real de WhatsApp) en vez del
+                    green-500 genérico de Tailwind — ese tono no coincidía ni
+                    con la marca ni con el verde real de WhatsApp, quedaba
+                    como un tercer verde suelto en la página (auditoría de
+                    armonía de color 2026-09-12). */}
                 <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-2 border-2 border-gray-200 hover:border-green-500 hover:bg-green-50 text-gray-600 hover:text-green-600 text-sm font-semibold py-2.5 rounded-xl transition-all">
+                  className="flex-1 flex items-center justify-center gap-2 border-2 border-gray-200 hover:border-[#25D366] hover:bg-[#25D366]/10 text-gray-600 hover:text-[#25D366] text-sm font-semibold py-2.5 rounded-xl transition-all">
                   <Share2 size={15} /> Compartir
                 </a>
               </div>
