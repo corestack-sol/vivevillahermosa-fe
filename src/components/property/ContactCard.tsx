@@ -28,7 +28,15 @@ export function ContactCard({ propertyId, propertyTitle, ownerName }: ContactCar
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden scroll-mt-20" id="contacto">
       <div className="px-5 py-5">
-        <p className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400 mb-4">Enviar mensaje</p>
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-gray-400 mb-1.5">Enviar mensaje</p>
+        {/* Esta card solo aparece cuando Property.requiereMensajePrimero es
+            true (ver PropertyDetailView.tsx) — sin esta línea, quien la ve
+            no tiene forma de saber POR QUÉ le toca escribir un mensaje en
+            vez del contacto directo de siempre (pedido explícito
+            2026-09-12). */}
+        <p className="text-sm text-gray-500 mb-4">
+          {ownerName} prefiere recibir un mensaje antes de compartir su contacto directo.
+        </p>
         <ContactForm propertyTitle={propertyTitle} propertyId={propertyId} ownerName={ownerName} />
       </div>
     </div>
