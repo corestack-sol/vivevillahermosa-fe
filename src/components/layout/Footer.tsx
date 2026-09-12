@@ -3,6 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { MapPin, Droplets } from 'lucide-react';
+import styles from './Footer.module.css';
+
+const CORESTACK_LOGO_SRC = '/images/icons/corestack-logo.webp';
 
 function FooterMinimal() {
   // Mismo trío cálido del Hero (brand-pale → blanco → sand, ver page.tsx)
@@ -61,9 +64,18 @@ function FooterFull() {
                 className="flex items-center gap-2 text-sm text-white/70 hover:text-accent transition-colors"
               >
                 {/* Logo de Corestack Solutions en vez del ícono de sobre
-                    genérico — pedido explícito 2026-08-19. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/icons/corestack-logo.webp" alt="" className="h-[15px] w-auto flex-shrink-0" />
+                    genérico — pedido explícito 2026-08-19. Efecto glitch
+                    (split RGB) igual al de /corestack — sin el float, que
+                    a 15px de alto rompería la línea de texto. */}
+                <span
+                  className={`${styles.logoWrap} h-[20px]`}
+                  style={{ ['--logo-mask' as string]: `url(${CORESTACK_LOGO_SRC})` }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={CORESTACK_LOGO_SRC} alt="" className="h-[20px] w-auto flex-shrink-0" />
+                  <span className={styles.glitchRed} aria-hidden="true" />
+                  <span className={styles.glitchCyan} aria-hidden="true" />
+                </span>
                 corestack.sol@gmail.com
               </a>
               <span className="flex items-center gap-2 text-sm text-white/70">
