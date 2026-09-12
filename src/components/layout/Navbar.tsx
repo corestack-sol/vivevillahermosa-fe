@@ -306,28 +306,10 @@ export function Navbar() {
           {/* Acciones — empujadas del todo a la derecha */}
           <div className="flex items-center ml-auto">
           <div className="hidden lg:flex items-center gap-3">
-            {esProfesional && (
-              <Link href="/dashboard/propiedades"
-                className="flex items-center gap-1.5 text-sm font-medium text-white border border-white/20 hover:border-white/40 rounded-xl px-3.5 py-2 transition-colors">
-                <Building2 size={14} /> Panel profesional
-              </Link>
-            )}
-            {!esProfesional && (
-              limitePropiedades ? (
-                <button
-                  type="button"
-                  onClick={() => toast.error(MENSAJE_LIMITE_PROPIEDADES)}
-                  className={`${buttonClasses('primary', 'md')} opacity-40 cursor-not-allowed`}
-                >
-                  <Plus size={15} strokeWidth={2.5} /> Publicar gratis
-                </button>
-              ) : (
-                <Link href="/publicar" className={buttonClasses('primary', 'md')}>
-                  <Plus size={15} strokeWidth={2.5} /> Publicar gratis
-                </Link>
-              )
-            )}
-
+            {/* Orden: campana → cuenta (usuario/entrar) → publicar — pedido
+                explícito 2026-09-12 (segunda vuelta, sobre el orden previo
+                usuario → campana → publicar). "Publicar gratis" se queda
+                como cierre más vistoso al extremo derecho. */}
             {!loading && user && <NotificationBell />}
 
             {!loading && (
@@ -335,7 +317,7 @@ export function Navbar() {
                 <div className="relative" ref={userMenuRef}>
                   <button onClick={() => setUserMenuOpen(!userMenuOpen)}
                     aria-haspopup="true" aria-expanded={userMenuOpen}
-                    className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border transition-colors text-sm border-white/15 hover:border-white/30 hover:bg-white/8">
+                    className="flex items-center gap-2 pl-2 pr-3 py-2 rounded-xl border transition-colors text-sm border-white/20 hover:border-white/40 hover:bg-white/8">
                     <div className="w-7 h-7 rounded-lg ring-1 ring-white/15 bg-gradient-to-br from-brand to-brand-light flex items-center justify-center text-white text-xs font-bold">
                       {user.nombre.charAt(0).toUpperCase()}
                     </div>
@@ -406,6 +388,28 @@ export function Navbar() {
                 <Link href={loginRedirectUrl(pathname)}
                   className="flex items-center gap-1.5 border text-sm font-medium px-3.5 py-2 rounded-xl transition-colors text-white border-white/20 hover:border-white/40">
                   <User size={14} /> Entrar
+                </Link>
+              )
+            )}
+
+            {esProfesional && (
+              <Link href="/dashboard/propiedades"
+                className="flex items-center gap-1.5 text-sm font-medium text-white border border-white/20 hover:border-white/40 rounded-xl px-3.5 py-2 transition-colors">
+                <Building2 size={14} /> Panel profesional
+              </Link>
+            )}
+            {!esProfesional && (
+              limitePropiedades ? (
+                <button
+                  type="button"
+                  onClick={() => toast.error(MENSAJE_LIMITE_PROPIEDADES)}
+                  className={`${buttonClasses('primary', 'md')} opacity-40 cursor-not-allowed`}
+                >
+                  <Plus size={15} strokeWidth={2.5} /> Publicar gratis
+                </button>
+              ) : (
+                <Link href="/publicar" className={buttonClasses('primary', 'md')}>
+                  <Plus size={15} strokeWidth={2.5} /> Publicar gratis
                 </Link>
               )
             )}
