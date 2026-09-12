@@ -12,7 +12,6 @@ import { useAuth } from '@/context/AuthContext';
 import { loginRedirectUrl } from '@/lib/authRedirect';
 import { backendFetch } from '@/lib/backendApi';
 import { whatsappUrl } from '@/lib/phone';
-import { Skeleton } from '@/components/ui/Skeleton';
 
 // Subconjunto público y seguro de mostrar de entrada — nombre y estado de
 // verificación no son datos sensibles.
@@ -102,7 +101,18 @@ export function AgentCard({ agent, propiedadId, propertyTitle, requiereMensajePr
         // confirmarlo, para no mostrar algo que puede desaparecer un
         // instante después (bug real reportado 2026-09-02, el botón de
         // contactar "parpadeaba" en la ficha del propio dueño al cargar).
-        <Skeleton variant="image" className="h-11 w-full" />
+        // El Skeleton compartido usa shimmer gris claro fijo (globals.css,
+        // pensado para cards blancas) — sobre el fondo verde oscuro de esta
+        // card se veía como un bloque blanco pegado encima del botón
+        // (reportado 2026-09-12). Placeholder propio en vez de tocar el
+        // shimmer compartido, que sí se ve bien en el resto del sitio.
+        <div
+          role="status"
+          aria-label="Cargando"
+          className={`h-11 w-full rounded-xl animate-pulse ${dark ? 'bg-white/10' : 'bg-gray-100'}`}
+        >
+          <span className="sr-only">Cargando…</span>
+        </div>
       ) : esMiPropiedad ? (
         <p className={`flex items-center justify-center gap-1.5 text-xs text-center rounded-xl px-3 py-2.5 ${
           dark ? 'text-white/50 bg-white/5 border border-white/10' : 'text-gray-400 bg-gray-50 border border-gray-100'
