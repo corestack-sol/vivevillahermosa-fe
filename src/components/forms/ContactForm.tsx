@@ -13,6 +13,7 @@ import { loginRedirectUrl } from '@/lib/authRedirect';
 import { usePropiedadEstado } from '@/hooks/usePropiedadEstado';
 import { estadoNoDisponibleInfo } from '@/lib/misPropiedades';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
+import type { ConversacionResumen } from '@/lib/mensajeria';
 
 const schema = z.object({
   mensaje: z.string().min(10, 'El mensaje debe tener al menos 10 caracteres'),
@@ -53,6 +54,40 @@ export function ContactForm({ propertyTitle, propertyId, ownerName, dark = false
   }, [user, reset]);
 
   const [conversacionId, setConversacionId] = useState<string | null>(null);
+  // true si `sent` quedó así por encontrar una conversación YA existente
+  // (revisita) en vez de por enviar el mensaje justo ahora — cambia el
+  // copy de abajo ("¡Mensaje enviado!" no tiene sentido en una revisita).
+  const [yaExistia, setYaExistia] = useState(false);
+  // Mientras se resuelve, no se sabe si mostrar el formulario vacío o el
+  // botón "Ver conversación" — sin este gate, quien ya escribió antes veía
+  // el formulario en blanco un instante antes de saltar a la conversación
+  // (pedido explícito 2026-09-12: "que siga mostrando el botón de ver
+  // conversación" si ya mandó mensaje antes).
+  const [checkingExisting, setCheckingExisting] = useState(true);
+
+  useEffect(() => {
+    if (!user) { setCheckingExisting(false); return; }
+    let cancelado = false;
+    // Mismo endpoint que ya usa /dashboard/mensajes (GET /mensajes/
+    // conversaciones) — no existe un "¿ya hay conversación con esta
+    // propiedad?" dedicado, así que se filtra la lista completa del
+    // usuario por propiedad.id.
+    backendFetch<{ conversaciones: ConversacionResumen[] }>('/mensajes/conversaciones')
+      .then(({ conversaciones }) => {
+        if (cancelado) return;
+        const existente = conversaciones.find((c) => c.propiedad.id === propertyId);
+        if (existente) {
+          setConversacionId(existente.id);
+          setYaExistia(true);
+          setSent(true);
+        }
+      })
+      // Fail-open: si el chequeo falla, se cae al formulario normal — peor
+      // caso, alguien que ya escribió ve el form de nuevo (no un bloqueo).
+      .catch(() => {})
+      .finally(() => { if (!cancelado) setCheckingExisting(false); });
+    return () => { cancelado = true; };
+  }, [user, propertyId]);
 
   // Migrado 2026-09-06 de POST /propiedades/:id/contactar (solo mandaba un
   // correo, nunca quedaba registrado ni ligado a la propiedad de forma
@@ -134,13 +169,29 @@ export function ContactForm({ propertyTitle, propertyId, ownerName, dark = false
     );
   }
 
+  if (checkingExisting) {
+    return (
+      <div
+        role="status"
+        aria-label="Cargando"
+        className={`h-32 rounded-xl animate-pulse ${dark ? 'bg-white/10' : 'bg-gray-100'}`}
+      >
+        <span className="sr-only">Cargando…</span>
+      </div>
+    );
+  }
+
   if (sent) {
     return (
       <div className="text-center py-6">
         <CheckCircle className={`mx-auto mb-3 ${dark ? 'text-white' : 'text-success'}`} size={40} />
-        <h3 className={`font-semibold mb-1 ${dark ? 'text-white' : 'text-gray-800'}`}>¡Mensaje enviado!</h3>
+        <h3 className={`font-semibold mb-1 ${dark ? 'text-white' : 'text-gray-800'}`}>
+          {yaExistia ? 'Ya iniciaste esta conversación' : '¡Mensaje enviado!'}
+        </h3>
         <p className={`text-sm mb-4 ${dark ? 'text-white/70' : 'text-gray-500'}`}>
-          {ownerName} puede responderte directo desde la plataforma.
+          {yaExistia
+            ? `Ya le escribiste a ${ownerName} sobre esta propiedad — continúa desde tu panel.`
+            : `${ownerName} puede responderte directo desde la plataforma.`}
         </p>
         {conversacionId && (
           <Link
