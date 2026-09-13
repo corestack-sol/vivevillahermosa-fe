@@ -4,6 +4,7 @@ import Script from 'next/script';
 import { Inter } from 'next/font/google';
 import '@/styles/globals.css';
 import { Navbar, NavbarFallback } from '@/components/layout/Navbar';
+import { TopProgressBar } from '@/components/layout/TopProgressBar';
 import { Footer } from '@/components/layout/Footer';
 import { defaultMetadata } from '@/lib/seo';
 import { AuthProvider } from '@/context/AuthContext';
@@ -59,6 +60,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           Saltar al contenido
         </a>
+        {/* Barra de progreso de navegación — pedido explícito 2026-09-13,
+            "como en la aplicación": indicador arriba del header mientras se
+            navega a otra página. Fuera de los providers (no necesita
+            ninguno), Suspense propio por el mismo motivo que Navbar
+            (useSearchParams). */}
+        <Suspense fallback={null}><TopProgressBar /></Suspense>
         <AuthProvider>
           <ToastProvider>
             <CompareProvider>

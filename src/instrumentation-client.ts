@@ -1,4 +1,5 @@
 import posthog from 'posthog-js';
+import { startTopProgress } from '@/lib/topProgress';
 
 // Analítica de producto — docs/PLAN-AUDITORIA-FASE1-MVP.md hallazgo #8.
 // Sin NEXT_PUBLIC_POSTHOG_KEY, se salta en silencio (mismo patrón que
@@ -36,6 +37,7 @@ if (KEY) {
 }
 
 export function onRouterTransitionStart(url: string) {
+  startTopProgress();
   if (KEY) posthog.capture('$pageview', { $current_url: url });
 }
 
