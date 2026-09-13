@@ -168,8 +168,8 @@ function RegistroContent() {
             <div className="space-y-2.5 mb-5">
               <a
                 href={`${process.env.NEXT_PUBLIC_API_URL}/auth/google?next=${encodeURIComponent(next)}`}
-                className="w-full flex items-center justify-center gap-3 border border-gray-200
-                           hover:border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold
+                className="w-full flex items-center justify-center gap-3 border border-gray-900
+                           bg-gray-900 hover:bg-gray-800 text-white font-semibold
                            text-sm py-3 rounded-xl transition-all"
               >
                 <GoogleIcon />
