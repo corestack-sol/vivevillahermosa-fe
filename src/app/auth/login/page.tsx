@@ -179,8 +179,8 @@ function LoginContent() {
             <div className="space-y-2.5 mb-5">
               <a
                 href={`${process.env.NEXT_PUBLIC_API_URL}/auth/google?next=${encodeURIComponent(next)}`}
-                className="w-full flex items-center justify-center gap-3 border border-gray-900
-                           bg-gray-900 hover:bg-gray-800 text-white font-semibold
+                className="w-full flex items-center justify-center gap-3 border border-accent-dark
+                           bg-accent-dark hover:bg-accent text-white font-semibold
                            text-sm py-3 rounded-xl transition-all"
               >
                 <GoogleIcon />
