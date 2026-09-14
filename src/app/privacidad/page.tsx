@@ -15,7 +15,7 @@ export default function PrivacidadPage() {
         <ShieldCheck size={22} className="text-brand" />
         <h1 className="text-3xl font-heading font-bold text-gray-900">Aviso de privacidad</h1>
       </div>
-      <p className="text-sm text-gray-400 mb-10">Última actualización: 12 de septiembre de 2026</p>
+      <p className="text-sm text-gray-400 mb-10">Última actualización: 14 de septiembre de 2026</p>
 
       {/* Grid principal + mascota fija a la derecha — mismo patrón sticky
           que el sidebar de /zonas/[slug] (lg:col-span-1, sticky top-24).
@@ -47,6 +47,14 @@ export default function PrivacidadPage() {
             <li>Si publicas una propiedad: los datos de contacto que tú decides mostrar a interesados (nombre, WhatsApp y/o correo).</li>
             <li>Las fotos que subes al publicar una propiedad — antes de aceptarlas, un sistema automatizado las analiza para detectar contenido fraudulento; luego se guardan para mostrarse en tu anuncio.</li>
             <li>Si activas las notificaciones push, un identificador técnico de esa suscripción en tu navegador — sin contenido personal legible, solo lo necesario para poder enviarte el aviso.</li>
+            {/* Auditoría 2026-09-14: el mapa se migró de Esri (imagen) a
+                OpenFreeMap (tiles vectoriales, src/components/map/MapView.tsx
+                y MapPicker.tsx) el 2026-09-02, pero nunca se agregó aquí — tu
+                navegador pide los tiles directo a ese servidor cada vez que
+                se muestra un mapa (ficha de propiedad, /mapa, publicar/
+                editar), revelando tu IP aproximada, igual que cualquier mapa
+                embebido en cualquier sitio. */}
+            <li>Al ver cualquier mapa en la plataforma (ficha de propiedad, /mapa, publicar o editar), tu navegador pide los mapas directamente al servidor de OpenFreeMap, que recibe tu dirección IP — como cualquier mapa interactivo embebido en un sitio web.</li>
             <li>Analítica de uso (qué páginas se visitan, qué botones se usan) mediante PostHog — sin usar cookies de rastreo, y sin registrar lo que escribes en ningún formulario (nombre, teléfono, correo, mensajes). Solo mide comportamiento agregado, nunca el contenido de lo que escribes.</li>
             {/* Google AdSense — auditoría 2026-09-12: estaba activo en
                 producción (NEXT_PUBLIC_ADSENSE_CLIENT_ID configurado) pero
@@ -95,6 +103,7 @@ export default function PrivacidadPage() {
             <li>Google (Gemini) — analiza las fotos que subes al publicar, para detectar contenido fraudulento, antes de que la propiedad quede visible.</li>
             <li>El servicio de notificaciones push de tu navegador (Google, Mozilla u otro, según cuál uses) — recibe un identificador técnico de tu dispositivo para poder entregarte el aviso, solo si activaste las notificaciones push.</li>
             <li>Google AdSense — muestra los anuncios en algunas páginas y coloca sus propias cookies de publicidad para personalizarlos; no recibe tu nombre, correo ni mensajes de nuestra parte.</li>
+            <li>OpenFreeMap — sirve los mapas interactivos de la plataforma; recibe tu dirección IP cada vez que se muestra un mapa, no recibe tu nombre, correo ni mensajes.</li>
           </ul>
         </section>
 
