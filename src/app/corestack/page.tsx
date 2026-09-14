@@ -28,6 +28,11 @@ export default function CorestackAnimationPage() {
           <div className={styles.glitchRed} aria-hidden="true" />
           <div className={styles.glitchCyan} aria-hidden="true" />
         </div>
+
+        <p className={styles.terminal}>
+          <span className={styles.prompt} aria-hidden="true">$</span>
+          <span className={styles.typed}>Corestack Solutions</span>
+        </p>
       </div>
     </div>
   );
