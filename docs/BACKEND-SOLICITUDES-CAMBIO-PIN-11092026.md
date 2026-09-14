@@ -1,6 +1,22 @@
 # Solicitudes de cambio de ubicación (pin) — contrato para backend
 
-**Fecha:** 2026-09-11. **Estado: NO implementado, frontend ya listo.**
+**Fecha:** 2026-09-11. **Estado (2026-09-14): IMPLEMENTADO, en
+producción.** Los 3 endpoints coinciden con el contrato propuesto abajo,
+con estas confirmaciones/decisiones del backend:
+
+- `POST /propiedades/:id/solicitud-pin` — además de 404 (no existe)/403
+  (no eres dueño), valida `400` si el punto cae fuera de Tabasco. Un
+  segundo intento con una solicitud `pendiente` ya existente la
+  ACTUALIZA en vez de crear una fila duplicada — como se recomendaba.
+- `POST /admin/solicitudes-pin/:id/aprobar` y `.../rechazar` — `404` si
+  no existe, `409` si ya estaba resuelta (ambos manejados en el
+  frontend con mensaje propio).
+- `GET /admin/metricas` ya incluye `solicitudesPin: { total, pendientes }`.
+- **Decisión de diseño a tener presente:** al aprobar, la propiedad queda
+  marcada `requiereModeracion: true` automáticamente — el backend NO
+  revalida el texto/colonia contra la nueva ubicación (podría rechazar
+  el mismo movimiento que el admin ya aprobó), así que un humano la
+  revisa aparte. El frontend ya avisa esto en el modal de aprobar.
 
 **Por qué hace falta:** al editar una propiedad, mover el pin más de
 `RADIO_MAXIMO_PIN_KM` (1 km, `src/lib/mapPin.ts`) del punto original queda
@@ -68,12 +84,13 @@ interface SolicitudPin {
   (opcional, mismo criterio que `intentosFraude`: `src/app/admin/page.tsx`
   ya oculta la tarjeta sola mientras el campo no exista).
 
-## Frontend (ya conectado, esperando los 3 endpoints)
+## Frontend (ya conectado, en producción)
 
-- `src/components/property/SolicitarCambioPinModal.tsx` — crear la solicitud.
-- `src/app/admin/solicitudes-pin/page.tsx` — listar, aprobar, rechazar.
-  Maneja 404 con un estado honesto ("el backend todavía no expone esta
-  cola"), mismo criterio que `admin/fraude/page.tsx`.
+- `src/components/property/SolicitarCambioPinModal.tsx` — crea la solicitud.
+- `src/app/admin/solicitudes-pin/page.tsx` — listar, aprobar, rechazar;
+  maneja 409 con mensaje propio, avisa del efecto `requiereModeracion`
+  antes de aprobar. El fallback 404 ("el backend todavía no expone esta
+  cola") sigue ahí como defensa, ya no como estado esperado.
 - `src/app/admin/AdminNav.tsx` — link "Cambios de ubicación".
-- `src/app/admin/page.tsx` — tarjeta de métricas, oculta hasta que exista
-  `solicitudesPin` en la respuesta.
+- `src/app/admin/page.tsx` — tarjeta de métricas, ahora visible
+  (`solicitudesPin` ya viene en `GET /admin/metricas`).

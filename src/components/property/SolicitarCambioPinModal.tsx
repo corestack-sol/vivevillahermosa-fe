@@ -29,12 +29,10 @@ const CORREO_SOPORTE = 'corestack.sol@gmail.com';
  * sin link ni referencia a la propiedad, un callejón sin salida real (no
  * existía ningún canal estructurado, y tampoco una forma de que un admin
  * viera estos casos en un solo lugar). Este modal reemplaza ese toast:
- * intenta un endpoint real (POST /propiedades/:id/solicitud-pin, ver
- * docs/BACKEND-SOLICITUDES-CAMBIO-PIN-11092026.md — NO implementado del
- * lado del backend todavía) que alimentaría /admin/solicitudes-pin; si el
- * backend responde 404 (ruta inexistente), cae a un mailto: prellenado con
- * todo el contexto en vez de fallar en silencio — mismo criterio que el
- * resto de esta plataforma con endpoints pendientes (ver admin/fraude/page.tsx).
+ * llama a POST /propiedades/:id/solicitud-pin (implementado por el backend
+ * 2026-09-14, ver docs/BACKEND-SOLICITUDES-CAMBIO-PIN-11092026.md), que
+ * alimenta /admin/solicitudes-pin. El fallback a mailto: si el backend
+ * respondiera 404 sigue ahí como defensa, no como camino esperado.
  */
 export function SolicitarCambioPinModal({ isOpen, onClose, propiedadId, propiedadTitulo, original, solicitada }: Props) {
   return (

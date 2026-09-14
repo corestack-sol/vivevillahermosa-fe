@@ -1,6 +1,13 @@
-# Anti-spam real en `POST /propiedades/reportar` — pendiente de confirmar
+# Anti-spam real en `POST /propiedades/reportar` — resuelto
 
-**Fecha:** 2026-09-11. **Estado: hallazgo de auditoría, no verificado en vivo.**
+**Fecha:** 2026-09-11. **Estado (2026-09-14): RESUELTO del lado del
+backend, sin cambios de contrato.** Confirmado por el backend: ahora un
+reporte repetido desde la misma IP (o mismo usuario si hay sesión) sobre
+la misma propiedad dentro de 24h se ignora en silencio del lado del
+servidor — el endpoint sigue respondiendo `200 { ok: true }` igual,
+nada que cambiar del lado del frontend. `src/lib/reportedProperties.ts`
+(mitigación de aviso rápido en localStorage) sigue funcionando, ahora es
+puramente cosmético — la protección real ya no depende de él.
 
 **Por qué hace falta:** el reporte de anuncios es anónimo por diseño (no
 requiere sesión, `ReportButton.tsx`) y, según el texto ya existente en

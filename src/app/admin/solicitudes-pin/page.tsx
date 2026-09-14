@@ -16,9 +16,14 @@ import { backendFetch, BackendApiError } from '@/lib/backendApi';
  * veía un toast diciendo "contáctanos" — sin link, sin ningún lugar donde un
  * admin pudiera ver esos casos. `SolicitarCambioPinModal.tsx` reemplazó ese
  * toast por una solicitud real (POST /propiedades/:id/solicitud-pin); esta
- * página es el lado admin. Backend pendiente de construir, ver
- * docs/BACKEND-SOLICITUDES-CAMBIO-PIN-11092026.md — mismo criterio "honesto
- * si el endpoint aún no existe" que el resto de /admin/**.
+ * página es el lado admin. Backend implementado 2026-09-14 (mismo día que se
+ * pidió), ver docs/BACKEND-SOLICITUDES-CAMBIO-PIN-11092026.md — `noImplementado`
+ * de abajo queda como defensa por si acaso, no como estado esperado.
+ *
+ * Decisión del backend que vale la pena tener presente al aprobar: la
+ * propiedad queda marcada `requiereModeracion: true` automáticamente — no
+ * revalida el texto/colonia contra la nueva ubicación, así que un humano la
+ * revisa aparte (ver aviso en el modal de aprobar).
  */
 interface SolicitudPin {
   id: string;
@@ -96,13 +101,21 @@ export default function AdminSolicitudesPinPage() {
   async function aprobar(s: SolicitudPin) {
     setAprobandoId(s.id);
     try {
-      // Aplica latSolicitada/lngSolicitada a la propiedad para real y marca
-      // la solicitud como resuelta — ver docs/BACKEND-SOLICITUDES-CAMBIO-
-      // PIN-11092026.md para el contrato exacto.
+      // Aplica latSolicitada/lngSolicitada a la propiedad de verdad y marca
+      // la solicitud como resuelta (correo real al dueño) — ver
+      // docs/BACKEND-SOLICITUDES-CAMBIO-PIN-11092026.md.
       await backendFetch(`/admin/solicitudes-pin/${s.id}/aprobar`, { method: 'POST' });
       setDetalle(null);
       cargar();
     } catch (err) {
+      // 409 = alguien más ya resolvió esta solicitud (aprobada o rechazada)
+      // entre que se cargó la lista y este clic — mensaje propio en vez del
+      // genérico, y refresca la lista para que ya no aparezca como pendiente.
+      if (err instanceof BackendApiError && err.status === 409) {
+        setError('Esta solicitud ya se resolvió (alguien más la aprobó o rechazó).');
+        cargar();
+        return;
+      }
       setError(err instanceof BackendApiError ? err.message : 'No se pudo aprobar la solicitud.');
     } finally {
       setAprobandoId(null);
@@ -128,6 +141,11 @@ export default function AdminSolicitudesPinPage() {
       setDetalle(null);
       cargar();
     } catch (err) {
+      if (err instanceof BackendApiError && err.status === 409) {
+        setError('Esta solicitud ya se resolvió (alguien más la aprobó o rechazó).');
+        cargar();
+        return;
+      }
       setError(err instanceof BackendApiError ? err.message : 'No se pudo rechazar la solicitud.');
     } finally {
       setEnviando(false);
@@ -206,7 +224,13 @@ export default function AdminSolicitudesPinPage() {
                           <Button size="sm" variant="outline" onClick={() => abrirRechazar(s)}>
                             <XCircle size={12} /> Rechazar
                           </Button>
-                          <Button size="sm" variant="primary" isLoading={aprobandoId === s.id} onClick={() => aprobar(s)}>
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            isLoading={aprobandoId === s.id}
+                            onClick={() => aprobar(s)}
+                            title="Reubica la propiedad de inmediato y la marca para moderación aparte"
+                          >
                             <CheckCircle2 size={12} /> Aprobar
                           </Button>
                         </div>
@@ -254,14 +278,19 @@ export default function AdminSolicitudesPinPage() {
             </div>
             {error && <p className="text-sm text-danger">{error}</p>}
             {detalle.estado === 'pendiente' && (
-              <div className="flex justify-end gap-2 pt-1 border-t border-gray-100">
-                <Button variant="outline" onClick={() => abrirRechazar(detalle)}>
-                  <XCircle size={14} /> Rechazar
-                </Button>
-                <Button variant="primary" isLoading={aprobandoId === detalle.id} onClick={() => aprobar(detalle)}>
-                  <CheckCircle2 size={14} /> Aprobar y reubicar
-                </Button>
-              </div>
+              <>
+                <p className="text-xs text-amber-600 bg-amber-50 rounded-xl p-3">
+                  Al aprobar, la propiedad queda marcada para moderación aparte — el backend no revalida el texto/colonia contra la nueva ubicación, así que alguien debe revisarlo por separado.
+                </p>
+                <div className="flex justify-end gap-2 pt-1 border-t border-gray-100">
+                  <Button variant="outline" onClick={() => abrirRechazar(detalle)}>
+                    <XCircle size={14} /> Rechazar
+                  </Button>
+                  <Button variant="primary" isLoading={aprobandoId === detalle.id} onClick={() => aprobar(detalle)}>
+                    <CheckCircle2 size={14} /> Aprobar y reubicar
+                  </Button>
+                </div>
+              </>
             )}
           </div>
         )}

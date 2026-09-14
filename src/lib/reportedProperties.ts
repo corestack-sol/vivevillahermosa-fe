@@ -4,10 +4,14 @@
 // escanea por userId (a diferencia de recentlyViewed.ts/publishDraft.ts):
 // lo que se recuerda es "esta propiedad ya se reportó desde este
 // navegador", sin importar si hay sesión iniciada o con cuál cuenta. Esto
-// no reemplaza una defensa real del backend (rate-limit/deduplicación por
-// IP+propiedadId) — cualquiera puede saltarlo borrando localStorage — solo
-// evita el caso más tonto: cerrar y reabrir el modal, o recargar la
-// página, para reenviar el mismo reporte varias veces sin querer.
+// No reemplaza una defensa real — cualquiera puede saltarlo borrando
+// localStorage — solo evita el caso más tonto: cerrar y reabrir el modal,
+// o recargar la página, para reenviar el mismo reporte varias veces sin
+// querer. Confirmado por el backend 2026-09-14 (docs/BACKEND-ANTISPAM-
+// REPORTES-11092026.md): ahora SÍ deduplica de verdad del lado del
+// servidor (misma IP/usuario + misma propiedad dentro de 24h se ignora
+// en silencio) — esto pasó de ser la única protección a ser puramente
+// cosmético, un aviso rápido sin esperar al servidor.
 const KEY = 'reportedProperties';
 
 function leerSet(): Set<string> {
