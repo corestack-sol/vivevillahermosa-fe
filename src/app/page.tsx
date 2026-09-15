@@ -209,7 +209,13 @@ export default async function HomePage() {
               abajo — hay que promover el nivel que en verdad compite con
               ese hermano, no un nieto más adentro. */}
           <div className="relative z-20 max-w-2xl animate-fade-up" style={{ animationDelay: '270ms' }}>
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-brand uppercase tracking-wide bg-brand-pale px-3 py-1 rounded-full mb-2">
+            {/* Pedido explícito 2026-09-14: resaltar más este badge — antes
+                era texto verde sobre fondo verde pálido, casi invisible
+                contra el resto del hero. Ahora fondo sólido en degradado
+                (mismos tokens --color-brand/--color-brand-dark, ningún
+                color nuevo) + sombra con tinte de marca para que se sienta
+                elevado, no plano. */}
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-white uppercase tracking-wide bg-gradient-to-r from-brand to-brand-dark px-3.5 py-1.5 rounded-full mb-2 shadow-md shadow-brand-dark/30">
               <Bot size={18} /> Búsqueda con IA
             </span>
             <SearchBar />
