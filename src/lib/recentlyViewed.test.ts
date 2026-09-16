@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getRecentlyViewedIds, addRecentlyViewed, getViewedCount } from './recentlyViewed';
+import { getRecentlyViewedIds, addRecentlyViewed, getViewedCount, clearRecentlyViewed } from './recentlyViewed';
 
 const USER_A = 'user-a';
 const USER_B = 'user-b';
@@ -94,6 +94,33 @@ describe('recentlyViewed', () => {
       expect(getRecentlyViewedIds(USER_A)).toEqual(['prop-2']);
       expect(getViewedCount(null)).toBe(1);
       expect(getViewedCount(USER_A)).toBe(1);
+    });
+  });
+
+  // Pedido explícito 2026-09-16 — botón "Borrar historial". Borra las DOS
+  // claves (lista + contador histórico) a propósito: getViewedCount() une
+  // el contador con la lista en la lectura, así que dejar una viva
+  // impediría que el contador baje a 0.
+  describe('clearRecentlyViewed', () => {
+    it('clears both the recent list and the all-time counter', () => {
+      for (let i = 1; i <= 10; i++) addRecentlyViewed(`prop-${i}`, USER_A);
+      expect(getViewedCount(USER_A)).toBe(10);
+
+      clearRecentlyViewed(USER_A);
+
+      expect(getRecentlyViewedIds(USER_A)).toEqual([]);
+      expect(getViewedCount(USER_A)).toBe(0);
+    });
+
+    it('only clears the given account, leaves other accounts untouched', () => {
+      addRecentlyViewed('prop-1', USER_A);
+      addRecentlyViewed('prop-2', USER_B);
+
+      clearRecentlyViewed(USER_A);
+
+      expect(getRecentlyViewedIds(USER_A)).toEqual([]);
+      expect(getRecentlyViewedIds(USER_B)).toEqual(['prop-2']);
+      expect(getViewedCount(USER_B)).toBe(1);
     });
   });
 });

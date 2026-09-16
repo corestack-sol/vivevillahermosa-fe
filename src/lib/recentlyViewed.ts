@@ -46,6 +46,22 @@ export function getViewedCount(userId: string | null): number {
   }
 }
 
+/**
+ * Pedido explícito 2026-09-16 — no había ninguna forma de borrar el
+ * historial salvo limpiar todo el navegador. Borra las dos claves juntas
+ * a propósito: `getViewedCount()` une el contador con la lista de
+ * recientes en la LECTURA (línea de arriba), así que borrar solo una
+ * dejaría el contador sin poder bajar de lo que quede en la otra.
+ */
+export function clearRecentlyViewed(userId: string | null): void {
+  try {
+    localStorage.removeItem(claveRecientes(userId));
+    localStorage.removeItem(claveTotal(userId));
+  } catch {
+    // Mismo caso que el resto del archivo — no crítico.
+  }
+}
+
 export function addRecentlyViewed(propertyId: string, userId: string | null): void {
   if (!propertyId) return;
   const current = getRecentlyViewedIds(userId).filter((id) => id !== propertyId);

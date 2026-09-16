@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Clock } from 'lucide-react';
+import { ArrowLeft, Clock, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { getAllProperties } from '@/lib/api';
-import { getRecentlyViewedIds } from '@/lib/recentlyViewed';
+import { getRecentlyViewedIds, clearRecentlyViewed } from '@/lib/recentlyViewed';
 import { PropertyCard } from '@/components/property/PropertyCard';
 import { Skeleton } from '@/components/ui/Skeleton';
 import type { Property } from '@/types/property';
@@ -47,6 +47,12 @@ export default function RecientesPage() {
     cargarVistosRecientemente();
   }, [authLoading, user, router]);
 
+  function handleLimpiar() {
+    if (!user) return;
+    clearRecentlyViewed(user.userId);
+    setProperties([]);
+  }
+
   if (authLoading || !user || properties === null) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -60,14 +66,25 @@ export default function RecientesPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="flex items-center gap-3 mb-6">
-        <Link href="/dashboard" className="text-gray-400 hover:text-brand transition-colors flex-shrink-0">
-          <ArrowLeft size={20} />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-heading font-bold text-gray-900">Propiedades vistas</h1>
-          <p className="text-sm text-gray-500">Las últimas que abriste con esta cuenta</p>
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard" className="text-gray-400 hover:text-brand transition-colors flex-shrink-0">
+            <ArrowLeft size={20} />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-heading font-bold text-gray-900">Propiedades vistas</h1>
+            <p className="text-sm text-gray-500">Las últimas que abriste con esta cuenta</p>
+          </div>
         </div>
+        {properties.length > 0 && (
+          <button
+            type="button"
+            onClick={handleLimpiar}
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-red-500 transition-colors flex-shrink-0"
+          >
+            <X size={14} /> Borrar historial
+          </button>
+        )}
       </div>
 
       {properties.length === 0 ? (

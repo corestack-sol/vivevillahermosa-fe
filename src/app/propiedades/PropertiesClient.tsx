@@ -20,6 +20,7 @@ import type { MapMarker } from '@/components/map/MapView';
 import { getLandmark, distanciaKm, CATEGORIAS_GENERICAS, precargarLandmarks } from '@/lib/landmarks';
 import { matchColonia, normalizarNombreColonia, precargarColoniasDescubiertas, buscarColoniaEnTexto } from '@/lib/colonias';
 import { interpretarBusqueda, esOracionLarga, MAX_QUERY_LENGTH } from '@/lib/interpretarBusqueda';
+import { buscarIA } from '@/lib/buscarIA';
 import { getColoniasRankedByPropiedades, searchProperties } from '@/lib/api';
 import { addRecentSearch, clearRecentSearches, getRecentSearches } from '@/lib/recentSearches';
 import { useAuth } from '@/context/AuthContext';
@@ -158,6 +159,22 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [buscandoIA, setBuscandoIA] = useState(false);
+  // Resultados de POST /ia/buscar (docs/BACKEND-INTEGRACION-IA-BUSCAR-
+  // 16092026.md) — separado de `filters`/useSearch a propósito: el backend
+  // ya entrega las propiedades rankeadas, no un conjunto de filtros para
+  // volver a pasar por applyFilters()/searchProperties(). `iaQuery` no nulo
+  // = "se está mostrando este modo", no el catálogo filtrado normal.
+  // Cualquier cambio de filtro manual (updateFiltersManual/clearFiltersManual
+  // más abajo) lo apaga y vuelve al flujo de siempre.
+  const [iaQuery, setIaQuery] = useState<string | null>(null);
+  const [iaResultados, setIaResultados] = useState<Property[]>([]);
+  const [iaTodoLoDemas, setIaTodoLoDemas] = useState<Property[]>([]);
+  const [iaDisplayCount, setIaDisplayCount] = useState(PER_PAGE);
+  const iaActivo = iaQuery !== null;
+  // Evita que una respuesta vieja (ej. "casas") sobrescriba una más nueva
+  // ("casas en Centro") que terminó antes — mismo patrón que
+  // evaluarSeqRef en PublishForm.tsx.
+  const iaSeqRef = useRef(0);
   // Detalle del marcador seleccionado en modo mapa — antes no existía
   // ningún estado para esto, así que hacer clic en un pin no mostraba
   // nada (bug real reportado 2026-08-19). Mismo componente que /mapa.
@@ -252,7 +269,7 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
     // interpretarlo con IA, mismo criterio que handleSuggestion en
     // SearchBar.tsx.
     setSearchOpen(false);
-    updateFilters({ q: s });
+    updateFiltersManual({ q: s });
     addRecentSearch(s, user?.userId ?? null);
     setRecent(getRecentSearches(user?.userId ?? null));
   }
@@ -295,20 +312,45 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Interpreta el texto del buscador inline con IA (OpenRouter, vía
-  // src/lib/interpretarBusqueda.ts) y lo fusiona sobre los filtros que ya
-  // están activos — a diferencia de SearchBar.tsx (Home), aquí no se navega
-  // a una página nueva, así que solo se tocan los campos que la IA sí
-  // encontró; el resto de lo que el usuario ya eligió en el panel de
-  // filtros se queda igual. Se dispara al presionar Enter, no en cada
-  // tecleo — el filtro de texto simple (onChange de abajo) ya da feedback
-  // instantáneo mientras se escribe.
+  // Búsqueda por texto libre — POST /ia/buscar (docs/BACKEND-INTEGRACION-
+  // IA-BUSCAR-16092026.md). El backend ya hace búsqueda+clasificación+
+  // ranking+proximidad; el resultado se muestra tal cual, sin volver a
+  // pasar por updateFilters()/applyFilters(). Si falla (timeout, error
+  // HTTP, red), cae a `aplicarBusquedaFiltrosFallback` — el flujo anterior
+  // completo (interpretarBusqueda → filtros → updateFilters), sin cambios.
   async function aplicarBusquedaIA(query: string) {
     const texto = query.trim();
     if (!texto) return;
     addRecentSearch(texto, user?.userId ?? null);
     setRecent(getRecentSearches(user?.userId ?? null));
     setBuscandoIA(true);
+    const seq = ++iaSeqRef.current;
+    try {
+      const resultado = await buscarIA(texto);
+      if (iaSeqRef.current !== seq) return; // respuesta vieja, ya hay una búsqueda más nueva en curso
+      setBuscandoIA(false);
+      if (resultado.fueraDeCobertura) {
+        toast.info('Por ahora solo operamos en el estado de Tabasco.');
+        setIaQuery(null);
+        return;
+      }
+      setIaResultados(resultado.propiedades);
+      setIaTodoLoDemas(resultado.todoLoDemas);
+      setIaDisplayCount(PER_PAGE);
+      setIaQuery(texto);
+    } catch {
+      if (iaSeqRef.current !== seq) return;
+      setIaQuery(null);
+      await aplicarBusquedaFiltrosFallback(texto, seq);
+    }
+  }
+
+  // Flujo anterior (interpretarBusqueda → filtros → updateFilters →
+  // useSearch/applyFilters) — sin cambios de lógica, solo se le quitaron
+  // las 3 líneas iniciales (addRecentSearch/setBuscandoIA) porque
+  // aplicarBusquedaIA ya las hizo. Ahora es el fallback de esa función
+  // cuando /ia/buscar falla, y ya no se llama directo desde el submit.
+  async function aplicarBusquedaFiltrosFallback(texto: string, seq: number) {
     let filtros = await interpretarBusqueda(texto);
     // Auditoría en vivo 2026-09-03: bajo latencia alta contra OpenRouter,
     // la extracción de colonia puede perderse en silencio. Reintento
@@ -336,6 +378,7 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
       }
     }
     setBuscandoIA(false);
+    if (iaSeqRef.current !== seq) return; // ya hay una búsqueda más nueva en curso
 
     // PR #89 del backend (ya deployado, confirmado en vivo 2026-09-03) —
     // la consulta nombró una ciudad fuera de Tabasco. Avisa en vez de
@@ -406,6 +449,19 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
     updateFilters(updates);
   }
 
+  // Cualquier interacción con filtros MANUALES (panel, sort, chips del mapa,
+  // sugerencia de lugar exacto, "quitar filtros") sale del modo búsqueda-IA
+  // y vuelve al flujo de siempre — pedido explícito del backend: los
+  // filtros manuales no deben verse afectados por esta integración.
+  function updateFiltersManual(updates: Partial<SearchFilters>) {
+    setIaQuery(null);
+    updateFilters(updates);
+  }
+  function clearFiltersManual() {
+    setIaQuery(null);
+    clearFilters();
+  }
+
   // Se propaga a cada tarjeta para que el enlace a la ficha lleve el mismo
   // landmark buscado — sin esto, alguien que llega a una propiedad desde
   // una búsqueda "cerca de X" no tenía ninguna forma de ver a qué distancia
@@ -422,6 +478,12 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
         ? `?cercaColonia=${coloniaCercana.key}`
         : '';
 
+  // En modo IA no se resuelve ningún landmark/colonia propio (esos campos
+  // de `filters` no se tocan durante una búsqueda IA) — pedido explícito
+  // del backend: no mostrar todavía distancia/etiquetas nuevas para
+  // resultados de /ia/buscar, primero validar la integración funcional.
+  const landmarkQueryEfectivo = iaActivo ? '' : landmarkQuery;
+
   // "1.2 km de Parque La Choca" bajo cada tarjeta — pedido explícito
   // 2026-08-23, SOLO para las tarjetas de "Resultados" (búsqueda real
   // "cerca de X" con landmark o colonia con coordenada verificada), nunca
@@ -430,6 +492,7 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
   // distancia ahí sería engañoso. Reusa el mismo landmark/colonia ya
   // resueltos arriba en vez de resolverlos de nuevo por cada tarjeta.
   function distanciaLabel(p: Property): string | undefined {
+    if (iaActivo) return undefined;
     if (landmarkResuelto) {
       return `${distanciaKm(p.lat, p.lng, landmarkResuelto.lat, landmarkResuelto.lng).toFixed(1)} km de ${landmarkResuelto.label}`;
     }
@@ -448,22 +511,40 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
     return undefined;
   }
 
-  // useMemo por referencia de allResults — sin esto, cualquier re-render del
-  // padre (hover, toggle de UI, etc.) generaba un array nuevo aunque los
-  // datos fueran idénticos, y MapView.tsx compara `markers` por referencia:
-  // eso disparaba una reconstrucción completa del índice de clustering y de
-  // TODOS los marcadores DOM por nada. Pedido explícito 2026-09-07
-  // (optimizar fluidez del mapa). `allResults` ya es estable entre renders
-  // cuando useSearch no volvió a hacer fetch (setState solo cambia
-  // referencia cuando de verdad llegan datos nuevos).
-  const mapMarkers = useMemo(() => allResults.map((p) => ({
+  // Fuente de datos según el modo — IA (POST /ia/buscar, ya rankeado) o el
+  // flujo de siempre (useSearch → applyFilters/searchProperties). El resto
+  // del render usa SIEMPRE estas variables unificadas, nunca `results`/
+  // `allResults`/`total`/`hasMore`/`isLoading` directo, para no bifurcar
+  // el JSX entero en dos copias.
+  const resultadosMostrados = iaActivo ? iaResultados.slice(0, iaDisplayCount) : results;
+  const totalMostrado = iaActivo ? iaResultados.length : total;
+  const hasMoreMostrado = iaActivo ? iaDisplayCount < iaResultados.length : hasMore;
+  const marcadoresFuente = iaActivo ? iaResultados : allResults;
+  function handleLoadMore() {
+    if (iaActivo) { setIaDisplayCount((c) => c + PER_PAGE); return; }
+    loadMore();
+  }
+  // En modo IA, la única carga real es `buscandoIA` (la llamada a
+  // /ia/buscar) — `isLoading` (useSearch) queda inerte porque `filters` no
+  // cambia mientras se navegan resultados IA.
+  const cargandoMostrado = iaActivo ? buscandoIA : isLoading;
+
+  // useMemo por referencia de marcadoresFuente — sin esto, cualquier
+  // re-render del padre (hover, toggle de UI, etc.) generaba un array nuevo
+  // aunque los datos fueran idénticos, y MapView.tsx compara `markers` por
+  // referencia: eso disparaba una reconstrucción completa del índice de
+  // clustering y de TODOS los marcadores DOM por nada. Pedido explícito
+  // 2026-09-07 (optimizar fluidez del mapa). `marcadoresFuente` ya es
+  // estable entre renders cuando su fuente no volvió a cambiar (setState
+  // solo cambia referencia cuando de verdad llegan datos nuevos).
+  const mapMarkers = useMemo(() => marcadoresFuente.map((p) => ({
     id: p.id, slug: p.slug, lat: p.latPublico, lng: p.lngPublico,
     titulo: p.titulo, precio: p.precio, operacion: p.operacion,
     tipo: p.tipo, colonia: p.colonia, foto: p.fotos[0] ?? null,
     riesgoInundacion: p.riesgoInundacion,
-  })), [allResults]);
+  })), [marcadoresFuente]);
 
-  const skeletonCount = Math.min(total || PER_PAGE, PER_PAGE);
+  const skeletonCount = Math.min(totalMostrado || PER_PAGE, PER_PAGE);
 
   // `results` ya viene ordenado por `filters.sort` (useSearch → applyFilters
   // → sortProperties) — el primero de la lista YA ES el resultado que pidió
@@ -472,10 +553,15 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
   // un número explícito ("las 3 más baratas", ver `limite` en ai.ts REGLA
   // 9b), ya pidió una lista de verdad, no "la mejor destacada + el resto"
   // — se muestra como grid plano de exactamente esas N, ya en el orden
-  // pedido. Tampoco aplica en vista mapa.
-  const etiquetaHero = !filters.limite ? heroLabel(filters.sort) : null;
-  const heroProperty = etiquetaHero && viewMode === 'grid' && results.length > 0 ? results[0] : null;
-  const restoResultados = heroProperty ? results.filter((p) => p.id !== heroProperty.id) : results;
+  // pedido. Tampoco aplica en vista mapa NI en modo IA — el orden de
+  // /ia/buscar ya viene resuelto por el backend (score+proximidad), no por
+  // un `sort` simple, así que no hay un "primero con significado propio"
+  // que destacar sin reinterpretar ese ranking (pedido explícito: no
+  // mostrar etiquetas nuevas todavía, primero validar la integración
+  // funcional).
+  const etiquetaHero = !iaActivo && !filters.limite ? heroLabel(filters.sort) : null;
+  const heroProperty = etiquetaHero && viewMode === 'grid' && resultadosMostrados.length > 0 ? resultadosMostrados[0] : null;
+  const restoResultados = heroProperty ? resultadosMostrados.filter((p) => p.id !== heroProperty.id) : resultadosMostrados;
 
   // Cuando hay una búsqueda real activa (no solo navegando el catálogo
   // completo), nunca se deja a la persona con cero resultados relacionados
@@ -490,7 +576,7 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
   // del filtro como "encontrado por la IA" era falso incluso cuando la
   // búsqueda sí pasó por la IA, y directamente engañoso cuando la búsqueda
   // activa venía solo del panel de filtros manuales.
-  const hayBusquedaActiva = activeCount > 0;
+  const hayBusquedaActiva = activeCount > 0 || iaActivo;
 
   // ⚠️ 2026-08-23: antes `getResultadosSimilares` puntuaba el catálogo
   // COMPLETO por cuántos criterios suaves cumplía cada propiedad. Ya no se
@@ -502,13 +588,16 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
   // ordena por cuántos filtros suaves comparte), pero sigue siendo
   // genuinamente "parecido" (mismo tipo, misma operación) sin traer nada
   // de más.
+  // En modo IA, "todo lo demás" ya viene resuelto por el propio backend
+  // (iaTodoLoDemas) — este estado/efecto se pausa por completo para no
+  // pedir un segundo "parecido" que compita con el que ya mandó /ia/buscar.
   const [resultadosSimilares, setResultadosSimilares] = useState<Property[]>([]);
   useEffect(() => {
     let cancelado = false;
     function limpiar() {
       if (!cancelado) setResultadosSimilares([]);
     }
-    if (!hayBusquedaActiva || viewMode !== 'grid' || !filters.tipo || !filters.operacion) {
+    if (iaActivo || !hayBusquedaActiva || viewMode !== 'grid' || !filters.tipo || !filters.operacion) {
       limpiar();
       return;
     }
@@ -520,7 +609,11 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
       })
       .catch(limpiar);
     return () => { cancelado = true; };
-  }, [hayBusquedaActiva, viewMode, filters.tipo, filters.operacion, allResults]);
+  }, [iaActivo, hayBusquedaActiva, viewMode, filters.tipo, filters.operacion, allResults]);
+
+  // En modo IA, "Todo lo demás" sale directo de buscarIA() (ya viene
+  // agrupado por el backend) — mismo slot visual que `resultadosSimilares`.
+  const demasQueMostrar = iaActivo ? iaTodoLoDemas : resultadosSimilares;
 
   return (
     <div className="min-h-screen bg-page">
@@ -562,10 +655,10 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
             <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-display font-black text-gray-900 leading-tight" style={{ letterSpacing: '-0.02em' }}>
-                {buildTitle(filters)}
+                {iaActivo ? `Resultados para "${iaQuery}"` : buildTitle(filters)}
                 {!isLoading && !buscandoIA && (
                   <span className="ml-2 text-sm font-semibold text-gray-400 align-middle">
-                    ({total})
+                    ({totalMostrado})
                   </span>
                 )}
               </h1>
@@ -621,7 +714,7 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
 
               {/* Sort */}
               <div className="hidden sm:block">
-                <SortSelect value={filters.sort ?? 'relevancia'} onChange={(sort) => updateFilters({ sort })} />
+                <SortSelect value={filters.sort ?? 'relevancia'} onChange={(sort) => updateFiltersManual({ sort })} />
               </div>
 
               {/* Mobile filter button */}
@@ -672,7 +765,7 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
               ) : inputValue && (
                 <button
                   type="button"
-                  onClick={() => { setInputValue(''); updateFilters({ q: '' }); }}
+                  onClick={() => { setInputValue(''); updateFiltersManual({ q: '' }); }}
                   aria-label="Limpiar búsqueda"
                   className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600"
                 >
@@ -730,7 +823,7 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
           </form>
 
           {/* Row 3: Active filters */}
-          <ActiveFilters filters={filters} onUpdate={updateFilters} onClear={clearFilters} />
+          <ActiveFilters filters={filters} onUpdate={updateFiltersManual} onClear={clearFiltersManual} />
         </div>
       </div>
 
@@ -764,10 +857,10 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                   <div className="p-4">
                     <FilterPanel
                       filters={filters}
-                      onUpdate={updateFilters}
-                      onClear={clearFilters}
+                      onUpdate={updateFiltersManual}
+                      onClear={clearFiltersManual}
                       activeCount={activeCount}
-                      total={total}
+                      total={totalMostrado}
                     />
                   </div>
                 </div>
@@ -780,8 +873,8 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
 
             {/* Mobile sort */}
             <div className="flex items-center justify-between mb-3 sm:hidden">
-              <span className="text-xs text-gray-500 font-medium">{total} resultado{total !== 1 ? 's' : ''}</span>
-              <SortSelect value={filters.sort ?? 'relevancia'} onChange={(sort) => updateFilters({ sort })} />
+              <span className="text-xs text-gray-500 font-medium">{totalMostrado} resultado{totalMostrado !== 1 ? 's' : ''}</span>
+              <SortSelect value={filters.sort ?? 'relevancia'} onChange={(sort) => updateFiltersManual({ sort })} />
             </div>
 
             {/* Map view — el mapa siempre se renderiza, aunque no haya
@@ -833,7 +926,7 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                   {MAP_TYPE_CHIPS.map((chip) => (
                     <button
                       key={chip.value}
-                      onClick={() => updateFilters({ tipo: chip.value as PropertyType | '' })}
+                      onClick={() => updateFiltersManual({ tipo: chip.value as PropertyType | '' })}
                       className={`flex-shrink-0 text-sm font-semibold px-3 py-2 rounded-xl shadow-sm border transition-all ${
                         (filters.tipo ?? '') === chip.value
                           ? 'bg-brand text-white border-brand'
@@ -847,7 +940,7 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                   {MAP_OP_CHIPS.map((chip) => (
                     <button
                       key={chip.value}
-                      onClick={() => updateFilters({ operacion: chip.value as OperationType | '' })}
+                      onClick={() => updateFiltersManual({ operacion: chip.value as OperationType | '' })}
                       className={`flex-shrink-0 text-sm font-semibold px-3 py-2 rounded-xl shadow-sm border transition-all ${
                         (filters.operacion ?? '') === chip.value
                           ? 'bg-accent text-white border-accent'
@@ -901,13 +994,13 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                     Con datos ya en pantalla, un refetch de fondo no debe
                     vaciar la vista — mismo criterio "no vaciar el mapa por
                     un fetch en curso" ya usado en MapaClient.tsx. */}
-                {isLoading && results.length === 0 ? (
+                {cargandoMostrado && resultadosMostrados.length === 0 ? (
                   <div className={PROPERTY_GRID_CLASSES}>
                     {Array.from({ length: skeletonCount }).map((_, i) => (
                       <Skeleton key={i} variant="card" />
                     ))}
                   </div>
-                ) : results.length === 0 ? (
+                ) : resultadosMostrados.length === 0 ? (
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col items-center py-16 px-6">
                     {/* Mismo criterio que not-found.tsx: un solo mascota de
                         "esto no está/no se encontró" en toda la plataforma
@@ -919,23 +1012,25 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                         que existiera ningún h2 antes (hallazgo de
                         accesibilidad, jerarquía de encabezados). */}
                     <h2 className="font-heading font-bold text-gray-800 text-lg mb-2 text-center">
-                      {esBusquedaSinInterpretar(filters) ? 'No pudimos interpretar tu búsqueda' : 'Sin resultados'}
+                      {iaActivo ? 'Sin resultados' : esBusquedaSinInterpretar(filters) ? 'No pudimos interpretar tu búsqueda' : 'Sin resultados'}
                     </h2>
                     <p className="text-gray-400 text-sm mb-2 max-w-sm leading-relaxed text-center">
-                      {esBusquedaSinInterpretar(filters)
-                        ? 'Prueba con menos palabras (ej. solo el lugar que buscas) o usa los filtros para acotar a mano.'
-                        : resultadosSimilares.length > 0
-                          ? 'No encontramos propiedades con esos filtros exactos — esto es lo más parecido:'
-                          : 'No encontramos propiedades con esos filtros.'}
+                      {iaActivo
+                        ? 'No encontramos propiedades para esa búsqueda.'
+                        : esBusquedaSinInterpretar(filters)
+                          ? 'Prueba con menos palabras (ej. solo el lugar que buscas) o usa los filtros para acotar a mano.'
+                          : demasQueMostrar.length > 0
+                            ? 'No encontramos propiedades con esos filtros exactos — esto es lo más parecido:'
+                            : 'No encontramos propiedades con esos filtros.'}
                     </p>
-                    <button onClick={clearFilters}
+                    <button onClick={clearFiltersManual}
                       className="text-brand font-semibold text-sm hover:underline mb-8">
                       Quitar filtros
                     </button>
-                    {resultadosSimilares.length > 0 ? (
+                    {demasQueMostrar.length > 0 ? (
                       <div className={`${PROPERTY_GRID_CLASSES} w-full`}>
-                        {resultadosSimilares.map((p) => (
-                          <PropertyCard key={p.id} property={p} landmarkQuery={landmarkQuery} />
+                        {demasQueMostrar.map((p) => (
+                          <PropertyCard key={p.id} property={p} landmarkQuery={landmarkQueryEfectivo} />
                         ))}
                       </div>
                     ) : (
@@ -945,18 +1040,19 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                     )}
                   </div>
                 ) : (
-                  // opacity/pointer-events atados a isLoading — sin esto, un
-                  // cambio de filtro seguía mostrando la lista VIEJA (a veces
-                  // el catálogo completo sin filtrar, sembrado por SSR) como
-                  // si fuera el resultado final durante el debounce+fetch de
-                  // useSearch, hasta que results se reemplazaba de golpe.
-                  // Pedido explícito 2026-09-07. No usa skeletons acá a
-                  // propósito (ver comentario de arriba, línea ~878) — esto
-                  // solo atenúa lo ya visible, no lo reemplaza.
-                  <div className={`transition-opacity duration-150 ${isLoading ? 'opacity-40 pointer-events-none' : ''}`}>
+                  // opacity/pointer-events atados a cargandoMostrado — sin
+                  // esto, un cambio de filtro seguía mostrando la lista VIEJA
+                  // (a veces el catálogo completo sin filtrar, sembrado por
+                  // SSR) como si fuera el resultado final durante el
+                  // debounce+fetch de useSearch, hasta que results se
+                  // reemplazaba de golpe. Pedido explícito 2026-09-07. No usa
+                  // skeletons acá a propósito (ver comentario de arriba,
+                  // línea ~878) — esto solo atenúa lo ya visible, no lo
+                  // reemplaza.
+                  <div className={`transition-opacity duration-150 ${cargandoMostrado ? 'opacity-40 pointer-events-none' : ''}`}>
                     {hayBusquedaActiva && (
                       <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">
-                        Resultados ({results.length})
+                        Resultados ({resultadosMostrados.length})
                       </p>
                     )}
                     {heroProperty && (
@@ -966,7 +1062,7 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                           {etiquetaHero}
                         </p>
                         <div className="max-w-sm">
-                          <PropertyCard property={heroProperty} landmarkQuery={landmarkQuery} distanciaLabel={distanciaLabel(heroProperty)} />
+                          <PropertyCard property={heroProperty} landmarkQuery={landmarkQueryEfectivo} distanciaLabel={distanciaLabel(heroProperty)} />
                         </div>
                         {restoResultados.length > 0 && (
                           <p className="text-xs text-gray-400 font-medium mt-5 mb-2">Resto de los resultados</p>
@@ -981,7 +1077,7 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                           roto entre 2-5 columnas según el ancho). */}
                       {restoResultados.map((p, i) => (
                         <Fragment key={p.id}>
-                          <PropertyCard property={p} landmarkQuery={landmarkQuery} distanciaLabel={distanciaLabel(p)} />
+                          <PropertyCard property={p} landmarkQuery={landmarkQueryEfectivo} distanciaLabel={distanciaLabel(p)} />
                           {(i + 1) % 9 === 0 && (
                             <AdSlot
                               slot="propiedadesInFeed"
@@ -996,17 +1092,17 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                     </div>
 
                     {/* Load more */}
-                    {hasMore && (
+                    {hasMoreMostrado && (
                       <div className="mt-8 flex flex-col items-center gap-2">
                         <button
-                          onClick={loadMore}
+                          onClick={handleLoadMore}
                           className="flex items-center gap-2 bg-white hover:bg-brand-pale border-2 border-gray-200 hover:border-brand/40 text-gray-700 hover:text-brand font-semibold text-sm px-8 py-3 rounded-2xl transition-all shadow-sm"
                         >
                           <ChevronDown size={16} />
-                          Cargar {Math.min(12, total - results.length)} propiedades más
+                          Cargar {Math.min(12, totalMostrado - resultadosMostrados.length)} propiedades más
                         </button>
                         <p className="text-xs text-gray-400">
-                          Mostrando {results.length} de {total}
+                          Mostrando {resultadosMostrados.length} de {totalMostrado}
                         </p>
                       </div>
                     )}
@@ -1014,22 +1110,22 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                     {/* "Todo lo demás" — lo más parecido que no cumplió TODOS los
                         filtros, para no dejar la búsqueda sintiéndose demasiado
                         estrecha cuando sí hubo resultados exactos pero pocos. */}
-                    {!hasMore && resultadosSimilares.length > 0 && (
+                    {!hasMoreMostrado && demasQueMostrar.length > 0 && (
                       <div className="mt-10 pt-8 border-t border-gray-100">
                         <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">
-                          Todo lo demás ({resultadosSimilares.length})
+                          Todo lo demás ({demasQueMostrar.length})
                         </p>
                         <div className={PROPERTY_GRID_CLASSES}>
-                          {resultadosSimilares.map((p) => (
-                            <PropertyCard key={p.id} property={p} landmarkQuery={landmarkQuery} />
+                          {demasQueMostrar.map((p) => (
+                            <PropertyCard key={p.id} property={p} landmarkQuery={landmarkQueryEfectivo} />
                           ))}
                         </div>
                       </div>
                     )}
 
-                    {!hasMore && results.length > 0 && total > 12 && (
+                    {!hasMoreMostrado && resultadosMostrados.length > 0 && totalMostrado > 12 && (
                       <p className="mt-8 text-center text-xs text-gray-400">
-                        Has visto todas las {total} propiedades
+                        Has visto todas las {totalMostrado} propiedades
                       </p>
                     )}
                   </div>
@@ -1060,10 +1156,10 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
             <div className="flex-1 overflow-y-auto p-5">
               <FilterPanel
                 filters={filters}
-                onUpdate={updateFilters}
-                onClear={clearFilters}
+                onUpdate={updateFiltersManual}
+                onClear={clearFiltersManual}
                 activeCount={activeCount}
-                total={total}
+                total={totalMostrado}
               />
             </div>
             <div className="flex-shrink-0 p-4 border-t border-white/10 bg-brand-dark">
@@ -1071,9 +1167,9 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                 onClick={() => setMobileFiltersOpen(false)}
                 className="w-full bg-white hover:bg-white/90 text-brand-dark font-bold py-3.5 rounded-2xl transition-colors text-sm"
               >
-                {total === 0
+                {totalMostrado === 0
                   ? 'Sin resultados — cambiar filtros'
-                  : `Ver ${total} propiedad${total !== 1 ? 'es' : ''}`}
+                  : `Ver ${totalMostrado} propiedad${totalMostrado !== 1 ? 'es' : ''}`}
               </button>
             </div>
           </div>
