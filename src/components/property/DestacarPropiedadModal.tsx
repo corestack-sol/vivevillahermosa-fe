@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Star } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -9,45 +8,32 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   propertyTitle: string;
-  onConfirm: (dias: number) => void;
+  onConfirm: () => void;
 }
 
-const OPCIONES_DIAS = [7, 15, 30];
-
-/** Compartido entre OwnerActionsBar (ficha pública) y /dashboard/propiedades. */
+/**
+ * Compartido entre OwnerActionsBar (ficha pública) y /dashboard/propiedades.
+ * Antes tenía un selector de 7/15/30 días que nunca se enviaba al backend
+ * (el DTO de PATCH /propiedades/:id no acepta ningún campo de expiración —
+ * ver docs/BACKEND-DESTACAR-EXPIRACION-16092026.md). Se quitó el selector
+ * falso: hoy "destacar" es un simple on/off sin vencimiento automático,
+ * el usuario lo quita manualmente cuando quiera con "Quitar destacado".
+ */
 export function DestacarPropiedadModal({ isOpen, onClose, propertyTitle, onConfirm }: Props) {
-  const [dias, setDias] = useState(15);
-
   function handleConfirmar() {
-    onConfirm(dias);
+    onConfirm();
     onClose();
   }
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Destacar propiedad" maxWidth="sm">
-      <div className="flex items-start gap-2.5 bg-brand-pale border border-brand/20 rounded-xl px-4 py-3 mb-5">
+      <div className="flex items-start gap-2.5 bg-brand-pale border border-brand/20 rounded-xl px-4 py-3 mb-6">
         <Star size={16} className="text-brand flex-shrink-0 mt-0.5" />
         <p className="text-sm text-brand-dark leading-relaxed">
-          <strong>{propertyTitle}</strong> aparecerá marcada como destacada en tu panel por el tiempo que
-          elijas. Vista previa: cuando exista el backend real, esto también hará que aparezca primero en
-          los resultados de búsqueda para otros usuarios.
+          <strong>{propertyTitle}</strong> aparecerá marcada como destacada y se posicionará primero en
+          los resultados de búsqueda. No tiene fecha de vencimiento automática todavía — se queda
+          destacada hasta que tú mismo la quites desde el mismo botón.
         </p>
-      </div>
-
-      <p className="text-sm font-medium text-gray-700 mb-2">¿Por cuánto tiempo?</p>
-      <div className="grid grid-cols-3 gap-2 mb-6">
-        {OPCIONES_DIAS.map((d) => (
-          <button
-            key={d}
-            type="button"
-            onClick={() => setDias(d)}
-            className={`border-2 rounded-xl py-2.5 text-sm font-semibold transition-colors ${
-              dias === d ? 'border-brand bg-brand-pale text-brand' : 'border-gray-200 text-gray-500 hover:border-brand/40'
-            }`}
-          >
-            {d} días
-          </button>
-        ))}
       </div>
 
       <div className="flex gap-3">

@@ -68,6 +68,19 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
     toast.info(`"${accion}" estará disponible cuando se conecte el panel real de propiedades (Módulo 2, Fase 2).`);
   }
 
+  async function quitarDestacado() {
+    try {
+      await backendFetch(`/propiedades/${propertyId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ featured: false }),
+      });
+      setMine((prev) => (prev ? { ...prev, featured: false } : prev));
+      toast.success('Se quitó el destacado.');
+    } catch {
+      toast.error('No se pudo quitar el destacado.');
+    }
+  }
+
   // `extra` — motivo/motivoDetalle (pausar) o encontradoEnPlataforma/
   // medioAlterno (archivar), ver docs/BACKEND-MOTIVOS-CIERRE-23082026.md.
   // Van como QUERY PARAMS, nunca en el body — verificado en vivo 2026-08-23:
@@ -168,12 +181,11 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
         {!ESTADOS_ARCHIVADOS.includes(mine.estado) && (
           <>
             {esProfesional && (
-              <Tooltip label={mine.featured ? 'Ya está destacada' : 'Destacar propiedad'}>
+              <Tooltip label={mine.featured ? 'Quitar destacado' : 'Destacar propiedad'}>
                 <button
                   type="button"
-                  disabled={mine.featured}
-                  onClick={() => setShowDestacar(true)}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center text-brand-dark/60 hover:text-amber-500 hover:bg-white transition-colors disabled:opacity-40 disabled:hover:text-brand-dark/60 disabled:hover:bg-transparent disabled:cursor-default"
+                  onClick={() => mine.featured ? quitarDestacado() : setShowDestacar(true)}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-brand-dark/60 hover:text-amber-500 hover:bg-white transition-colors"
                 >
                   <Star size={16} className={mine.featured ? 'fill-current text-amber-400' : ''} />
                 </button>
@@ -262,14 +274,14 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
         isOpen={showDestacar}
         onClose={() => setShowDestacar(false)}
         propertyTitle={mine.titulo}
-        onConfirm={async (dias) => {
+        onConfirm={async () => {
           try {
             await backendFetch(`/propiedades/${propertyId}`, {
               method: 'PATCH',
               body: JSON.stringify({ featured: true }),
             });
             setMine((prev) => (prev ? { ...prev, featured: true } : prev));
-            toast.success(`Propiedad destacada por ${dias} días.`);
+            toast.success('Propiedad destacada.');
           } catch {
             toast.error('No se pudo destacar la propiedad.');
           }

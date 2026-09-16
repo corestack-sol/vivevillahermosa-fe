@@ -183,7 +183,7 @@ export default function MisPropiedadesPage() {
     }
   }
 
-  async function confirmarDestacar(id: string, dias: number) {
+  async function confirmarDestacar(id: string) {
     try {
       await backendFetch(`/propiedades/${id}`, {
         method: 'PATCH',
@@ -192,9 +192,24 @@ export default function MisPropiedadesPage() {
       setItems((prev) => prev.map((it) => (
         it.property.id === id ? { ...it, property: { ...it.property, featured: true } } : it
       )));
-      toast.success(`Propiedad destacada por ${dias} días.`);
+      toast.success('Propiedad destacada.');
     } catch {
       toast.error('No se pudo destacar la propiedad.');
+    }
+  }
+
+  async function quitarDestacado(id: string) {
+    try {
+      await backendFetch(`/propiedades/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ featured: false }),
+      });
+      setItems((prev) => prev.map((it) => (
+        it.property.id === id ? { ...it, property: { ...it.property, featured: false } } : it
+      )));
+      toast.success('Se quitó el destacado.');
+    } catch {
+      toast.error('No se pudo quitar el destacado.');
     }
   }
 
@@ -420,12 +435,11 @@ export default function MisPropiedadesPage() {
                           se gateaba por estado archivado, cualquier cuenta
                           (particular incluida) la veía. */}
                       {esProfesional && (
-                        <Tooltip label={p.featured ? 'Ya está destacada' : 'Destacar propiedad'}>
+                        <Tooltip label={p.featured ? 'Quitar destacado' : 'Destacar propiedad'}>
                           <button
                             type="button"
-                            disabled={p.featured}
-                            onClick={() => setDestacando(p.id)}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-amber-500 hover:bg-amber-50 transition-colors disabled:opacity-40 disabled:hover:text-gray-400 disabled:hover:bg-transparent disabled:cursor-default"
+                            onClick={() => p.featured ? quitarDestacado(p.id) : setDestacando(p.id)}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-amber-500 hover:bg-amber-50 transition-colors"
                           >
                             <Star size={15} className={p.featured ? 'fill-current text-amber-400' : ''} />
                           </button>
@@ -510,7 +524,7 @@ export default function MisPropiedadesPage() {
           isOpen
           onClose={() => setDestacando(null)}
           propertyTitle={propiedadDestacando.property.titulo}
-          onConfirm={(dias) => confirmarDestacar(propiedadDestacando.property.id, dias)}
+          onConfirm={() => confirmarDestacar(propiedadDestacando.property.id)}
         />
       )}
     </div>
