@@ -100,18 +100,13 @@ export const COLONIAS_COORDS: ColoniaCoord[] = [
   // sin sufijo de sector, sin ambigüedad — a diferencia de Gaviotas Sur,
   // ver comentario ahí abajo).
   { key: 'gaviotas-norte', label: 'Gaviotas Norte', municipio: 'Centro', lat: 17.9811, lng: -92.9195, radioKm: RADIO_COLONIA_KM },
-  // ⚠️ Verificado 2026-08-21 junto con 'gaviotas-norte' de arriba — este
-  // valor (18.0089, -92.9278) también cae ~3.8km del cluster real en
-  // Nominatim, mismo tipo de error. A diferencia de Gaviotas Norte, NO hay
-  // un "Colonia Gaviotas Sur" sin sufijo en OSM — solo 3 variantes con
-  // sector ("Sector El Monal I/II", "Sector San José", lat 17.97-17.98,
-  // lng -92.90/-92.92), sin que ninguna sea claramente "la" colonia
-  // completa. Se deja el valor viejo sin tocar a propósito — corregirlo a
-  // ciegas eligiendo un sector arbitrario sería el mismo tipo de error que
-  // esto está arreglando. Necesita la misma verificación de dos fuentes
-  // independientes que ya exige el resto de este archivo antes de
-  // cambiarse.
-  { key: 'gaviotas-sur', label: 'Gaviotas Sur', municipio: 'Centro', lat: 18.0089, lng: -92.9278, radioKm: RADIO_COLONIA_KM },
+  // Corregida 2026-09-16 — reporte real: "Ir a zona" sobre Gaviotas Sur
+  // aterrizaba en un lugar que no era Gaviotas Sur. El valor anterior
+  // (18.0089, -92.9278, dejado sin tocar en la auditoría 2026-08-21 por
+  // falta de una fuente inequívoca — ver historial de este archivo)
+  // estaba a ~7km del punto real, dado directamente por el usuario
+  // (17.954721013531334, -92.89254323466423).
+  { key: 'gaviotas-sur', label: 'Gaviotas Sur', municipio: 'Centro', lat: 17.954721013531334, lng: -92.89254323466423, radioKm: RADIO_COLONIA_KM },
   { key: 'framboyanes', label: 'Framboyanes', municipio: 'Centro', lat: 18.0056, lng: -92.9288, radioKm: RADIO_COLONIA_KM },
   // "Sector Carrizal" — DISTINTO de "Fraccionamiento Carrizal" más abajo
   // (~3.4km de diferencia, verificado). Ninguno de los dos lleva un alias
