@@ -29,7 +29,7 @@ export const TERMS_SECTIONS: { title: string; body: string }[] = [
   },
   {
     title: '5. Información de historial de inundación',
-    body: 'La clasificación de historial de inundación mostrada en la Plataforma tiene carácter exclusivamente informativo y de referencia. Se basa en el Atlas de Riesgos del Municipio de Centro y otros registros históricos disponibles públicamente, que pueden estar desactualizados, ser incompletos o no aplicar con precisión a un predio específico. Esta clasificación no constituye una garantía, dictamen técnico, asesoría profesional ni responsabilidad de la Plataforma. Recomendamos verificar esta información directamente con el H. Ayuntamiento, IMPLAN, Protección Civil u otra autoridad competente antes de tomar cualquier decisión de compra, renta o inversión.',
+    body: 'La clasificación de historial de inundación mostrada en la Plataforma tiene carácter exclusivamente informativo y de referencia. Para el municipio de Centro (Villahermosa) se basa en el Atlas de Riesgos del Municipio de Centro, Tabasco; para los otros 16 municipios del estado, el nivel es declarado directamente por quien publica la propiedad, sin un atlas oficial equivalente contra el cual verificarlo. En ambos casos, la información puede estar desactualizada, ser incompleta o no aplicar con precisión a un predio específico. Esta clasificación no constituye una garantía, dictamen técnico, asesoría profesional ni responsabilidad de la Plataforma. Recomendamos verificar esta información directamente con el H. Ayuntamiento, IMPLAN, Protección Civil u otra autoridad competente antes de tomar cualquier decisión de compra, renta o inversión.',
   },
   {
     title: '6. Usos prohibidos',

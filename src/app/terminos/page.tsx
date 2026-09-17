@@ -19,7 +19,7 @@ export default function TerminosPage() {
         <Scale size={22} className="text-brand" />
         <h1 className="text-3xl font-heading font-bold text-gray-900">Términos y condiciones</h1>
       </div>
-      <p className="text-sm text-gray-400 mb-10">Vigente desde julio de 2026 · última actualización: 12 de septiembre de 2026</p>
+      <p className="text-sm text-gray-400 mb-10">Vigente desde julio de 2026 · última actualización: 17 de septiembre de 2026</p>
 
       <div className="prose prose-sm max-w-none text-gray-700 space-y-8">
         {TERMS_SECTIONS.map((s) => (
