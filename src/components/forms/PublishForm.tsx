@@ -1069,11 +1069,24 @@ export function PublishForm() {
     .filter((campo) => errors[campo])
     .map((campo) => ETIQUETAS_CAMPO[campo] ?? campo);
 
-  // Una foto marcada como no apta (contenido inapropiado detectado por IA)
-  // bloquea avanzar/publicar. "No relacionada" y señales normales de fraude
-  // solo advierten, no bloquean — la única excepción es un texto tan
-  // incoherente que no describe ninguna propiedad real (ver ai.ts).
+  // Una foto marcada como no apta (contenido inapropiado/obsceno/violento
+  // detectado por IA) bloquea avanzar/publicar. "No relacionada" (no
+  // parece ser del inmueble, pero contenido normal) y señales normales de
+  // fraude solo advierten, no bloquean CON 2+ FOTOS — decisión explícita
+  // 2026-09-17: el riesgo de falso positivo de la IA bloqueando una foto
+  // real pesa más que el caso de fraude que cubriría, siempre que haya
+  // otra foto real respaldando la publicación (ver unicaFotoConAdvertencia
+  // más abajo para el caso contrario). La única excepción real es un texto
+  // tan incoherente que no describe ninguna propiedad real (ver ai.ts).
   const fotoNoApta = fotos.find((f) => f.analisis !== 'pendiente' && !f.analisis.apta);
+  // Si la ÚNICA foto del set trae advertencia (no parece ser del inmueble,
+  // o señal de fraude), no hay ninguna otra foto real respaldando la
+  // publicación — pedido explícito 2026-09-17: en ese caso sí bloquea,
+  // aunque con 2+ fotos una advertencia sola no lo haga.
+  const unicaFotoConAdvertencia = fotos.length === 1 && (() => {
+    const a = fotos[0].analisis;
+    return a !== 'pendiente' && a.apta && (!a.relacionada || a.señalesFraude.length > 0);
+  })();
   // Sistema de 3 niveles (pedido explícito 2026-08-31) — bajo: no bloquea.
   // medio: se marca (banner ámbar, no bloquea). alto: ahora SÍ bloquea —
   // antes solo se mostraba como advertencia y la publicación seguía
@@ -1110,6 +1123,10 @@ export function PublishForm() {
       toast.error('Agrega al menos una foto real de la propiedad antes de continuar.');
       return;
     }
+    if (step === 4 && unicaFotoConAdvertencia) {
+      toast.error('Tu única foto no parece ser del inmueble — agrega otra foto real antes de continuar.');
+      return;
+    }
     if (step === 2 && esDowngrade && !confirmaRiesgoBajo) {
       toast.error('Confirma el aviso sobre el historial de inundación antes de continuar.');
       return;
@@ -1131,6 +1148,11 @@ export function PublishForm() {
     }
     if (sinFotos) {
       toast.error('Agrega al menos una foto real de la propiedad antes de publicar.');
+      setStep(4);
+      return;
+    }
+    if (unicaFotoConAdvertencia) {
+      toast.error('Tu única foto no parece ser del inmueble — agrega otra foto real antes de publicar.');
       setStep(4);
       return;
     }
@@ -1196,6 +1218,18 @@ export function PublishForm() {
     const fotosUrls = resultados
       .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
       .map((r) => r.value);
+    // Bug real reportado 2026-09-17: `sinFotos` (arriba) solo exige que
+    // haya al menos 1 foto SELECCIONADA antes de llegar aquí — no que
+    // alguna haya llegado a subirse de verdad. Si TODAS fallan (red,
+    // rechazo del backend en su propio análisis, Cloudinary caído), antes
+    // esto seguía adelante y creaba la propiedad con `fotos: []` —
+    // exactamente el caso que `sinFotos` existe para evitar, solo que
+    // corriéndose al momento equivocado. Se corta aquí: nunca se crea una
+    // publicación con cero fotos reales, sin importar por qué llegó a 0.
+    if (fotosUrls.length === 0) {
+      toast.error('Ninguna foto se pudo subir — revisa tu conexión e intenta publicar de nuevo.');
+      return;
+    }
     // Antes esto pasaba en silencio: la propiedad se publicaba con menos
     // fotos de las seleccionadas sin ningún aviso de cuál(es) fallaron.
     const fotosFallidas = resultados.length - fotosUrls.length;
@@ -1823,6 +1857,13 @@ export function PublishForm() {
                   const noApta = analisis !== 'pendiente' && !analisis.apta;
                   const advertencia = analisis !== 'pendiente' && analisis.apta
                     && (!analisis.relacionada || analisis.señalesFraude.length > 0);
+                  // Con 2+ fotos, `advertencia` sola no bloquea (hay otra
+                  // foto real de respaldo) — pero si ÉSTA es la única foto
+                  // del set, sí (ver unicaFotoConAdvertencia arriba). Se
+                  // muestra igual que "no apta" (overlay rojo), para que
+                  // quede claro por qué no se puede publicar.
+                  const bloqueaPorSerUnica = advertencia && unicaFotoConAdvertencia;
+                  const bloqueante = noApta || bloqueaPorSerUnica;
                   // "Borrosa" solo llega aquí para tipos exentos del
                   // bloqueo (TIPOS_SIN_BLOQUEO_BORROSA) — para el resto,
                   // addFiles() ya la rechazó antes de agregarla al estado.
@@ -1832,14 +1873,14 @@ export function PublishForm() {
                     : calidad?.sobreexpuesta ? 'Foto sobreexpuesta'
                     : null;
                   return (
-                    <div key={i} className={`relative group aspect-square rounded-xl overflow-hidden bg-gray-100 ${noApta ? 'ring-2 ring-red-500' : ''}`}>
+                    <div key={i} className={`relative group aspect-square rounded-xl overflow-hidden bg-gray-100 ${bloqueante ? 'ring-2 ring-red-500' : ''}`}>
                       <img src={foto.preview} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
-                      {i === 0 && !noApta && (
+                      {i === 0 && !bloqueante && (
                         <div className="absolute top-1.5 left-1.5 bg-accent text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md leading-none">
                           Principal
                         </div>
                       )}
-                      {calidadMsg && !noApta && (
+                      {calidadMsg && !bloqueante && (
                         <div
                           className="absolute top-1.5 right-9 w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center"
                           title={calidadMsg}
@@ -1858,7 +1899,13 @@ export function PublishForm() {
                           <p className="text-white text-[10px] font-bold leading-tight">Contenido inapropiado — quítala para publicar</p>
                         </div>
                       )}
-                      {advertencia && !noApta && (
+                      {bloqueaPorSerUnica && (
+                        <div className="absolute inset-0 bg-red-600/85 flex flex-col items-center justify-center text-center px-2 gap-1">
+                          <AlertCircle size={16} className="text-white" />
+                          <p className="text-white text-[10px] font-bold leading-tight">Tu única foto — agrega otra real para publicar</p>
+                        </div>
+                      )}
+                      {advertencia && !bloqueante && (
                         <div className="absolute bottom-1.5 left-1.5 right-1.5 bg-amber-500 text-white text-[9px] font-bold px-1.5 py-1 rounded-md leading-tight flex items-center gap-1">
                           <AlertCircle size={11} className="flex-shrink-0" />
                           {!analisis.relacionada ? '¿Es del inmueble?' : 'Posible foto no original'}
@@ -1867,7 +1914,7 @@ export function PublishForm() {
                       <button
                         type="button"
                         onClick={() => removePhoto(i)}
-                        className={`absolute top-1.5 right-1.5 w-7 h-7 bg-black/60 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-all opacity-100 ${noApta ? 'md:opacity-100' : 'md:opacity-0 md:group-hover:opacity-100'}`}
+                        className={`absolute top-1.5 right-1.5 w-7 h-7 bg-black/60 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-all opacity-100 ${bloqueante ? 'md:opacity-100' : 'md:opacity-0 md:group-hover:opacity-100'}`}
                         aria-label="Eliminar foto"
                       >
                         <X size={14} />
