@@ -20,13 +20,16 @@ import type { Zone, Municipality } from '@/types/zone';
 // Auditoría de derechos de autor 17/09/2026 (docs/AUDITORIA-FOTOS-
 // MUNICIPIOS-17092026.md, con la URL exacta del archivo de Commons de
 // cada una) — re-verificadas de cero, no solo confiando en el nombre de
-// autor que ya había en el código. Dos no tenían fuente real detrás
-// ("Miguel Marín" en Comalcalco, "ProtoplasmaKid" en Tenosique — ningún
-// archivo verificable de Tabasco a su nombre) y se quitaron por completo
-// (ver municipalities.json, `foto` ahora opcional) en vez de dejarlas
-// publicadas sin poder probar la fuente.
+// autor que ya había en el código. "Miguel Marín" (Comalcalco) y
+// "ProtoplasmaKid" (Tenosique) no tenían ningún archivo verificable de
+// Tabasco a su nombre — se quitaron esas 2 fotos, y luego se
+// reemplazaron por otras de Alfonsobouchot (ya verificado en 9 de los
+// otros 15 municipios), esta vez del lugar correcto: la pirámide de
+// ladrillo de Comalcalco y el puente sobre el Usumacinta en Tenosique
+// (coincide con la propia descripción de cada municipio). Con esto,
+// los 17 municipios tienen foto con fuente real confirmada.
 //
-// De las 15 restantes, 8 están licenciadas CC BY-SA (no dominio público)
+// De las 17, 10 están licenciadas CC BY-SA (no dominio público)
 // — esa licencia exige, además del autor, nombrar la licencia y avisar
 // que la obra se adaptó (se convirtió a .webp y se recortó). Antes solo
 // se mostraba el autor; `licencia` completa eso solo para las que de
@@ -40,6 +43,7 @@ interface CreditoFoto { autor: string; licencia?: { nombre: string; url: string 
 const MUNICIPIO_FOTO_CREDITO: Record<string, CreditoFoto> = {
   centro: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_3 },
   cardenas: { autor: 'Alfonsobouchot' },
+  comalcalco: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_3 },
   paraiso: { autor: 'Alfonsobouchot' },
   'jalpa-de-mendez': { autor: 'Olavarria10', licencia: CC_BY_SA_4 },
   nacajuca: { autor: 'Cultura Yokotan', licencia: CC_BY_SA_4 },
@@ -47,6 +51,7 @@ const MUNICIPIO_FOTO_CREDITO: Record<string, CreditoFoto> = {
   centla: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_3 },
   macuspana: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_4 },
   cunduacan: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_3 },
+  tenosique: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_4 },
   'emiliano-zapata': { autor: 'Kazekage AMT' },
   balancán: { autor: 'Kazekage AMT' },
   jonuta: { autor: 'Kazekage AMT' },
