@@ -482,12 +482,25 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
   // sugerencia de lugar exacto, "quitar filtros") sale del modo búsqueda-IA
   // y vuelve al flujo de siempre — pedido explícito del backend: los
   // filtros manuales no deben verse afectados por esta integración.
+  // Bug real reportado 2026-09-17: al presionar una opción del panel de
+  // filtros (izquierdo) después de haber buscado texto libre, el resultado
+  // se "rompía" — el texto seguía en el input y/o `filters.q` seguía
+  // activo, combinándose con el filtro nuevo (o dejando el input mostrando
+  // una búsqueda IA que ya no correspondía a nada activo). `q` se limpia
+  // por default aquí (a menos que quien llama SÍ quiera ponerlo, ej.
+  // handleSuggestionClick) — inputValue se resuelve al mismo valor de una
+  // vez en vez de esperar al efecto que sincroniza con filters.q, para
+  // cubrir también el caso de modo IA (filters.q nunca cambia ahí, ese
+  // efecto no se vuelve a disparar solo).
   function updateFiltersManual(updates: Partial<SearchFilters>) {
     setIaQuery(null);
-    updateFilters(updates);
+    const nextQ = updates.q ?? '';
+    setInputValue(nextQ);
+    updateFilters({ q: '', ...updates });
   }
   function clearFiltersManual() {
     setIaQuery(null);
+    setInputValue('');
     clearFilters();
   }
 
