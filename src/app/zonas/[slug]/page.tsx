@@ -15,19 +15,44 @@ import { backendFetchServer } from '@/lib/backendApiServer';
 import { PROPERTY_GRID_CLASSES } from '@/lib/gridClasses';
 import type { Zone, Municipality } from '@/types/zone';
 
-// Fotos reales de Wikimedia Commons (2026-08-19, pedido explícito) para el
-// hero de cada uno de los 17 municipios — antes era un degradado sólido sin
-// foto ("Ya existe ese componente pero solo como una card verde"). CC-BY-SA
-// exige crédito al autor; se muestra igual para las de dominio público, por
-// cortesía. Fuente/licencia de cada una documentada en el historial de este
-// cambio, no repetida aquí para no inflar el archivo.
-const MUNICIPIO_FOTO_CREDITO: Record<string, string> = {
-  centro: 'Alfonsobouchot', cardenas: 'Alfonsobouchot', comalcalco: 'Miguel Marín',
-  paraiso: 'Alfonsobouchot', 'jalpa-de-mendez': 'Olavarria10', nacajuca: 'Cultura Yokotan',
-  huimanguillo: 'Alfonsobouchot', centla: 'Alfonsobouchot', macuspana: 'Alfonsobouchot',
-  cunduacan: 'Alfonsobouchot', tenosique: 'ProtoplasmaKid', 'emiliano-zapata': 'Kazekage AMT',
-  balancán: 'Kazekage AMT', jonuta: 'Kazekage AMT', jalapa: 'Alfonsobouchot',
-  tacotalpa: 'Alfonsobouchot', teapa: 'Haikabio',
+// Fotos reales de Wikimedia Commons para el hero de cada municipio.
+//
+// Auditoría de derechos de autor 17/09/2026 (docs/AUDITORIA-FOTOS-
+// MUNICIPIOS-17092026.md, con la URL exacta del archivo de Commons de
+// cada una) — re-verificadas de cero, no solo confiando en el nombre de
+// autor que ya había en el código. Dos no tenían fuente real detrás
+// ("Miguel Marín" en Comalcalco, "ProtoplasmaKid" en Tenosique — ningún
+// archivo verificable de Tabasco a su nombre) y se quitaron por completo
+// (ver municipalities.json, `foto` ahora opcional) en vez de dejarlas
+// publicadas sin poder probar la fuente.
+//
+// De las 15 restantes, 8 están licenciadas CC BY-SA (no dominio público)
+// — esa licencia exige, además del autor, nombrar la licencia y avisar
+// que la obra se adaptó (se convirtió a .webp y se recortó). Antes solo
+// se mostraba el autor; `licencia` completa eso solo para las que de
+// verdad lo requieren. Las de dominio público (`licencia` ausente) no lo
+// necesitan legalmente, se les da crédito igual por cortesía.
+const CC_BY_SA_3 = { nombre: 'CC BY-SA 3.0', url: 'https://creativecommons.org/licenses/by-sa/3.0/' };
+const CC_BY_SA_4 = { nombre: 'CC BY-SA 4.0', url: 'https://creativecommons.org/licenses/by-sa/4.0/' };
+
+interface CreditoFoto { autor: string; licencia?: { nombre: string; url: string } }
+
+const MUNICIPIO_FOTO_CREDITO: Record<string, CreditoFoto> = {
+  centro: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_3 },
+  cardenas: { autor: 'Alfonsobouchot' },
+  paraiso: { autor: 'Alfonsobouchot' },
+  'jalpa-de-mendez': { autor: 'Olavarria10', licencia: CC_BY_SA_4 },
+  nacajuca: { autor: 'Cultura Yokotan', licencia: CC_BY_SA_4 },
+  huimanguillo: { autor: 'Alfonsobouchot' },
+  centla: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_3 },
+  macuspana: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_4 },
+  cunduacan: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_3 },
+  'emiliano-zapata': { autor: 'Kazekage AMT' },
+  balancán: { autor: 'Kazekage AMT' },
+  jonuta: { autor: 'Kazekage AMT' },
+  jalapa: { autor: 'Alfonsobouchot' },
+  tacotalpa: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_4 },
+  teapa: { autor: 'Haikabio', licencia: CC_BY_SA_3 },
 };
 
 // Radio generoso para "cerca de la zona" (el centro de una colonia/municipio
@@ -217,11 +242,29 @@ export default async function ZonaDetailPage({ params }: Props) {
               </div>
               <h1 className="text-3xl sm:text-4xl font-heading font-bold text-white drop-shadow-sm">{name}</h1>
             </div>
-            {isMunicipality && municipality?.foto && (
-              <span className="absolute top-3 right-3 bg-black/25 backdrop-blur-sm text-white/80 text-[10px] px-2 py-1 rounded-full">
-                Foto: {MUNICIPIO_FOTO_CREDITO[municipality.id] ?? 'Wikimedia Commons'} / Wikimedia Commons
-              </span>
-            )}
+            {isMunicipality && municipality?.foto && (() => {
+              const credito = MUNICIPIO_FOTO_CREDITO[municipality.id];
+              return (
+                <span className="absolute top-3 right-3 bg-black/25 backdrop-blur-sm text-white/80 text-[10px] px-2 py-1 rounded-full">
+                  Foto: {credito?.autor ?? 'Wikimedia Commons'}
+                  {credito?.licencia && (
+                    <>
+                      {' · '}
+                      <a
+                        href={credito.licencia.url}
+                        target="_blank"
+                        rel="noopener noreferrer license"
+                        className="underline hover:text-white"
+                      >
+                        {credito.licencia.nombre}
+                      </a>
+                      {', adaptada'}
+                    </>
+                  )}
+                  {' / Wikimedia Commons'}
+                </span>
+              );
+            })()}
           </div>
 
           {/* Description */}

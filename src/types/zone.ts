@@ -6,7 +6,11 @@ export interface Municipality {
   lng: number;
   propiedades: number;
   descripcion: string;
-  foto: string;
+  // Opcional — auditoría de derechos de autor 17/09/2026 (docs/AUDITORIA-
+  // FOTOS-MUNICIPIOS-17092026.md): 2 de 17 fotos no tenían fuente
+  // verificable en Wikimedia Commons y se quitaron. Sin foto, la UI cae
+  // a un ícono genérico (zonas/[slug]/page.tsx) en vez de romper.
+  foto?: string;
   cercaDosoBocas?: boolean;
 }
 
