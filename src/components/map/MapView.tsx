@@ -314,7 +314,15 @@ export function MapView({
             const nombre = m.id === 'centro' ? 'Villahermosa' : m.nombre;
             const el = elementFromHtml(municipioLabelHtml(nombre));
             el.style.zIndex = '5';
-            new Marker({ element: el, anchor: 'center' }).setLngLat([m.lng, m.lat]).addTo(map);
+            // Reporte real 2026-09-17: con el zoom más alejado, todas las
+            // propiedades de un municipio colapsan en UN cluster centrado
+            // justo en este mismo punto — el label (ganador del empate de
+            // z-index desde el fix de arriba) quedaba pintado ENCIMA del
+            // número del badge, tapándolo. offset (soportado nativo por
+            // Marker de MapLibre) sube el label lo suficiente para
+            // despejar el badge más grande (44px, conteo >99) sin alejarlo
+            // demasiado cuando no hay cluster debajo.
+            new Marker({ element: el, anchor: 'center', offset: [0, -34] }).setLngLat([m.lng, m.lat]).addTo(map);
           });
 
           // Sin esto, el municipio queda con DOS nombres encimados: el
