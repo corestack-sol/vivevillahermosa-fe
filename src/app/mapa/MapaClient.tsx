@@ -17,6 +17,8 @@ import { getColoniasOrdenadasPorDemanda, getPropertiesInBounds, type ColoniaCard
 import { matchColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
 import { precargarLandmarks } from '@/lib/landmarks';
 import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/context/ToastContext';
+import { useInstallPwa } from '@/hooks/useInstallPwa';
 import { SelectedPropertyCard } from '@/components/map/SelectedPropertyCard';
 import type { MapMarker, MapControls, MapBounds } from '@/components/map/MapView';
 import { estaEnBounds } from '@/lib/mapGeo';
@@ -67,6 +69,8 @@ interface Props { allProperties: Property[] }
 export function MapaClient({ allProperties }: Props) {
   const { filters, updateFilters, clearFilters, activeCount } = useFilters();
   const { user } = useAuth();
+  const toast = useToast();
+  const { instalada } = useInstallPwa();
 
   // `allProperties` (SSR, mapa/page.tsx) es solo el primer pintado — pedido
   // explícito 2026-08-23: a cientos/miles de propiedades activas, traer el
@@ -114,7 +118,6 @@ export function MapaClient({ allProperties }: Props) {
   const [inundacionOpen, setInundacionOpen] = useState(true);
   const [irAZonaOpen,    setIrAZonaOpen]    = useState(true);
   const [geoLoading,    setGeoLoading]    = useState(false);
-  const [geoError,      setGeoError]      = useState('');
 
   // `landmarksCache`/`coloniasDescubiertasCache` (src/lib/landmarks.ts,
   // src/lib/colonias.ts) son variables de módulo llenadas por un fetch
@@ -293,16 +296,42 @@ export function MapaClient({ allProperties }: Props) {
     }
   }
 
+  // Reporte real 2026-09-17: en iPhone, "Mi ubicación" nunca funcionaba —
+  // causa real: la app instalada en pantalla de inicio (manifest.ts,
+  // display:'standalone') corre en un contexto WebKit separado, y Safari/
+  // iOS tiene una limitación conocida y documentada (no un bug de este
+  // código): dentro de una PWA standalone en iOS, el permiso de
+  // geolocalización casi nunca se concede — el mismo sitio abierto en una
+  // pestaña normal de Safari sí funciona. Antes el mensaje de error era
+  // genérico ("No se pudo obtener tu ubicación") sin importar la causa
+  // real, así que nadie sabía que el arreglo era abrir el sitio en Safari
+  // en vez de la app instalada. Ahora se distingue por `err.code`
+  // (estándar de la Geolocation API) y, en el caso de permiso denegado
+  // dentro de la app instalada en iOS, se da el mensaje específico y
+  // accionable.
   function handleGeolocate() {
-    if (!navigator.geolocation) { setGeoError('Tu navegador no soporta geolocalización'); return; }
+    if (!navigator.geolocation) { toast.error('Tu navegador no soporta geolocalización.'); return; }
     setGeoLoading(true);
-    setGeoError('');
+    const esIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
         mapControls?.flyTo(coords.latitude, coords.longitude, 15);
         setGeoLoading(false);
       },
-      () => { setGeoError('No se pudo obtener tu ubicación'); setGeoLoading(false); },
+      (err) => {
+        setGeoLoading(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          toast.error(
+            esIOS && instalada
+              ? 'iOS no comparte tu ubicación dentro de la app instalada — abre vivevillahermosa.corestacksolutions.com.mx en Safari para usar "Mi ubicación".'
+              : 'Activa el permiso de ubicación para este sitio en los ajustes de tu navegador.'
+          );
+        } else if (err.code === err.TIMEOUT) {
+          toast.error('Tardó demasiado en obtener tu ubicación — intenta de nuevo.');
+        } else {
+          toast.error('No se pudo determinar tu ubicación.');
+        }
+      },
       { timeout: 8000 }
     );
   }
@@ -729,16 +758,6 @@ export function MapaClient({ allProperties }: Props) {
               : <Navigation size={16} />}
           </button>
         </div>
-
-        {/* Geo error tooltip — bottom-36 → bottom-44, misma corrección que
-            el grupo de botones de abajo (+32px), para seguir apareciendo
-            arriba del botón "Mi ubicación" y no encima. */}
-        {geoError && (
-          <div className="absolute bottom-44 right-3 z-[1001] bg-red-50 border border-red-200
-                          text-red-600 text-sm px-3 py-2 rounded-xl shadow-md max-w-48">
-            {geoError}
-          </div>
-        )}
 
         {/* ── Flood risk legend — equivalente táctil de "Inundación" del
             panel de escritorio, mismo motivo/mismo arreglo que el botón
