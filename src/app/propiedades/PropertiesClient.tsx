@@ -482,26 +482,32 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
   // sugerencia de lugar exacto, "quitar filtros") sale del modo búsqueda-IA
   // y vuelve al flujo de siempre — pedido explícito del backend: los
   // filtros manuales no deben verse afectados por esta integración.
-  // Bug real reportado 2026-09-17: al presionar una opción del panel de
-  // filtros (izquierdo) después de haber buscado texto libre, el resultado
-  // se "rompía" — el texto seguía en el input y/o `filters.q` seguía
-  // activo, combinándose con el filtro nuevo (o dejando el input mostrando
-  // una búsqueda IA que ya no correspondía a nada activo). `q` se limpia
-  // por default aquí (a menos que quien llama SÍ quiera ponerlo, ej.
-  // handleSuggestionClick) — inputValue se resuelve al mismo valor de una
-  // vez en vez de esperar al efecto que sincroniza con filters.q, para
-  // cubrir también el caso de modo IA (filters.q nunca cambia ahí, ese
-  // efecto no se vuelve a disparar solo).
   function updateFiltersManual(updates: Partial<SearchFilters>) {
     setIaQuery(null);
-    const nextQ = updates.q ?? '';
-    setInputValue(nextQ);
-    updateFilters({ q: '', ...updates });
+    updateFilters(updates);
   }
   function clearFiltersManual() {
     setIaQuery(null);
-    setInputValue('');
     clearFilters();
+  }
+
+  // Bug real reportado 2026-09-17, acotado 2026-09-17: SOLO el panel de
+  // filtros verde (FilterPanel, sidebar de escritorio + drawer móvil) debe
+  // limpiar el input de búsqueda — pedido explícito de no tocarlo desde
+  // SortSelect/chips del mapa/ActiveFilters/sugerencias, que ya usan
+  // updateFiltersManual/clearFiltersManual tal cual. `q` se limpia por
+  // default aquí (nunca lo manda FilterPanel con un valor propio, a
+  // diferencia de handleSuggestionClick) — inputValue se resuelve de una
+  // vez en vez de esperar el efecto que sincroniza con filters.q, para
+  // cubrir también el modo búsqueda-IA (filters.q nunca cambia ahí, ese
+  // efecto no se vuelve a disparar solo).
+  function updateFiltersDesdePanel(updates: Partial<SearchFilters>) {
+    setInputValue('');
+    updateFiltersManual({ q: '', ...updates });
+  }
+  function clearFiltersDesdePanel() {
+    setInputValue('');
+    clearFiltersManual();
   }
 
   // Se propaga a cada tarjeta para que el enlace a la ficha lleve el mismo
@@ -900,8 +906,8 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                   <div className="p-4">
                     <FilterPanel
                       filters={filters}
-                      onUpdate={updateFiltersManual}
-                      onClear={clearFiltersManual}
+                      onUpdate={updateFiltersDesdePanel}
+                      onClear={clearFiltersDesdePanel}
                       activeCount={activeCount}
                       total={totalMostrado}
                     />
@@ -1199,8 +1205,8 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
             <div className="flex-1 overflow-y-auto p-5">
               <FilterPanel
                 filters={filters}
-                onUpdate={updateFiltersManual}
-                onClear={clearFiltersManual}
+                onUpdate={updateFiltersDesdePanel}
+                onClear={clearFiltersDesdePanel}
                 activeCount={activeCount}
                 total={totalMostrado}
               />
