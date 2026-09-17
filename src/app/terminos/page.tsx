@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Scale } from 'lucide-react';
+import { Gavel } from 'lucide-react';
 import { TERMS_SECTIONS } from '@/lib/termsSections';
 
 export const metadata: Metadata = {
@@ -16,7 +16,7 @@ export default function TerminosPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="flex items-center gap-2 mb-2">
-        <Scale size={22} className="text-brand" />
+        <Gavel size={22} className="text-brand" />
         <h1 className="text-3xl font-heading font-bold text-gray-900">Términos y condiciones</h1>
       </div>
       <p className="text-sm text-gray-400 mb-10">Vigente desde julio de 2026 · última actualización: 17 de septiembre de 2026</p>
