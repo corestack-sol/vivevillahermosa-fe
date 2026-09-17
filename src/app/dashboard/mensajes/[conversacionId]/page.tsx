@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Send, Building2, MoreVertical, Ban, Flag, ShieldOff, MessageCircleHeart, Loader2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Send, Building2, MoreVertical, Ban, Flag, ShieldOff, MessageCircleHeart, Loader2, Trash2, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError, BACKEND_URL } from '@/lib/backendApi';
@@ -375,6 +375,7 @@ export default function ConversacionPage() {
                 </span>
               )}
             </div>
+            <ChevronRight size={16} className="text-white/60 flex-shrink-0 ml-auto" />
           </Link>
           {/* Compartir WhatsApp — pedido explícito 2026-09-08: la única
               forma de que el interesado consiga el WhatsApp de una
