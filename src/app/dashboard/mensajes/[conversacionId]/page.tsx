@@ -343,14 +343,15 @@ export default function ConversacionPage() {
           la ficha pública; el resto de la pantalla (leer/responder) se
           queda aquí mismo. */}
       {propiedad && (
-        // Fondo verde degradado — pedido explícito 2026-09-08. Solo en la
-        // franja de arriba (foto+título), no en todo el bloque — el botón
-        // "Compartir WhatsApp" de abajo se queda en blanco, sus colores
-        // (emerald) no se leen bien sobre el degradado oscuro.
+        // Fondo terracota degradado (pedido explícito 2026-09-17, antes
+        // verde — pedido explícito 2026-09-08). Solo en la franja de arriba
+        // (foto+título), no en todo el bloque — el botón "Compartir
+        // WhatsApp" de abajo se queda en blanco, sus colores (emerald) no
+        // se leen bien sobre el degradado oscuro.
         <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden mb-4 flex-shrink-0">
           <Link
             href={`/propiedades/${propiedad.slug}`}
-            className="flex items-center gap-3 min-w-0 px-4 py-3 bg-gradient-to-r from-brand to-brand-dark hover:opacity-90 transition-opacity"
+            className="flex items-center gap-3 min-w-0 px-4 py-3 bg-gradient-to-r from-accent to-accent-dark hover:opacity-90 transition-opacity"
           >
             <div className="relative w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 bg-white/15 flex items-center justify-center">
               {propiedad.foto ? (
@@ -366,7 +367,7 @@ export default function ConversacionPage() {
                 <span
                   className={`inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border mt-0.5 ${
                     esMiPropiedad
-                      ? 'bg-white/90 text-brand-dark border-white/40'
+                      ? 'bg-white/90 text-accent-dark border-white/40'
                       : 'bg-white/10 text-white/80 border-white/25'
                   }`}
                 >
