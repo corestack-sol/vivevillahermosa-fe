@@ -145,6 +145,18 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
   const [value, setValue] = useState(initialValue);
   const [open, setOpen] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
+  // Navegación por teclado del dropdown (sugerencias o recientes, nunca los
+  // dos a la vez — ver `showSuggestions`/`showRecent` abajo) — pedido
+  // explícito 2026-09-17. -1 = nada resaltado. Se resetea cada vez que el
+  // texto cambia (la lista mostrada cambia con él) para no dejar un índice
+  // apuntando a una opción que ya no está ahí.
+  const [highlighted, setHighlighted] = useState(-1);
+  useEffect(() => {
+    function limpiarResaltado() {
+      if (!open) setHighlighted(-1);
+    }
+    limpiarResaltado();
+  }, [open]);
   const [buscando, setBuscando] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLFormElement>(null);
@@ -401,6 +413,32 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
     setRecent([]);
   }
 
+  // Lista efectiva que se está mostrando ahora mismo — sugerencias de lugar
+  // y recientes son mutuamente excluyentes (showSuggestions/showRecent de
+  // arriba), así que nunca hace falta navegar dos listas a la vez.
+  const dropdownItems = showSuggestions ? filtered : showRecent ? recent : [];
+
+  // Flechas mueven el resaltado (cíclico); Tab con algo resaltado SOLO
+  // rellena el input (como un clic en "reciente", nunca navega) — pedido
+  // explícito 2026-09-17: poder retomar una búsqueda anterior y seguir
+  // editándola antes de buscar. preventDefault en Tab evita que el foco
+  // salte al siguiente control del formulario, para que la persona pueda
+  // seguir escribiendo/corrigiendo ahí mismo.
+  function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (dropdownItems.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlighted((h) => (h + 1) % dropdownItems.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlighted((h) => (h - 1 + dropdownItems.length) % dropdownItems.length);
+    } else if (e.key === 'Tab' && highlighted >= 0 && highlighted < dropdownItems.length) {
+      e.preventDefault();
+      setValue(dropdownItems[highlighted]);
+      setHighlighted(-1);
+    }
+  }
+
   // Antes esto comparaba contra inputRef (solo el <input>), no contra el
   // dropdown completo — así que un mousedown sobre un botón de sugerencia o
   // de búsqueda reciente contaba como "clic afuera" y cerraba el dropdown
@@ -441,8 +479,9 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
             ref={inputRef}
             type="text"
             value={value}
-            onChange={(e) => { setValue(e.target.value); setOpen(true); }}
+            onChange={(e) => { setValue(e.target.value); setOpen(true); setHighlighted(-1); }}
             onFocus={() => setOpen(true)}
+            onKeyDown={handleInputKeyDown}
             maxLength={MAX_QUERY_LENGTH}
             placeholder={placeholder}
             aria-label={placeholder ? undefined : 'Buscar propiedades por lugar, precio o características'}
@@ -480,10 +519,10 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
 
       {(showSuggestions || showRecent) && (
         <ul className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden z-20">
-          {showSuggestions && filtered.map((s) => (
+          {showSuggestions && filtered.map((s, i) => (
             <li key={s}>
               <button type="button" onClick={() => handleSuggestion(s)}
-                className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors">
+                className={`w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors ${highlighted === i ? 'bg-brand-pale text-brand' : ''}`}>
                 <MapPin size={13} className="text-gray-400 flex-shrink-0" />
                 {s}
               </button>
@@ -499,10 +538,10 @@ export function SearchBar({ initialValue = '', placeholder, onSearch, className 
                   <X size={11} /> Borrar
                 </button>
               </li>
-              {recent.map((s) => (
+              {recent.map((s, i) => (
                 <li key={s}>
                   <button type="button" onClick={() => handleRecentClick(s)}
-                    className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors">
+                    className={`w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors ${highlighted === i ? 'bg-brand-pale text-brand' : ''}`}>
                     <Clock size={13} className="text-gray-400 flex-shrink-0" />
                     {s}
                   </button>

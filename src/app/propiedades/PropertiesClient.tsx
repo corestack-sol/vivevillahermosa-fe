@@ -223,6 +223,15 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
   // Home. Antes este input era un <input> suelto sin ninguno de los dos.
   const [searchOpen, setSearchOpen] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
+  // Navegación por teclado del dropdown de búsqueda — mismo patrón que
+  // SearchBar.tsx (Home), pedido explícito 2026-09-17.
+  const [highlighted, setHighlighted] = useState(-1);
+  useEffect(() => {
+    function limpiarResaltado() {
+      if (!searchOpen) setHighlighted(-1);
+    }
+    limpiarResaltado();
+  }, [searchOpen]);
   const searchFormRef = useRef<HTMLFormElement>(null);
   // Texto tal cual se está escribiendo — antes el input escribía DIRECTO a
   // filters.q en cada tecleo, y la grilla lo aplicaba en vivo como filtro
@@ -283,6 +292,26 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
     e.stopPropagation();
     clearRecentSearches(user?.userId ?? null);
     setRecent([]);
+  }
+
+  // Igual que SearchBar.tsx: flechas mueven el resaltado (cíclico), Tab con
+  // algo resaltado SOLO rellena el input (nunca navega/busca) — pedido
+  // explícito 2026-09-17, para poder retomar una búsqueda anterior y
+  // seguir editándola antes de buscar.
+  const dropdownItems = showSuggestions ? filteredPlaces : showRecent ? recent : [];
+  function handleSearchInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (dropdownItems.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlighted((h) => (h + 1) % dropdownItems.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlighted((h) => (h - 1 + dropdownItems.length) % dropdownItems.length);
+    } else if (e.key === 'Tab' && highlighted >= 0 && highlighted < dropdownItems.length) {
+      e.preventDefault();
+      setInputValue(dropdownItems[highlighted]);
+      setHighlighted(-1);
+    }
   }
 
   // Trae las colonias descubiertas automáticamente (ver coloniaDiscovery.ts)
@@ -754,8 +783,9 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
               <input
                 type="text"
                 value={inputValue}
-                onChange={(e) => { setInputValue(e.target.value); setSearchOpen(true); }}
+                onChange={(e) => { setInputValue(e.target.value); setSearchOpen(true); setHighlighted(-1); }}
                 onFocus={() => setSearchOpen(true)}
+                onKeyDown={handleSearchInputKeyDown}
                 maxLength={MAX_QUERY_LENGTH}
                 placeholder="Buscar por colonia, municipio... o descríbelo"
                 className="w-full pl-9 pr-9 py-2.5 text-base sm:text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-brand focus:bg-white transition-colors placeholder-gray-400 text-gray-800"
@@ -775,10 +805,10 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
 
               {(showSuggestions || showRecent) && (
                 <ul className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-gray-100 shadow-2xl overflow-hidden z-40">
-                  {showSuggestions && filteredPlaces.map((s) => (
+                  {showSuggestions && filteredPlaces.map((s, i) => (
                     <li key={s}>
                       <button type="button" onClick={() => handleSuggestionClick(s)}
-                        className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors">
+                        className={`w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors ${highlighted === i ? 'bg-brand-pale text-brand' : ''}`}>
                         <MapPin size={13} className="text-gray-400 flex-shrink-0" />
                         {s}
                       </button>
@@ -794,10 +824,10 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                           <X size={11} /> Borrar
                         </button>
                       </li>
-                      {recent.map((s) => (
+                      {recent.map((s, i) => (
                         <li key={s}>
                           <button type="button" onClick={() => handleRecentClick(s)}
-                            className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors">
+                            className={`w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-brand-pale hover:text-brand text-left transition-colors ${highlighted === i ? 'bg-brand-pale text-brand' : ''}`}>
                             <Clock size={13} className="text-gray-400 flex-shrink-0" />
                             {s}
                           </button>
