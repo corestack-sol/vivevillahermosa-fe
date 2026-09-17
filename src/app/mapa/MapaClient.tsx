@@ -20,6 +20,7 @@ import { useAuth } from '@/context/AuthContext';
 import { SelectedPropertyCard } from '@/components/map/SelectedPropertyCard';
 import type { MapMarker, MapControls, MapBounds } from '@/components/map/MapView';
 import { estaEnBounds } from '@/lib/mapGeo';
+import { createRequestGuard } from '@/lib/requestGuard';
 
 // ── Config ──────────────────────────────────────────────────────────────
 
@@ -74,11 +75,18 @@ export function MapaClient({ allProperties }: Props) {
   // cuanto el mapa reporta un área real (`handleBoundsChange` de abajo), se
   // vuelve a pedir SOLO lo que cabe en ese recuadro — ver
   // getPropertiesInBounds() en api.ts y docs/BACKEND-MAPA-BBOX-23082026.md.
-  // El backend todavía no filtra por área (se lo ignora, ver el comentario
-  // de esa función) — hasta que lo implemente, esto sigue trayendo el
-  // catálogo completo en cada pan/zoom, más llamadas que antes pero cada
-  // una del mismo tamaño de hoy, nunca peor por llamada. `allProperties` se
-  // mantiene como respaldo si el primer fetch por área fallara.
+  // ⚠️ Verificado en vivo 2026-09-16: el backend YA filtra por bbox de
+  // verdad (antes lo ignoraba, este comentario decía lo contrario) —
+  // 30 propiedades sin bbox, 14 con un recuadro chico en Centro, 0 con un
+  // recuadro fuera de Tabasco. Esto es justo lo que hizo real el bug
+  // reportado: dos fetches por área que se solapan (zoom in → zoom out
+  // rápido) ahora SÍ pueden traer conjuntos de datos distintos, y sin
+  // ninguna protección de orden, el que responde más tarde (no importa
+  // cuál se pidió después) es el que se queda pintado. Corregido con
+  // `boundsGuard` (createRequestGuard, requestGuard.ts) más abajo — la
+  // respuesta de un fetch viejo ya no puede pisar la de uno más nuevo.
+  // `allProperties` se mantiene como respaldo si el primer fetch por área
+  // fallara.
   const [properties, setProperties] = useState<Property[]>(allProperties);
   const [cargandoArea, setCargandoArea] = useState(false);
 
@@ -242,6 +250,13 @@ export function MapaClient({ allProperties }: Props) {
   // para filtrado local instantáneo, pero dispararía una llamada de red por
   // cada paso intermedio de un pan/zoom continuo.
   const boundsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // El debounce de abajo solo cancela timers PENDIENTES — una vez que un
+  // fetch ya arrancó, no hay forma de cancelarlo, así que dos llamadas a
+  // cargarPropiedadesDelArea() sí pueden quedar en vuelo al mismo tiempo
+  // (zoom in dispara una, zoom out dispara otra antes de que la primera
+  // responda). boundsGuardRef asegura que solo la respuesta de la llamada
+  // MÁS RECIENTE se aplique, sin importar cuál responda primero.
+  const boundsGuardRef = useRef(createRequestGuard());
   function handleBoundsChange(bounds: MapBounds) {
     if (boundsDebounceRef.current) clearTimeout(boundsDebounceRef.current);
     boundsDebounceRef.current = setTimeout(() => {
@@ -257,16 +272,24 @@ export function MapaClient({ allProperties }: Props) {
   }
 
   async function cargarPropiedadesDelArea(bounds: MapBounds) {
+    const id = boundsGuardRef.current.start();
     setCargandoArea(true);
     try {
       const data = await getPropertiesInBounds(bounds);
+      // Bug real reportado 2026-09-16: zoom in → zoom out rápido dejaba
+      // pines sin cargar. Causa: el fetch del zoom in (área chica) podía
+      // resolver DESPUÉS del fetch del zoom out (área grande, más
+      // reciente) y pisar sus datos — el mapa se quedaba mostrando solo
+      // las propiedades del recuadro viejo y chico. Se descarta cualquier
+      // respuesta que ya no sea la más reciente en vez de aplicarla.
+      if (!boundsGuardRef.current.isCurrent(id)) return;
       setProperties(data);
     } catch {
       // Fail-open — se queda con lo que ya había (el SSR inicial o la
       // última área cargada con éxito), nunca se vacía el mapa por un
       // fetch fallido.
     } finally {
-      setCargandoArea(false);
+      if (boundsGuardRef.current.isCurrent(id)) setCargandoArea(false);
     }
   }
 
