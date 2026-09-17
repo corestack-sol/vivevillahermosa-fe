@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatPrice, formatPriceShort, formatPropertyCount, formatArea, formatRelativeDate, formatHora, slugify } from './format';
+import { formatPrice, formatPriceShort, formatPropertyCount, formatArea, formatRelativeDate, formatHora, slugify, diasParaVencer } from './format';
 
 describe('formatPrice', () => {
   it('formats venta without suffix, no decimals', () => {
@@ -10,6 +10,26 @@ describe('formatPrice', () => {
   });
   it('rounds to whole pesos even with a fractional input', () => {
     expect(formatPrice(1200000.75, 'venta')).toBe('$1,200,001');
+  });
+});
+
+describe('diasParaVencer', () => {
+  it('returns null for a null date (destacado sin vencimiento)', () => {
+    expect(diasParaVencer(null)).toBeNull();
+  });
+
+  it('returns null for a date already in the past (vencido)', () => {
+    expect(diasParaVencer(new Date(Date.now() - 1000).toISOString())).toBeNull();
+  });
+
+  it('rounds up so "vence en menos de 1 día" still counts as 1, not 0', () => {
+    const enUnaHora = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    expect(diasParaVencer(enUnaHora)).toBe(1);
+  });
+
+  it('returns the exact day count for a date N full days out', () => {
+    const en15Dias = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString();
+    expect(diasParaVencer(en15Dias)).toBe(15);
   });
 });
 

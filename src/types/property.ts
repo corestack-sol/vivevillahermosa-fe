@@ -103,6 +103,8 @@ export interface Property {
   zonaEcologica: boolean;
   cercaDosoBocas: boolean;
   featured: boolean;
+  /** ISO date o null — vencimiento real de `featured`, confirmado en vivo 17/09/2026. Ver api.ts. */
+  featuredHasta: string | null;
   alertaFraude?: AlertaFraude;
   agente: PropertyAgent;
   /**

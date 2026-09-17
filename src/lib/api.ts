@@ -47,6 +47,13 @@ export interface BackendPublicProperty {
   zonaEcologica: boolean;
   cercaDosoBocas: boolean;
   featured: boolean;
+  // Confirmado en vivo 17/09/2026 (docs/BACKEND-DESTACAR-EXPIRACION-
+  // 16092026.md) — el backend expira `featured` solo al LEER una
+  // propiedad vencida, nunca en segundo plano: no hace falta comparar
+  // esta fecha contra `now()` para saber si sigue destacada, `featured`
+  // ya viene correcto en cada respuesta. Solo se usa para mostrar
+  // "vence en N días" en la UI.
+  featuredHasta: string | null;
   estado: string;
   activa: boolean;
   agente: { nombre: string; foto: string | null; verificado: boolean; enRevision: boolean };
@@ -110,6 +117,7 @@ export function mapBackendProperty(bp: BackendPublicProperty): Property {
     zonaEcologica: bp.zonaEcologica,
     cercaDosoBocas: bp.cercaDosoBocas,
     featured: bp.featured,
+    featuredHasta: bp.featuredHasta,
     alertaFraude: bp.alertaFraude ?? undefined,
     agente: {
       nombre: bp.agente.nombre,

@@ -40,6 +40,7 @@ function propiedad(id: string, overrides: Partial<BackendPublicProperty> = {}): 
     zonaEcologica: false,
     cercaDosoBocas: false,
     featured: false,
+    featuredHasta: null,
     estado: 'activa',
     activa: true,
     agente: { nombre: 'Agente', foto: null, verificado: false, enRevision: false },

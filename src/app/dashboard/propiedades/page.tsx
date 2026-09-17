@@ -21,6 +21,7 @@ import { PausarPropiedadModal } from '@/components/property/PausarPropiedadModal
 import { DestacarPropiedadModal } from '@/components/property/DestacarPropiedadModal';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { LIMITE_PROPIEDADES, MENSAJE_LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
+import { diasParaVencer } from '@/lib/format';
 
 type FiltroEstado = EstadoPublicacion | 'todas' | 'archivada';
 
@@ -183,16 +184,19 @@ export default function MisPropiedadesPage() {
     }
   }
 
-  async function confirmarDestacar(id: string) {
+  // featuredDias confirmado en vivo 17/09/2026 (docs/BACKEND-DESTACAR-
+  // EXPIRACION-16092026.md) — el backend calcula y devuelve featuredHasta
+  // real, se usa la respuesta tal cual en vez de calcularla aquí.
+  async function confirmarDestacar(id: string, dias: 7 | 15 | 30) {
     try {
-      await backendFetch(`/propiedades/${id}`, {
+      const actualizada = await backendFetch<{ featuredHasta: string | null }>(`/propiedades/${id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ featured: true }),
+        body: JSON.stringify({ featured: true, featuredDias: dias }),
       });
       setItems((prev) => prev.map((it) => (
-        it.property.id === id ? { ...it, property: { ...it.property, featured: true } } : it
+        it.property.id === id ? { ...it, property: { ...it.property, featured: true, featuredHasta: actualizada.featuredHasta } } : it
       )));
-      toast.success('Propiedad destacada.');
+      toast.success(`Propiedad destacada por ${dias} días.`);
     } catch {
       toast.error('No se pudo destacar la propiedad.');
     }
@@ -205,7 +209,7 @@ export default function MisPropiedadesPage() {
         body: JSON.stringify({ featured: false }),
       });
       setItems((prev) => prev.map((it) => (
-        it.property.id === id ? { ...it, property: { ...it.property, featured: false } } : it
+        it.property.id === id ? { ...it, property: { ...it.property, featured: false, featuredHasta: null } } : it
       )));
       toast.success('Se quitó el destacado.');
     } catch {
@@ -352,6 +356,7 @@ export default function MisPropiedadesPage() {
           {filtered.map(({ property: p, estado, publicadaHace, contactos }) => {
             const cfg = getPropertyTypeConfig(p.tipo);
             const estadoCfg = ESTADO_CFG[estado];
+            const diasVenceDestacada = diasParaVencer(p.featuredHasta);
             return (
               // flex-col en móvil, flex-row desde sm: — con los íconos de
               // acción siempre visibles (w-8 cada uno) más la miniatura, no
@@ -396,7 +401,12 @@ export default function MisPropiedadesPage() {
                       </span>
                       {p.featured && (
                         <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
-                          <Star size={9} className="fill-current" /> Destacada
+                          <Star size={9} className="fill-current" />
+                          {/* featuredHasta confirmado en vivo 17/09/2026 —
+                              null significa "destacada sin vencimiento"
+                              (featured:true sin featuredDias), no un dato
+                              faltante. */}
+                          Destacada{diasVenceDestacada !== null ? ` · vence en ${diasVenceDestacada} día${diasVenceDestacada === 1 ? '' : 's'}` : ''}
                         </span>
                       )}
                       <span className="text-xs text-gray-400">Publicada {publicadaHace}</span>
@@ -524,7 +534,7 @@ export default function MisPropiedadesPage() {
           isOpen
           onClose={() => setDestacando(null)}
           propertyTitle={propiedadDestacando.property.titulo}
-          onConfirm={() => confirmarDestacar(propiedadDestacando.property.id)}
+          onConfirm={(dias) => confirmarDestacar(propiedadDestacando.property.id, dias)}
         />
       )}
     </div>

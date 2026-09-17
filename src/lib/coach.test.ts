@@ -12,7 +12,7 @@ function mkProperty(overrides: Partial<Property> = {}): Property {
     // riesgo "bajo" — mismo valor que `riesgoInundacion` de abajo, así que
     // el fixture "sano" por defecto tampoco dispara `riesgo-inconsistente`.
     municipio: 'Centro', colonia: 'Prados de Villahermosa', direccion: 'x', lat: 17.98, lng: -92.93, latPublico: 17.98, lngPublico: -92.93,
-    riesgoInundacion: 'bajo', zonaEcologica: false, cercaDosoBocas: false, featured: false,
+    riesgoInundacion: 'bajo', zonaEcologica: false, cercaDosoBocas: false, featured: false, featuredHasta: null,
     agente: { nombre: 'x', foto: '' }, fechaPublicacion: new Date().toISOString(), activa: true,
     ...overrides,
   };

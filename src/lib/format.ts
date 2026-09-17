@@ -11,6 +11,18 @@ export function formatPrice(price: number, operacion: OperationType): string {
   return operacion === 'renta' ? `${formatted}/mes` : formatted;
 }
 
+/**
+ * Días restantes hasta una fecha futura (ej. `featuredHasta`) — null si ya
+ * venció o si no hay fecha. `Math.ceil` para no mostrar "0 días" el mismo
+ * día que vence (redondea hacia arriba, "vence hoy" sigue contando como 1).
+ */
+export function diasParaVencer(fechaISO: string | null): number | null {
+  if (!fechaISO) return null;
+  const restante = new Date(fechaISO).getTime() - Date.now();
+  if (restante <= 0) return null;
+  return Math.ceil(restante / (1000 * 60 * 60 * 24));
+}
+
 export function formatPriceShort(price: number): string {
   if (price >= 1_000_000) {
     return `$${(price / 1_000_000).toFixed(1)}M`;

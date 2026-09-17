@@ -14,6 +14,7 @@ import { PausarPropiedadModal } from '@/components/property/PausarPropiedadModal
 import { DestacarPropiedadModal } from '@/components/property/DestacarPropiedadModal';
 import { useRouter } from 'next/navigation';
 import { LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
+import { diasParaVencer } from '@/lib/format';
 
 interface MiaBackend {
   id: string;
@@ -21,6 +22,10 @@ interface MiaBackend {
   operacion: 'venta' | 'renta';
   estado: EstadoPublicacion;
   featured: boolean;
+  // Confirmado en vivo 17/09/2026 (docs/BACKEND-DESTACAR-EXPIRACION-
+  // 16092026.md) — null si nunca se destacó o si es un destacado sin
+  // vencimiento (featured:true sin featuredDias).
+  featuredHasta: string | null;
   // Confirmado en vivo 2026-09-02 — el backend ya lo manda real (ver
   // docs/BACKEND-VISTAS-CONTACTOS-02092026.md). Opcional se queda igual,
   // por si algún día vuelve a faltar (ej. propiedad muy vieja).
@@ -63,6 +68,7 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
   if (!user || !mine) return null;
 
   const estadoCfg = ESTADO_CFG[mine.estado];
+  const diasVenceDestacada = diasParaVencer(mine.featuredHasta);
 
   function pendiente(accion: string) {
     toast.info(`"${accion}" estará disponible cuando se conecte el panel real de propiedades (Módulo 2, Fase 2).`);
@@ -74,7 +80,7 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
         method: 'PATCH',
         body: JSON.stringify({ featured: false }),
       });
-      setMine((prev) => (prev ? { ...prev, featured: false } : prev));
+      setMine((prev) => (prev ? { ...prev, featured: false, featuredHasta: null } : prev));
       toast.success('Se quitó el destacado.');
     } catch {
       toast.error('No se pudo quitar el destacado.');
@@ -156,7 +162,8 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
             </span>
             {mine.featured && (
               <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200">
-                <Star size={9} className="fill-current" /> Destacada
+                <Star size={9} className="fill-current" />
+                Destacada{diasVenceDestacada !== null ? ` · vence en ${diasVenceDestacada} día${diasVenceDestacada === 1 ? '' : 's'}` : ''}
               </span>
             )}
           </div>
@@ -274,14 +281,14 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
         isOpen={showDestacar}
         onClose={() => setShowDestacar(false)}
         propertyTitle={mine.titulo}
-        onConfirm={async () => {
+        onConfirm={async (dias) => {
           try {
-            await backendFetch(`/propiedades/${propertyId}`, {
+            const actualizada = await backendFetch<{ featuredHasta: string | null }>(`/propiedades/${propertyId}`, {
               method: 'PATCH',
-              body: JSON.stringify({ featured: true }),
+              body: JSON.stringify({ featured: true, featuredDias: dias }),
             });
-            setMine((prev) => (prev ? { ...prev, featured: true } : prev));
-            toast.success('Propiedad destacada.');
+            setMine((prev) => (prev ? { ...prev, featured: true, featuredHasta: actualizada.featuredHasta } : prev));
+            toast.success(`Propiedad destacada por ${dias} días.`);
           } catch {
             toast.error('No se pudo destacar la propiedad.');
           }
