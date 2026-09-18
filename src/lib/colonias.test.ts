@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   matchColonia, matchColoniaCandidates, sugerirColonias, getColoniaByKey, buscarColoniaEnTexto, jitterCoord, getPuntoPublico,
-  normalizarNombreColonia, RADIO_COLONIA_KM,
+  normalizarNombreColonia, RADIO_COLONIA_KM, coloniaCercana,
 } from './colonias';
 
 describe('normalizarNombreColonia', () => {
@@ -117,6 +117,33 @@ describe('matchColonia', () => {
       expect(matchColonia('Magisteral')).toBeUndefined(); // still ambiguous without a hint
       expect(matchColonia('Magisteral', 'Paraíso')?.key).toBe('magisterial-paraiso');
     });
+  });
+});
+
+// Pedido explícito 2026-09-17 (bloqueo real en PublishForm.tsx: el pin
+// del mapa no puede quedar lejos de la colonia declarada) — esta es la
+// función de búsqueda inversa (coordenada -> colonia real más cercana)
+// que hace posible ofrecer "el pin es correcto, usar esta colonia" como
+// salida de un clic.
+describe('coloniaCercana', () => {
+  it('encuentra la colonia catalogada más cercana dentro del radio', () => {
+    // Coordenada real de 'tabasco-2000' — ver colonias.ts.
+    const r = coloniaCercana(17.9994, -92.9316);
+    expect(r?.key).toBe('tabasco-2000');
+  });
+
+  it('respeta municipioHint — descarta la más cercana si es de otro municipio', () => {
+    // Misma coordenada de 'tabasco-2000' (municipio Centro), pero
+    // pidiendo un municipio distinto — no debe devolver nada aunque la
+    // distancia real sea 0.
+    const r = coloniaCercana(17.9994, -92.9316, 2, 'Cárdenas');
+    expect(r).toBeUndefined();
+  });
+
+  it('devuelve undefined si no hay ninguna colonia catalogada dentro del radio', () => {
+    // Punto en medio de la selva, lejos de cualquier colonia catalogada.
+    const r = coloniaCercana(17.3, -91.0, 2);
+    expect(r).toBeUndefined();
   });
 });
 

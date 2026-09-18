@@ -32,7 +32,7 @@ import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { getAllProperties } from '@/lib/api';
 import posthog from 'posthog-js';
-import { matchColonia, matchColoniaCandidates, distanciaKm, precargarColoniasDescubiertas, type ColoniaCoord } from '@/lib/colonias';
+import { matchColonia, matchColoniaCandidates, coloniaCercana, distanciaKm, precargarColoniasDescubiertas, type ColoniaCoord } from '@/lib/colonias';
 import { ColoniaAutocomplete } from './ColoniaAutocomplete';
 import { coordsAutoDesdeColonia } from '@/lib/mapPin';
 import { landmarksCercanos, precargarLandmarks } from '@/lib/landmarks';
@@ -657,7 +657,31 @@ export function PublishForm() {
   const distanciaPinColonia = coords && coloniaVerificada
     ? distanciaKm(coords.lat, coords.lng, coloniaVerificada.lat, coloniaVerificada.lng)
     : null;
+  // Pedido explícito 2026-09-17: si el pin no coincide con la colonia
+  // escrita, ya NO es solo un aviso — bloquea avanzar/publicar (ver
+  // goNext/onSubmit más abajo). Para que sea fácil corregir un error
+  // honesto sin adivinar cuál de los dos datos está mal, se ofrecen las
+  // dos salidas de un clic: "el pin es correcto, actualiza la colonia" o
+  // "la colonia es correcta, regresa el pin" — sin municipioHint (busca
+  // en TODO el estado) porque el caso que más importa detectar es
+  // justo un pin en un municipio distinto al declarado.
   const pinLejosDeColonia = distanciaPinColonia !== null && distanciaPinColonia > 3;
+  const coloniaSegunPin = pinLejosDeColonia && coords ? coloniaCercana(coords.lat, coords.lng, 5) : undefined;
+
+  function usarColoniaDelPin() {
+    if (!coloniaSegunPin) return;
+    setValue('colonia', coloniaSegunPin.label, { shouldValidate: true, shouldDirty: true });
+    setValue('municipio', coloniaSegunPin.municipio, { shouldValidate: true, shouldDirty: true });
+    toast.success(`Colonia actualizada a "${coloniaSegunPin.label}", ${coloniaSegunPin.municipio}.`);
+  }
+
+  function regresarPinAColonia() {
+    if (!coloniaVerificada) return;
+    setCoords({ lat: coloniaVerificada.lat, lng: coloniaVerificada.lng });
+    setPinDesdeColonia(true);
+    setPinDesdeFoto(false);
+    toast.success(`Pin regresado a "${coloniaVerificada.label}".`);
+  }
 
   // Pedido explícito 2026-09-10: capturar cuándo el punto de una colonia
   // en el catálogo (colonias.ts) resulta estar mal — si la persona
@@ -1131,6 +1155,10 @@ export function PublishForm() {
       toast.error('Tu única foto no parece ser del inmueble — agrega otra foto real antes de continuar.');
       return;
     }
+    if (step === 4 && pinLejosDeColonia) {
+      toast.error('El pin en el mapa no coincide con la colonia que escribiste — corrígelo antes de continuar.');
+      return;
+    }
     if (step === 2 && esDowngrade && !confirmaRiesgoBajo) {
       toast.error('Confirma el aviso sobre el historial de inundación antes de continuar.');
       return;
@@ -1157,6 +1185,11 @@ export function PublishForm() {
     }
     if (unicaFotoConAdvertencia) {
       toast.error('Tu única foto no parece ser del inmueble — agrega otra foto real antes de publicar.');
+      setStep(4);
+      return;
+    }
+    if (pinLejosDeColonia) {
+      toast.error('El pin en el mapa no coincide con la colonia que escribiste — corrígelo antes de publicar.');
       setStep(4);
       return;
     }
@@ -2118,10 +2151,37 @@ export function PublishForm() {
                 </p>
               )}
               {pinLejosDeColonia && (
-                <p className="flex items-start gap-1.5 text-[10px] text-orange-700 bg-orange-50 border border-orange-200 rounded-lg px-2.5 py-2 mt-2">
-                  <Info size={11} className="flex-shrink-0 mt-0.5" />
-                  El pin que marcaste está a {distanciaPinColonia!.toFixed(1)} km de &quot;{coloniaVerificada!.label}&quot; — revisa que el punto y la colonia coincidan antes de publicar.
-                </p>
+                // Bloquea avanzar/publicar (goNext/onSubmit) — pedido
+                // explícito 2026-09-17: antes era solo un aviso pasivo.
+                // Las 2 acciones cubren cualquiera de los dos errores
+                // honestos posibles, sin adivinar cuál cometió la
+                // persona: el pin puede ser el correcto (typeó mal la
+                // colonia) o la colonia puede ser la correcta (arrastró
+                // el pin sin querer).
+                <div className="rounded-lg bg-orange-50 border border-orange-200 px-2.5 py-2.5 mt-2">
+                  <p className="flex items-start gap-1.5 text-[10px] font-semibold text-orange-700">
+                    <Info size={13} className="flex-shrink-0 mt-0.5" />
+                    El pin está a {distanciaPinColonia!.toFixed(1)} km de &quot;{coloniaVerificada!.label}&quot; — no puedes continuar hasta corregirlo.
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {coloniaSegunPin && (
+                      <button
+                        type="button"
+                        onClick={usarColoniaDelPin}
+                        className="text-[10px] font-bold text-white bg-orange-600 hover:bg-orange-700 rounded-lg px-2.5 py-1.5 transition-colors"
+                      >
+                        El pin es correcto — usar &quot;{coloniaSegunPin.label}&quot;
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={regresarPinAColonia}
+                      className="text-[10px] font-bold text-orange-700 bg-white border border-orange-300 hover:bg-orange-100 rounded-lg px-2.5 py-1.5 transition-colors"
+                    >
+                      La colonia es correcta — regresar el pin
+                    </button>
+                  </div>
+                </div>
               )}
               {coords && (
                 <p className="flex items-start gap-1.5 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2 mt-2">
