@@ -32,7 +32,7 @@ import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { getAllProperties } from '@/lib/api';
 import posthog from 'posthog-js';
-import { matchColonia, matchColoniaCandidates, coloniaCercana, distanciaKm, precargarColoniasDescubiertas, type ColoniaCoord } from '@/lib/colonias';
+import { matchColonia, matchColoniaCandidates, evaluarPinVsColonia, distanciaKm, precargarColoniasDescubiertas, type ColoniaCoord } from '@/lib/colonias';
 import { ColoniaAutocomplete } from './ColoniaAutocomplete';
 import { coordsAutoDesdeColonia } from '@/lib/mapPin';
 import { landmarksCercanos, precargarLandmarks } from '@/lib/landmarks';
@@ -630,8 +630,8 @@ export function PublishForm() {
   // lo mismo "no pudimos verificar" que "está mal"; hoy el catálogo cubre
   // casi solo Centro/Villahermosa — 264 de 268 colonias — así que fuera
   // de ahí esta comprobación simplemente no corre, a propósito, no es un
-  // bug). 2.5km (pedido explícito 2026-09-17, antes 3km): una colonia es
-  // un área, no un punto, así que sigue sin avisar por variación normal
+  // bug). 1.2km (pedido explícito 2026-09-18, antes 2.5km y 3km): una
+  // colonia es un área, no un punto, así que no avisa por variación normal
   // dentro de la misma zona.
   // /publicar (a diferencia de /propiedades y /mapa) nunca disparaba la
   // precarga del catálogo de colonias descubiertas dinámicamente
@@ -678,8 +678,14 @@ export function PublishForm() {
   // "la colonia es correcta, regresa el pin" — sin municipioHint (busca
   // en TODO el estado) porque el caso que más importa detectar es
   // justo un pin en un municipio distinto al declarado.
-  const pinLejosDeColonia = distanciaPinColonia !== null && distanciaPinColonia > 2.5;
-  const coloniaSegunPin = pinLejosDeColonia && coords ? coloniaCercana(coords.lat, coords.lng, 5) : undefined;
+  // Solo bloquea si el pin está a más de 1.2km del centroide Y otra colonia
+  // queda más cerca (evaluarPinVsColonia) — así una colonia grande no da
+  // falsos positivos cuando el pin está en su extremo (pedido 2026-09-18).
+  const evaluacionPin = coords && coloniaVerificada
+    ? evaluarPinVsColonia(coords.lat, coords.lng, coloniaVerificada, 1.2)
+    : null;
+  const pinLejosDeColonia = evaluacionPin?.lejos ?? false;
+  const coloniaSegunPin = evaluacionPin?.masCercana;
 
   function usarColoniaDelPin() {
     if (!coloniaSegunPin) return;

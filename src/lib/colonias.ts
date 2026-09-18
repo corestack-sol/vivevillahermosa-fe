@@ -802,6 +802,28 @@ export function coloniaCercana(lat: number, lng: number, radioKm = 2, municipioH
   return mejor;
 }
 
+/**
+ * ¿El pin contradice la colonia escrita? Cada colonia del catálogo es un
+ * punto (sin polígono), así que "lejos del centroide" no basta: una colonia
+ * grande tendría falsos positivos. Solo se marca `lejos` si el pin está a
+ * más de `umbralKm` del centroide Y otra colonia catalogada queda más cerca
+ * del pin que la escrita. `masCercana` es esa otra colonia (para sugerirla).
+ */
+export function evaluarPinVsColonia(
+  lat: number,
+  lng: number,
+  colonia: ColoniaCoord,
+  umbralKm = 1.2,
+): { distanciaKm: number; lejos: boolean; masCercana?: ColoniaCoord } {
+  const distancia = distanciaKm(lat, lng, colonia.lat, colonia.lng);
+  if (distancia <= umbralKm) return { distanciaKm: distancia, lejos: false };
+  const cercana = coloniaCercana(lat, lng, 5);
+  const esLaMisma = !!cercana && cercana.lat === colonia.lat && cercana.lng === colonia.lng;
+  return esLaMisma
+    ? { distanciaKm: distancia, lejos: false }
+    : { distanciaKm: distancia, lejos: true, masCercana: cercana };
+}
+
 function escaparRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

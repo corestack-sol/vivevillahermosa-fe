@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   matchColonia, matchColoniaCandidates, sugerirColonias, getColoniaByKey, buscarColoniaEnTexto, jitterCoord, getPuntoPublico,
-  normalizarNombreColonia, RADIO_COLONIA_KM, coloniaCercana,
+  normalizarNombreColonia, RADIO_COLONIA_KM, coloniaCercana, evaluarPinVsColonia, distanciaKm, COLONIAS_COORDS,
 } from './colonias';
 
 describe('normalizarNombreColonia', () => {
@@ -144,6 +144,31 @@ describe('coloniaCercana', () => {
     // Punto en medio de la selva, lejos de cualquier colonia catalogada.
     const r = coloniaCercana(17.3, -91.0, 2);
     expect(r).toBeUndefined();
+  });
+});
+
+describe('evaluarPinVsColonia', () => {
+  const tabasco2000 = matchColonia('Tabasco 2000')!;
+
+  it('pin dentro del umbral del centroide no es "lejos"', () => {
+    expect(evaluarPinVsColonia(tabasco2000.lat, tabasco2000.lng, tabasco2000).lejos).toBe(false);
+  });
+
+  it('pin sobre otra colonia distante SÍ es "lejos" y sugiere esa otra colonia', () => {
+    const otra = matchColonia('Atasta')!;
+    expect(distanciaKm(tabasco2000.lat, tabasco2000.lng, otra.lat, otra.lng)).toBeGreaterThan(1.2);
+    const r = evaluarPinVsColonia(otra.lat, otra.lng, tabasco2000);
+    expect(r.lejos).toBe(true);
+    expect(r.masCercana?.key).toBe(otra.key);
+  });
+
+  it('colonia grande/aislada: pin a >1.2km del centroide pero sin otra colonia más cerca NO bloquea', () => {
+    const aislada = COLONIAS_COORDS.find((c) =>
+      COLONIAS_COORDS.every((o) => o === c || distanciaKm(c.lat, c.lng, o.lat, o.lng) > 4),
+    )!;
+    const latDesplazada = aislada.lat + 1.5 / 111;
+    expect(distanciaKm(latDesplazada, aislada.lng, aislada.lat, aislada.lng)).toBeGreaterThan(1.2);
+    expect(evaluarPinVsColonia(latDesplazada, aislada.lng, aislada).lejos).toBe(false);
   });
 });
 
