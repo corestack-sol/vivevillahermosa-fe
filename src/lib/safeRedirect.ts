@@ -13,5 +13,8 @@ export function safeRedirectPath(path: string | null | undefined, fallback = '/d
   // protocolo-relativo, redirect externo. Se rechaza cualquier backslash,
   // no solo el patrón exacto "//" al inicio.
   if (!path.startsWith('/') || path.startsWith('//') || path.includes('://') || path.includes('\\')) return fallback;
+  // Volver a /auth/* después de iniciar sesión dejaba a la persona en el
+  // formulario de login/registro aunque ya tenía sesión (?next=/auth/login).
+  if (path === '/auth' || path.startsWith('/auth/') || path.startsWith('/auth?')) return fallback;
   return path;
 }

@@ -13,7 +13,7 @@ import { buttonClasses } from '@/components/ui/Button';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { EliminarCuentaModal } from '@/components/account/EliminarCuentaModal';
-import { loginRedirectUrl } from '@/lib/authRedirect';
+import { loginRedirectUrl, publicarHref } from '@/lib/authRedirect';
 import { useCoach } from '@/hooks/useCoach';
 import { CoachModal } from '@/components/dashboard/CoachModal';
 import { useLimitePropiedades, MENSAJE_LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
@@ -408,7 +408,7 @@ export function Navbar() {
                   <Plus size={15} strokeWidth={2.5} /> Publicar gratis
                 </button>
               ) : (
-                <Link href="/publicar" className={buttonClasses('primary', 'md')}>
+                <Link href={publicarHref(loading, !!user)} className={buttonClasses('primary', 'md')}>
                   <Plus size={15} strokeWidth={2.5} /> Publicar gratis
                 </Link>
               )
@@ -604,7 +604,7 @@ export function Navbar() {
                     <Plus size={15} strokeWidth={2.5} /> Publicar gratis
                   </button>
                 ) : (
-                  <Link href="/publicar" onClick={() => setIsOpen(false)}
+                  <Link href={publicarHref(loading, !!user)} onClick={() => setIsOpen(false)}
                     className={buttonClasses('primary', 'lg', 'w-full')}>
                     <Plus size={15} strokeWidth={2.5} /> Publicar gratis
                   </Link>

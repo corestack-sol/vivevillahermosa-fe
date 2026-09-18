@@ -30,4 +30,13 @@ describe('safeRedirectPath', () => {
   it('accepts a path with query params and hash', () => {
     expect(safeRedirectPath('/propiedades?operacion=renta#top')).toBe('/propiedades?operacion=renta#top');
   });
+
+  it('rechaza destinos dentro de /auth (volvería al login ya con sesión)', () => {
+    expect(safeRedirectPath('/auth/login')).toBe('/dashboard');
+    expect(safeRedirectPath('/auth/registro?next=/x')).toBe('/dashboard');
+    expect(safeRedirectPath('/auth')).toBe('/dashboard');
+  });
+  it('no confunde rutas que solo empiezan parecido a /auth', () => {
+    expect(safeRedirectPath('/authors')).toBe('/authors');
+  });
 });

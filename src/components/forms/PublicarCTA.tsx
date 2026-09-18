@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
+import { publicarHref } from '@/lib/authRedirect';
 import { useLimitePropiedades, MENSAJE_LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
 
 /**
@@ -22,7 +23,7 @@ import { useLimitePropiedades, MENSAJE_LIMITE_PROPIEDADES } from '@/hooks/useLim
 export function PublicarCTA({
   className, style, children,
 }: { className?: string; style?: CSSProperties; children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const toast = useToast();
   const limiteAlcanzado = useLimitePropiedades(!!user && user.rol !== 'agente');
 
@@ -40,7 +41,7 @@ export function PublicarCTA({
   }
 
   return (
-    <Link href="/publicar" className={className} style={style}>
+    <Link href={publicarHref(loading, !!user)} className={className} style={style}>
       {children}
     </Link>
   );
