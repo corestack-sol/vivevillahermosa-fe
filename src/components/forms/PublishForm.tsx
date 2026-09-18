@@ -24,6 +24,7 @@ import { formatTelefonoInput } from '@/lib/phone';
 import type { RiesgoInundacion } from '@/lib/zonas-inundacion';
 import type { Coords } from './MapPicker';
 import { FloodRiskBadge } from '@/components/property/FloodRiskBadge';
+import { FLOOD_LABEL } from '@/lib/floodColors';
 import { TermsModal } from './TermsModal';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/context/ToastContext';
@@ -1349,6 +1350,33 @@ export function PublishForm() {
   // sin haber llenado nada.
   const progressPct = Math.round((step / STEPS.length) * 100);
 
+  // Timeline lateral (solo escritorio) — pedido explícito 2026-09-17: un
+  // resumen secundario de lo ya capturado en cada paso, sin competir por
+  // atención con el formulario ni moverlo de lugar (ver el <aside>
+  // absolutamente posicionado más abajo, fuera del flujo normal). Un
+  // resumen por paso, o `null` si ese paso todavía no tiene nada capturado
+  // — se muestra "Pendiente" en ese caso.
+  const resumenPasos: (string | null)[] = [
+    watch('tipo') && watch('operacion')
+      ? `${TIPO_OPTIONS.find((t) => t.value === watch('tipo'))?.label ?? watch('tipo')} · ${watch('operacion') === 'venta' ? 'Venta' : 'Renta'}`
+      : null,
+    watch('precio')
+      ? [
+          `$${Number(watch('precio')).toLocaleString('es-MX')}`,
+          watch('recamaras') ? `${watch('recamaras')} rec` : null,
+          watch('m2Construidos') ? `${watch('m2Construidos')}m²` : null,
+        ].filter(Boolean).join(' · ')
+      : null,
+    watch('colonia') && watch('municipio')
+      ? `${watch('colonia')}, ${watch('municipio') === 'Centro' ? 'Villahermosa' : watch('municipio')}${
+          watch('riesgoInundacion') ? ` · ${FLOOD_LABEL[watch('riesgoInundacion') as keyof typeof FLOOD_LABEL]}` : ''
+        }`
+      : null,
+    watch('titulo') || null,
+    fotos.length > 0 ? `${fotos.length} foto${fotos.length !== 1 ? 's' : ''}` : null,
+    watch('nombreContacto') || null,
+  ];
+
   // Gate de límite gratuito — reemplaza el formulario entero en vez de
   // dejar avanzar los 6 pasos para recién bloquear en el envío final; es
   // más honesto no hacer perder el tiempo a quien ya topó.
@@ -1370,7 +1398,57 @@ export function PublishForm() {
   }
 
   return (
-    <div className={`mx-auto ${step === 2 ? 'max-w-4xl' : 'max-w-2xl'}`}>
+    <div className={`relative mx-auto ${step === 2 ? 'max-w-4xl' : 'max-w-2xl'}`}>
+      {/* Timeline lateral — solo escritorio grande (xl+, hace falta el
+          margen real a la izquierda del formulario centrado para no
+          encimarse con nada), y no en el paso de Ubicación (ese paso ya
+          tiene su propio panel secundario, el mapa, a la derecha —
+          agregar otro a la izquierda se sentiría saturado). `absolute` a
+          propósito: vive FUERA del flujo normal, así el formulario
+          principal no se mueve ni un píxel por su presencia, pedido
+          explícito. */}
+      {step !== 2 && (
+        <aside className="hidden xl:block absolute right-full mr-6 top-0 w-60">
+          <div className="sticky top-24 space-y-0.5">
+            {STEPS.map((label, i) => {
+              const Icon = STEP_ICONS[i];
+              const activo = i === step;
+              const completado = i < step;
+              const resumen = resumenPasos[i];
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  // Solo se puede saltar a un paso ya completado — evita
+                  // que alguien brinque a "Contacto" sin haber pasado por
+                  // la validación de los pasos de en medio.
+                  onClick={() => { if (completado) setStep(i); }}
+                  disabled={!completado}
+                  className={`w-full flex items-start gap-2.5 text-left rounded-xl px-2.5 py-2 transition-colors ${
+                    activo ? 'bg-brand-pale' : completado ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-default'
+                  }`}
+                >
+                  <span
+                    className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5 ${
+                      completado ? 'bg-brand text-white' : activo ? 'bg-brand-pale border-2 border-brand text-brand' : 'bg-gray-100 text-gray-300'
+                    }`}
+                  >
+                    {completado ? <CheckCircle size={13} /> : <Icon size={12} />}
+                  </span>
+                  <span className="min-w-0">
+                    <p className={`text-xs font-bold ${activo ? 'text-brand-dark' : completado ? 'text-gray-700' : 'text-gray-400'}`}>
+                      {label}
+                    </p>
+                    <p className="text-[11px] text-gray-400 truncate leading-snug">
+                      {resumen ?? 'Pendiente'}
+                    </p>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </aside>
+      )}
       <div className={step === 2 ? 'lg:grid lg:grid-cols-[1fr_300px] lg:gap-6 lg:items-start' : ''}>
       <div className="relative overflow-hidden rounded-3xl bg-white border border-gray-100 shadow-xl shadow-gray-200/60">
       <div className="p-6 md:p-9">
