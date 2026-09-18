@@ -1443,21 +1443,21 @@ export function PublishForm() {
 
   return (
     <div className={`relative mx-auto ${step === 2 ? 'max-w-4xl' : 'max-w-2xl'} ${hayProgresoResumen ? 'pb-24 xl:pb-0' : ''}`}>
-      {/* Timeline lateral — solo escritorio grande (xl+, hace falta el
-          margen real a la izquierda del formulario centrado para no
-          encimarse con nada), y no en el paso de Ubicación (ese paso ya
-          tiene su propio panel secundario, el mapa, a la derecha —
-          agregar otro a la izquierda se sentiría saturado). `absolute` a
-          propósito: vive FUERA del flujo normal, así el formulario
-          principal no se mueve ni un píxel por su presencia, pedido
-          explícito. */}
-      {step !== 2 && (
-        <aside className="hidden xl:block absolute right-full mr-6 top-0 w-60">
-          <div className="sticky top-24 space-y-0.5">
-            {STEPS.map((_, i) => renderPasoItem(i))}
-          </div>
-        </aside>
-      )}
+      {/* Timeline lateral — pedido explícito 2026-09-17: debe estar
+          presente durante TODO el proceso, ningún paso lo oculta (antes
+          se ocultaba en Ubicación por espacio — corregido subiendo el
+          punto de quiebre en vez de escondiéndolo). 2xl (no xl) porque
+          el paso de Ubicación usa max-w-4xl (896px) para su propio panel
+          del mapa — con eso + el timeline a la izquierda hace falta más
+          ancho real de viewport para que no se encimen; 2xl es seguro
+          para el caso más ancho de los 6 pasos. `absolute` a propósito:
+          vive FUERA del flujo normal, así el formulario principal no se
+          mueve ni un píxel por su presencia. */}
+      <aside className="hidden 2xl:block absolute right-full mr-6 top-0 w-60">
+        <div className="sticky top-24 space-y-0.5">
+          {STEPS.map((_, i) => renderPasoItem(i))}
+        </div>
+      </aside>
 
       {/* Resumen de móvil — barra fija abajo + bottom sheet, pedido
           explícito 2026-09-17: "se puede consultar en cualquier momento,
