@@ -41,6 +41,7 @@ import {
   type ResultadoGPSFoto,
 } from '@/lib/publishFraudGuard';
 import { hashImagenDesdeFile, hashImagenDesdeUrl, distanciaHamming, UMBRAL_HASH_SIMILAR } from '@/lib/fotoHash';
+import { moverElemento } from '@/lib/reorderArray';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { useAuth } from '@/context/AuthContext';
 import { guardarBorrador, leerBorrador, borrarBorrador, borradorTieneContenido, type PublishDraft } from '@/lib/publishDraft';
@@ -210,12 +211,12 @@ export function PublishForm() {
   // Arrastrar para reordenar fotos — pedido explícito 2026-09-17: la que
   // quede primero es la "Principal" (mismo criterio que usarComoPortada,
   // ahora también manual/libre, no solo por sugerencia de calidad).
-  // `dragIdx`: índice que se está arrastrando. `dragOverIdx`: índice sobre
-  // el que pasa el cursor ahora mismo, solo para el resalte visual de
-  // "aquí se suelta" — ninguno de los dos participa en la lógica de
-  // reordenar en sí, que ocurre entera en el `drop`.
+  // `dragIdx`: índice que se está arrastrando. `dropTarget`: sobre qué
+  // foto pasa el cursor y de qué lado (mitad izquierda/derecha de esa
+  // tarjeta) — pedido explícito: una barra vertical exacta de "aquí se
+  // suelta" (como Trello/Notion), no solo resaltar toda la tarjeta.
   const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ idx: number; side: 'before' | 'after' } | null>(null);
   const [dragOver, setDragOver]   = useState(false);
   const [servicios, setServicios] = useState<string[]>([]);
   const [amenidades, setAmenidades] = useState<string[]>([]);
@@ -491,15 +492,12 @@ export function PublishForm() {
 
   // Arrastrar y soltar para reordenar — a cualquier posición, no solo al
   // frente (usarComoPortada ya cubre "hacerla principal" de un clic, esto
-  // es el reordenamiento libre). Pedido explícito 2026-09-17.
-  function reorderFotos(from: number, to: number) {
-    setFotos((prev) => {
-      if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) return prev;
-      const arr = [...prev];
-      const [item] = arr.splice(from, 1);
-      arr.splice(to, 0, item);
-      return arr;
-    });
+  // es el reordenamiento libre). Pedido explícito 2026-09-17. Aritmética
+  // de índices en moverElemento() (reorderArray.ts, con tests) — fácil de
+  // equivocar a mano (quitar el elemento arrastrado corre los índices
+  // posteriores), no vale la pena reinventarla inline sin cobertura.
+  function reorderFotos(from: number, targetIdx: number, side: 'before' | 'after') {
+    setFotos((prev) => moverElemento(prev, from, targetIdx, side));
   }
 
   // Solo sugiere si otra foto está claramente mejor (diferencia >= 15 pts)
@@ -2052,20 +2050,40 @@ export function PublishForm() {
                       // desde el celular.
                       draggable
                       onDragStart={(e) => { setDragIdx(i); e.dataTransfer.effectAllowed = 'move'; }}
-                      onDragEnter={() => setDragOverIdx(i)}
-                      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        if (dragIdx === null || dragIdx === i) { setDropTarget(null); return; }
+                        // Mitad izquierda de la tarjeta = "antes de esta
+                        // foto", mitad derecha = "después" — la misma
+                        // lectura que usan Trello/Notion/Figma para saber
+                        // de qué lado dibujar la barra.
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const side: 'before' | 'after' = e.clientX < rect.left + rect.width / 2 ? 'before' : 'after';
+                        setDropTarget((prev) => (prev?.idx === i && prev.side === side ? prev : { idx: i, side }));
+                      }}
                       onDrop={(e) => {
                         e.preventDefault();
-                        if (dragIdx !== null && dragIdx !== i) reorderFotos(dragIdx, i);
+                        if (dragIdx !== null && dropTarget?.idx === i) reorderFotos(dragIdx, i, dropTarget.side);
                         setDragIdx(null);
-                        setDragOverIdx(null);
+                        setDropTarget(null);
                       }}
-                      onDragEnd={() => { setDragIdx(null); setDragOverIdx(null); }}
+                      onDragEnd={() => { setDragIdx(null); setDropTarget(null); }}
                       className={`relative group aspect-square rounded-xl overflow-hidden bg-gray-100 cursor-grab active:cursor-grabbing transition-opacity ${
-                        bloqueante ? 'ring-2 ring-red-500' : dragOverIdx === i && dragIdx !== i ? 'ring-2 ring-brand' : ''
+                        bloqueante ? 'ring-2 ring-red-500' : ''
                       } ${dragIdx === i ? 'opacity-40' : ''}`}
                     >
                       <img src={foto.preview} alt={`Foto ${i + 1}`} className="w-full h-full object-cover pointer-events-none" />
+                      {/* Barra vertical de "aquí se suelta" — pedido
+                          explícito 2026-09-17, mismo patrón que apps de
+                          arrastrar-y-soltar conocidas (Trello, Notion):
+                          una línea exacta en el borde correcto de la
+                          tarjeta, no resaltar la tarjeta completa. */}
+                      {dropTarget?.idx === i && dragIdx !== i && (
+                        <div
+                          className={`absolute top-0 bottom-0 w-1 bg-brand z-10 rounded-full ${dropTarget.side === 'before' ? 'left-0' : 'right-0'}`}
+                        />
+                      )}
                       {!advertencia && (
                         <div className="absolute bottom-1.5 left-1.5 w-6 h-6 rounded-md bg-black/40 text-white/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                           <GripVertical size={13} />
