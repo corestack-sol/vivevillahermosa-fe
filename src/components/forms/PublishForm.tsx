@@ -247,13 +247,6 @@ export function PublishForm() {
   // detección de "ya subiste esta foto antes" (ver detectarFotoRepetida()
   // más abajo, fotoHash.ts). Sin llamada extra al backend.
   const [propiasFotos, setPropiasFotos] = useState<{ id: string; titulo: string; fotos: string[] }[]>([]);
-  // Cuántas propiedades vivas (activas/pausadas) ya tenía ANTES de esta
-  // publicación — determina qué número de publicación es esta (1ra, 2da...).
-  // Pedido explícito 2026-09-08: la 1ra publicación de cada cuenta no
-  // muestra anuncio en /publicar/gracias, de la 2da en adelante sí (aplica
-  // también a cuentas profesionales/agente, sin excepción — mismo conteo
-  // "vivas" que ya usa el límite gratuito, reusa esta misma llamada).
-  const [vivasAlEntrar, setVivasAlEntrar] = useState(0);
   const hashesPropiosRef = useRef<Map<string, string>>(new Map());
   useEffect(() => {
     let cancelado = false;
@@ -261,7 +254,6 @@ export function PublishForm() {
       .then(({ propiedades }) => {
         if (cancelado) return;
         setLimiteAlcanzado(contarPropiedadesVivas(propiedades) >= LIMITE_PROPIEDADES);
-        setVivasAlEntrar(contarPropiedadesVivas(propiedades));
         setPropiasFotos(propiedades.filter((p) => p.fotos.length > 0));
       })
       .catch(() => {});
@@ -1360,7 +1352,7 @@ export function PublishForm() {
     // innecesaria de PII (hallazgo H3 de la auditoría).
     sessionStorage.setItem(
       'lastPublishedProperty',
-      JSON.stringify({ id: created.id, numeroPublicacion: vivasAlEntrar + 1 }),
+      JSON.stringify({ id: created.id }),
     );
 
     // Evento clave para saber si la hipótesis de Fase 1 se cumple — sin

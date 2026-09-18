@@ -6,8 +6,7 @@ import Image from 'next/image';
 import { ChevronRight, MapPin, Zap, TrendingUp, Map as MapIcon, Building2 } from 'lucide-react';
 import { getAllZones, getAllMunicipalities, getAllProperties, getZonesWithLiveStats, getMunicipalitiesWithLiveStats } from '@/lib/api';
 import { buildZoneMetadata } from '@/lib/seo';
-import { PropertyCard } from '@/components/property/PropertyCard';
-import { ZoneMap } from '@/components/map/ZoneMap';
+import { PropertyCard } from '@/components/property/PropertyCard';import { ZoneMap } from '@/components/map/ZoneMap';
 import { formatPrice } from '@/lib/format';
 import { obtenerLandmarksBackend, distanciaKm } from '@/lib/landmarks';
 import { detectarRiesgoInundacion } from '@/lib/zonas-inundacion';
@@ -325,8 +324,7 @@ export default async function ZonaDetailPage({ params }: Props) {
                   sin necesitar un marcador falso. */}
               <ZoneMap markers={markers} center={[lat, lng]} zoom={isMunicipality ? 12 : 14} />
             </div>
-          </div>
-        </div>
+          </div>        </div>
 
         {/* Sidebar */}
         <div className="lg:col-span-1">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import Script from 'next/script';
 import { ADSENSE_CLIENT_ID, ADSENSE_ENABLED, ADSENSE_SLOTS, type AdSlotKey } from '@/lib/ads';
 
 declare global {
@@ -84,6 +85,18 @@ export function AdSlot({ slot, className = '', minHeight = 120, adFormat = 'auto
 
   return (
     <div className={`ad-slot ${className}`}>
+      {/* Script de AdSense solo en páginas que tienen un espacio real (antes
+          cargaba global desde el layout, y Google podía servir Auto ads en
+          /login, /mapa, /dashboard — pantallas sin contenido editorial).
+          `id` fijo: next/script lo carga una sola vez por página aunque haya
+          varios AdSlot. */}
+      <Script
+        id="adsense-loader"
+        async
+        src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT_ID}`}
+        crossOrigin="anonymous"
+        strategy="afterInteractive"
+      />
       <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1.5 text-center">Publicidad</p>
       <ins
         ref={insRef}
