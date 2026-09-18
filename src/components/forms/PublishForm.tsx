@@ -2181,10 +2181,7 @@ export function PublishForm() {
                 se escribieron en el paso anterior y siguen disponibles aquí
                 igual. */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-gray-700">Ubicación exacta</label>
-                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Opcional</span>
-              </div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Ubicación exacta</label>
               <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm" style={{ height: 220 }}>
                 <MapPicker
                   value={coords}
