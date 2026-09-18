@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button, buttonClasses } from '@/components/ui/Button';
 import {
-  CheckCircle, ChevronRight, ChevronLeft, ChevronUp, Sparkles, ImagePlus, X, Images, AlertCircle,
+  CheckCircle, ChevronRight, ChevronLeft, ChevronUp, Sparkles, ImagePlus, X, Images, AlertCircle, GripVertical,
   Home, DollarSign, MapPin, FileText, Camera, Phone, Info, ShieldAlert, ShieldX, Droplets,
   Tag, Key, Lightbulb, ShieldCheck, Loader2, EyeOff, RefreshCw, TrendingUp, Star,
 } from 'lucide-react';
@@ -207,6 +207,15 @@ export function PublishForm() {
   const [contactoReutilizado, setContactoReutilizado] = useState(0);
   const contactoReutilizadoRef = useRef(0);
   const [fotos, setFotos]         = useState<{ file: File; preview: string; analisis: AnalisisFoto; calidad: CalidadFoto | null }[]>([]);
+  // Arrastrar para reordenar fotos — pedido explícito 2026-09-17: la que
+  // quede primero es la "Principal" (mismo criterio que usarComoPortada,
+  // ahora también manual/libre, no solo por sugerencia de calidad).
+  // `dragIdx`: índice que se está arrastrando. `dragOverIdx`: índice sobre
+  // el que pasa el cursor ahora mismo, solo para el resalte visual de
+  // "aquí se suelta" — ninguno de los dos participa en la lógica de
+  // reordenar en sí, que ocurre entera en el `drop`.
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [dragOver, setDragOver]   = useState(false);
   const [servicios, setServicios] = useState<string[]>([]);
   const [amenidades, setAmenidades] = useState<string[]>([]);
@@ -476,6 +485,19 @@ export function PublishForm() {
       const arr = [...prev];
       const [item] = arr.splice(idx, 1);
       arr.unshift(item);
+      return arr;
+    });
+  }
+
+  // Arrastrar y soltar para reordenar — a cualquier posición, no solo al
+  // frente (usarComoPortada ya cubre "hacerla principal" de un clic, esto
+  // es el reordenamiento libre). Pedido explícito 2026-09-17.
+  function reorderFotos(from: number, to: number) {
+    setFotos((prev) => {
+      if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) return prev;
+      const arr = [...prev];
+      const [item] = arr.splice(from, 1);
+      arr.splice(to, 0, item);
       return arr;
     });
   }
@@ -1019,17 +1041,6 @@ export function PublishForm() {
       m2Terreno: watch('m2Terreno'),
     }));
   }
-
-  // Bug real reportado 2026-08-22: "Solo WhatsApp" no guarda correo
-  // (construirAgenteContacto), pero el checkbox de abajo pedía "mensaje
-  // primero" sin importar el método elegido — esa rama de AgentCard.tsx
-  // solo sabe revelar CORREO, así que la combinación dejaba el contacto
-  // roto en silencio (revelar "exitoso" sin nada que mostrar). Se fuerza a
-  // false y se oculta el checkbox cuando no hay correo posible que revelar.
-  const metodoContactoActual = watch('metodoContacto');
-  useEffect(() => {
-    if (metodoContactoActual === 'whatsapp') setValue('requiereMensajePrimero', false);
-  }, [metodoContactoActual, setValue]);
 
   async function generarConIA() {
     // Bug real reportado 2026-08-21: el botón siempre fallaba con "No se
@@ -2029,8 +2040,49 @@ export function PublishForm() {
                     : calidad?.sobreexpuesta ? 'Foto sobreexpuesta'
                     : null;
                   return (
-                    <div key={i} className={`relative group aspect-square rounded-xl overflow-hidden bg-gray-100 ${bloqueante ? 'ring-2 ring-red-500' : ''}`}>
-                      <img src={foto.preview} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
+                    <div
+                      key={i}
+                      // Arrastrar para reordenar — pedido explícito
+                      // 2026-09-17: la que quede en la posición 1 es la
+                      // "Principal" (mismo criterio que ya usaba
+                      // usarComoPortada, ahora también manual/libre). Solo
+                      // funciona con mouse (drag-and-drop nativo de HTML5
+                      // no dispara en touch) — el botón "★ Hacer principal"
+                      // de abajo es el mismo resultado para quien publica
+                      // desde el celular.
+                      draggable
+                      onDragStart={(e) => { setDragIdx(i); e.dataTransfer.effectAllowed = 'move'; }}
+                      onDragEnter={() => setDragOverIdx(i)}
+                      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragIdx !== null && dragIdx !== i) reorderFotos(dragIdx, i);
+                        setDragIdx(null);
+                        setDragOverIdx(null);
+                      }}
+                      onDragEnd={() => { setDragIdx(null); setDragOverIdx(null); }}
+                      className={`relative group aspect-square rounded-xl overflow-hidden bg-gray-100 cursor-grab active:cursor-grabbing transition-opacity ${
+                        bloqueante ? 'ring-2 ring-red-500' : dragOverIdx === i && dragIdx !== i ? 'ring-2 ring-brand' : ''
+                      } ${dragIdx === i ? 'opacity-40' : ''}`}
+                    >
+                      <img src={foto.preview} alt={`Foto ${i + 1}`} className="w-full h-full object-cover pointer-events-none" />
+                      {!advertencia && (
+                        <div className="absolute bottom-1.5 left-1.5 w-6 h-6 rounded-md bg-black/40 text-white/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <GripVertical size={13} />
+                        </div>
+                      )}
+                      {/* !advertencia también — ese aviso ya ocupa toda la
+                          franja inferior (bottom-1.5 left-1.5 right-1.5,
+                          más abajo), este botón se encimaría con él. */}
+                      {i !== 0 && !bloqueante && !advertencia && (
+                        <button
+                          type="button"
+                          onClick={() => usarComoPortada(i)}
+                          className="absolute bottom-1.5 right-1.5 text-[9px] font-bold text-white bg-black/50 hover:bg-accent px-1.5 py-1 rounded-md transition-colors"
+                        >
+                          ★ Hacer principal
+                        </button>
+                      )}
                       {i === 0 && !bloqueante && (
                         <div className="absolute top-1.5 left-1.5 bg-accent text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md leading-none">
                           Principal
@@ -2357,25 +2409,29 @@ export function PublishForm() {
               Tu nombre y forma de contacto quedarán visibles de un clic para cualquier persona con sesión iniciada — así es como ya se acostumbra contactar en este mercado (como una lona de &quot;se renta&quot;). Nadie sin cuenta puede verlos.
             </p>
 
-            {/* Oculto para "Solo WhatsApp" — esa elección no guarda correo
-                (construirAgenteContacto), y esta casilla depende de tener uno
-                para revelar en su lugar (ver AgentCard.tsx). Bug real
-                encontrado 2026-08-22: la combinación dejaba el contacto roto
-                en silencio. El efecto de arriba ya fuerza el valor a false
-                si cambian a WhatsApp después de marcarla. */}
-            {watch('metodoContacto') !== 'whatsapp' && (
-              <div className="flex items-start gap-2.5">
-                <input
-                  type="checkbox"
-                  id="requiereMensajePrimero"
-                  {...register('requiereMensajePrimero')}
-                  className="mt-0.5 w-4 h-4 flex-shrink-0 rounded border-gray-300 text-brand focus:ring-2 focus:ring-brand/40 focus:ring-offset-0 cursor-pointer"
-                />
-                <label htmlFor="requiereMensajePrimero" className="text-xs text-gray-500 leading-relaxed cursor-pointer">
-                  Prefiero que me manden un mensaje antes de ver mi teléfono/WhatsApp — decido yo si respondo y comparto mi número.
-                </label>
-              </div>
-            )}
+            {/* Corregido 2026-09-17 — bug real: esto se ocultaba para "Solo
+                WhatsApp" por una restricción de 2026-08-22 que ya no aplica.
+                Esa restricción asumía que esta casilla dependía de tener
+                correo para "revelar en su lugar" (AgentCard.tsx solo sabía
+                revelar correo) — pero el rediseño de 2026-09-12 cambió el
+                mecanismo por completo: hoy `requiereMensajePrimero` oculta
+                el botón de AgentCard ENTERO (tel/whatsapp/correo, los que
+                sea) y manda todo por el formulario de mensaje — método
+                completamente independiente de qué se eligió arriba. Nadie
+                actualizó esta restricción cuando cambió el mecanismo real,
+                dejando justo el método que más la necesita ("Solo
+                WhatsApp") sin poder usarla. */}
+            <div className="flex items-start gap-2.5">
+              <input
+                type="checkbox"
+                id="requiereMensajePrimero"
+                {...register('requiereMensajePrimero')}
+                className="mt-0.5 w-4 h-4 flex-shrink-0 rounded border-gray-300 text-brand focus:ring-2 focus:ring-brand/40 focus:ring-offset-0 cursor-pointer"
+              />
+              <label htmlFor="requiereMensajePrimero" className="text-xs text-gray-500 leading-relaxed cursor-pointer">
+                Prefiero que me manden un mensaje antes de ver mi teléfono/WhatsApp — decido yo si respondo y comparto mi número.
+              </label>
+            </div>
 
             <div className="flex items-start gap-2.5 pt-1">
               <input

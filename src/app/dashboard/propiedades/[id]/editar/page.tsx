@@ -368,16 +368,6 @@ export default function EditarPropiedadPage() {
     });
   }, [property, reset]);
 
-  // Mismo criterio que PublishForm.tsx: "Solo WhatsApp" no guarda correo
-  // (construirAgenteContacto/el mapeo de abajo), y "mensaje primero"
-  // depende de tener uno para revelar en su lugar (AgentCard.tsx) — sin
-  // esto, cambiar a "Solo WhatsApp" con la casilla ya marcada dejaría el
-  // contacto roto en silencio, el mismo bug real que ya se corrigió ahí.
-  const metodoContactoActual = watch('metodoContacto');
-  useEffect(() => {
-    if (metodoContactoActual === 'whatsapp') setValue('requiereMensajePrimero', false);
-  }, [metodoContactoActual, setValue]);
-
   async function onSubmit(data: PublishFormData) {
     if (!property) return;
     // Última validación antes de persistir — MapPicker ya rechaza clics/
@@ -857,24 +847,24 @@ export default function EditarPropiedadPage() {
           )}
         </div>
 
-        {/* Oculto para "Solo WhatsApp" — mismo motivo que PublishForm.tsx:
-            esa elección no guarda correo, y esta casilla depende de tener
-            uno para revelar en su lugar. Auditoría 2026-08-30: antes esta
-            opción ni siquiera existía en Editar, una vez publicada la
-            propiedad quedaba fija para siempre. */}
-        {watch('metodoContacto') !== 'whatsapp' && (
-          <div className="flex items-start gap-2.5">
-            <input
-              type="checkbox"
-              id="requiereMensajePrimero"
-              {...register('requiereMensajePrimero')}
-              className="mt-0.5 w-4 h-4 flex-shrink-0 rounded border-gray-300 text-brand focus:ring-2 focus:ring-brand/40 focus:ring-offset-0 cursor-pointer"
-            />
-            <label htmlFor="requiereMensajePrimero" className="text-xs text-gray-500 leading-relaxed cursor-pointer">
-              Prefiero que me manden un mensaje antes de ver mi teléfono/WhatsApp — decido yo si respondo y comparto mi número.
-            </label>
-          </div>
-        )}
+        {/* Corregido 2026-09-17 — mismo bug real que PublishForm.tsx: se
+            ocultaba para "Solo WhatsApp" por una restricción de 2026-08-30
+            que asumía que esta casilla dependía de tener correo para
+            "revelar en su lugar" (AgentCard.tsx). El rediseño de
+            2026-09-12 cambió el mecanismo: hoy oculta el botón de
+            AgentCard ENTERO (cualquier método) y manda todo por el
+            formulario de mensaje — ya no depende de qué método se eligió. */}
+        <div className="flex items-start gap-2.5">
+          <input
+            type="checkbox"
+            id="requiereMensajePrimero"
+            {...register('requiereMensajePrimero')}
+            className="mt-0.5 w-4 h-4 flex-shrink-0 rounded border-gray-300 text-brand focus:ring-2 focus:ring-brand/40 focus:ring-offset-0 cursor-pointer"
+          />
+          <label htmlFor="requiereMensajePrimero" className="text-xs text-gray-500 leading-relaxed cursor-pointer">
+            Prefiero que me manden un mensaje antes de ver mi teléfono/WhatsApp — decido yo si respondo y comparto mi número.
+          </label>
+        </div>
 
         <div className="flex gap-3 pt-2">
           <Link href="/dashboard/propiedades" className={buttonClasses('outline', 'md', 'flex-1 justify-center')}>
