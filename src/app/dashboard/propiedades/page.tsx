@@ -238,10 +238,19 @@ export default function MisPropiedadesPage() {
             veía "cortado" porque en realidad la página entera era más
             ancha que el viewport). */}
         <div className="flex items-center gap-2 flex-wrap">
-          <Link href="/dashboard/analitica"
-            className="flex items-center gap-2 bg-white border-2 border-gray-200 hover:border-brand/40 text-gray-700 hover:text-brand text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
-            <TrendingUp size={15} /> Analítica
-          </Link>
+          {/* Bug real reportado 2026-09-17: este link se mostraba a
+              cualquier cuenta, pero /dashboard/analitica exige rol
+              'agente' y redirige de vuelta a /dashboard en silencio si no
+              lo eres — para una cuenta particular, el botón se sentía
+              como si "no hiciera nada" (clic, flash, de regreso). Mismo
+              gate que ya tenían Descargar reporte/Importar CSV, ahora
+              consistente con la página real. */}
+          {esProfesional && (
+            <Link href="/dashboard/analitica"
+              className="flex items-center gap-2 bg-white border-2 border-gray-200 hover:border-brand/40 text-gray-700 hover:text-brand text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
+              <TrendingUp size={15} /> Analítica
+            </Link>
+          )}
           {esProfesional && (
             <>
               <button
