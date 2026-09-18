@@ -1506,16 +1506,16 @@ export function PublishForm() {
           <button
             type="button"
             onClick={() => setResumenMovilAbierto(true)}
-            className="xl:hidden fixed bottom-4 left-4 right-4 z-[1300] flex items-center gap-2.5 bg-white border border-gray-200 shadow-lg shadow-gray-300/40 rounded-2xl px-4 py-3 text-left"
+            className="xl:hidden fixed bottom-4 left-4 right-4 z-[1300] flex items-center gap-2.5 bg-accent-pale border border-accent/25 shadow-lg shadow-accent/20 rounded-2xl px-4 py-3 text-left"
           >
             <span className="w-7 h-7 rounded-full bg-accent text-white flex items-center justify-center flex-shrink-0">
               <StepIcon size={13} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-xs font-bold text-gray-800">Paso {step + 1} de {STEPS.length} · {STEPS[step]}</span>
-              <span className="block text-[11px] text-gray-400 truncate">{resumenPasos[step] ?? 'Toca para ver tu avance'}</span>
+              <span className="block text-xs font-bold text-accent-dark">Paso {step + 1} de {STEPS.length} · {STEPS[step]}</span>
+              <span className="block text-[11px] text-gray-600 truncate">{resumenPasos[step] ?? 'Toca para ver tu avance'}</span>
             </span>
-            <ChevronUp size={16} className="text-gray-400 flex-shrink-0" />
+            <ChevronUp size={16} className="text-accent flex-shrink-0" />
           </button>
 
           <BottomSheet
