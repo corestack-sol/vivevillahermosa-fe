@@ -552,9 +552,9 @@ export function getAllAgents(): Agent[] {
   return agentsData as Agent[];
 }
 
-export async function getStats() {
+export async function getStats(propiedades?: Property[]) {
   return {
-    propiedadesActivas: (await getAllProperties()).length,
+    propiedadesActivas: (propiedades ?? (await getAllProperties())).length,
     municipiosCubiertos: 17,
   };
 }

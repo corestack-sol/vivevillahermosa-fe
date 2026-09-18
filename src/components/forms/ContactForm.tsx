@@ -66,7 +66,8 @@ export function ContactForm({ propertyTitle, propertyId, ownerName, dark = false
   const [checkingExisting, setCheckingExisting] = useState(true);
 
   useEffect(() => {
-    if (!user) { setCheckingExisting(false); return; }
+    function sinSesion() { setCheckingExisting(false); }
+    if (!user) { sinSesion(); return; }
     let cancelado = false;
     // Mismo endpoint que ya usa /dashboard/mensajes (GET /mensajes/
     // conversaciones) — no existe un "¿ya hay conversación con esta

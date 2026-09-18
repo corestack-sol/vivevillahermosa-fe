@@ -88,7 +88,10 @@ export default async function HomePage() {
   // se pueda usar en su lugar.
   const { colonias: coloniasPorDemanda, porDemanda, tieneDemandaReal } = await getColoniasOrdenadasPorDemanda();
   const zones = coloniasPorDemanda.slice(0, 4);
-  const stats = await getStats();
+  // Un solo catálogo para stats + mapa (antes 2 descargas completas de
+  // `?all=true` por cada visita a Home).
+  const todasLasPropiedades = await getAllProperties();
+  const stats = await getStats(todasLasPropiedades);
 
   // getAllProperties (no `featured`) — pedido explícito (2026-08-09): el
   // mapa mostraba solo las 5 propiedades marcadas `featured:true`, la
@@ -98,7 +101,7 @@ export default async function HomePage() {
   // Tabasco, así que usa el catálogo completo. `fitToMarkers` en
   // ClickableMap (ver ese componente) ya encuadra para que se vean todas,
   // sin importar cuántas ni qué tan dispersas estén.
-  const markers = (await getAllProperties()).map((p) => ({
+  const markers = todasLasPropiedades.map((p) => ({
     id: p.id, slug: p.slug, lat: p.lat, lng: p.lng,
     titulo: p.titulo, precio: p.precio, operacion: p.operacion,
     tipo: p.tipo, colonia: p.colonia, foto: p.fotos[0] ?? null,
