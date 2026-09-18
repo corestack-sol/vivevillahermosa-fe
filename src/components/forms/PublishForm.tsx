@@ -1434,21 +1434,21 @@ export function PublishForm() {
         onClick={() => { if (completado) { setStep(i); setResumenMovilAbierto(false); } }}
         disabled={!completado}
         className={`w-full flex items-start gap-2.5 text-left rounded-xl px-2.5 py-2 transition-colors ${
-          activo ? 'bg-brand-pale' : completado ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-default'
+          activo ? 'bg-white shadow-sm' : completado ? 'hover:bg-white/60 cursor-pointer' : 'cursor-default'
         }`}
       >
         <span
           className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5 ${
-            completado ? 'bg-brand text-white' : activo ? 'bg-brand-pale border-2 border-brand text-brand' : 'bg-gray-100 text-gray-300'
+            completado ? 'bg-accent text-white' : activo ? 'bg-white border-2 border-accent text-accent' : 'bg-white/70 border border-accent/20 text-accent/40'
           }`}
         >
           {completado ? <CheckCircle size={13} /> : <Icon size={12} />}
         </span>
         <span className="min-w-0">
-          <p className={`text-xs font-bold ${activo ? 'text-brand-dark' : completado ? 'text-gray-700' : 'text-gray-400'}`}>
+          <p className={`text-xs font-bold ${activo ? 'text-accent-dark' : completado ? 'text-gray-800' : 'text-gray-500'}`}>
             {label}
           </p>
-          <p className="text-[11px] text-gray-400 truncate leading-snug">
+          <p className="text-[11px] text-gray-600 truncate leading-snug">
             {resumen ?? 'Pendiente'}
           </p>
         </span>
@@ -1489,7 +1489,7 @@ export function PublishForm() {
           vive FUERA del flujo normal, así el formulario principal no se
           mueve ni un píxel por su presencia. */}
       <aside className="hidden 2xl:block absolute right-full mr-6 top-0 w-60">
-        <div className="sticky top-24 space-y-0.5">
+        <div className="sticky top-24 space-y-0.5 rounded-2xl bg-accent-pale/70 border border-accent/15 p-2">
           {STEPS.map((_, i) => renderPasoItem(i))}
         </div>
       </aside>
@@ -1508,7 +1508,7 @@ export function PublishForm() {
             onClick={() => setResumenMovilAbierto(true)}
             className="xl:hidden fixed bottom-4 left-4 right-4 z-[1300] flex items-center gap-2.5 bg-white border border-gray-200 shadow-lg shadow-gray-300/40 rounded-2xl px-4 py-3 text-left"
           >
-            <span className="w-7 h-7 rounded-full bg-brand-pale border-2 border-brand text-brand flex items-center justify-center flex-shrink-0">
+            <span className="w-7 h-7 rounded-full bg-accent text-white flex items-center justify-center flex-shrink-0">
               <StepIcon size={13} />
             </span>
             <span className="min-w-0 flex-1">
@@ -1523,7 +1523,7 @@ export function PublishForm() {
             onClose={() => setResumenMovilAbierto(false)}
             title="Tu avance"
           >
-            <div className="space-y-0.5">
+            <div className="space-y-0.5 rounded-2xl bg-accent-pale/70 border border-accent/15 p-2">
               {STEPS.map((_, i) => renderPasoItem(i))}
             </div>
           </BottomSheet>
