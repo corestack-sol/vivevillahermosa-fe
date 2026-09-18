@@ -630,16 +630,17 @@ export function PublishForm() {
   const mapCenter = (MUNICIPIO_CENTERS[municipio ?? ''] ?? [17.9869, -92.9303]) as [number, number];
   const frasesSensibles = descripcion ? detectarLenguajeSensible(descripcion) : [];
 
-  // Aviso (no bloqueante) si el pin que se marcó en el mapa queda lejos de
-  // la colonia escrita arriba — mismo tipo de inconsistencia real que se
-  // encontró y corrigió en el catálogo de muestra dos veces esta sesión
-  // ("Centro Histórico" y "Atasta" apuntaban a un lugar distinto del que
-  // describían). Solo se puede comparar cuando la colonia escrita coincide
-  // con el catálogo verificado (colonias.ts) — si no coincide, no hay
-  // centroide real contra qué comparar, y no se avisa nada (no es lo mismo
-  // "no pudimos verificar" que "está mal"). 3km es generoso a propósito:
-  // una colonia es un área, no un punto, así que solo se avisa cuando la
-  // distancia ya no se explica por eso.
+  // Bloquea avanzar/publicar (pedido explícito 2026-09-17, antes solo
+  // avisaba) si el pin que se marcó en el mapa queda lejos de la colonia
+  // escrita arriba. Solo se puede comparar cuando la colonia escrita
+  // coincide con el catálogo verificado (colonias.ts) — si no coincide,
+  // no hay centroide real contra qué comparar, y no se avisa nada (no es
+  // lo mismo "no pudimos verificar" que "está mal"; hoy el catálogo cubre
+  // casi solo Centro/Villahermosa — 264 de 268 colonias — así que fuera
+  // de ahí esta comprobación simplemente no corre, a propósito, no es un
+  // bug). 2.5km (pedido explícito 2026-09-17, antes 3km): una colonia es
+  // un área, no un punto, así que sigue sin avisar por variación normal
+  // dentro de la misma zona.
   // /publicar (a diferencia de /propiedades y /mapa) nunca disparaba la
   // precarga del catálogo de colonias descubiertas dinámicamente
   // (coloniasDescubiertasCache, colonias.ts) — quien llega directo aquí
@@ -685,7 +686,7 @@ export function PublishForm() {
   // "la colonia es correcta, regresa el pin" — sin municipioHint (busca
   // en TODO el estado) porque el caso que más importa detectar es
   // justo un pin en un municipio distinto al declarado.
-  const pinLejosDeColonia = distanciaPinColonia !== null && distanciaPinColonia > 3;
+  const pinLejosDeColonia = distanciaPinColonia !== null && distanciaPinColonia > 2.5;
   const coloniaSegunPin = pinLejosDeColonia && coords ? coloniaCercana(coords.lat, coords.lng, 5) : undefined;
 
   function usarColoniaDelPin() {
