@@ -126,7 +126,7 @@ export default async function GuiaPostPage({ params }: Props) {
               <div className="flex flex-wrap items-center gap-2 mb-6">
                 {[
                   { Icon: MapPin, label: '17 municipios' },
-                  { Icon: DollarSign, label: '$0 comisión' },
+                  { Icon: DollarSign, label: 'Sin comisión' },
                   { Icon: Droplets, label: 'Historial de inundación por zona' },
                 ].map(({ Icon, label }) => (
                   <span key={label} className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand bg-brand-pale px-3 py-1.5 rounded-full">
