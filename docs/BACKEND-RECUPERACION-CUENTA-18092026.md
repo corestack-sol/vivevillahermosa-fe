@@ -105,3 +105,43 @@ correo nuevo, aviso con enlace "no fui yo, revertir" al correo viejo, y el
 viejo sigue válido hasta confirmar el nuevo. Recuperación por código al
 teléfono/WhatsApp como canal secundario (todas las propiedades ya llevan
 teléfono).
+
+---
+
+## Respuesta del backend (18/09/2026) y lo que hizo el frontend
+
+Confirmado: falta `POST /cuenta/confirmar-cambio-correo` (público,
+`{ token, password }`; 400 token inválido/vencido, 409 correo ya tomado, 429
+límite). Cuentas solo Google/Facebook quedan fuera del flujo (rechazo
+silencioso, siempre 200). No se guarda solicitud si el correo actual no
+existe. Sin retraso 24–48 h en la etapa 1. El detalle de admin no trae
+"último login".
+
+Frontend, ya construido:
+
+- `/cuenta/confirmar-cambio-correo?token=…` — el enlace del correo nuevo
+  debe apuntar exactamente a esa ruta. Lee el token una vez y lo **borra de la
+  URL de inmediato** (`history.replaceState`); pide contraseña nueva (mín. 10);
+  maneja 400 → "enlace inválido o vencido", 409, 429 y éxito.
+- `src/lib/redactarUrl.ts` + `sanitize_properties` de PostHog: cualquier
+  `token=`, `codigo=` o `code=` en una URL se censura antes de mandarse a
+  PostHog (que adjunta la URL a cada clic y salida de página).
+- `/cuenta/recuperar-acceso`: el éxito dice "Si los datos coinciden con una
+  cuenta…" y hay un aviso previo para quien entra con Google/Facebook.
+- Pendiente: pantallas de admin (esperan los endpoints desplegados) y quitar
+  el respaldo `mailto:` cuando avisen.
+
+Pedido al backend sobre el token: un solo uso, guardado con hash (no en
+claro), y enlace `…/cuenta/confirmar-cambio-correo?token=<token>`.
+
+## Objeción del frontend al punto 8
+
+Que `PATCH /auth/me` deje cambiar un correo **ya verificado** con solo tener
+sesión (sin contraseña ni aviso al correo viejo) deja la Etapa 1 sin efecto
+como protección: sesión robada (equipo compartido, XSS futuro) → cambiar el
+correo → "recuperar contraseña" al correo nuevo → toma de la cuenta, sin pasar
+por ninguna revisión. Se entiende el derecho de rectificación, pero se puede
+cumplir sin abrir ese hueco. Mínimo sugerido para no esperar a la Etapa 2:
+avisar siempre al correo viejo cuando cambie un correo verificado (con enlace
+"no fui yo"); idealmente pedir contraseña actual. La interfaz ya muestra el
+campo bloqueado, así que no cambia nada visible.

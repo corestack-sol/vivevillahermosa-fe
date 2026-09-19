@@ -1,5 +1,6 @@
 import posthog from 'posthog-js';
 import { startTopProgress } from '@/lib/topProgress';
+import { redactarPropiedades } from '@/lib/redactarUrl';
 
 // Analítica de producto — docs/PLAN-AUDITORIA-FASE1-MVP.md hallazgo #8.
 // Sin NEXT_PUBLIC_POSTHOG_KEY, se salta en silencio (mismo patrón que
@@ -27,6 +28,9 @@ if (KEY) {
     person_profiles: 'identified_only',
     capture_pageview: false,
     capture_pageleave: true,
+    // Nunca mandar tokens/códigos de un solo uso que viajen en la URL (ej.
+    // enlace de confirmación de cambio de correo) — ver lib/redactarUrl.ts.
+    sanitize_properties: (properties) => redactarPropiedades(properties),
     autocapture: {
       // No capturar contenido de inputs/forms — los formularios de esta
       // plataforma (publicar, contacto) llevan nombre/teléfono/correo, y

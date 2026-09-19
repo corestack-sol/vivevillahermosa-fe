@@ -74,7 +74,7 @@ function RecuperarAccesoContent() {
         </div>
         <h1 className="text-xl font-heading font-bold text-gray-900 mb-2">Recibimos tu solicitud</h1>
         <p className="text-sm text-gray-500 leading-relaxed mb-6">
-          Un administrador la revisará y te escribiremos al correo nuevo que nos diste, apruebe o no la solicitud. No compartas tu contraseña con nadie.
+          Si los datos coinciden con una cuenta, un administrador revisará tu solicitud y te escribiremos al correo nuevo que nos diste con el resultado. No compartas tu contraseña con nadie.
         </p>
         <Link href="/" className="text-brand font-bold text-sm hover:underline">Volver al inicio</Link>
       </div>
@@ -136,6 +136,16 @@ function RecuperarAccesoContent() {
           <Info size={13} className="flex-shrink-0 mt-0.5" />
           <span>
             Si solo olvidaste tu contraseña y sí tienes acceso a tu correo, usa <Link href="/auth/recuperar-password" className="font-semibold underline">Recuperar contraseña</Link>, es más rápido.
+          </span>
+        </p>
+        {/* Confirmado con el backend (18/09/2026): las cuentas que solo entran
+            con Google/Facebook quedan fuera de este flujo (rechazo silencioso)
+            porque no dependen del correo guardado — sin este aviso previo,
+            esa persona esperaría una respuesta que nunca llega. */}
+        <p className="flex items-start gap-1.5 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 mt-2 leading-relaxed">
+          <Info size={13} className="flex-shrink-0 mt-0.5" />
+          <span>
+            ¿Entras con Google o Facebook? Recupera el acceso desde tu cuenta de Google o Facebook: esta solicitud no aplica para ese tipo de cuenta.
           </span>
         </p>
       </div>
