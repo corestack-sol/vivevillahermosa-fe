@@ -169,7 +169,7 @@ function RecuperarAccesoContent() {
           <textarea
             id="pruebas"
             rows={4}
-            placeholder="Ej. Publiqué una casa en la colonia Tabasco 2000 en agosto, con el teléfono 993... Mi cuenta la creé con mi nombre completo."
+            placeholder="Ejemplo (escribe tus propios datos): Publiqué una casa en la colonia [tu colonia] en [mes], con el teléfono [tu teléfono]. Creé la cuenta con mi nombre completo."
             className={`w-full rounded-xl border text-base sm:text-sm px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-brand/40 transition-shadow ${errors.pruebas ? 'border-danger' : 'border-gray-200 focus:border-brand'}`}
             {...register('pruebas')}
           />
