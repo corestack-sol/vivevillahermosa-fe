@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
-  matchColonia, matchColoniaCandidates, sugerirColonias, getColoniaByKey, buscarColoniaEnTexto, jitterCoord, getPuntoPublico,
+  matchColonia, matchColoniaCandidates, sugerirColonias, getColoniaByKey, buscarColoniaEnTexto, completarColoniaDesdeTexto, jitterCoord, getPuntoPublico,
   normalizarNombreColonia, RADIO_COLONIA_KM, coloniaCercana, evaluarPinVsColonia, distanciaKm, COLONIAS_COORDS,
 } from './colonias';
 
@@ -274,6 +274,41 @@ describe('buscarColoniaEnTexto', () => {
     const c = buscarColoniaEnTexto('casas en renta cerca del centro histórico');
     expect(c?.key).toBe('centro-historico');
     expect(c?.municipio).toBe('Centro');
+  });
+});
+
+describe('completarColoniaDesdeTexto — bug 2026-09-18 "el centro" terminaba en Balancán', () => {
+  it('"propiedades en el centro" con municipio Centro NO se convierte en Balancán', () => {
+    const r = completarColoniaDesdeTexto({ municipio: 'Centro' } as { colonia?: string; municipio?: string }, 'propiedades en el centro');
+    expect(r.municipio).toBe('Centro');
+    expect(r.colonia).toBeUndefined();
+  });
+  it('"centro histórico" con municipio Centro sí rellena la colonia (caso que motivó la red)', () => {
+    const r = completarColoniaDesdeTexto({ municipio: 'Centro' } as { colonia?: string; municipio?: string }, 'centro histórico');
+    expect(r.colonia).toBe('Centro Histórico');
+    expect(r.municipio).toBe('Centro');
+  });
+  it('"el centro de balancán" con municipio Balancán conserva la colonia El Centro de Balancán', () => {
+    const r = completarColoniaDesdeTexto({ municipio: 'Balancán' } as { colonia?: string; municipio?: string }, 'casas en el centro de balancán');
+    expect(r.municipio).toBe('Balancán');
+    expect(r.colonia).toBe('El Centro');
+  });
+  it('sin municipio de la IA conserva el comportamiento anterior (la colonia trae su municipio)', () => {
+    const r = completarColoniaDesdeTexto({} as { colonia?: string; municipio?: string }, 'cerca de la col magisterial');
+    expect(r.colonia).toBeDefined();
+    expect(r.municipio).toBe('Centro');
+  });
+  it('nunca pisa una colonia que la IA ya extrajo', () => {
+    const f = { colonia: 'Tabasco 2000', municipio: 'Centro' };
+    expect(completarColoniaDesdeTexto(f, 'centro histórico')).toBe(f);
+  });
+  it('"Villahermosa" del municipio equivale a Centro', () => {
+    const r = completarColoniaDesdeTexto({ municipio: 'Villahermosa' } as { colonia?: string; municipio?: string }, 'centro histórico');
+    expect(r.colonia).toBe('Centro Histórico');
+  });
+  it('buscarColoniaEnTexto con municipio ignora colonias homónimas de otro municipio', () => {
+    expect(buscarColoniaEnTexto('el centro', 'Centro')).toBeUndefined();
+    expect(buscarColoniaEnTexto('el centro', 'Balancán')?.municipio).toBe('Balancán');
   });
 });
 

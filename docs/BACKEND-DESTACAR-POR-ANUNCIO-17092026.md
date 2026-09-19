@@ -79,3 +79,49 @@ En cuanto confirmen el endpoint, construimos: el modal/flujo del anuncio
 depender del producto "Rewarded Ads" de Google que requiere aprobación
 aparte) y el botón "Ver anuncio y destacar" visible solo para
 `rol === 'particular'` en su propia ficha/panel.
+
+---
+
+## Actualización 18/09/2026 — endpoint verificado en vivo
+
+El backend entregó `POST /propiedades/:id/destacar-por-anuncio`. Verificado en
+producción con cuenta y propiedad desechables (ambas borradas al terminar,
+login posterior 401):
+
+| Prueba | Resultado |
+|---|---|
+| Sin sesión | 401 |
+| POST con propiedad activa propia | 200, `featured: true`, `featuredHasta` = ahora + 24 h exactas |
+| Repetir el POST | 409 `{ code: "YA_DESTACADA", featuredHasta }` (mismo valor) |
+| POST con `{"featuredDias":30}` en el body | 409 igual — el body se ignora |
+| `GET /propiedades/mias` después | `featured: true`, mismo `featuredHasta` |
+
+Contrato completo (403/404/409 sin code/429, límite 10 por hora) en el reporte
+del backend; no se probaron 403/429 en vivo.
+
+## Corrección al plan de frontend de arriba
+
+El plan original ("AdSlot existente + un timer propio") **no se debe
+construir**. Revisado contra la documentación oficial de Google (18/09/2026):
+
+- AdSense prohíbe mostrar anuncios de Google en pop-ups/modales — un modal con
+  un `<ins class="adsbygoogle">` y una cuenta regresiva es exactamente eso, y
+  es el mismo patrón por el que la cuenta recibió "anuncios en pantallas sin
+  contenido de publicadores" (ver `/publicar/gracias`, ya retirado).
+- El formato oficial con recompensa en AdSense web es el "Rewarded ad" del
+  Offerwall (Privacidad y mensajería): da **acceso a contenido**, sin
+  callback de JavaScript documentado para ligarlo a una acción propia como
+  "destacar", y solo se muestra si hay demanda en la cuenta. Sin callback no
+  se puede saber que el usuario vio el anuncio antes de llamar al endpoint
+  (el servidor tampoco lo verifica).
+- Una recompensa de "visibilidad de mi anuncio por 24 h" no aparece ni como
+  permitida ni como prohibida en la política de rewarded ads (solo permite
+  recompensas indirectas no monetarias, canjeables solo dentro de la
+  plataforma, con opt-in y aviso previo de qué se recibe).
+- Ad Manager sí tiene rewarded ads para web con callbacks (GPT), pero es otro
+  producto, aparte de AdSense.
+
+Bloqueado hasta decidir con el dueño: (a) esperar a que la cuenta esté
+aprobada y evaluar Rewarded ad units / Ad Manager, o (b) ofrecer "Destacar 24
+h" sin anuncio (el servidor ya impone 24 h fijas, solo particulares, sin
+apilar).

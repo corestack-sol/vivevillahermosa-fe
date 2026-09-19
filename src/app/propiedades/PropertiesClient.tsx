@@ -18,7 +18,7 @@ import { MapViewDynamic } from '@/components/map/MapViewDynamic';
 import { SelectedPropertyCard } from '@/components/map/SelectedPropertyCard';
 import type { MapMarker } from '@/components/map/MapView';
 import { getLandmark, distanciaKm, CATEGORIAS_GENERICAS, precargarLandmarks } from '@/lib/landmarks';
-import { matchColonia, normalizarNombreColonia, precargarColoniasDescubiertas, buscarColoniaEnTexto } from '@/lib/colonias';
+import { matchColonia, normalizarNombreColonia, precargarColoniasDescubiertas, completarColoniaDesdeTexto } from '@/lib/colonias';
 import { interpretarBusqueda, esOracionLarga, MAX_QUERY_LENGTH } from '@/lib/interpretarBusqueda';
 import { buscarIA } from '@/lib/buscarIA';
 import { getColoniasRankedByPropiedades, searchProperties } from '@/lib/api';
@@ -400,12 +400,9 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
     // Solo rellena `colonia` cuando la IA no la dio — nunca pisa una
     // colonia que la IA sí extrajo, y nunca puede inventar una que no
     // esté verificada en el catálogo. Mismo criterio que SearchBar.tsx.
-    if (!filtros.colonia) {
-      const coloniaEnTexto = buscarColoniaEnTexto(texto);
-      if (coloniaEnTexto) {
-        filtros = { ...filtros, colonia: coloniaEnTexto.label, municipio: coloniaEnTexto.municipio };
-      }
-    }
+    // Solo una colonia del municipio que la IA ya dio (ver SearchBar.tsx,
+    // bug 2026-09-18: "el centro" terminaba en Balancán).
+    filtros = completarColoniaDesdeTexto(filtros, texto);
     setBuscandoIA(false);
     if (iaSeqRef.current !== seq) return; // ya hay una búsqueda más nueva en curso
 

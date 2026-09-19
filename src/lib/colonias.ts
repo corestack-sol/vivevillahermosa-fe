@@ -843,9 +843,16 @@ function escaparRegex(s: string): string {
  * Nunca puede inventar una coordenada nueva: solo encuentra lo que ya está
  * verificado en COLONIAS_COORDS.
  */
-export function buscarColoniaEnTexto(texto: string): ColoniaCoord | undefined {
+export function buscarColoniaEnTexto(texto: string, municipioHint?: string): ColoniaCoord | undefined {
   const t = normalizarBase(texto);
+  const hint = municipioHint ? municipioCanonico(municipioHint) : undefined;
   for (const c of todasLasColonias()) {
+    // Con municipio conocido solo cuenta una colonia de ESE municipio — el
+    // catálogo repite 56 nombres entre municipios ("Las Flores" en 7), y
+    // devolver la primera coincidencia sin mirar el municipio mandaba
+    // "propiedades en el centro" (municipio Centro) a la "El Centro" de
+    // Balancán.
+    if (hint && municipioCanonico(c.municipio) !== hint) continue;
     const nombres = [c.label, ...(c.aliases ?? [])];
     for (const nombre of nombres) {
       const re = new RegExp(`\\b${escaparRegex(normalizarBase(nombre))}\\b`);
@@ -853,6 +860,26 @@ export function buscarColoniaEnTexto(texto: string): ColoniaCoord | undefined {
     }
   }
   return undefined;
+}
+
+// "Villahermosa" es como se le llama a la ciudad del municipio Centro — el
+// backend y el catálogo usan "Centro", la UI a veces "Villahermosa".
+function municipioCanonico(m: string): string {
+  const n = normalizarBase(m).replace(/\s*\(villahermosa\)\s*$/, '').trim();
+  return n === 'villahermosa' ? 'centro' : n;
+}
+
+/**
+ * Red de seguridad para cuando la IA devuelve municipio pero no colonia:
+ * rellena la colonia desde el texto SOLO si esa colonia pertenece al
+ * municipio que la IA ya dio (o si no dio ninguno). Nunca pisa un municipio
+ * ya resuelto ni una colonia ya extraída.
+ */
+export function completarColoniaDesdeTexto<T extends { colonia?: string; municipio?: string }>(filtros: T, texto: string): T {
+  if (filtros.colonia) return filtros;
+  const c = buscarColoniaEnTexto(texto, filtros.municipio);
+  if (!c) return filtros;
+  return { ...filtros, colonia: c.label, municipio: c.municipio };
 }
 
 /**
