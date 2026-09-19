@@ -138,7 +138,15 @@ export default function CuentaPage() {
           {emailBloqueado && (
             <p className="flex items-center gap-1.5 text-xs text-gray-400 mt-1.5">
               <Lock size={11} className="flex-shrink-0" />
-              Ya está confirmado — por seguridad, no se puede cambiar desde aquí. Si perdiste acceso a este correo, contáctanos.
+              <span>
+                Ya está confirmado — por seguridad, no se puede cambiar desde aquí. Si perdiste acceso a este correo,{' '}
+                <Link
+                  href={`/cuenta/recuperar-acceso?email=${encodeURIComponent(user.email)}`}
+                  className="font-semibold text-brand hover:underline"
+                >
+                  solicita ayuda
+                </Link>.
+              </span>
             </p>
           )}
         </div>

@@ -335,7 +335,14 @@ function RecuperarPasswordContent() {
         </Button>
       </form>
 
-      <Link href="/auth/login" className="flex items-center justify-center gap-1.5 text-sm text-gray-500 hover:text-brand mt-6">
+      <Link
+        href={`/cuenta/recuperar-acceso${emailForm.watch('email') ? `?email=${encodeURIComponent(emailForm.watch('email'))}` : ''}`}
+        className="block text-center text-xs text-gray-400 hover:text-brand mt-5"
+      >
+        ¿Ya no tienes acceso a ese correo?
+      </Link>
+
+      <Link href="/auth/login" className="flex items-center justify-center gap-1.5 text-sm text-gray-500 hover:text-brand mt-4">
         <ArrowLeft size={14} /> Volver a iniciar sesión
       </Link>
     </>
