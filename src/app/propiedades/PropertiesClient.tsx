@@ -243,9 +243,17 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
   // (aplicarBusquedaIA) o por una acción externa (sugerencia, reciente,
   // limpiar) — este estado sincroniza el input con esos cambios externos.
   const [inputValue, setInputValue] = useState(filters.q ?? '');
+  // Último texto enviado con Enter/Buscar/historial (aplicarBusquedaIA).
+  // Mientras no lo cancele una acción de limpieza explícita (panel verde,
+  // X, quitar filtros), el input conserva ese texto aunque la búsqueda
+  // termine limpiando `filters.q` (fallback de filtros con IA que sí
+  // encontró un lugar) — pedido 2026-09-18: solo el panel verde limpia.
+  const textoBuscadoRef = useRef<string | null>(null);
   useEffect(() => {
     function sincronizarInput() {
-      setInputValue(filters.q ?? '');
+      const qActual = filters.q ?? '';
+      if (qActual === '' && textoBuscadoRef.current !== null) return;
+      setInputValue(qActual);
     }
     sincronizarInput();
   }, [filters.q]);
@@ -350,6 +358,10 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
   async function aplicarBusquedaIA(query: string) {
     const texto = query.trim();
     if (!texto) return;
+    // El input muestra lo que se buscó (también al elegir del historial,
+    // que solo aparece con el input vacío y antes lo dejaba vacío).
+    textoBuscadoRef.current = texto;
+    setInputValue(texto);
     addRecentSearch(texto, user?.userId ?? null);
     setRecent(getRecentSearches(user?.userId ?? null));
     setBuscandoIA(true);
@@ -481,10 +493,18 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
   // filtros manuales no deben verse afectados por esta integración.
   function updateFiltersManual(updates: Partial<SearchFilters>) {
     setIaQuery(null);
+    // Solo una acción que toca `q` (sugerencia, X, chip de búsqueda, panel)
+    // suelta el texto buscado y actualiza el input; sort/chips/tipo no.
+    if ('q' in updates) {
+      textoBuscadoRef.current = null;
+      setInputValue(updates.q ?? '');
+    }
     updateFilters(updates);
   }
   function clearFiltersManual() {
     setIaQuery(null);
+    textoBuscadoRef.current = null;
+    setInputValue('');
     clearFilters();
   }
 
