@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -116,6 +116,16 @@ export function NavbarFallback() {
   );
 }
 
+function OperacionSync({ onChange }: { onChange: (operacion: string | null) => void }) {
+  const searchParams = useSearchParams();
+  const operacion = searchParams.get('operacion');
+  useEffect(() => {
+    function publicarOperacion() { onChange(operacion); }
+    publicarOperacion();
+  }, [operacion, onChange]);
+  return null;
+}
+
 export function Navbar() {
   const [isOpen, setIsOpen]         = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -127,7 +137,14 @@ export function Navbar() {
   // (el botón del avatar).
   const [perfilAbierto, setPerfilAbierto] = useState(false);
   const pathname     = usePathname();
-  const searchParams = useSearchParams();
+  // Solo el resaltado de "Comprar"/"Rentar" depende de la query string
+  // (?operacion=). Antes el Navbar entero llamaba useSearchParams(), lo que
+  // obliga a Next a dibujarlo SOLO en el navegador: el HTML del servidor traía
+  // únicamente el logo, y enlaces + "Publicar gratis" + botón de usuario no
+  // aparecían hasta que el JavaScript cargaba (tardaba o fallaba a veces).
+  // Ahora esa lectura vive en <OperacionSync/>, con su propio Suspense, y el
+  // resto del Navbar sale ya dibujado en el HTML.
+  const [operacionActiva, setOperacionActiva] = useState<string | null>(null);
   const router       = useRouter();
   const { user, loading, logout } = useAuth();
   const toast = useToast();
@@ -204,7 +221,7 @@ export function Navbar() {
 
   const isActive = (link: typeof navLinks[number]) => {
     if (!pathname.startsWith(link.base)) return false;
-    if (link.operacion) return searchParams.get('operacion') === link.operacion;
+    if (link.operacion) return operacionActiva === link.operacion;
     return true;
   };
 
@@ -218,6 +235,7 @@ export function Navbar() {
 
   return (
     <>
+    <Suspense fallback={null}><OperacionSync onChange={setOperacionActiva} /></Suspense>
     {/* Header oscuro a propósito — el resto del sitio es blanco/gris claro,
         así que un header en brand-dark es lo que da el golpe de marca desde
         el primer scroll, en vez de fundirse con el contenido de abajo. */}
@@ -310,6 +328,10 @@ export function Navbar() {
                 explícito 2026-09-12 (segunda vuelta, sobre el orden previo
                 usuario → campana → publicar). "Publicar gratis" se queda
                 como cierre más vistoso al extremo derecho. */}
+            {/* Espacio reservado mientras se resuelve la sesión — antes no se
+                dibujaba nada y el botón de usuario "aparecía de golpe" (o
+                parecía no cargar) hasta que /auth/me respondía. */}
+            {loading && <div aria-hidden="true" className="w-28 h-9 rounded-xl bg-white/10 animate-pulse" />}
             {!loading && user && <NotificationBell />}
 
             {!loading && (

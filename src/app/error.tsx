@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Home, RotateCw } from 'lucide-react';
 import { buttonClasses } from '@/components/ui/Button';
+import { esErrorDeChunk, recargarSiCorresponde } from '@/lib/chunkRecovery';
 
 // Sin este archivo, cualquier error no atrapado (ej. el backend caído
 // justo cuando el Home hace sus 4 llamadas server-side) tumbaba TODO el
@@ -15,6 +16,7 @@ import { buttonClasses } from '@/components/ui/Button';
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     console.error(error);
+    if (esErrorDeChunk(error)) recargarSiCorresponde();
   }, [error]);
 
   return (

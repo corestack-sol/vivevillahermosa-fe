@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { ServerCrash } from 'lucide-react';
+import { esErrorDeChunk, recargarSiCorresponde } from '@/lib/chunkRecovery';
 
 /**
  * error.tsx (la envoltura normal: Navbar/Footer/AuthProvider en
@@ -22,6 +23,7 @@ import { ServerCrash } from 'lucide-react';
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     console.error(error);
+    if (esErrorDeChunk(error)) recargarSiCorresponde();
   }, [error]);
 
   return (

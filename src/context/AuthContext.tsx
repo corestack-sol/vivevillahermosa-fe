@@ -1,7 +1,8 @@
 'use client';
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
-import { backendFetch, type BackendUser } from '@/lib/backendApi';
+import { backendFetch, BackendApiError, type BackendUser } from '@/lib/backendApi';
+import { pedirSesion } from '@/lib/sesion';
 
 export interface AuthUser {
   userId: string;
@@ -42,29 +43,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async () => {
     const id = ++refreshId.current;
-    try {
-      const { user: backendUser } = await backendFetch<{
-        user: BackendUser | null;
-      }>('/auth/me');
-      if (refreshId.current !== id) return;
-      setUser(
-        backendUser
-          ? {
-              userId: backendUser.id,
-              email: backendUser.email,
-              nombre: backendUser.nombre,
-              rol: backendUser.rol,
-              esAdmin: backendUser.esAdmin,
-              emailVerificado: backendUser.emailVerificado,
-            }
-          : null,
-      );
-    } catch {
-      if (refreshId.current !== id) return;
+    // Timeout por intento + un reintento — antes un backend lento dejaba
+    // `loading` para siempre (botón de usuario sin aparecer) y cualquier
+    // fallo de red se trataba como "sin sesión" (aparecía "Entrar" aunque la
+    // persona sí tuviera sesión, hasta recargar). Ver lib/sesion.ts.
+    const resultado = await pedirSesion(
+      () => backendFetch<{ user: BackendUser | null }>('/auth/me', { signal: AbortSignal.timeout(8000) }),
+      { esSinSesion: (err) => err instanceof BackendApiError && (err.status === 401 || err.status === 403) },
+    );
+    if (refreshId.current !== id) return;
+    if (resultado.tipo === 'usuario') {
+      const backendUser = resultado.user;
+      setUser({
+        userId: backendUser.id,
+        email: backendUser.email,
+        nombre: backendUser.nombre,
+        rol: backendUser.rol,
+        esAdmin: backendUser.esAdmin,
+        emailVerificado: backendUser.emailVerificado,
+      });
+    } else if (resultado.tipo === 'sin-sesion') {
       setUser(null);
-    } finally {
-      if (refreshId.current === id) setLoading(false);
     }
+    // tipo 'error' (red/timeout/5xx tras reintentar): se conserva el estado
+    // anterior en vez de cerrar la sesión en la interfaz por un fallo pasajero.
+    setLoading(false);
   }, []);
 
   // setUser(null) va en `finally`: si /auth/logout falla (red, 5xx), la

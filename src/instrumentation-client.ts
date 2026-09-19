@@ -1,6 +1,11 @@
 import posthog from 'posthog-js';
 import { startTopProgress } from '@/lib/topProgress';
 import { redactarPropiedades } from '@/lib/redactarUrl';
+import { instalarRecuperacionDeChunks } from '@/lib/chunkRecovery';
+
+// Ver lib/chunkRecovery.ts — recarga una sola vez si un deploy dejó al
+// navegador pidiendo archivos JS que ya no existen.
+if (typeof window !== 'undefined') instalarRecuperacionDeChunks();
 
 // Analítica de producto — docs/PLAN-AUDITORIA-FASE1-MVP.md hallazgo #8.
 // Sin NEXT_PUBLIC_POSTHOG_KEY, se salta en silencio (mismo patrón que
