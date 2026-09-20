@@ -19,7 +19,7 @@ import { AMENIDADES_OPTIONS, AMENIDADES_MAP } from '@/lib/amenidades';
 import { evaluarCalidadFoto, type CalidadFoto } from '@/lib/calidadFoto';
 import { generarTituloAutomatico } from '@/lib/tituloGenerator';
 import { detectarLenguajeSensible } from '@/lib/contentModeration';
-import { detectarRiesgoInundacion } from '@/lib/zonas-inundacion';
+import { detectarRiesgoInundacion, riesgoPorCercania } from '@/lib/zonas-inundacion';
 import { formatTelefonoInput } from '@/lib/phone';
 import type { RiesgoInundacion } from '@/lib/zonas-inundacion';
 import type { Coords } from './MapPicker';
@@ -99,8 +99,8 @@ async function analizarFoto(file: File): Promise<ResultadoImagenIA> {
 }
 
 type DeteccionUI =
-  | { riesgo: RiesgoInundacion; confianza: 'confirmada' | 'probable'; metodo: 'texto' }
-  | { riesgo: RiesgoInundacion; confianza: 'confirmada'; metodo: 'gis'; zona: string };
+  | { riesgo: RiesgoInundacion; confianza: 'confirmada' | 'probable'; citadaEnAtlas: boolean; metodo: 'texto' }
+  | { riesgo: RiesgoInundacion; confianza: 'confirmada'; citadaEnAtlas: true; metodo: 'gis'; zona: string };
 
 const MapPicker = dynamic(
   () => import('./MapPicker').then((m) => m.MapPicker),
@@ -824,7 +824,17 @@ export function PublishForm() {
     // hubiera dado para la detección ANTERIOR ya no aplica a esta.
     setConfirmaRiesgoBajo(false);
     if (d) {
-      setAutoRiesgo(d.riesgo);
+      // `autoRiesgo` es lo que se manda como `riesgoInundacionDetectado` —
+      // el backend lo trata como "detección real contra el Atlas" y lo usa
+      // para decidir si la ficha pública muestra la cita del Atlas
+      // (fuente: 'atlas', con página y todo). Auditoría 2026-09-20: 24 de
+      // 88 zonas del catálogo NO están citadas en el Atlas — mandar esas
+      // como si lo estuvieran sería la misma "cita falsa" que este sistema
+      // existe para evitar. El selector sí se pre-llena igual (sigue siendo
+      // un estimado razonable), pero sin exigir el checkbox de "bajé el
+      // riesgo a propósito" — no tiene sentido pedir esa confirmación
+      // contra un valor que nosotros mismos no podemos respaldar.
+      setAutoRiesgo(d.citadaEnAtlas ? d.riesgo : null);
       setValue('riesgoInundacion', d.riesgo);
     } else {
       setAutoRiesgo(null);
@@ -856,6 +866,13 @@ export function PublishForm() {
     }
     detectarPorTexto();
   }, [colonia, municipio]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Aviso de cercanía (auditoría 2026-09-20, ver zonas-inundacion.ts) —
+  // SOLO informativo cuando no hubo detección directa. Nunca llena
+  // `riesgoInundacion` ni pasa por `autoRiesgo`/`riesgoInundacionDetectado`:
+  // ese campo el backend lo trata como una detección real contra el Atlas,
+  // y esto es una inferencia por distancia, un escalón más débil todavía.
+  const cercania = !deteccion && colonia ? riesgoPorCercania(colonia, municipio) : null;
 
   const riesgoActual  = watch('riesgoInundacion');
   const fueModificado = autoRiesgo !== null && riesgoActual !== autoRiesgo;
@@ -1762,7 +1779,15 @@ export function PublishForm() {
                       <span className="font-semibold">Detectado automáticamente</span>
                       {' — '}Esta colonia tiene historial de inundaciones{' '}
                       <span className="font-bold uppercase">{deteccion.riesgo}</span>
-                      {' '}según el Atlas de Riesgos Municipal.
+                      {deteccion.citadaEnAtlas
+                        ? ' según el Atlas de Riesgos Municipal.'
+                        // Auditoría 2026-09-20: 24 de 88 zonas del catálogo no
+                        // aparecen citadas en el Atlas — el nivel viene de
+                        // inferir el riesgo del distrito completo, no de una
+                        // cita directa. No afirmar "según el Atlas" en ese
+                        // caso, mismo criterio que ya se corrigió para
+                        // riesgoInundacionFuente.
+                        : ' según nuestro catálogo interno — el Atlas no nombra esta colonia en particular.'}
                       {deteccion.confianza === 'probable' && (
                         <span className="text-[10px] opacity-70"> · coincidencia parcial</span>
                       )}
@@ -1777,10 +1802,20 @@ export function PublishForm() {
                     </div>
                   </div>
                 ) : colonia && colonia.length >= 4 ? (
-                  <p className="flex items-center gap-1.5 text-xs text-gray-400 bg-gray-50 rounded-xl px-3 py-2.5 mb-3">
-                    <Info size={11} className="flex-shrink-0" />
-                    No encontramos datos históricos para esta colonia — selecciona manualmente.
-                  </p>
+                  <div className="mb-3 space-y-1.5">
+                    <p className="flex items-center gap-1.5 text-xs text-gray-400 bg-gray-50 rounded-xl px-3 py-2.5">
+                      <Info size={11} className="flex-shrink-0" />
+                      No encontramos datos históricos para esta colonia — selecciona manualmente.
+                    </p>
+                    {cercania && (
+                      <p className="flex items-start gap-1.5 text-[11px] text-sky-700 bg-sky-50 border border-sky-100 rounded-lg px-3 py-2 leading-snug">
+                        <Info size={12} className="flex-shrink-0 mt-0.5" />
+                        A {cercania.distanciaKm.toFixed(1)} km hay una colonia con historial{' '}
+                        <span className="font-bold uppercase">{cercania.riesgo}</span> ({cercania.coloniaReferencia}) —
+                        no significa que aquí sea igual, solo es una referencia cercana para decidir.
+                      </p>
+                    )}
+                  </div>
                 ) : null}
               </div>
 
@@ -2523,6 +2558,14 @@ export function PublishForm() {
                   <ChevronLeft size={13} className="text-brand flex-shrink-0" />
                   <p className="text-xs font-semibold text-brand">Selecciona el nivel manualmente en el formulario</p>
                 </div>
+                {cercania && (
+                  <p className="flex items-start gap-1.5 text-[11px] text-sky-700 bg-sky-50 border border-sky-100 rounded-lg px-3 py-2 leading-snug">
+                    <Info size={12} className="flex-shrink-0 mt-0.5" />
+                    A {cercania.distanciaKm.toFixed(1)} km hay una colonia con historial{' '}
+                    <span className="font-bold uppercase">{cercania.riesgo}</span> ({cercania.coloniaReferencia}) —
+                    solo referencia, no aplica automáticamente aquí.
+                  </p>
+                )}
               </div>
             ) : (
               <p className="text-xs text-gray-400 leading-relaxed">

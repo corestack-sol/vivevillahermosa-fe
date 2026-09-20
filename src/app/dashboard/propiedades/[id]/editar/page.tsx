@@ -411,7 +411,16 @@ export default function EditarPropiedadPage() {
           // `riesgoInundacion` — se recalcula de la colonia/municipio ACTUALES
           // del formulario en cada guardado, nunca del valor que la persona
           // eligió a mano en los radios de arriba.
-          riesgoInundacionDetectado: detectarRiesgoInundacion(data.colonia ?? '', data.municipio)?.riesgo ?? null,
+          // Auditoría 2026-09-20: solo se manda como "detección real del
+          // Atlas" cuando el Atlas de verdad cita esa colonia
+          // (`citadaEnAtlas`) — 24 de 88 zonas del catálogo son una
+          // inferencia por distrito, no una cita, y mandarlas igual causaba
+          // que la ficha pública mostrara la cita real del Atlas (con
+          // página) para una colonia que el documento nunca menciona.
+          riesgoInundacionDetectado: (() => {
+            const d = detectarRiesgoInundacion(data.colonia ?? '', data.municipio);
+            return d?.citadaEnAtlas ? d.riesgo : null;
+          })(),
           amenidades,
           servicios,
           fotos,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectarRiesgoInundacion } from './zonas-inundacion';
+import { detectarRiesgoInundacion, riesgoPorCercania } from './zonas-inundacion';
 
 describe('detectarRiesgoInundacion', () => {
   it('returns null for text shorter than 4 characters (avoids matching on noise)', () => {
@@ -68,5 +68,58 @@ describe('detectarRiesgoInundacion', () => {
   it('distinguishes "Pino Suárez" (medio, generic) from "José Ma. Pino Suárez" (alto, specific)', () => {
     expect(detectarRiesgoInundacion('Pino Suárez', 'Centro')?.riesgo).toBe('medio');
     expect(detectarRiesgoInundacion('José Ma. Pino Suárez', 'Centro')?.riesgo).toBe('alto');
+  });
+
+  // Auditoría 2026-09-20: se extrajo el texto real de las 380 páginas del
+  // Atlas (pdftotext -enc UTF-8 sobre el PDF real, no supuesto) y se
+  // comparó cada una de las 88 zonas del catálogo. 64 (73%) están citadas
+  // literalmente; 24 no aparecen en ningún lado (10 de ellas "alto") — el
+  // nivel viene de inferir el riesgo del distrito completo, nunca de una
+  // cita directa. `citadaEnAtlas` distingue ambos casos para que ni la UI
+  // ni el backend afirmen "según el Atlas" para las 24.
+  describe('citadaEnAtlas — distingue cita literal de inferencia por distrito', () => {
+    it('una zona con el nombre citado literalmente en el Atlas es citadaEnAtlas: true', () => {
+      expect(detectarRiesgoInundacion('Tabasco 2000', 'Centro')?.citadaEnAtlas).toBe(true);
+      expect(detectarRiesgoInundacion('Casa Blanca', 'Centro')?.citadaEnAtlas).toBe(true);
+      expect(detectarRiesgoInundacion('Gaviotas Sur', 'Centro')?.citadaEnAtlas).toBe(true);
+    });
+
+    it('una zona que el Atlas nunca nombra es citadaEnAtlas: false, aunque el catálogo le asigne un riesgo', () => {
+      const r = detectarRiesgoInundacion('Valle Verde', 'Centro');
+      expect(r?.riesgo).toBe('alto');
+      expect(r?.citadaEnAtlas).toBe(false);
+    });
+
+    it('mismo caso para Gaviotas Norte — solo "Gaviotas Sur" aparece en el texto real, "Norte" no', () => {
+      const r = detectarRiesgoInundacion('Gaviotas Norte', 'Centro');
+      expect(r?.riesgo).toBe('alto');
+      expect(r?.citadaEnAtlas).toBe(false);
+    });
+  });
+});
+
+describe('riesgoPorCercania — indicio por distancia real, nunca una cita', () => {
+  it('nunca corre fuera de Centro', () => {
+    expect(riesgoPorCercania('Casa Blanca', 'Cárdenas')).toBeNull();
+    expect(riesgoPorCercania('Casa Blanca')).toBeNull();
+  });
+
+  it('sin coordenada verificada para la colonia buscada, no hay con qué medir distancia', () => {
+    expect(riesgoPorCercania('Una colonia totalmente inventada xyz', 'Centro')).toBeNull();
+  });
+
+  it('encuentra una zona confirmada real dentro de 1km (caso real: Olmeca está a 0.39km de Atasta, riesgo medio)', () => {
+    const r = riesgoPorCercania('Olmeca', 'Centro');
+    expect(r?.riesgo).toBe('medio');
+    expect(r?.coloniaReferencia.toLowerCase()).toContain('atasta');
+    expect(r?.distanciaKm).toBeGreaterThan(0);
+    expect(r?.distanciaKm).toBeLessThanOrEqual(1);
+    // La referencia que usó SÍ está citada en el Atlas — nunca propaga una
+    // de las 24 inferencias como si fuera más sólida por estar "cerca".
+    expect(detectarRiesgoInundacion(r!.coloniaReferencia, 'Centro')?.citadaEnAtlas).toBe(true);
+  });
+
+  it('una zona ya detectada directamente no necesita cercanía (no es el caso de uso, pero no debe reventar)', () => {
+    expect(() => riesgoPorCercania('Tabasco 2000', 'Centro')).not.toThrow();
   });
 });

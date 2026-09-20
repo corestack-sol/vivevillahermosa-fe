@@ -107,7 +107,11 @@ async function resolverDescripcion(zone: Zone | undefined, municipality: Municip
       totalPropiedades: zone!.propiedades,
       precioPromedioVenta: zone!.precioPromedioVenta > 0 ? zone!.precioPromedioVenta : undefined,
       precioPromedioRenta: zone!.precioPromedioRenta > 0 ? zone!.precioPromedioRenta : undefined,
-      riesgoInundacion: riesgo?.confianza === 'confirmada' ? riesgo.riesgo : undefined,
+      // `confianza: 'confirmada'` solo dice que el NOMBRE coincidió exacto —
+      // `citadaEnAtlas` (auditoría 2026-09-20) dice si el Atlas de verdad
+      // nombra esta colonia. Sin ambas, la IA podría escribir "según el
+      // Atlas..." para una de las 24 zonas que el documento nunca menciona.
+      riesgoInundacion: riesgo?.confianza === 'confirmada' && riesgo.citadaEnAtlas ? riesgo.riesgo : undefined,
     };
     const { descripcion } = await backendFetchServer<{ descripcion: string }>('/ia/descripcion-zona', {
       method: 'POST',

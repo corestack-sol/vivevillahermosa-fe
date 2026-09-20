@@ -1,8 +1,31 @@
+import { matchColonia, distanciaKm } from './colonias';
+
 export type RiesgoInundacion = 'alto' | 'medio' | 'bajo';
 
 export interface DeteccionRiesgo {
   riesgo: RiesgoInundacion;
   confianza: 'confirmada' | 'probable';
+  /**
+   * Auditoría 2026-09-20 — verificación real, no supuesta: se extrajo el
+   * texto completo de las 380 páginas del Atlas (`pdftotext -enc UTF-8`,
+   * PDF real en tabasco-proptech/, ignorado por git) y se comparó cada una
+   * de las 88 colonias/zonas de este catálogo contra ese texto. 64 (73%)
+   * aparecen citadas literalmente (nombre de la colonia, evento histórico
+   * con fecha, o mapa de escenarios con su nombre) — esas quedan
+   * `citadaEnAtlas: true`. Las otras 24 — 10 de ellas "alto", la
+   * afirmación más fuerte — NO aparecen en ningún lado del documento
+   * (`NO_CONFIRMADAS_EN_ATLAS` abajo): alguien las agregó infiriendo el
+   * riesgo del distrito completo, sin que el Atlas las nombre. Se
+   * investigó si "distrito completo" era una inferencia razonable —
+   * NO lo es: el propio Atlas describe riesgo distinto calle por calle
+   * dentro de un mismo distrito (ej. Centro Histórico: una cuadra sin
+   * anegarse desde los 80, la de al lado hasta 50cm en lluvia fuerte) —
+   * así que ni un polígono de distrito perfectamente trazado resolvería
+   * esto. Por eso este campo, no una reclasificación: no hay dato mejor
+   * con que reemplazar esas 24, solo hay que dejar de mostrarlas con la
+   * misma confianza que las 64 sí citadas.
+   */
+  citadaEnAtlas: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -264,6 +287,38 @@ const ZONAS: Array<{ patron: string[]; municipio?: string; riesgo: RiesgoInundac
   { patron: ['terraza de reforma'],                                          riesgo: 'bajo' },
 ];
 
+// Las 24 de 88 zonas (ver `citadaEnAtlas` arriba) cuyo nombre NO aparece en
+// ningún lugar de las 380 páginas reales del Atlas — comparadas por el
+// primer patrón de cada entrada de `ZONAS`, tal como aparece en el arreglo.
+// 10 de estas son "alto", la clasificación más fuerte y la que menos
+// respaldo directo tiene.
+const NO_CONFIRMADAS_EN_ATLAS = new Set<string>([
+  'gaviotas sur sector san jose',
+  'gaviotas sur armenia',
+  'gaviotas norte sector explanada',
+  'gaviotas norte sector popular',
+  'gaviotas norte',
+  'fovissste casa blanca',
+  'tierra colorada',
+  'brisas del carrizal',
+  'valle verde',
+  'reforma agraria',
+  'atasta de serra',
+  'miguel hidalgo ii',
+  'invitab miguel hidalgo',
+  'las granjas',
+  'aquiles serdan',
+  'lindavista',
+  'colonia carrizal',
+  'jardines del grijalva',
+  'las garzas',
+  'lomas de casa blanca',
+  'paraiso dorado',
+  'villas del grijalva',
+  'parque tabasco',
+  'villahermosa 2000',
+]);
+
 function normalizar(s: string): string {
   return s
     .toLowerCase()
@@ -307,9 +362,72 @@ export function detectarRiesgoInundacion(
         return {
           riesgo: zona.riesgo,
           confianza: normColonia === normPatron ? 'confirmada' : 'probable',
+          citadaEnAtlas: !NO_CONFIRMADAS_EN_ATLAS.has(normalizar(zona.patron[0])),
         };
       }
     }
   }
   return null;
+}
+
+export interface DeteccionPorCercania {
+  riesgo: RiesgoInundacion;
+  distanciaKm: number;
+  coloniaReferencia: string;
+}
+
+// Radio elegido con datos reales, no al ojo: la distancia mediana entre una
+// colonia catalogada de Centro y su vecina más cercana es 0.40km, y el 75%
+// tiene una vecina a menos de 0.77km (medido 2026-09-18 sobre las 264
+// colonias de Centro en colonias.ts). 1km cubre con margen "la de al lado"
+// sin llegar a "la del otro lado de la ciudad".
+const RADIO_CERCANIA_KM = 1;
+
+// Coordenadas reales (colonias.ts) de cada zona CITADA EN EL ATLAS — nunca
+// de las 24 no confirmadas, para no propagar una inferencia ya débil a
+// través de una segunda inferencia (cercanía) y que termine pareciendo más
+// sólida de lo que es. Se resuelve una sola vez al cargar el módulo: cada
+// zona intenta emparejar su primer patrón contra el catálogo de coordenadas
+// verificadas; las que no tienen coincidencia (ej. la zona describe un
+// paraje sin colonia catalogada, como "Río Viejo") simplemente no participan
+// en la búsqueda de cercanía — no se inventa una coordenada para ellas.
+const ZONAS_CITADAS_CON_COORDS: Array<{ riesgo: RiesgoInundacion; lat: number; lng: number; label: string }> = ZONAS
+  .filter((z) => !NO_CONFIRMADAS_EN_ATLAS.has(normalizar(z.patron[0])))
+  .map((z) => {
+    const c = matchColonia(z.patron[0], 'Centro');
+    return c ? { riesgo: z.riesgo, lat: c.lat, lng: c.lng, label: c.label } : null;
+  })
+  .filter((z): z is { riesgo: RiesgoInundacion; lat: number; lng: number; label: string } => z !== null);
+
+/**
+ * Respuesta a "¿una colonia junto a una zona inundable también lo es?":
+ * indicio real, no prueba. El propio Atlas describe el riesgo como
+ * dependiente de la subcuenca/cárcamo que drena cada zona, no de la
+ * cercanía en línea recta — un bordo, una avenida elevada o estar en otra
+ * subcuenca puede separar dos colonias vecinas con niveles muy distintos
+ * (confirmado en el texto: la falla de un cárcamo "eleva de inmediato el
+ * nivel de riesgo LOCAL"). Por eso esto nunca se ofrece con la misma
+ * confianza que una cita textual — siempre debe mostrarse la distancia real
+ * y la colonia de referencia, nunca fusionarse con `riesgoInundacionDetectado`
+ * (ese campo el backend lo trata como detección real contra el Atlas, ver
+ * docs — una inferencia por cercanía ahí sería la misma "cita falsa" que ya
+ * se corrigió una vez).
+ *
+ * Solo Centro — mismo candado que `detectarRiesgoInundacion` — y solo si la
+ * colonia buscada existe en el catálogo de coordenadas verificado
+ * (colonias.ts); sin coordenada propia no hay cómo medir la distancia.
+ */
+export function riesgoPorCercania(colonia: string, municipio?: string): DeteccionPorCercania | null {
+  if (municipio !== 'Centro') return null;
+  const origen = matchColonia(colonia, 'Centro');
+  if (!origen) return null;
+
+  let mejor: DeteccionPorCercania | null = null;
+  for (const zona of ZONAS_CITADAS_CON_COORDS) {
+    const d = distanciaKm(origen.lat, origen.lng, zona.lat, zona.lng);
+    if (d > 0 && d <= RADIO_CERCANIA_KM && (!mejor || d < mejor.distanciaKm)) {
+      mejor = { riesgo: zona.riesgo, distanciaKm: d, coloniaReferencia: zona.label };
+    }
+  }
+  return mejor;
 }

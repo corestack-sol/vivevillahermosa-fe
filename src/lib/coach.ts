@@ -81,7 +81,11 @@ export function evaluarPropiedad(p: Property, estado: EstadoPublicacion): RazonA
   // riesgo es lo que de verdad puede engañar a un interesado) — nunca al
   // revés, marcar un riesgo más alto del detectado no es un problema.
   const gis = detectarRiesgoInundacion(p.colonia, p.municipio);
-  if (gis && RIESGO_ORDEN[p.riesgoInundacion] < RIESGO_ORDEN[gis.riesgo]) {
+  // Auditoría 2026-09-20: solo avisar cuando el Atlas de verdad nombra esta
+  // colonia (`citadaEnAtlas`) — de otro modo el mensaje le diría al
+  // propietario "el Atlas registra esto" para una de las 24 zonas que el
+  // documento nunca menciona (el nivel viene de inferir por distrito).
+  if (gis && gis.citadaEnAtlas && RIESGO_ORDEN[p.riesgoInundacion] < RIESGO_ORDEN[gis.riesgo]) {
     razones.push({
       clave: 'riesgo-inconsistente',
       mensaje: `Tu anuncio marca un historial de inundación "${p.riesgoInundacion}", pero el Atlas de Riesgos Municipal registra esta zona como "${gis.riesgo}" — revísalo antes de que alguien más lo note.`,
