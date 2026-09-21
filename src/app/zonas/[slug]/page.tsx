@@ -4,18 +4,23 @@ import Link from 'next/link';
 import { PublicarCTA } from '@/components/forms/PublicarCTA';
 import Image from 'next/image';
 import { ChevronRight, MapPin, Zap, TrendingUp, Map as MapIcon, Building2, Droplets, Waves, PlayCircle } from 'lucide-react';
-import { getAllZones, getAllMunicipalities, getAllProperties, getZonesWithLiveStats, getMunicipalitiesWithLiveStats } from '@/lib/api';
+import { getAllZones, getAllMunicipalities, getAllProperties, getZoneBySlug, getMunicipalityBySlug, getPropertiesPage, getZonesWithLiveStats, getMunicipalitiesWithLiveStats } from '@/lib/api';
 import { buildZoneMetadata } from '@/lib/seo';
-import { PropertyCard } from '@/components/property/PropertyCard';import { ZoneMap } from '@/components/map/ZoneMap';
+import { ZoneMap } from '@/components/map/ZoneMap';
 import { formatPrice } from '@/lib/format';
 import { obtenerLandmarksBackend, distanciaKm } from '@/lib/landmarks';
 import { detectarRiesgoInundacion } from '@/lib/zonas-inundacion';
 import { backendFetchServer } from '@/lib/backendApiServer';
-import { PROPERTY_GRID_CLASSES } from '@/lib/gridClasses';
+import type { Property } from '@/types/property';
+import { ListaPropiedadesMunicipio } from '@/components/zonas/ListaPropiedadesMunicipio';
 import type { Zone, Municipality, MunicipioContenido } from '@/types/zone';
 import contenidoMunicipios from '@/data/municipios-contenido.json';
 import { MunicipioContenidoView } from '@/components/zonas/MunicipioContenidoView';
 import { VideoConCorte } from '@/components/zonas/VideoConCorte';
+
+const TAMANO_PAGINA = 12;
+// Tope de pines en el mapa de un municipio: los pines son ligeros, las tarjetas no.
+const MAX_PINES_MAPA = 50;
 
 const CONTENIDO_MUNICIPIOS = contenidoMunicipios as Record<string, MunicipioContenido>;
 
@@ -164,22 +169,38 @@ export default async function ZonaDetailPage({ params }: Props) {
   // Stats en vivo (conteo y precio promedio calculados desde el catálogo
   // real, no el valor editorial fijo de zones.json/municipalities.json —
   // mismo dato que ya muestra el listado en /zonas, ver src/lib/api.ts).
-  const zone = (await getZonesWithLiveStats()).find((z) => z.slug === slug);
-  const municipality = !zone ? (await getMunicipalitiesWithLiveStats()).find((m) => m.slug === slug) : undefined;
+  // Un slug de colonia tiene prioridad sobre uno de municipio (mismo orden de
+  // antes). Se pregunta por la ficha de UNA colonia en vez de calcular las
+  // estadísticas de todas, que obliga a traer el catálogo completo.
+  const fichaColonia = await getZoneBySlug(slug);
+  const zone = fichaColonia ? (await getZonesWithLiveStats()).find((z) => z.slug === slug) : undefined;
+  const municipality = !fichaColonia ? getMunicipalityBySlug(slug) : undefined;
 
   if (!zone && !municipality) notFound();
 
-  const allProperties = await getAllProperties();
+  // Colonia: el catálogo completo (pocas propiedades por colonia). Municipio:
+  // solo su primera tanda de TAMANO_PAGINA, y el resto bajo demanda desde el
+  // navegador (ListaPropiedadesMunicipio) — sin traer todo el catálogo.
+  const nombreMunicipioFiltro = municipality?.nombre.replace(' (Villahermosa)', '');
+  let zoneProperties: Property[];
+  let totalPropiedades: number;
+  let markerSource: Property[];
+  if (zone) {
+    const allProperties = await getAllProperties();
+    zoneProperties = allProperties.filter((p) => p.colonia.toLowerCase() === zone.nombre.toLowerCase());
+    totalPropiedades = zoneProperties.length;
+    markerSource = zoneProperties;
+  } else {
+    const [primera, paraMapa] = await Promise.all([
+      getPropertiesPage({ municipio: nombreMunicipioFiltro!, page: 1, limit: TAMANO_PAGINA }),
+      getPropertiesPage({ municipio: nombreMunicipioFiltro!, page: 1, limit: MAX_PINES_MAPA }),
+    ]);
+    zoneProperties = primera.properties;
+    totalPropiedades = primera.total;
+    markerSource = paraMapa.properties;
+  }
 
-  const zoneProperties = zone
-    ? allProperties.filter((p) => p.colonia.toLowerCase() === zone.nombre.toLowerCase())
-    : allProperties.filter((p) => {
-        const munName = municipality!.nombre.replace(' (Villahermosa)', '');
-        return p.municipio.toLowerCase() === munName.toLowerCase()
-          || (slug === 'villahermosa' && p.municipio === 'Centro');
-      });
-
-  const markers = zoneProperties.map((p) => ({
+  const markers = markerSource.map((p) => ({
     id: p.id,
     slug: p.slug,
     // latPublico/lngPublico (enmascaradas), no lat/lng reales — mismo
@@ -300,7 +321,7 @@ export default async function ZonaDetailPage({ params }: Props) {
           {zone && (zone.precioPromedioRenta > 0 || zone.precioPromedioVenta > 0) ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="bg-brand-pale rounded-2xl p-4 text-center">
-                <p className="text-2xl font-display font-black text-brand">{zoneProperties.length}</p>
+                <p className="text-2xl font-display font-black text-brand">{totalPropiedades}</p>
                 <p className="text-xs text-gray-600 mt-1">Propiedades</p>
               </div>
               {zone.precioPromedioRenta > 0 && (
@@ -322,9 +343,9 @@ export default async function ZonaDetailPage({ params }: Props) {
             </div>
           ) : (
             <div className="bg-brand-pale rounded-2xl p-4 flex items-center gap-4">
-              <p className="text-2xl font-display font-black text-brand flex-shrink-0">{zoneProperties.length}</p>
+              <p className="text-2xl font-display font-black text-brand flex-shrink-0">{totalPropiedades}</p>
               <p className="text-xs text-gray-600">
-                propiedad{zoneProperties.length !== 1 ? 'es' : ''} publicada{zoneProperties.length !== 1 ? 's' : ''} en {name}
+                propiedad{totalPropiedades !== 1 ? 'es' : ''} publicada{totalPropiedades !== 1 ? 's' : ''} en {name}
               </p>
             </div>
           )}
@@ -430,16 +451,16 @@ export default async function ZonaDetailPage({ params }: Props) {
             Propiedades en {name}
           </h2>
           {/* Misma grilla auto-fill que /propiedades (PROPERTY_GRID_CLASSES,
-              src/lib/gridClasses.ts) — antes era grid-cols-1 md:grid-cols-2
-              fijo, así que con pocos resultados (ej. un municipio con solo
-              3 propiedades) las tarjetas se veían más grandes que en
-              cualquier otra página. Pedido explícito 2026-08-19: mismo
-              tamaño haya o no haya más propiedades. */}
-          <div className={PROPERTY_GRID_CLASSES}>
-            {zoneProperties.map((p) => (
-              <PropertyCard key={p.id} property={p} />
-            ))}
-          </div>
+              src/lib/gridClasses.ts, usada dentro de ListaPropiedadesMunicipio).
+              Municipio: de a TAMANO_PAGINA con "Ver más" (pedido 2026-09-21).
+              Colonia: ya trae todas, así que `total` = las que hay y el botón
+              no aparece. */}
+          <ListaPropiedadesMunicipio
+            inicial={zoneProperties}
+            total={totalPropiedades}
+            municipio={nombreMunicipioFiltro ?? ''}
+            tamanoPagina={TAMANO_PAGINA}
+          />
         </section>
       ) : (
         <div className="mt-10 bg-gray-50 rounded-2xl p-10 text-center">

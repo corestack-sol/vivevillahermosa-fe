@@ -201,17 +201,43 @@ export interface PropertiesSearchParams {
  * completo (incluye qué filtros quedaron fuera de esta primera pasada a
  * propósito — zonaDestacada, amenidad, "todo lo demás").
  *
- * Mismo criterio de seguridad que `getPropertiesInBounds()`: se manda
- * `all=true` junto con los parámetros nuevos — el backend hoy los ignora y
- * devuelve el catálogo completo (`total` ausente, se usa
- * `propiedades.length` como respaldo), cero regresión mientras no lo
- * implemente.
+ * ⚠️ 2026-09-21: ya NO manda `all=true`. Verificado en vivo que con ese
+ * parámetro el backend ignoraba `page`/`limit` y devolvía todo el catálogo
+ * filtrado (sin `total`), así que la "paginación" de 12 en 12 en realidad
+ * descargaba todo de golpe. Sin él pagina de verdad y devuelve `total`.
+ * Comparadas 14 combinaciones de filtros y orden (tipo, operación, municipio,
+ * riesgo, precio, recámaras, q, sort, cercanía): mismo conjunto de
+ * propiedades que con `all=true`.
  */
 export async function searchProperties(params: PropertiesSearchParams): Promise<{ properties: Property[]; total: number }> {
-  const qs = new URLSearchParams({ all: 'true' });
+  const qs = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== '') qs.set(key, String(value));
   }
+  const { propiedades, total } = await backendFetch<{
+    propiedades: BackendPublicProperty[];
+    total?: number;
+  }>(`/propiedades?${qs.toString()}`);
+  return { properties: propiedades.map(mapBackendProperty), total: total ?? propiedades.length };
+}
+
+/**
+ * Una página real de las propiedades de un municipio. A diferencia de
+ * `searchProperties`, NO manda `all=true`: verificado en vivo 2026-09-21 que
+ * con `all=true` el backend ignora `page`/`limit` y devuelve todo el catálogo
+ * filtrado sin `total`; sin él responde `{ propiedades, total, page,
+ * perPage, totalPages }` paginado de verdad.
+ */
+export async function getPropertiesPage(params: {
+  municipio: string;
+  page: number;
+  limit: number;
+}): Promise<{ properties: Property[]; total: number }> {
+  const qs = new URLSearchParams({
+    municipio: params.municipio,
+    page: String(params.page),
+    limit: String(params.limit),
+  });
   const { propiedades, total } = await backendFetch<{
     propiedades: BackendPublicProperty[];
     total?: number;
