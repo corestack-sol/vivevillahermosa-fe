@@ -15,6 +15,7 @@ import { PROPERTY_GRID_CLASSES } from '@/lib/gridClasses';
 import type { Zone, Municipality, MunicipioContenido } from '@/types/zone';
 import contenidoMunicipios from '@/data/municipios-contenido.json';
 import { MunicipioContenidoView } from '@/components/zonas/MunicipioContenidoView';
+import { VideoConCorte } from '@/components/zonas/VideoConCorte';
 
 const CONTENIDO_MUNICIPIOS = contenidoMunicipios as Record<string, MunicipioContenido>;
 
@@ -279,11 +280,17 @@ export default async function ZonaDetailPage({ params }: Props) {
             })()}
           </div>
 
-          {/* Description */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 animate-fade-up" style={{ animationDelay: '60ms' }}>
-            <h2 className="font-heading font-bold text-gray-800 mb-2">Sobre {isMunicipality ? 'el municipio' : 'la colonia'}</h2>
-            <p className="text-gray-600 text-sm leading-relaxed">{description}</p>
-          </div>
+          {/* Description — en municipios con contenido ampliado
+              (src/data/municipios-contenido.json) todo va unificado en esta
+              misma tarjeta "Sobre el municipio". */}
+          {municipality && CONTENIDO_MUNICIPIOS[municipality.id] ? (
+            <MunicipioContenidoView descripcion={description} contenido={CONTENIDO_MUNICIPIOS[municipality.id]} />
+          ) : (
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 animate-fade-up" style={{ animationDelay: '60ms' }}>
+              <h2 className="font-heading font-bold text-gray-800 mb-2">Sobre {isMunicipality ? 'el municipio' : 'la colonia'}</h2>
+              <p className="text-gray-600 text-sm leading-relaxed">{description}</p>
+            </div>
+          )}
 
           {/* Stats — para municipios (sin precio promedio de zona) un solo
               stat real existe, así que se muestra como tira ancha en vez
@@ -374,15 +381,13 @@ export default async function ZonaDetailPage({ params }: Props) {
                   <p className="text-xs text-white/70 mb-4">Una ciudad que aprendió a convivir con sus ríos.</p>
 
                   {/* Vertical (720×1280, 9:16): un marco 16:9 lo dejaría con barras negras. */}
-                  <video
+                  <VideoConCorte
                     className="w-full max-w-[280px] mx-auto rounded-2xl bg-black aspect-[9/16] ring-1 ring-white/25 shadow-2xl shadow-black/50"
-                    controls
-                    playsInline
-                    preload="none"
                     src="/videos/villahermosa-y-el-agua.mp4"
+                    finSegundos={71.5}
                   >
                     Tu navegador no puede reproducir este video.
-                  </video>
+                  </VideoConCorte>
                 </div>
               </section>
             )}
@@ -457,14 +462,6 @@ export default async function ZonaDetailPage({ params }: Props) {
           >
             Publicar propiedad <ChevronRight size={16} />
           </PublicarCTA>
-        </div>
-      )}
-
-      {/* Contenido editorial ampliado — va DESPUÉS de las propiedades para no
-          desplazar la búsqueda (src/data/municipios-contenido.json). */}
-      {municipality && CONTENIDO_MUNICIPIOS[municipality.id] && (
-        <div className="mt-10 max-w-3xl">
-          <MunicipioContenidoView nombre={name} contenido={CONTENIDO_MUNICIPIOS[municipality.id]} />
         </div>
       )}
     </div>
