@@ -1,4 +1,46 @@
 {
+  "centro": {
+    "datos": {
+      "poblacion2020": 683607,
+      "cabecera": "Villahermosa"
+    },
+    "secciones": [
+      {
+        "titulo": "Historia",
+        "texto": "Centro es el municipio de la capital, Villahermosa. Su primer cabildo, el de San Juan de Villahermosa, empezó a funcionar el 1 de enero de 1809; en 1826 pasó a ser el Ayuntamiento de San Juan Bautista y en 1883 Centro quedó como uno de los 17 municipios de Tabasco."
+      },
+      {
+        "titulo": "Geografía y clima",
+        "texto": "Ocupa el centro del estado, sobre la planicie del río Grijalva, con lomeríos bajos, pantanos y unas 13,000 hectáreas de lagunas. El suelo es arcilloso y drena mal. El clima es cálido y húmedo, con cerca de 2,237 mm de lluvia al año (septiembre es el mes más lluvioso y abril el más seco) y nortes de octubre a marzo. Cómo convive la ciudad con el agua se explica en el video de esta página."
+      },
+      {
+        "titulo": "Cómo se organiza la ciudad",
+        "texto": "El municipio suma 205 localidades: además de la ciudad, 7 villas, 6 poblados, 167 rancherías, 36 ejidos, 61 colonias y 52 fraccionamientos. El Atlas de Riesgos divide Villahermosa en 12 distritos, entre ellos Centro Histórico, La Venta, Tabasco 2000, Casa Blanca, Ciudad Industrial y Las Gaviotas."
+      },
+      {
+        "titulo": "Economía y servicios",
+        "texto": "Villahermosa concentra los poderes estatales y es el centro administrativo y comercial de Tabasco. El Centro Histórico es el distrito más denso: según el Atlas, unos 10 mil habitantes en 137 hectáreas, con 63 instituciones educativas y 437 establecimientos que procesan o venden alimentos."
+      },
+      {
+        "titulo": "Qué visitar",
+        "texto": "En el Centro Histórico están la Plaza de Armas, el parque Juárez, el parque de La Paz, el Parque Lineal del Malecón y el mercado José María Pino Suárez. En La Venta se encuentra el Parque Museo La Venta. El Malecón es uno de los paseos favoritos de la ciudad."
+      }
+    ],
+    "fuentes": [
+      {
+        "nombre": "Wikipedia: Municipio de Centro",
+        "url": "https://es.wikipedia.org/wiki/Municipio_de_Centro"
+      },
+      {
+        "nombre": "INEGI: Censo de Población y Vivienda 2020, presentación de resultados de Tabasco",
+        "url": "https://www.inegi.org.mx/contenidos/programas/ccpv/2020/doc/cpv2020_pres_res_tab.pdf"
+      },
+      {
+        "nombre": "Galindo-Alcántara, A. et al. (2023). Atlas de Riesgos del Municipio de Centro, Tabasco. Ayuntamiento de Centro"
+      }
+    ],
+    "consultado": "2026-09-20"
+  },
   "comalcalco": {
     "datos": {
       "poblacion2020": 214877,
@@ -112,52 +154,6 @@
       {
         "nombre": "INEGI: Censo de Población y Vivienda 2020, presentación de resultados de Tabasco",
         "url": "https://www.inegi.org.mx/contenidos/programas/ccpv/2020/doc/cpv2020_pres_res_tab.pdf"
-      }
-    ],
-    "consultado": "2026-09-20"
-  },
-  "centro": {
-    "datos": {
-      "poblacion2020": 683607,
-      "cabecera": "Villahermosa"
-    },
-    "secciones": [
-      {
-        "titulo": "Historia",
-        "texto": "La historia del municipio va de la mano de la de Villahermosa. En la Colonia, la provincia de Tabasco se dividía en tres distritos —Chontalpa, Centro y Sierra—, y en 1808 el virrey ordenó formar el primer cabildo de San Juan de Villahermosa, que comenzó a funcionar el 1 de enero de 1809. En 1826 pasó a llamarse Ayuntamiento de San Juan Bautista y en 1883 Centro quedó constituido como uno de los 17 municipios del estado. La ciudad siempre ha convivido con el agua: el Atlas de Riesgos del municipio reproduce imágenes de la inundación de 1927, y en el Centro Histórico la más reciente que registra es la de 2007."
-      },
-      {
-        "titulo": "Geografía y clima",
-        "texto": "Ocupa la parte central del estado, en la región del río Grijalva. Es una amplia planicie interrumpida por lomeríos bajos de arcilla rojiza y por bajos pantanosos cubiertos de maleza y plantas acuáticas. Además del Grijalva y sus afluentes (Samaria, Carrizal y El Viejo), tiene lagunas como Las Ilusiones, Chilapa, El Campo, El Horizonte, Puché y Maluco, que suman unas 13,000 hectáreas. Casi todo el suelo es de tipo gleysol: arcilloso, con exceso de humedad y drenaje deficiente. El clima es cálido y húmedo, con lluvias abundantes en verano (cerca de 2,237 mm al año; septiembre es el mes más lluvioso y abril el más seco), y entre octubre y marzo llegan los llamados nortes, vientos del noreste acompañados de lluvias continuas."
-      },
-      {
-        "titulo": "El agua y las obras de protección",
-        "texto": "Villahermosa se asienta junto al río de la Sierra, al que en el habla popular se le llama Grijalva. Desde junio de 2013 funciona la estructura de control El Macayo, sobre el río Carrizal: su construcción empezó en 2003, costó unos 1,100 millones de pesos y limita el caudal del Carrizal a 850 m³/s. Aguas arriba, un sistema de cuatro presas —la primera, Malpaso, de 1964— regula el flujo del Mezcalapa hacia la planicie. En pleno centro, una barrera de concreto de 1.8 km a lo largo del Malecón Carlos A. Madrazo contiene el desbordamiento del río, y cárcamos (estaciones de bombeo) desalojan la lluvia. Con estas obras, el peligro principal hoy es el anegamiento por lluvia, que depende de que los cárcamos operen sin fallas. En Vive Villahermosa, cada ficha indica el historial de inundación de la zona y de dónde sale ese dato."
-      },
-      {
-        "titulo": "Cómo se organiza la ciudad",
-        "texto": "Para analizar los riesgos, el Atlas de Riesgos divide Villahermosa en distritos: Centro Histórico, La Venta, Deportiva–CICOM, Atasta–Tamulté, Tabasco 2000, Laguna de las Ilusiones, Casa Blanca, Ciudad Industrial, la zona habitacional de Ciudad Industrial, Las Gaviotas, Reserva Sur y Loma de Caballo, cada uno con sus propios mapas. Todo el municipio suma 205 localidades: además de la ciudad, 7 villas, 6 poblados, 167 rancherías, 36 ejidos, 61 colonias y 52 fraccionamientos."
-      },
-      {
-        "titulo": "Economía y servicios",
-        "texto": "Villahermosa concentra los poderes estatales y es el centro administrativo y comercial de Tabasco. El Centro Histórico es el distrito de mayor densidad de la ciudad: según el Atlas, unos 10 mil habitantes en 137 hectáreas, con 63 instituciones educativas, 27 mayoristas y 437 establecimientos que procesan o venden alimentos. Otros puntos de reunión masiva del municipio son el Centro de Convenciones Tabasco 2000, el Estadio Olímpico y el parque Dora María."
-      },
-      {
-        "titulo": "Qué visitar",
-        "texto": "En el Centro Histórico están la Plaza de Armas, el parque Juárez, el parque de La Paz, el nuevo Parque Lineal del Malecón y el mercado municipal José María Pino Suárez, adonde la gente acude tradicionalmente por productos locales. En el distrito de La Venta se encuentra el Parque Museo La Venta, junto al parque Tomás Garrido Canabal. El Malecón es, además, uno de los paseos favoritos de la ciudad."
-      }
-    ],
-    "fuentes": [
-      {
-        "nombre": "Wikipedia: Municipio de Centro",
-        "url": "https://es.wikipedia.org/wiki/Municipio_de_Centro"
-      },
-      {
-        "nombre": "INEGI: Censo de Población y Vivienda 2020, presentación de resultados de Tabasco",
-        "url": "https://www.inegi.org.mx/contenidos/programas/ccpv/2020/doc/cpv2020_pres_res_tab.pdf"
-      },
-      {
-        "nombre": "Galindo-Alcántara, A. et al. (2023). Atlas de Riesgos del Municipio de Centro, Tabasco. Ayuntamiento de Centro"
       }
     ],
     "consultado": "2026-09-20"

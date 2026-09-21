@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PublicarCTA } from '@/components/forms/PublicarCTA';
 import Image from 'next/image';
-import { ChevronRight, MapPin, Zap, TrendingUp, Map as MapIcon, Building2 } from 'lucide-react';
+import { ChevronRight, MapPin, Zap, TrendingUp, Map as MapIcon, Building2, Droplets, Waves, PlayCircle } from 'lucide-react';
 import { getAllZones, getAllMunicipalities, getAllProperties, getZonesWithLiveStats, getMunicipalitiesWithLiveStats } from '@/lib/api';
 import { buildZoneMetadata } from '@/lib/seo';
 import { PropertyCard } from '@/components/property/PropertyCard';import { ZoneMap } from '@/components/map/ZoneMap';
@@ -356,18 +356,34 @@ export default async function ZonaDetailPage({ params }: Props) {
             </div>
 
             {municipality?.id === 'centro' && (
-              <section aria-label="Video sobre Villahermosa y el agua" className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                <h2 className="font-heading font-bold text-gray-800 mb-3 text-sm">Cómo Villahermosa sobrevive al asedio del agua</h2>
-                {/* Vertical (720×1280, 9:16): un marco 16:9 lo dejaría con barras negras. */}
-                <video
-                  className="w-full max-w-[280px] mx-auto rounded-xl bg-black aspect-[9/16]"
-                  controls
-                  playsInline
-                  preload="none"
-                  src="/videos/villahermosa-y-el-agua.mp4"
-                >
-                  Tu navegador no puede reproducir este video.
-                </video>
+              <section
+                aria-label="Video sobre Villahermosa y el agua"
+                className="relative overflow-hidden rounded-3xl p-5 text-white shadow-xl ring-1 ring-brand-dark/40 bg-[radial-gradient(120%_80%_at_100%_0%,rgba(56,189,248,0.28),transparent_55%),radial-gradient(90%_70%_at_0%_100%,rgba(181,100,58,0.30),transparent_60%),linear-gradient(160deg,#1D4A2C_0%,#0F2B1A_100%)]"
+              >
+                {/* Decoración: gotas y olas grandes, muy tenues, detrás del contenido. */}
+                <Droplets aria-hidden="true" size={120} strokeWidth={1} className="pointer-events-none absolute -right-6 -top-6 text-white/10" />
+                <Waves aria-hidden="true" size={150} strokeWidth={1} className="pointer-events-none absolute -bottom-8 -left-8 text-white/10" />
+
+                <div className="relative">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-white backdrop-blur-sm ring-1 ring-white/20">
+                    <PlayCircle size={12} /> Video · 75 s
+                  </span>
+                  <h2 className="font-display font-black text-lg leading-snug mt-3 mb-1 text-balance">
+                    Cómo Villahermosa sobrevive al asedio del agua
+                  </h2>
+                  <p className="text-xs text-white/70 mb-4">Una ciudad que aprendió a convivir con sus ríos.</p>
+
+                  {/* Vertical (720×1280, 9:16): un marco 16:9 lo dejaría con barras negras. */}
+                  <video
+                    className="w-full max-w-[280px] mx-auto rounded-2xl bg-black aspect-[9/16] ring-1 ring-white/25 shadow-2xl shadow-black/50"
+                    controls
+                    playsInline
+                    preload="none"
+                    src="/videos/villahermosa-y-el-agua.mp4"
+                  >
+                    Tu navegador no puede reproducir este video.
+                  </video>
+                </div>
               </section>
             )}
 
