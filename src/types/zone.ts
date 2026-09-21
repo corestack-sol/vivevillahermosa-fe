@@ -14,6 +14,23 @@ export interface Municipality {
   cercaDosoBocas?: boolean;
 }
 
+/**
+ * Contenido editorial ampliado de un municipio (src/data/municipios-contenido.json).
+ * Redactado con palabras propias a partir de las fuentes listadas en `fuentes`
+ * — cada cifra sale de una de ellas, nunca de memoria — y comparado contra
+ * cada fuente para que no copie frases (las secuencias idénticas que quedan
+ * son nombres propios, fechas y cifras). Motivo: las páginas de municipio
+ * tenían 14–28 palabras propias y AdSense las marcó como "contenido de
+ * bajo valor" (auditoría 2026-09-20).
+ */
+export interface MunicipioContenido {
+  datos: { poblacion2020: number; cabecera: string };
+  secciones: { titulo: string; texto: string }[];
+  fuentes: { nombre: string; url?: string }[];
+  /** Fecha ISO (YYYY-MM-DD) en que se consultaron las fuentes. */
+  consultado: string;
+}
+
 export interface Zone {
   id: string;
   nombre: string;

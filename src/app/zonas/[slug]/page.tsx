@@ -12,7 +12,11 @@ import { obtenerLandmarksBackend, distanciaKm } from '@/lib/landmarks';
 import { detectarRiesgoInundacion } from '@/lib/zonas-inundacion';
 import { backendFetchServer } from '@/lib/backendApiServer';
 import { PROPERTY_GRID_CLASSES } from '@/lib/gridClasses';
-import type { Zone, Municipality } from '@/types/zone';
+import type { Zone, Municipality, MunicipioContenido } from '@/types/zone';
+import contenidoMunicipios from '@/data/municipios-contenido.json';
+import { MunicipioContenidoView } from '@/components/zonas/MunicipioContenidoView';
+
+const CONTENIDO_MUNICIPIOS = contenidoMunicipios as Record<string, MunicipioContenido>;
 
 // Fotos reales de Wikimedia Commons para el hero de cada municipio.
 //
@@ -328,7 +332,9 @@ export default async function ZonaDetailPage({ params }: Props) {
                   sin necesitar un marcador falso. */}
               <ZoneMap markers={markers} center={[lat, lng]} zoom={isMunicipality ? 12 : 14} />
             </div>
-          </div>        </div>
+          </div>
+
+        </div>
 
         {/* Sidebar */}
         <div className="lg:col-span-1">
@@ -419,6 +425,14 @@ export default async function ZonaDetailPage({ params }: Props) {
           >
             Publicar propiedad <ChevronRight size={16} />
           </PublicarCTA>
+        </div>
+      )}
+
+      {/* Contenido editorial ampliado — va DESPUÉS de las propiedades para no
+          desplazar la búsqueda (src/data/municipios-contenido.json). */}
+      {municipality && CONTENIDO_MUNICIPIOS[municipality.id] && (
+        <div className="mt-10 max-w-3xl">
+          <MunicipioContenidoView nombre={name} contenido={CONTENIDO_MUNICIPIOS[municipality.id]} />
         </div>
       )}
     </div>
