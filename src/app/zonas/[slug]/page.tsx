@@ -355,6 +355,22 @@ export default async function ZonaDetailPage({ params }: Props) {
               </Link>
             </div>
 
+            {municipality?.id === 'centro' && (
+              <section aria-label="Video sobre Villahermosa y el agua" className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+                <h2 className="font-heading font-bold text-gray-800 mb-3 text-sm">Cómo Villahermosa sobrevive al asedio del agua</h2>
+                {/* Vertical (720×1280, 9:16): un marco 16:9 lo dejaría con barras negras. */}
+                <video
+                  className="w-full max-w-[280px] mx-auto rounded-xl bg-black aspect-[9/16]"
+                  controls
+                  playsInline
+                  preload="none"
+                  src="/videos/villahermosa-y-el-agua.mp4"
+                >
+                  Tu navegador no puede reproducir este video.
+                </video>
+              </section>
+            )}
+
             {/* Antes decía "Tip de inversión" con afirmaciones de demanda/
                 plusvalía sin ningún dato real detrás — el caso genérico
                 (ninguna colonia catalogada como Dos Bocas o municipio)
