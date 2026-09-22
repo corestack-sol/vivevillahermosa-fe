@@ -191,13 +191,14 @@ export default async function ZonaDetailPage({ params }: Props) {
     totalPropiedades = zoneProperties.length;
     markerSource = zoneProperties;
   } else {
-    const [primera, paraMapa] = await Promise.all([
-      getPropertiesPage({ municipio: nombreMunicipioFiltro!, page: 1, limit: TAMANO_PAGINA }),
-      getPropertiesPage({ municipio: nombreMunicipioFiltro!, page: 1, limit: MAX_PINES_MAPA }),
-    ]);
-    zoneProperties = primera.properties;
-    totalPropiedades = primera.total;
-    markerSource = paraMapa.properties;
+    // Una sola llamada al backend (antes eran dos, la misma página=1 pedida
+    // dos veces con distinto límite) — MAX_PINES_MAPA (50) ya cubre de sobra
+    // TAMANO_PAGINA (12), así que las tarjetas son simplemente los primeros
+    // 12 de la respuesta del mapa, sin pedirlos aparte.
+    const pagina = await getPropertiesPage({ municipio: nombreMunicipioFiltro!, page: 1, limit: MAX_PINES_MAPA });
+    zoneProperties = pagina.properties.slice(0, TAMANO_PAGINA);
+    totalPropiedades = pagina.total;
+    markerSource = pagina.properties;
   }
 
   const markers = markerSource.map((p) => ({
