@@ -1175,8 +1175,16 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
 
                     {/* "Todo lo demás" — lo más parecido que no cumplió TODOS los
                         filtros, para no dejar la búsqueda sintiéndose demasiado
-                        estrecha cuando sí hubo resultados exactos pero pocos. */}
-                    {!hasMoreMostrado && demasQueMostrar.length > 0 && (
+                        estrecha cuando sí hubo resultados exactos pero pocos.
+                        Siempre debajo de los exactos, haya o no botón "cargar
+                        más" arriba — antes dependía de `!hasMoreMostrado`, que
+                        con /propiedades?all=true (ya no se manda, ver
+                        searchProperties en api.ts) siempre daba false de
+                        entrada; con paginación real (12 en 12) esa condición
+                        dejaba la sección oculta hasta agotar TODAS las páginas
+                        de resultados exactos, que en un catálogo grande
+                        prácticamente nunca pasa. */}
+                    {demasQueMostrar.length > 0 && (
                       <div className="mt-10 pt-8 border-t border-gray-100">
                         <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">
                           Todo lo demás ({demasQueMostrar.length})

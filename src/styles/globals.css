@@ -358,3 +358,36 @@
   display: none;
 }
 
+/* src/app/zonas/[slug]/page.tsx — pedido explícito 2026-09-22: en móvil,
+   "Buscar" y las propiedades reales no deben quedar enterrados debajo de
+   foto/mapa/texto. El orden del DOM (para lectores de pantalla y tab) es
+   el orden MÓVIL: hero, side (buscar + video), estadística, propiedades,
+   mapa, info — en móvil no hace falta grid-template-areas, el stacking
+   natural de grid-cols-1 ya sigue ese orden. Solo lg+ reordena a las dos
+   columnas de siempre (sin cambiar cómo se ve en escritorio); "side" es
+   UN solo bloque (no se separa el botón de buscar del video) porque ambos
+   comparten el mismo contenedor `sticky` de la barra lateral. */
+.zona-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+.zona-grid__hero  { grid-area: hero; }
+.zona-grid__side  { grid-area: side; }
+.zona-grid__info  { grid-area: info; }
+.zona-grid__stats { grid-area: stats; }
+.zona-grid__map   { grid-area: map; }
+.zona-grid__props { grid-area: props; }
+
+@media (min-width: 1024px) {
+  .zona-grid {
+    grid-template-columns: 2fr 1fr;
+    column-gap: 2rem;
+    grid-template-areas:
+      "hero  side"
+      "info  side"
+      "stats side"
+      "map   side"
+      "props props";
+  }
+}
+

@@ -236,9 +236,13 @@ export default async function ZonaDetailPage({ params }: Props) {
         <span className="text-gray-700 font-medium">{name}</span>
       </nav>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main */}
-        <div className="lg:col-span-2 space-y-6">
+      {/* .zona-grid (src/styles/globals.css) — móvil: orden = orden del DOM,
+          tal cual aparece abajo (hero, side [buscar + video], estadística,
+          propiedades, mapa, info) — pedido explícito 2026-09-22: no enterrar
+          la búsqueda ni las propiedades reales bajo foto/texto/mapa. lg+:
+          recompone las dos columnas de siempre vía grid-template-areas,
+          sin tocar cómo se ve en escritorio. */}
+      <div className="zona-grid">
           {/* Hero card — foto real (Wikimedia Commons) para municipios,
               antes un degradado sólido sin imagen. Las colonias (`zone`)
               no tienen foto propia, se quedan con el degradado + ícono.
@@ -246,7 +250,7 @@ export default async function ZonaDetailPage({ params }: Props) {
               ("mejora el diseño"): con foto real de calidad, 192px se
               sentía corto/recortado; más alto deja respirar la imagen sin
               perder el título encima. */}
-          <div className="relative h-64 sm:h-80 bg-gradient-to-br from-brand-dark to-brand rounded-3xl overflow-hidden animate-fade-up">
+          <div className="zona-grid__hero relative h-64 sm:h-80 bg-gradient-to-br from-brand-dark to-brand rounded-3xl overflow-hidden animate-fade-up">
             {isMunicipality && municipality?.foto ? (
               <Image
                 src={municipality.foto}
@@ -301,72 +305,13 @@ export default async function ZonaDetailPage({ params }: Props) {
             })()}
           </div>
 
-          {/* Description — en municipios con contenido ampliado
-              (src/data/municipios-contenido.json) todo va unificado en esta
-              misma tarjeta "Sobre el municipio". */}
-          {municipality && CONTENIDO_MUNICIPIOS[municipality.id] ? (
-            <MunicipioContenidoView descripcion={description} contenido={CONTENIDO_MUNICIPIOS[municipality.id]} />
-          ) : (
-            <div className="bg-white rounded-2xl border border-gray-200 p-5 animate-fade-up" style={{ animationDelay: '60ms' }}>
-              <h2 className="font-heading font-bold text-gray-800 mb-2">Sobre {isMunicipality ? 'el municipio' : 'la colonia'}</h2>
-              <p className="text-gray-600 text-sm leading-relaxed">{description}</p>
-            </div>
-          )}
-
-          {/* Stats — para municipios (sin precio promedio de zona) un solo
-              stat real existe, así que se muestra como tira ancha en vez
-              de una grilla de 3 columnas con 2 huecos vacíos al lado
-              (pedido explícito 2026-08-19). Las colonias con precios sí
-              llenan la grilla de verdad. */}
-          {zone && (zone.precioPromedioRenta > 0 || zone.precioPromedioVenta > 0) ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <div className="bg-brand-pale rounded-2xl p-4 text-center">
-                <p className="text-2xl font-display font-black text-brand">{totalPropiedades}</p>
-                <p className="text-xs text-gray-600 mt-1">Propiedades</p>
-              </div>
-              {zone.precioPromedioRenta > 0 && (
-                <div className="bg-white border border-gray-200 rounded-2xl p-4 text-center">
-                  <p className="text-lg font-heading font-bold text-gray-800">
-                    {formatPrice(zone.precioPromedioRenta, 'renta')}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">Renta promedio</p>
-                </div>
-              )}
-              {zone.precioPromedioVenta > 0 && (
-                <div className="bg-white border border-gray-200 rounded-2xl p-4 text-center">
-                  <p className="text-lg font-heading font-bold text-gray-800">
-                    {formatPrice(zone.precioPromedioVenta, 'venta')}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">Venta promedio</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="bg-brand-pale rounded-2xl p-4 flex items-center gap-4">
-              <p className="text-2xl font-display font-black text-brand flex-shrink-0">{totalPropiedades}</p>
-              <p className="text-xs text-gray-600">
-                propiedad{totalPropiedades !== 1 ? 'es' : ''} publicada{totalPropiedades !== 1 ? 's' : ''} en {name}
-              </p>
-            </div>
-          )}
-
-          {/* Map */}
-          <div>
-            <h2 className="font-heading font-bold text-gray-800 mb-3">Mapa de la zona</h2>
-            <div className="h-64 rounded-2xl overflow-hidden border border-gray-200">
-              {/* Sin pin "$0" inventado cuando no hay propiedades — pedido
-                  explícito 2026-08-19: "no quiero que se vea nada... mas
-                  que el solo mapa". `center`/`zoom` ya posicionan el mapa
-                  sin necesitar un marcador falso. */}
-              <ZoneMap markers={markers} center={[lat, lng]} zoom={isMunicipality ? 12 : 14} />
-            </div>
-          </div>
-
-        </div>
-
-        {/* Sidebar */}
-        <div className="lg:col-span-1">
-          <div className="sticky top-24 space-y-4">
+          {/* Sidebar (área "side") — el botón de buscar y, en Centro, el
+              video van SIEMPRE juntos: comparten un solo contenedor sticky,
+              así que no se pueden separar sin romper ese comportamiento en
+              escritorio. En móvil suben juntos a la posición 2 (justo tras
+              el hero) — pedido explícito 2026-09-22: no enterrar la acción
+              principal bajo foto/texto/mapa. */}
+          <div className="zona-grid__side sticky top-24 space-y-4">
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
               <h2 className="font-heading font-bold text-gray-800 mb-3">Buscar en {name}</h2>
               <Link
@@ -441,50 +386,118 @@ export default async function ZonaDetailPage({ params }: Props) {
               </div>
             )}
           </div>
-        </div>
-      </div>
 
-      {/* Properties list */}
-      {zoneProperties.length > 0 ? (
-        <section className="mt-10">
-          <h2 className="text-xl font-heading font-bold text-gray-800 mb-5">
-            Propiedades en {name}
-          </h2>
-          {/* Misma grilla auto-fill que /propiedades (PROPERTY_GRID_CLASSES,
-              src/lib/gridClasses.ts, usada dentro de ListaPropiedadesMunicipio).
-              Municipio: de a TAMANO_PAGINA con "Ver más" (pedido 2026-09-21).
-              Colonia: ya trae todas, así que `total` = las que hay y el botón
-              no aparece. */}
-          <ListaPropiedadesMunicipio
-            inicial={zoneProperties}
-            total={totalPropiedades}
-            municipio={nombreMunicipioFiltro ?? ''}
-            tamanoPagina={TAMANO_PAGINA}
-          />
-        </section>
-      ) : (
-        <div className="mt-10 bg-gray-50 rounded-2xl p-10 text-center">
-          {/* Mascota 404 propia en vez del ícono genérico de construcción —
-              pedido explícito 2026-08-19, aplica a las 17 páginas de
-              municipio (y a colonia, mismo bloque compartido). */}
-          <Image
-            src="/images/icons/404-mascota.webp"
-            alt=""
-            width={140}
-            height={87}
-            className="mx-auto mb-3"
-          />
-          <p className="font-semibold text-gray-700 mb-2">Próximamente en {name}</p>
-          <p className="text-gray-500 text-sm mb-4">
-            Aún no hay propiedades publicadas en esta zona. ¿Tienes una? Publícala gratis.
-          </p>
-          <PublicarCTA
-            className="inline-flex items-center gap-2 bg-brand text-white font-semibold px-6 py-2.5 rounded-xl text-sm hover:bg-brand-dark transition-colors"
-          >
-            Publicar propiedad <ChevronRight size={16} />
-          </PublicarCTA>
-        </div>
-      )}
+          {/* Stats — para municipios (sin precio promedio de zona) un solo
+              stat real existe, así que se muestra como tira ancha en vez
+              de una grilla de 3 columnas con 2 huecos vacíos al lado
+              (pedido explícito 2026-08-19). Las colonias con precios sí
+              llenan la grilla de verdad. */}
+          {zone && (zone.precioPromedioRenta > 0 || zone.precioPromedioVenta > 0) ? (
+            <div className="zona-grid__stats grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="bg-brand-pale rounded-2xl p-4 text-center">
+                <p className="text-2xl font-display font-black text-brand">{totalPropiedades}</p>
+                <p className="text-xs text-gray-600 mt-1">Propiedades</p>
+              </div>
+              {zone.precioPromedioRenta > 0 && (
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 text-center">
+                  <p className="text-lg font-heading font-bold text-gray-800">
+                    {formatPrice(zone.precioPromedioRenta, 'renta')}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Renta promedio</p>
+                </div>
+              )}
+              {zone.precioPromedioVenta > 0 && (
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 text-center">
+                  <p className="text-lg font-heading font-bold text-gray-800">
+                    {formatPrice(zone.precioPromedioVenta, 'venta')}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Venta promedio</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="zona-grid__stats bg-brand-pale rounded-2xl p-4 flex items-center gap-4">
+              <p className="text-2xl font-display font-black text-brand flex-shrink-0">{totalPropiedades}</p>
+              <p className="text-xs text-gray-600">
+                propiedad{totalPropiedades !== 1 ? 'es' : ''} publicada{totalPropiedades !== 1 ? 's' : ''} en {name}
+              </p>
+            </div>
+          )}
+
+          {/* Properties list (área "props") — pedido explícito 2026-09-22:
+              sube a la posición 4 en móvil, antes era literalmente lo
+              último de la página, después incluso del video. */}
+          <div className="zona-grid__props">
+            {zoneProperties.length > 0 ? (
+              <section>
+                <h2 className="text-xl font-heading font-bold text-gray-800 mb-5">
+                  Propiedades en {name}
+                </h2>
+                {/* Misma grilla auto-fill que /propiedades (PROPERTY_GRID_CLASSES,
+                    src/lib/gridClasses.ts, usada dentro de ListaPropiedadesMunicipio).
+                    Municipio: de a TAMANO_PAGINA con "Ver más" (pedido 2026-09-21).
+                    Colonia: ya trae todas, así que `total` = las que hay y el botón
+                    no aparece. */}
+                <ListaPropiedadesMunicipio
+                  inicial={zoneProperties}
+                  total={totalPropiedades}
+                  municipio={nombreMunicipioFiltro ?? ''}
+                  tamanoPagina={TAMANO_PAGINA}
+                />
+              </section>
+            ) : (
+              <div className="bg-gray-50 rounded-2xl p-10 text-center">
+                {/* Mascota 404 propia en vez del ícono genérico de construcción —
+                    pedido explícito 2026-08-19, aplica a las 17 páginas de
+                    municipio (y a colonia, mismo bloque compartido). */}
+                <Image
+                  src="/images/icons/404-mascota.webp"
+                  alt=""
+                  width={140}
+                  height={87}
+                  className="mx-auto mb-3"
+                />
+                <p className="font-semibold text-gray-700 mb-2">Próximamente en {name}</p>
+                <p className="text-gray-500 text-sm mb-4">
+                  Aún no hay propiedades publicadas en esta zona. ¿Tienes una? Publícala gratis.
+                </p>
+                <PublicarCTA
+                  className="inline-flex items-center gap-2 bg-brand text-white font-semibold px-6 py-2.5 rounded-xl text-sm hover:bg-brand-dark transition-colors"
+                >
+                  Publicar propiedad <ChevronRight size={16} />
+                </PublicarCTA>
+              </div>
+            )}
+          </div>
+
+          {/* Map */}
+          <div className="zona-grid__map">
+            <h2 className="font-heading font-bold text-gray-800 mb-3">Mapa de la zona</h2>
+            <div className="h-64 rounded-2xl overflow-hidden border border-gray-200">
+              {/* Sin pin "$0" inventado cuando no hay propiedades — pedido
+                  explícito 2026-08-19: "no quiero que se vea nada... mas
+                  que el solo mapa". `center`/`zoom` ya posicionan el mapa
+                  sin necesitar un marcador falso. */}
+              <ZoneMap markers={markers} center={[lat, lng]} zoom={isMunicipality ? 12 : 14} />
+            </div>
+          </div>
+
+          {/* Description — en municipios con contenido ampliado
+              (src/data/municipios-contenido.json) todo va unificado en esta
+              misma tarjeta "Sobre el municipio". Última en móvil (posición
+              6): es material de apoyo, no la acción ni el contenido
+              principal de la página. */}
+          {municipality && CONTENIDO_MUNICIPIOS[municipality.id] ? (
+            <div className="zona-grid__info">
+              <MunicipioContenidoView descripcion={description} contenido={CONTENIDO_MUNICIPIOS[municipality.id]} />
+            </div>
+          ) : (
+            <div className="zona-grid__info bg-white rounded-2xl border border-gray-200 p-5 animate-fade-up" style={{ animationDelay: '60ms' }}>
+              <h2 className="font-heading font-bold text-gray-800 mb-2">Sobre {isMunicipality ? 'el municipio' : 'la colonia'}</h2>
+              <p className="text-gray-600 text-sm leading-relaxed">{description}</p>
+            </div>
+          )}
+      </div>
     </div>
   );
 }
