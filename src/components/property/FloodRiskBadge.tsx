@@ -17,6 +17,8 @@ interface FloodRiskBadgeProps {
    * de un mensaje corto y directo.
    */
   fuente?: 'atlas' | 'propietario';
+  /** Municipio de la propiedad — el Atlas de Riesgos solo cubre Centro, el texto de fuente cambia fuera de él. */
+  municipio?: string;
 }
 
 // Mismo criterio que src/lib/floodColors.ts: describe el registro
@@ -55,8 +57,9 @@ const config = {
   },
 };
 
-export function FloodRiskBadge({ nivel, compact = false, fuente }: FloodRiskBadgeProps) {
+export function FloodRiskBadge({ nivel, compact = false, fuente, municipio }: FloodRiskBadgeProps) {
   const c = config[nivel];
+  const fueraDeCentro = !!municipio && municipio !== 'Centro';
 
   if (compact) {
     // truncate — este badge vive en filas flex justify-between de ancho
@@ -83,6 +86,8 @@ export function FloodRiskBadge({ nivel, compact = false, fuente }: FloodRiskBadg
           <p className="text-xs opacity-40 mt-2 leading-relaxed">
             {fuente === 'atlas'
               ? 'Según el Atlas de Riesgos del Municipio de Centro, 2023. Ayuntamiento de Centro. P 377.'
+              : fueraDeCentro
+              ? 'Nivel indicado por quien publicó la propiedad. En este municipio no existe un atlas de riesgos que lo verifique.'
               : fuente === 'propietario'
               ? 'No podemos confirmar este nivel contra el Atlas de Riesgos Municipal — quien publicó lo ajustó.'
               : 'Este dato proviene de registros públicos de inundación y/o de lo reportado por quien publicó la propiedad.'}
@@ -95,7 +100,9 @@ export function FloodRiskBadge({ nivel, compact = false, fuente }: FloodRiskBadg
         <div className="text-sm text-gray-500 leading-relaxed space-y-1.5">
           <p>
             <span className="font-semibold">Dato informativo.</span>{' '}
-            Esta clasificación se basa en registros históricos y modelos de simulación, o en lo reportado por quien publicó. Te recomendamos verificar directamente con el H. Ayuntamiento de Centro o IMPLAN antes de tomar una decisión.
+            {fueraDeCentro
+              ? 'Este nivel lo indicó quien publicó la propiedad y no está verificado contra una fuente oficial. Pregunta a quien publica de dónde lo obtuvo y, si la decisión es importante, visita la zona en temporada de lluvias.'
+              : 'Esta clasificación se basa en registros históricos y modelos de simulación, o en lo reportado por quien publicó. Te recomendamos verificar directamente con el H. Ayuntamiento de Centro o IMPLAN antes de tomar una decisión.'}
           </p>
           <p>
             El precio de la propiedad no está condicionado por la zona de riesgo — puede estar justificado por acabados, servicios, ubicación u otras características propias del inmueble.

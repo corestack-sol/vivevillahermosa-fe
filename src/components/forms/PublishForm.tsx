@@ -2550,9 +2550,15 @@ export function PublishForm() {
             ) : colonia && colonia.length >= 4 ? (
               <div className="space-y-2">
                 <p className="text-xs text-gray-400 bg-gray-50 rounded-xl px-3 py-2.5 leading-relaxed">
-                  Sin registros para{' '}
-                  <span className="font-medium italic">&quot;{colonia}&quot;</span>{' '}
-                  en el Atlas de Riesgos.
+                  {municipio === 'Centro' ? (
+                    <>
+                      Sin registros para{' '}
+                      <span className="font-medium italic">&quot;{colonia}&quot;</span>{' '}
+                      en el Atlas de Riesgos.
+                    </>
+                  ) : (
+                    <>El Atlas de Riesgos solo cubre el municipio de Centro; en {municipio || 'este municipio'} tú indicas el nivel.</>
+                  )}
                 </p>
                 <div className="flex items-center gap-2 bg-brand-pale border border-brand/25 rounded-xl px-3 py-2.5">
                   <ChevronLeft size={13} className="text-brand flex-shrink-0" />
@@ -2569,7 +2575,9 @@ export function PublishForm() {
               </div>
             ) : (
               <p className="text-xs text-gray-400 leading-relaxed">
-                Escribe el nombre de la colonia para detectar su historial de inundación automáticamente.
+                {municipio && municipio !== 'Centro'
+                  ? 'La detección automática del historial de inundación solo existe para el municipio de Centro; en los demás tú indicas el nivel.'
+                  : 'Escribe el nombre de la colonia para detectar su historial de inundación automáticamente.'}
               </p>
             )}
 

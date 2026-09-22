@@ -6,7 +6,7 @@ import { MapaClient } from './MapaClient';
 export const metadata: Metadata = {
   title: 'Mapa de propiedades en Tabasco | Vive Villahermosa',
   description:
-    'Explora casas, departamentos y terrenos en Villahermosa en un mapa interactivo con indicador de zonas inundables. Filtra por precio, tipo y riesgo hídrico.',
+    'Explora casas, departamentos y terrenos en Villahermosa en un mapa interactivo con el historial de inundación de cada propiedad. Filtra por precio, tipo y nivel de inundación.',
 };
 
 export default async function MapaPage() {

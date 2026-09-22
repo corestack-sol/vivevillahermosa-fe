@@ -69,10 +69,12 @@ export function construirEjemplosPlaceholder(properties: Property[]): string[] {
   }
 
   // Riesgo de inundación, a nivel municipio (no colonia) — el primer
-  // municipio con al menos 2 propiedades de riesgo bajo.
+  // municipio con al menos 2 propiedades de riesgo bajo. Solo Centro: es el
+  // único con Atlas de Riesgos; en los demás el nivel lo declara quien
+  // publica, y sugerir "algo que no se inunde" prometería más de lo que hay.
   const sinRiesgoPorMunicipio = new Map<string, number>();
   for (const p of properties) {
-    if (p.riesgoInundacion !== 'bajo') continue;
+    if (p.riesgoInundacion !== 'bajo' || p.municipio !== 'Centro') continue;
     sinRiesgoPorMunicipio.set(p.municipio, (sinRiesgoPorMunicipio.get(p.municipio) ?? 0) + 1);
   }
   const municipioSinRiesgo = [...sinRiesgoPorMunicipio.entries()].find(([, n]) => n >= MIN_RESULTADOS_EJEMPLO)?.[0];

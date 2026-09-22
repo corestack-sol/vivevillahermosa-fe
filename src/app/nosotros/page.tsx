@@ -17,7 +17,7 @@ const VALUES = [
   {
     icon: <Shield size={24} className="text-brand" />,
     title: 'Transparencia',
-    desc: 'Publicamos el historial de inundación de cada propiedad. Tabasco merece información honesta para decisiones inmobiliarias.',
+    desc: 'Cada propiedad muestra su historial de inundación: verificado con el Atlas de Riesgos en Centro y, en el resto del estado, indicado por quien publica. Tabasco merece información honesta para decisiones inmobiliarias.',
   },
   {
     icon: <Map size={24} className="text-brand" />,
@@ -99,8 +99,10 @@ export default async function NosotrosPage() {
             Vive Villahermosa quiere ayudar a navegar.
           </p>
           <p>
-            Vive Villahermosa integra el Atlas de Riesgos del Municipio de Centro, cobertura de los 17
-            municipios y publicación 100% gratuita para propietarios.
+            Vive Villahermosa tiene propiedades en los 17 municipios y publicación 100% gratuita para
+            propietarios. El historial de inundación se verifica con el Atlas de Riesgos del Municipio
+            de Centro; fuera de Centro no existe un atlas equivalente, y ahí el nivel lo indica quien
+            publica la propiedad.
           </p>
         </div>
       </div>

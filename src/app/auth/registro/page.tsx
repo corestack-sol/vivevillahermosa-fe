@@ -126,7 +126,7 @@ function RegistroContent() {
               Empieza gratis.<br />Sin comisiones.
             </h2>
             <p className="text-white/65 text-sm leading-relaxed mb-6">
-              Crea tu cuenta en segundos y accede a todas las propiedades de Tabasco con información real de riesgo hídrico.
+              Crea tu cuenta en segundos y accede a todas las propiedades de Tabasco con su historial de inundación.
             </p>
             <div className="bg-white/10 rounded-2xl p-4 border border-white/15">
               <p className="text-white/50 text-xs uppercase font-semibold tracking-wider mb-3">Incluye</p>

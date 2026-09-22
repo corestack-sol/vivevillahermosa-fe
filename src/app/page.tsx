@@ -71,7 +71,7 @@ const FEATURES = [
   // acortó de paso (line-clamp-2 en una tarjeta de 300px de ancho no
   // tiene margen para una oración larga) y de paso queda igual de
   // conciso que las otras dos tarjetas del carrusel.
-  { Icon: Droplets, title: 'Alerta de inundación', sub: 'Te decimos qué zonas de Tabasco se han inundado históricamente.', bg: 'bg-sky/15', fg: 'text-sky' },
+  { Icon: Droplets, title: 'Alerta de inundación', sub: 'Historial de inundación en cada propiedad: oficial en Centro, indicado por quien publica en el resto.', bg: 'bg-sky/15', fg: 'text-sky' },
   { Icon: Zap, title: 'Anuncio activo en 5 min', sub: 'Sube fotos, llena datos, publica. Sin comisión, sin trámites.', bg: 'bg-coral/15', fg: 'text-coral' },
 ];
 
@@ -349,7 +349,7 @@ export default async function HomePage() {
                 ¿La zona se ha inundado<br />en temporada de lluvias?
               </h2>
               <p className="text-gray-500 leading-relaxed mb-6 max-w-md">
-                La información completa beneficia a todos: quien busca llega con certeza, quien publica atrae al comprador indicado. Por eso el historial de inundación va incluido en cada propiedad.
+                La información completa beneficia a todos: quien busca llega con certeza, quien publica atrae al comprador indicado. Por eso el historial de inundación va incluido en cada propiedad: verificado con el Atlas de Riesgos en Centro y declarado por quien publica en el resto del estado.
               </p>
               <div className="space-y-3 mb-7">
                 {[
