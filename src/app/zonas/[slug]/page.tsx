@@ -311,7 +311,13 @@ export default async function ZonaDetailPage({ params }: Props) {
               escritorio. En móvil suben juntos a la posición 2 (justo tras
               el hero) — pedido explícito 2026-09-22: no enterrar la acción
               principal bajo foto/texto/mapa. */}
-          <div className="zona-grid__side lg:sticky lg:top-24 space-y-4">
+          {/* Sin sticky (ni en móvil ni en escritorio): el bloque de video en
+              Centro es alto (~1500px con el resto de la columna) y, mientras
+              seguía pegado, terminaba compartiendo espacio visible en pantalla
+              con las tarjetas de propiedades que ya habían entrado por abajo
+              — confirmado en vivo con un navegador real, pedido explícito
+              2026-09-22: "esas secciones no deben de estar sticky". */}
+          <div className="zona-grid__side space-y-4">
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
               <h2 className="font-heading font-bold text-gray-800 mb-3">Buscar en {name}</h2>
               <Link
