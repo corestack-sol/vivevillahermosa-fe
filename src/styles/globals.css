@@ -369,15 +369,18 @@
    comparten el mismo contenedor `sticky` de la barra lateral. */
 .zona-grid {
   display: grid;
+  grid-template-columns: 1fr;
   gap: 1.5rem;
 }
-.zona-grid__hero  { grid-area: hero; }
-.zona-grid__side  { grid-area: side; }
-.zona-grid__info  { grid-area: info; }
-.zona-grid__stats { grid-area: stats; }
-.zona-grid__map   { grid-area: map; }
-.zona-grid__props { grid-area: props; }
 
+/* Los nombres de área SOLO existen dentro de este media query, a propósito:
+   `grid-area: hero` fuera de un `grid-template-areas` que declare "hero" no
+   cae en auto-placement normal como cabría esperar — en la práctica el
+   navegador seguía intentando resolver la línea nombrada y producía un
+   grid roto (todo superpuesto en móvil, hallazgo en vivo 2026-09-22). Con
+   estas reglas movidas aquí adentro, en móvil el navegador ni siquiera ve
+   la propiedad `grid-area` y cada bloque cae en el flujo normal de una
+   sola columna. */
 @media (min-width: 1024px) {
   .zona-grid {
     grid-template-columns: 2fr 1fr;
@@ -389,5 +392,11 @@
       "map   side"
       "props props";
   }
+  .zona-grid__hero  { grid-area: hero; }
+  .zona-grid__side  { grid-area: side; }
+  .zona-grid__info  { grid-area: info; }
+  .zona-grid__stats { grid-area: stats; }
+  .zona-grid__map   { grid-area: map; }
+  .zona-grid__props { grid-area: props; }
 }
 

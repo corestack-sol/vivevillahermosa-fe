@@ -311,7 +311,7 @@ export default async function ZonaDetailPage({ params }: Props) {
               escritorio. En móvil suben juntos a la posición 2 (justo tras
               el hero) — pedido explícito 2026-09-22: no enterrar la acción
               principal bajo foto/texto/mapa. */}
-          <div className="zona-grid__side sticky top-24 space-y-4">
+          <div className="zona-grid__side lg:sticky lg:top-24 space-y-4">
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
               <h2 className="font-heading font-bold text-gray-800 mb-3">Buscar en {name}</h2>
               <Link
