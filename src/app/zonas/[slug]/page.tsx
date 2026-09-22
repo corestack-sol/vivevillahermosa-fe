@@ -17,6 +17,7 @@ import type { Zone, Municipality, MunicipioContenido } from '@/types/zone';
 import contenidoMunicipios from '@/data/municipios-contenido.json';
 import { MunicipioContenidoView } from '@/components/zonas/MunicipioContenidoView';
 import { VideoConCorte } from '@/components/zonas/VideoConCorte';
+import { HeroFotoMunicipio } from '@/components/zonas/HeroFotoMunicipio';
 
 const TAMANO_PAGINA = 12;
 // Tope de pines en el mapa de un municipio: los pines son ligeros, las tarjetas no.
@@ -275,14 +276,7 @@ export default async function ZonaDetailPage({ params }: Props) {
               perder el título encima. */}
           <div className="zona-grid__hero relative h-64 sm:h-80 bg-gradient-to-br from-brand-dark to-brand rounded-3xl overflow-hidden animate-fade-up">
             {isMunicipality && municipality?.foto ? (
-              <Image
-                src={municipality.foto}
-                alt={name}
-                fill
-                priority
-                sizes="(min-width: 1024px) 66vw, 100vw"
-                className="object-cover"
-              />
+              <HeroFotoMunicipio src={municipality.foto} alt={name} />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center opacity-20">
                 {isMunicipality ? <MapIcon size={110} strokeWidth={1} /> : <Building2 size={110} strokeWidth={1} />}
