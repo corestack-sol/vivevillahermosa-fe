@@ -59,26 +59,36 @@ const CC_BY_3 = { nombre: 'CC BY 3.0', url: 'https://creativecommons.org/license
 const CC_BY_SA_3 = { nombre: 'CC BY-SA 3.0', url: 'https://creativecommons.org/licenses/by-sa/3.0/' };
 const CC_BY_SA_4 = { nombre: 'CC BY-SA 4.0', url: 'https://creativecommons.org/licenses/by-sa/4.0/' };
 
-interface CreditoFoto { autor: string; licencia?: { nombre: string; url: string } }
+interface CreditoFoto { autor: string; fuente: string; licencia?: { nombre: string; url: string } }
 
+// `fuente` — auditoría 22/09/2026: las 17 páginas de archivo real en
+// Commons, reconfirmadas una por una ese mismo día (autor, licencia y
+// descripción tal cual aparecen ahí, ninguna con aviso de disputa ni
+// solicitud de borrado). CC BY/BY-SA piden enlazar la licencia Y, cuando
+// sea razonable, la obra misma — antes solo se enlazaba la licencia.
 const MUNICIPIO_FOTO_CREDITO: Record<string, CreditoFoto> = {
-  centro: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_3 },
-  cardenas: { autor: 'AlejandroLinaresGarcia', licencia: CC_BY_SA_3 },
-  comalcalco: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_4 },
-  paraiso: { autor: 'AlejandroLinaresGarcia', licencia: CC_BY_SA_3 },
-  'jalpa-de-mendez': { autor: 'Cookie253', licencia: CC_BY_3 },
-  nacajuca: { autor: 'Alfonsobouchot' },
-  huimanguillo: { autor: 'Alfonsobouchot' },
-  centla: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_3 },
-  macuspana: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_3 },
-  cunduacan: { autor: 'AlejandroLinaresGarcia', licencia: CC_BY_SA_3 },
-  tenosique: { autor: 'ProtoplasmaKid', licencia: CC_BY_SA_4 },
-  'emiliano-zapata': { autor: 'Kazekage AMT' },
-  balancán: { autor: 'México Comunidad', licencia: CC_BY_2 },
-  jonuta: { autor: 'Kazekage AMT' },
-  jalapa: { autor: 'Alfonsobouchot' },
-  tacotalpa: { autor: 'Alfonsobouchot' },
-  teapa: { autor: 'Avatar7', licencia: CC_BY_SA_3 },
+  // Cabeza colosal olmeca (Monumento 1) en el Parque-Museo La Venta,
+  // Villahermosa — pedido explícito 2026-09-22: Centro también pasa de
+  // vista genérica a atractivo turístico real, mismo criterio que los
+  // otros 16. Verificado en Commons: autor, licencia y descripción tal
+  // cual aparecen en la página real del archivo.
+  centro: { autor: 'Arian Zwegers', licencia: CC_BY_2, fuente: 'https://commons.wikimedia.org/wiki/File:Villahermosa,_Parque-Museo_La_Venta,_Colossal_Head_(20686566115).jpg' },
+  cardenas: { autor: 'AlejandroLinaresGarcia', licencia: CC_BY_SA_3, fuente: 'https://commons.wikimedia.org/wiki/File:BeachAreanearSanchezMagallanes.JPG' },
+  comalcalco: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_4, fuente: 'https://commons.wikimedia.org/wiki/File:Comalcalco.La_Gran_Acr%C3%B3polis.jpg' },
+  paraiso: { autor: 'AlejandroLinaresGarcia', licencia: CC_BY_SA_3, fuente: 'https://commons.wikimedia.org/wiki/File:VaraderoBeach37.JPG' },
+  'jalpa-de-mendez': { autor: 'Cookie253', licencia: CC_BY_3, fuente: 'https://commons.wikimedia.org/wiki/File:Casa_Museo_Coronel_Gregorio_M%C3%A9ndez_Maga%C3%B1a.JPG' },
+  nacajuca: { autor: 'Alfonsobouchot', fuente: 'https://commons.wikimedia.org/wiki/File:Nacajuca_Iglesia_de_Mazateupa.jpg' },
+  huimanguillo: { autor: 'Alfonsobouchot', fuente: 'https://commons.wikimedia.org/wiki/File:La_Venta_Museo_de_sitio.jpg' },
+  centla: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_3, fuente: 'https://commons.wikimedia.org/wiki/File:Pantanos_de_Centla_09.JPG' },
+  macuspana: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_3, fuente: 'https://commons.wikimedia.org/wiki/File:Macuspana_Agua_Blanca.jpg' },
+  cunduacan: { autor: 'AlejandroLinaresGarcia', licencia: CC_BY_SA_3, fuente: 'https://commons.wikimedia.org/wiki/File:HouseChonita01.JPG' },
+  tenosique: { autor: 'ProtoplasmaKid', licencia: CC_BY_SA_4, fuente: 'https://commons.wikimedia.org/wiki/File:Zona_Arqueol%C3%B3gica_de_Pomon%C3%A1_-_Panor%C3%A1mica.jpg' },
+  'emiliano-zapata': { autor: 'Kazekage AMT', fuente: 'https://commons.wikimedia.org/wiki/File:Actual_Malec%C3%B3n_de_Emiliano_Zapata.JPG' },
+  balancán: { autor: 'México Comunidad', licencia: CC_BY_2, fuente: 'https://commons.wikimedia.org/wiki/File:Zona_arqueol%C3%B3gica_de_Moral_-_Reforma_(Balanc%C3%A1n,_Tabasco,_M%C3%A9xico)_-_05.jpg' },
+  jonuta: { autor: 'Kazekage AMT', fuente: 'https://commons.wikimedia.org/wiki/File:El_Cuyo,_Jonuta.jpg' },
+  jalapa: { autor: 'Alfonsobouchot', fuente: 'https://commons.wikimedia.org/wiki/File:Tunel_Vegetal,_Jalapa_Tabasco.JPG' },
+  tacotalpa: { autor: 'Alfonsobouchot', fuente: 'https://commons.wikimedia.org/wiki/File:Tapijulapa.JPG' },
+  teapa: { autor: 'Avatar7', licencia: CC_BY_SA_3, fuente: 'https://commons.wikimedia.org/wiki/File:Teapa.Grutas_de_Cocon%C3%A1.jpg' },
 };
 
 // Radio generoso para "cerca de la zona" (el centro de una colonia/municipio
@@ -312,7 +322,14 @@ export default async function ZonaDetailPage({ params }: Props) {
                       {', adaptada'}
                     </>
                   )}
-                  {' / Wikimedia Commons'}
+                  {' / '}
+                  {credito?.fuente ? (
+                    <a href={credito.fuente} target="_blank" rel="noopener noreferrer" className="underline hover:text-white">
+                      Wikimedia Commons
+                    </a>
+                  ) : (
+                    'Wikimedia Commons'
+                  )}
                 </span>
               );
             })()}
