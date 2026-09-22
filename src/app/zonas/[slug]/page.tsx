@@ -26,24 +26,36 @@ const CONTENIDO_MUNICIPIOS = contenidoMunicipios as Record<string, MunicipioCont
 
 // Fotos reales de Wikimedia Commons para el hero de cada municipio.
 //
-// Auditoría de derechos de autor 17/09/2026 (docs/AUDITORIA-FOTOS-
-// MUNICIPIOS-17092026.md, con la URL exacta del archivo de Commons de
-// cada una) — re-verificadas de cero, no solo confiando en el nombre de
-// autor que ya había en el código. "Miguel Marín" (Comalcalco) y
-// "ProtoplasmaKid" (Tenosique) no tenían ningún archivo verificable de
-// Tabasco a su nombre — se quitaron esas 2 fotos, y luego se
-// reemplazaron por otras de Alfonsobouchot (ya verificado en 9 de los
-// otros 15 municipios), esta vez del lugar correcto: la pirámide de
-// ladrillo de Comalcalco y el puente sobre el Usumacinta en Tenosique
-// (coincide con la propia descripción de cada municipio). Con esto,
-// los 17 municipios tienen foto con fuente real confirmada.
+// Auditoría de atractivos turísticos 22/09/2026 — pedido explícito: para
+// los 16 municipios que no son Centro, la foto debía mostrar un atractivo
+// turístico real (el mismo que ya describe la sección "Qué visitar" de
+// cada uno) en vez de una vista genérica de la cabecera municipal. Cada
+// archivo se verificó abriendo su página real en Commons (autor, licencia
+// y descripción tal cual aparecen ahí, nunca inferidos del nombre del
+// archivo) — mismo criterio que la auditoría de fotos del 17/09/2026, que
+// ya había encontrado 2 fotos con autoría no verificable.
 //
-// De las 17, 10 están licenciadas CC BY-SA (no dominio público)
-// — esa licencia exige, además del autor, nombrar la licencia y avisar
-// que la obra se adaptó (se convirtió a .webp y se recortó). Antes solo
-// se mostraba el autor; `licencia` completa eso solo para las que de
-// verdad lo requieren. Las de dominio público (`licencia` ausente) no lo
-// necesitan legalmente, se les da crédito igual por cortesía.
+// Dos casos con salvedad, documentados aquí por si hay que revisar:
+//  - Huimanguillo: la única foto libre encontrada es el edificio del museo
+//    de sitio de La Venta, no las pirámides — el sitio real está en gran
+//    parte bajo una refinería de Pemex y casi no hay fotos libres suyas;
+//    se descartaron varias candidatas por riesgo de confundirse con el
+//    Parque-Museo La Venta (que está en Villahermosa, no en Huimanguillo).
+//  - Jalapa: no se encontró ninguna foto turística libre en Commons (la
+//    categoría del municipio solo tiene dulces típicos y una acuarela de
+//    1858) — se dejó sin cambios, sigue con su foto de cabecera de siempre.
+//  - Macuspana, Balancán y Jonuta: la foto correcta existe pero en
+//    resolución baja en su origen (720×480 a 1632×1224) — se usaron igual,
+//    revisar cómo se ven ampliadas.
+//
+// De las 16 fotos nuevas, 10 están licenciadas CC BY / CC BY-SA (no
+// dominio público) — esa licencia exige, además del autor, nombrar la
+// licencia y avisar que la obra se adaptó (se convirtió a .webp y se
+// recortó). `licencia` completa eso solo para las que de verdad lo
+// requieren; las de dominio público (`licencia` ausente) no lo necesitan
+// legalmente, se les da crédito igual por cortesía.
+const CC_BY_2 = { nombre: 'CC BY 2.0', url: 'https://creativecommons.org/licenses/by/2.0/' };
+const CC_BY_3 = { nombre: 'CC BY 3.0', url: 'https://creativecommons.org/licenses/by/3.0/' };
 const CC_BY_SA_3 = { nombre: 'CC BY-SA 3.0', url: 'https://creativecommons.org/licenses/by-sa/3.0/' };
 const CC_BY_SA_4 = { nombre: 'CC BY-SA 4.0', url: 'https://creativecommons.org/licenses/by-sa/4.0/' };
 
@@ -51,22 +63,22 @@ interface CreditoFoto { autor: string; licencia?: { nombre: string; url: string 
 
 const MUNICIPIO_FOTO_CREDITO: Record<string, CreditoFoto> = {
   centro: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_3 },
-  cardenas: { autor: 'Alfonsobouchot' },
-  comalcalco: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_3 },
-  paraiso: { autor: 'Alfonsobouchot' },
-  'jalpa-de-mendez': { autor: 'Olavarria10', licencia: CC_BY_SA_4 },
-  nacajuca: { autor: 'Cultura Yokotan', licencia: CC_BY_SA_4 },
+  cardenas: { autor: 'AlejandroLinaresGarcia', licencia: CC_BY_SA_3 },
+  comalcalco: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_4 },
+  paraiso: { autor: 'AlejandroLinaresGarcia', licencia: CC_BY_SA_3 },
+  'jalpa-de-mendez': { autor: 'Cookie253', licencia: CC_BY_3 },
+  nacajuca: { autor: 'Alfonsobouchot' },
   huimanguillo: { autor: 'Alfonsobouchot' },
   centla: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_3 },
-  macuspana: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_4 },
-  cunduacan: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_3 },
-  tenosique: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_4 },
+  macuspana: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_3 },
+  cunduacan: { autor: 'AlejandroLinaresGarcia', licencia: CC_BY_SA_3 },
+  tenosique: { autor: 'ProtoplasmaKid', licencia: CC_BY_SA_4 },
   'emiliano-zapata': { autor: 'Kazekage AMT' },
-  balancán: { autor: 'Kazekage AMT' },
+  balancán: { autor: 'México Comunidad', licencia: CC_BY_2 },
   jonuta: { autor: 'Kazekage AMT' },
   jalapa: { autor: 'Alfonsobouchot' },
-  tacotalpa: { autor: 'Alfonsobouchot', licencia: CC_BY_SA_4 },
-  teapa: { autor: 'Haikabio', licencia: CC_BY_SA_3 },
+  tacotalpa: { autor: 'Alfonsobouchot' },
+  teapa: { autor: 'Avatar7', licencia: CC_BY_SA_3 },
 };
 
 // Radio generoso para "cerca de la zona" (el centro de una colonia/municipio
