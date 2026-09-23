@@ -18,10 +18,16 @@ export interface MotivoOption {
   label: string;
 }
 
+// Ordenados del motivo más probable al menos probable (pedido 2026-09-23) —
+// criterio de producto, no medido: "ya se vendió/rentó" (va primero en el
+// modal, ver PausarPropiedadModal.tsx), luego una pausa temporal genérica,
+// luego editar la publicación, luego mensajes poco serios; "otro" siempre al
+// final. Si PostHog/el backend llegan a mostrar la frecuencia real, reordenar
+// con esos datos.
 export const MOTIVOS_PAUSA: MotivoOption[] = [
+  { value: 'pausa_temporal', label: 'Pausa temporal, sigo interesado en publicarla' },
   { value: 'actualizando', label: 'Voy a actualizar precio, fotos o descripción' },
   { value: 'mensajes_no_calificados', label: 'Recibí muchos mensajes que no eran serios' },
-  { value: 'pausa_temporal', label: 'Pausa temporal, sigo interesado en publicarla' },
   { value: 'otro', label: 'Otro motivo' },
 ];
 

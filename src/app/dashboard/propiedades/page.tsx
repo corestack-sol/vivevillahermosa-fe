@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  ArrowLeft, Plus, Info, Pencil, Trash2, Play, Pause, Archive, Star, Building2, Download, Upload, TrendingUp, Loader2, MessageCircle,
+  ArrowLeft, Plus, Info, Pencil, Trash2, Play, Pause, Star, Building2, Download, Upload, TrendingUp, Loader2, MessageCircle,
 } from 'lucide-react';
 import { ESTADOS_ARCHIVADOS, ESTADO_CFG, mapMiaBackend, type EstadoPublicacion, type MiPropiedad } from '@/lib/misPropiedades';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
@@ -15,7 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { usePerfilInmobiliaria } from '@/hooks/usePerfilInmobiliaria';
 import { Tooltip } from '@/components/ui/Tooltip';
-import { ArchivarPropiedadModal } from '@/components/property/ArchivarPropiedadModal';
+import { resolverPausa } from '@/lib/cierrePublicacion';
 import { EliminarPropiedadModal } from '@/components/property/EliminarPropiedadModal';
 import { PausarPropiedadModal } from '@/components/property/PausarPropiedadModal';
 import { DestacarPropiedadModal } from '@/components/property/DestacarPropiedadModal';
@@ -60,7 +60,6 @@ export default function MisPropiedadesPage() {
   // reemplazara — un flash real del estado vacío incorrecto para
   // cualquier dueño que sí tiene propiedades.
   const [cargando, setCargando] = useState(true);
-  const [archivando, setArchivando] = useState<string | null>(null);
   const [eliminando, setEliminando] = useState<string | null>(null);
   const [pausando, setPausando] = useState<string | null>(null);
   const [destacando, setDestacando] = useState<string | null>(null);
@@ -160,15 +159,6 @@ export default function MisPropiedadesPage() {
     actualizarEstado(id, 'activa');
   }
 
-  function archivar(id: string, operacion: 'venta' | 'renta', encontradoEnPlataforma: boolean, medioAlterno?: string, medioAlternoDetalle?: string) {
-    actualizarEstado(id, operacion === 'venta' ? 'vendida' : 'rentada', {
-      encontradoEnPlataforma: String(encontradoEnPlataforma),
-      ...(medioAlterno && { medioAlterno }),
-      ...(medioAlternoDetalle && { medioAlternoDetalle }),
-    });
-  }
-
-  const propiedadArchivando = archivando ? items.find((i) => i.property.id === archivando) : undefined;
   const propiedadEliminando = eliminando ? items.find((i) => i.property.id === eliminando) : undefined;
   const propiedadPausando = pausando ? items.find((i) => i.property.id === pausando) : undefined;
   const propiedadDestacando = destacando ? items.find((i) => i.property.id === destacando) : undefined;
@@ -464,15 +454,6 @@ export default function MisPropiedadesPage() {
                           </button>
                         </Tooltip>
                       )}
-                      <Tooltip label={p.operacion === 'venta' ? 'Marcar como vendida' : 'Marcar como rentada'}>
-                        <button
-                          type="button"
-                          onClick={() => setArchivando(p.id)}
-                          className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-brand hover:bg-brand-pale transition-colors"
-                        >
-                          <Archive size={15} />
-                        </button>
-                      </Tooltip>
                     </>
                   )}
                   {/* Enlaza a la bandeja unificada filtrada por esta
@@ -508,24 +489,17 @@ export default function MisPropiedadesPage() {
         </div>
       )}
 
-      {propiedadArchivando && (
-        <ArchivarPropiedadModal
-          isOpen
-          onClose={() => setArchivando(null)}
-          propertyTitle={propiedadArchivando.property.titulo}
-          operacion={propiedadArchivando.property.operacion}
-          onConfirm={(encontradoEnPlataforma, medioAlterno, medioAlternoDetalle) =>
-            archivar(propiedadArchivando.property.id, propiedadArchivando.property.operacion, encontradoEnPlataforma, medioAlterno, medioAlternoDetalle)}
-          contactosReales={propiedadArchivando.contactos}
-        />
-      )}
-
       {propiedadPausando && (
         <PausarPropiedadModal
           isOpen
           onClose={() => setPausando(null)}
           propertyTitle={propiedadPausando.property.titulo}
-          onConfirm={(motivo, motivoDetalle) => actualizarEstado(propiedadPausando.property.id, 'pausada', { motivo, ...(motivoDetalle && { motivoDetalle }) })}
+          operacion={propiedadPausando.property.operacion}
+          contactosReales={propiedadPausando.contactos}
+          onConfirm={(resultado) => {
+            const { estado, extra } = resolverPausa(resultado, propiedadPausando.property.operacion);
+            actualizarEstado(propiedadPausando.property.id, estado, extra);
+          }}
         />
       )}
 

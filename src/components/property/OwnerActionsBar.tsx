@@ -2,16 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Building2, Pencil, Trash2, Play, Pause, Archive, Star, ArrowRight, MapPin } from 'lucide-react';
+import { Building2, Pencil, Trash2, Play, Pause, Star, ArrowRight, MapPin } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { ESTADOS_ARCHIVADOS, ESTADO_CFG, type EstadoPublicacion } from '@/lib/misPropiedades';
 import { Tooltip } from '@/components/ui/Tooltip';
-import { ArchivarPropiedadModal } from '@/components/property/ArchivarPropiedadModal';
 import { EliminarPropiedadModal } from '@/components/property/EliminarPropiedadModal';
 import { PausarPropiedadModal } from '@/components/property/PausarPropiedadModal';
 import { DestacarPropiedadModal } from '@/components/property/DestacarPropiedadModal';
+import { resolverPausa } from '@/lib/cierrePublicacion';
 import { useRouter } from 'next/navigation';
 import { LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
 import { diasParaVencer } from '@/lib/format';
@@ -48,7 +48,6 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
   const esProfesional = !!user && user.rol === 'agente';
 
   const [mine, setMine] = useState<MiaBackend | null>(null);
-  const [showArchivar, setShowArchivar] = useState(false);
   const [showEliminar, setShowEliminar] = useState(false);
   const [showPausar, setShowPausar] = useState(false);
   const [showDestacar, setShowDestacar] = useState(false);
@@ -139,14 +138,6 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
     }
   }
 
-  function archivar(encontradoEnPlataforma: boolean, medioAlterno?: string, medioAlternoDetalle?: string) {
-    actualizarEstado(mine!.operacion === 'venta' ? 'vendida' : 'rentada', {
-      encontradoEnPlataforma: String(encontradoEnPlataforma),
-      ...(medioAlterno && { medioAlterno }),
-      ...(medioAlternoDetalle && { medioAlternoDetalle }),
-    });
-  }
-
   return (
     <div className="bg-brand-pale border border-brand/20 rounded-2xl px-5 py-4 mb-5">
     <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -198,15 +189,6 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
                 </button>
               </Tooltip>
             )}
-            <Tooltip label={mine.operacion === 'venta' ? 'Marcar como vendida' : 'Marcar como rentada'}>
-              <button
-                type="button"
-                onClick={() => setShowArchivar(true)}
-                className="w-9 h-9 rounded-xl flex items-center justify-center text-brand-dark/60 hover:text-brand hover:bg-white transition-colors"
-              >
-                <Archive size={16} />
-              </button>
-            </Tooltip>
           </>
         )}
         <Tooltip label="Editar propiedad">
@@ -248,19 +230,16 @@ export function OwnerActionsBar({ propertyId, lat, lng }: { propertyId: string; 
         </button>
       </div>
 
-      <ArchivarPropiedadModal
-        isOpen={showArchivar}
-        onClose={() => setShowArchivar(false)}
-        propertyTitle={mine.titulo}
-        operacion={mine.operacion}
-        onConfirm={archivar}
-        contactosReales={mine.contactosReales}
-      />
       <PausarPropiedadModal
         isOpen={showPausar}
         onClose={() => setShowPausar(false)}
         propertyTitle={mine.titulo}
-        onConfirm={(motivo, motivoDetalle) => actualizarEstado('pausada', { motivo, ...(motivoDetalle && { motivoDetalle }) })}
+        operacion={mine.operacion}
+        contactosReales={mine.contactosReales}
+        onConfirm={(resultado) => {
+          const { estado, extra } = resolverPausa(resultado, mine.operacion);
+          actualizarEstado(estado, extra);
+        }}
       />
       <EliminarPropiedadModal
         isOpen={showEliminar}
