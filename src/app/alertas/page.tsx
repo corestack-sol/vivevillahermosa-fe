@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Bell, BellRing, BellOff, Plus, Trash2, ArrowLeft, Zap, Loader2 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/context/AuthContext';
@@ -12,10 +12,15 @@ import { useToast } from '@/context/ToastContext';
 import { backendFetch, BackendApiError } from '@/lib/backendApi';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { MUNICIPIO_OPTIONS } from '@/lib/publishSchema';
+import { ColoniaAutocomplete } from '@/components/forms/ColoniaAutocomplete';
+import {
+  ALERTAS_POR_COLONIA_DISPONIBLE, construirCuerpoAlerta, validarFiltrosAlerta, alertaSinFiltros, etiquetaAlerta,
+} from '@/lib/alertas';
 import { obtenerEstadoPush, suscribirPush, desuscribirPush, fueDesactivadoManualmente, type EstadoPush } from '@/lib/push';
 
 const schema = z.object({
   municipio: z.string().optional(),
+  colonia: z.string().optional(),
   tipo: z.string().optional(),
   operacion: z.enum(['venta', 'renta', '']).optional(),
   precioMax: z.string().optional(),
@@ -27,6 +32,7 @@ type FormData = z.infer<typeof schema>;
 interface Alerta {
   id: string;
   municipio?: string | null;
+  colonia?: string | null;
   tipo?: string | null;
   operacion?: string | null;
   precioMax?: number | null;
@@ -62,10 +68,13 @@ export default function AlertasPage() {
   // (framing viejo) durante ese instante.
   const [activandoAuto, setActivandoAuto] = useState(false);
 
-  const { register, handleSubmit, reset, setFocus, formState: { isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, reset, setFocus, setValue, control, formState: { isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { dosBocas: false, sinRiesgo: false },
   });
+
+  const municipioElegido = useWatch({ control, name: 'municipio' });
+  const coloniaEscrita = useWatch({ control, name: 'colonia' });
 
   function irAlFormulario() {
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -134,18 +143,16 @@ export default function AlertasPage() {
   }
 
   async function onSubmit(data: FormData) {
-    const body = {
-      municipio: data.municipio || undefined,
-      tipo: data.tipo || undefined,
-      operacion: data.operacion || undefined,
-      precioMax: data.precioMax ? Number(data.precioMax) : undefined,
-      dosBocas: data.dosBocas,
-      sinRiesgo: data.sinRiesgo,
-    };
+    const errorFiltros = validarFiltrosAlerta(data);
+    if (errorFiltros) {
+      toast.error(errorFiltros);
+      return;
+    }
+    const body = construirCuerpoAlerta(data);
     // Sin ningún filtro, la alerta coincide con TODA publicación futura —
-    // válido (alertaLabel ya contempla "Todas las propiedades"), pero
+    // válido (etiquetaAlerta ya contempla "Todas las propiedades"), pero
     // merece una confirmación explícita en vez de crearse con un clic.
-    const vacia = !body.municipio && !body.tipo && !body.operacion && !body.precioMax && !body.dosBocas && !body.sinRiesgo;
+    const vacia = alertaSinFiltros(body);
     if (vacia && !window.confirm('No elegiste ningún filtro — esta alerta te avisará de TODAS las propiedades nuevas que se publiquen. ¿Crearla así?')) {
       return;
     }
@@ -191,31 +198,21 @@ export default function AlertasPage() {
     try {
       const d = await backendFetch<{ alerta: Alerta }>('/alertas', {
         method: 'POST',
-        body: JSON.stringify({
+        body: JSON.stringify(construirCuerpoAlerta({
           municipio: a.municipio ?? undefined,
+          colonia: a.colonia ?? undefined,
           tipo: a.tipo ?? undefined,
           operacion: a.operacion ?? undefined,
           precioMax: a.precioMax ?? undefined,
           dosBocas: a.dosBocas,
           sinRiesgo: a.sinRiesgo,
-        }),
+        })),
       });
       setAlertas((prev) => [d.alerta, ...prev]);
       toast.success('Alerta restaurada.');
     } catch (err) {
       toast.error(err instanceof BackendApiError ? err.message : 'No se pudo restaurar la alerta.');
     }
-  }
-
-  function alertaLabel(a: Alerta) {
-    const parts: string[] = [];
-    if (a.operacion) parts.push(a.operacion === 'renta' ? 'Renta' : 'Venta');
-    if (a.tipo) parts.push(a.tipo.charAt(0).toUpperCase() + a.tipo.slice(1));
-    if (a.municipio) parts.push(a.municipio === 'Centro' ? 'Villahermosa' : a.municipio);
-    if (a.precioMax) parts.push(`hasta $${a.precioMax.toLocaleString('es-MX')}`);
-    if (a.dosBocas) parts.push('Dos Bocas');
-    if (a.sinRiesgo) parts.push('zona segura');
-    return parts.length ? parts.join(' · ') : 'Todas las propiedades';
   }
 
   if (loading || fetching) {
@@ -332,6 +329,19 @@ export default function AlertasPage() {
             </div>
           </div>
 
+          {ALERTAS_POR_COLONIA_DISPONIBLE && (
+            <div>
+              <ColoniaAutocomplete
+                label="Colonia (opcional)"
+                placeholder={municipioElegido ? 'Ej. Tabasco 2000' : 'Elige primero un municipio'}
+                municipio={municipioElegido || undefined}
+                value={coloniaEscrita ?? ''}
+                onChange={(texto) => setValue('colonia', texto, { shouldDirty: true })}
+              />
+              <p className="text-xs text-gray-400 mt-1">Solo te avisamos de propiedades publicadas en esa colonia.</p>
+            </div>
+          )}
+
           <div className="flex gap-4">
             <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
               <input type="checkbox" {...register('dosBocas')} className="rounded text-brand" />
@@ -371,7 +381,7 @@ export default function AlertasPage() {
                   <Bell size={14} className="text-amber-500" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-800">{alertaLabel(a)}</p>
+                  <p className="text-sm font-medium text-gray-800">{etiquetaAlerta(a)}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
                     Creada el {new Date(a.createdAt).toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City' })}
                     {a.expiraEn && ` · expira el ${new Date(a.expiraEn).toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City' })}`}
