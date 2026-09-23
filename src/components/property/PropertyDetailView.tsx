@@ -385,8 +385,12 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
                   </div>
                 )}
 
-                {/* Agente */}
-                <div className="px-5 py-4">
+                {/* Agente — destino del botón "Contactar" de la barra móvil
+                    (MobileContactCta, href="#contacto"). Con "mensaje primero"
+                    el id lo tiene ContactCard; con contacto directo ContactCard
+                    no se dibuja, así que el id vive aquí. Nunca los dos a la vez:
+                    un id duplicado haría que el ancla apunte al primero del DOM. */}
+                <div className="px-5 py-4 scroll-mt-20" id={property.requiereMensajePrimero ? undefined : 'contacto'}>
                   <AgentCard
                     agent={{ nombre: property.agente.nombre, verificado: property.agente.verificado }}
                     propiedadId={property.id}
