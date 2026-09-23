@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Map as MaplibreMap, Marker as MaplibreMarker, GeoJSONSource } from 'maplibre-gl';
 import Supercluster, { type PointFeature } from 'supercluster';
 import { jitterCoord } from '@/lib/colonias';
+import type { FloodRisk } from '@/types/property';
 import { TABASCO_BOUNDS } from '@/lib/tabascoBoundary';
 import { shortPrice, circlePolygon, toMaplibreBounds } from '@/lib/mapGeo';
 import { getAllMunicipalities } from '@/lib/api';
@@ -22,7 +23,7 @@ export interface MapMarker {
   tipo: string;
   colonia: string;
   foto: string | null;
-  riesgoInundacion: 'alto' | 'medio' | 'bajo';
+  riesgoInundacion: FloodRisk;
 }
 
 export interface MapControls {
@@ -121,8 +122,8 @@ interface MapViewProps {
   showMunicipioLabels?: boolean;
 }
 
-const FLOOD_COLORS = { alto: '#EF4444', medio: '#F59E0B', bajo: '#10B981' } as const;
-const FLOOD_DARK   = { alto: '#B91C1C', medio: '#D97706', bajo: '#059669' } as const;
+const FLOOD_COLORS = { alto: '#EF4444', medio: '#F59E0B', bajo: '#10B981', sin_dato: '#A5957A' } as const;
+const FLOOD_DARK   = { alto: '#B91C1C', medio: '#D97706', bajo: '#059669', sin_dato: '#7C6F58' } as const;
 
 // Migrado de Esri World_Topo_Map (raster + filtro CSS) a OpenFreeMap/
 // MapLibre GL (pedido explícito 2026-09-02: "solución a largo plazo" —

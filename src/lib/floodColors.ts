@@ -5,6 +5,8 @@ import type { FloodRisk } from '@/types/property';
  * completa) para que ambos hablen el mismo lenguaje visual. */
 export const FLOOD_COLOR: Record<FloodRisk, string> = {
   alto: '#EF4444', medio: '#F59E0B', bajo: '#10B981',
+  // Gris cálido (gray-400): "no sabemos" no es una alerta ni una garantía, no lleva color de semáforo.
+  sin_dato: '#A5957A',
 };
 
 // "Riesgo alto/medio de inundación" sonaba a que la plataforma está
@@ -13,4 +15,5 @@ export const FLOOD_COLOR: Record<FloodRisk, string> = {
 // predicción. Reformulado como hecho documentado, no como juicio.
 export const FLOOD_LABEL: Record<FloodRisk, string> = {
   alto: 'Históricamente inundable', medio: 'Inundaciones menores ocasionales', bajo: 'Bajo historial de inundaciones',
+  sin_dato: 'Sin información de riesgo de inundación',
 };

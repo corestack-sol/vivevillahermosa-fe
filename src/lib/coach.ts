@@ -1,4 +1,4 @@
-import type { Property } from '@/types/property';
+import type { Property, FloodRisk } from '@/types/property';
 import type { EstadoPublicacion, MiPropiedad } from '@/lib/misPropiedades';
 import { detectarRiesgoInundacion } from '@/lib/zonas-inundacion';
 
@@ -20,7 +20,8 @@ const FOTOS_SUGERIDAS = 3;
 const DESCRIPCION_CORTA = 120;
 const DIAS_SIN_MOVIMIENTO = 60;
 const TITULO_GENERICO = 15;
-const RIESGO_ORDEN: Record<'bajo' | 'medio' | 'alto', number> = { bajo: 0, medio: 1, alto: 2 };
+// sin_dato = 99: nunca es "más bajo" que el Atlas, así que jamás dispara "riesgo-inconsistente" (no afirmó ningún nivel).
+const RIESGO_ORDEN: Record<FloodRisk, number> = { bajo: 0, medio: 1, alto: 2, sin_dato: 99 };
 
 function diasDesde(fechaIso: string): number {
   return Math.floor((Date.now() - new Date(fechaIso).getTime()) / 86_400_000);

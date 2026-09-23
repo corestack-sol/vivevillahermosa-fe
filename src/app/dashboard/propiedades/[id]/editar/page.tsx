@@ -361,7 +361,8 @@ export default function EditarPropiedadPage() {
       colonia: property.colonia,
       titulo: property.titulo,
       descripcion: property.descripcion,
-      riesgoInundacion: property.riesgoInundacion,
+      // 'sin_dato' no es una opción del formulario: se deja vacío para que la persona elija a conciencia.
+      riesgoInundacion: property.riesgoInundacion === 'sin_dato' ? undefined : property.riesgoInundacion,
       nombreContacto: property.agente.nombre,
       metodoContacto: inferirMetodoContacto(property.agente),
       // Auditoría 2026-08-30: antes ausente del todo — una vez publicada,

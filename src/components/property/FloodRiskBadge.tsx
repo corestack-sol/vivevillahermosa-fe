@@ -1,5 +1,6 @@
 import type { FloodRisk } from '@/types/property';
 import { Droplets, Info } from 'lucide-react';
+import { explicarFuenteRiesgo } from '@/lib/fuenteRiesgo';
 
 interface FloodRiskBadgeProps {
   nivel: FloodRisk;
@@ -25,35 +26,57 @@ interface FloodRiskBadgeProps {
 // histórico, no una predicción de la plataforma — "Riesgo Alto/Medio/
 // Bajo" sonaba a que estuviéramos pronosticando algo.
 //
-// Colores del badge sin tocar — pedido explícito 2026-08-21: "mantén los
-// colores originales de los badges, solo te pedí cambiar el fondo de esa
-// sección". Lo único que cambia por el fondo más oscuro de la sección
-// (PropertyDetailView.tsx) es que ambas cajas ganan shadow-sm, más abajo —
-// separación por elevación, no por color.
+// Colores 2026-09-23 (pedido: armonía con el diseño de la ficha, libertad
+// total incluido el contenido): tríada terrosa con tokens propios
+// (--color-flood-*, globals.css) en vez de los red/amber/green genéricos de
+// Tailwind — antes el amarillo neón y el texto a opacity-40 (contraste ~1.5:1)
+// desentonaban con crema/verde bosque/terracota y la línea de fuente casi no
+// se leía. Las clases van completas (no armadas por partes) para que
+// Tailwind las detecte.
 const config = {
   alto: {
     label: 'Históricamente inundable',
     description: 'Esta zona tiene historial de inundaciones severas.',
-    classes: 'bg-red-50 text-red-700 border-red-200',
-    iconClass: 'text-red-500',
-    dot: 'bg-red-500',
-    compactText: 'text-red-300',
+    box: 'bg-flood-alto-bg border-flood-alto-border',
+    title: 'text-flood-alto-title',
+    body: 'text-flood-alto-body',
+    muted: 'text-flood-alto-muted',
+    chip: 'bg-flood-alto-chip',
+    dot: 'bg-flood-alto-soft',
+    compactText: 'text-flood-alto-soft',
   },
   medio: {
     label: 'Inundaciones menores ocasionales',
     description: 'Zona con anegamiento ocasional en temporada de lluvias.',
-    classes: 'bg-amber-50 text-amber-700 border-amber-200',
-    iconClass: 'text-amber-500',
-    dot: 'bg-amber-400',
-    compactText: 'text-amber-300',
+    box: 'bg-flood-medio-bg border-flood-medio-border',
+    title: 'text-flood-medio-title',
+    body: 'text-flood-medio-body',
+    muted: 'text-flood-medio-muted',
+    chip: 'bg-flood-medio-chip',
+    dot: 'bg-flood-medio-soft',
+    compactText: 'text-flood-medio-soft',
+  },
+  sin_dato: {
+    label: 'Sin información de riesgo de inundación',
+    description: 'No tenemos un dato confiable de inundación para esta zona. Eso no significa que sea segura ni que se inunde.',
+    box: 'bg-gray-100 border-gray-200',
+    title: 'text-gray-800',
+    body: 'text-gray-700',
+    muted: 'text-gray-600',
+    chip: 'bg-gray-500',
+    dot: 'bg-gray-300',
+    compactText: 'text-gray-300',
   },
   bajo: {
     label: 'Bajo historial de inundaciones',
     description: 'Zona con bajo historial de inundaciones.',
-    classes: 'bg-green-50 text-green-700 border-green-200',
-    iconClass: 'text-green-500',
-    dot: 'bg-emerald-400',
-    compactText: 'text-emerald-300',
+    box: 'bg-flood-bajo-bg border-flood-bajo-border',
+    title: 'text-flood-bajo-title',
+    body: 'text-flood-bajo-body',
+    muted: 'text-flood-bajo-muted',
+    chip: 'bg-flood-bajo-chip',
+    dot: 'bg-flood-bajo-soft',
+    compactText: 'text-flood-bajo-soft',
   },
 };
 
@@ -71,36 +94,34 @@ export function FloodRiskBadge({ nivel, compact = false, fuente, municipio }: Fl
     return (
       <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-black/50 backdrop-blur-sm min-w-0 max-w-full truncate ${c.compactText}`}>
         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${c.dot}`} />
-        <span className="truncate">{c.label}</span>
+        <span className="truncate">{nivel === 'sin_dato' ? 'Sin información' : c.label}</span>
       </span>
     );
   }
 
   return (
     <div className="space-y-2">
-      <div className={`flex gap-3 p-4 rounded-xl border shadow-sm ${c.classes}`}>
-        <Droplets className={`flex-shrink-0 mt-1 ${c.iconClass}`} size={22} />
+      <div className={`flex items-start gap-3.5 p-4 rounded-xl border shadow-sm ${c.box}`}>
+        <span className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white ${c.chip}`}>
+          <Droplets size={20} />
+        </span>
         <div className="min-w-0">
-          <p className="font-bold text-xl leading-tight">{c.label}</p>
-          <p className="text-base mt-1 opacity-80">{c.description}</p>
-          <p className="text-xs opacity-40 mt-2 leading-relaxed">
-            {fuente === 'atlas'
-              ? 'Según el Atlas de Riesgos del Municipio de Centro, 2023. Ayuntamiento de Centro. P 377.'
-              : fueraDeCentro
-              ? 'Nivel indicado por quien publicó la propiedad. En este municipio no existe un atlas de riesgos que lo verifique.'
-              : fuente === 'propietario'
-              ? 'No podemos confirmar este nivel contra el Atlas de Riesgos Municipal — quien publicó lo ajustó.'
-              : 'Este dato proviene de registros públicos de inundación y/o de lo reportado por quien publicó la propiedad.'}
+          <p className={`font-bold text-xl leading-tight ${c.title}`}>{c.label}</p>
+          <p className={`text-base mt-1 ${c.body}`}>{c.description}</p>
+          <p className={`text-xs mt-2 leading-relaxed ${c.muted}`}>
+            {explicarFuenteRiesgo({ nivel, fuente, municipio })}
           </p>
         </div>
       </div>
 
-      <div className="flex gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-3 shadow-sm">
-        <Info size={15} className="text-gray-400 flex-shrink-0 mt-0.5" />
-        <div className="text-sm text-gray-500 leading-relaxed space-y-1.5">
+      <div className="flex gap-2 bg-white border border-gray-200 rounded-xl px-3 py-3 shadow-sm">
+        <Info size={15} className="text-accent flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-gray-600 leading-relaxed space-y-1.5">
           <p>
-            <span className="font-semibold">Dato informativo.</span>{' '}
-            {fueraDeCentro
+            <span className="font-semibold text-gray-800">Dato informativo.</span>{' '}
+            {nivel === 'sin_dato'
+              ? 'Sin un nivel registrado no podemos orientarte sobre esta zona. Te recomendamos consultar a la autoridad municipal correspondiente y visitar la zona en temporada de lluvias antes de decidir.'
+              : fueraDeCentro
               ? 'Este nivel lo indicó quien publicó la propiedad y no está verificado contra una fuente oficial. Pregunta a quien publica de dónde lo obtuvo y, si la decisión es importante, visita la zona en temporada de lluvias.'
               : 'Esta clasificación se basa en registros históricos y modelos de simulación, o en lo reportado por quien publicó. Te recomendamos verificar directamente con el H. Ayuntamiento de Centro o IMPLAN antes de tomar una decisión.'}
           </p>

@@ -9,7 +9,7 @@ export type PropertyType =
 
 export type OperationType = 'venta' | 'renta';
 
-export type FloodRisk = 'alto' | 'medio' | 'bajo';
+export type FloodRisk = 'alto' | 'medio' | 'bajo' | 'sin_dato';
 
 /**
  * Solo se adjunta cuando analizarFraude (src/lib/ai.ts) devuelve riesgo

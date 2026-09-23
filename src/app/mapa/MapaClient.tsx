@@ -26,7 +26,7 @@ import { createRequestGuard } from '@/lib/requestGuard';
 
 // ── Config ──────────────────────────────────────────────────────────────
 
-type RiesgoLevel = 'bajo' | 'medio' | 'alto';
+type RiesgoLevel = 'bajo' | 'medio' | 'alto' | 'sin_dato';
 type TileType    = 'street' | 'satellite';
 
 // Mismo criterio que src/lib/floodColors.ts — describe el registro
@@ -35,6 +35,7 @@ const RIESGO_CFG = [
   { level: 'bajo'  as RiesgoLevel, color: '#10B981', short: 'Bajo',  long: 'Bajo historial de inundaciones' },
   { level: 'medio' as RiesgoLevel, color: '#F59E0B', short: 'Medio', long: 'Inundaciones menores ocasionales' },
   { level: 'alto'  as RiesgoLevel, color: '#EF4444', short: 'Alto',  long: 'Históricamente inundable' },
+  { level: 'sin_dato' as RiesgoLevel, color: '#A5957A', short: 'Sin dato', long: 'Sin información de riesgo de inundación' },
 ];
 
 const TYPE_CHIPS: { value: PropertyType | ''; label: string }[] = [
@@ -97,7 +98,7 @@ export function MapaClient({ allProperties }: Props) {
   const [panelOpen,     setPanelOpen]     = useState(false);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
-  const [riesgoActive,  setRiesgoActive]  = useState<Set<RiesgoLevel>>(new Set(['bajo', 'medio', 'alto']));
+  const [riesgoActive,  setRiesgoActive]  = useState<Set<RiesgoLevel>>(new Set(['bajo', 'medio', 'alto', 'sin_dato']));
   const [selectedMarker, setSelectedMarker] = useState<MapMarker | null>(null);
   const [activeBounds,  setActiveBounds]  = useState<MapBounds | null>(null);
   // Cerrar la leyenda de privacidad — pedido explícito 2026-09-07.

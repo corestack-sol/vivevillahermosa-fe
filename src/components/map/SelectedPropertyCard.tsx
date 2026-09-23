@@ -11,15 +11,16 @@ import type { MapMarker } from './MapView';
 
 const RIESGO_LABEL: Record<string, string> = {
   bajo: 'Bajo historial de inundaciones', medio: 'Inundaciones menores ocasionales', alto: 'Históricamente inundable',
+  sin_dato: 'Sin información de riesgo de inundación',
 };
 
 // Versión corta — la card compacta de la esquina no tiene ancho para la
 // oración completa de RIESGO_LABEL (info de seguridad real, no se quita,
 // solo se acorta).
-const RIESGO_SHORT: Record<string, string> = { bajo: 'Bajo', medio: 'Medio', alto: 'Alto' };
+const RIESGO_SHORT: Record<string, string> = { bajo: 'Bajo', medio: 'Medio', alto: 'Alto', sin_dato: 'Sin dato' };
 
 const RIESGO_COLOR: Record<string, string> = {
-  bajo: '#10B981', medio: '#F59E0B', alto: '#EF4444',
+  bajo: '#10B981', medio: '#F59E0B', alto: '#EF4444', sin_dato: '#A5957A',
 };
 
 // Card compacta en la esquina — antes era una hoja de pantalla completa en
