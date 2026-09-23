@@ -17,3 +17,18 @@ export const FLOOD_LABEL: Record<FloodRisk, string> = {
   alto: 'Históricamente inundable', medio: 'Inundaciones menores ocasionales', bajo: 'Bajo historial de inundaciones',
   sin_dato: 'Sin información de riesgo de inundación',
 };
+
+const NIVELES_CONOCIDOS: readonly FloodRisk[] = ['alto', 'medio', 'bajo', 'sin_dato'];
+
+/**
+ * Cualquier valor de riesgo que el backend mande y este código no conozca
+ * (un cuarto/quinto nivel futuro, `null`, texto raro) se trata como
+ * `sin_dato` en el punto de entrada, en vez de dejar que rompa una ficha
+ * entera — 2026-09-23 el backend sembró propiedades con `sin_dato` antes de
+ * que el front lo conociera y toda su ficha dio "No pudimos cargar esta
+ * página". Mostrar "sin información" es siempre más seguro que inventar un
+ * nivel o tronar.
+ */
+export function normalizarRiesgo(valor: unknown): FloodRisk {
+  return NIVELES_CONOCIDOS.includes(valor as FloodRisk) ? (valor as FloodRisk) : 'sin_dato';
+}

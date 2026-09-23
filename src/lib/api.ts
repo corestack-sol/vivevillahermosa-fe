@@ -1,4 +1,5 @@
 import type { FloodRisk, OperationType, Property, PropertyType } from '@/types/property';
+import { normalizarRiesgo } from '@/lib/floodColors';
 import type { Municipality, Zone } from '@/types/zone';
 import type { Agent } from '@/types/agent';
 
@@ -112,7 +113,7 @@ export function mapBackendProperty(bp: BackendPublicProperty): Property {
     latPublico: bp.latPublico,
     lngPublico: bp.lngPublico,
     pinMovidoAt: bp.pinMovidoAt,
-    riesgoInundacion: bp.riesgoInundacion,
+    riesgoInundacion: normalizarRiesgo(bp.riesgoInundacion),
     riesgoInundacionFuente: bp.riesgoInundacionFuente,
     zonaEcologica: bp.zonaEcologica,
     cercaDosoBocas: bp.cercaDosoBocas,

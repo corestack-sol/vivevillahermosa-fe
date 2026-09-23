@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { FloodRiskBadge } from './FloodRiskBadge';
-import { FLOOD_COLOR, FLOOD_LABEL } from '@/lib/floodColors';
+import { FLOOD_COLOR, FLOOD_LABEL, normalizarRiesgo } from '@/lib/floodColors';
 import type { FloodRisk } from '@/types/property';
 
 const NIVELES: FloodRisk[] = ['alto', 'medio', 'bajo', 'sin_dato'];
@@ -40,5 +40,14 @@ describe('floodColors', () => {
       expect(FLOOD_COLOR[nivel]).toMatch(/^#[0-9A-Fa-f]{6}$/);
       expect(FLOOD_LABEL[nivel].length).toBeGreaterThan(5);
     }
+  });
+});
+
+describe('normalizarRiesgo', () => {
+  it('conserva los cuatro niveles conocidos', () => {
+    for (const n of NIVELES) expect(normalizarRiesgo(n)).toBe(n);
+  });
+  it('cualquier valor desconocido se trata como sin_dato, nunca rompe', () => {
+    for (const raro of [null, undefined, '', 'critico', 'ALTO', 3, {}]) expect(normalizarRiesgo(raro)).toBe('sin_dato');
   });
 });
