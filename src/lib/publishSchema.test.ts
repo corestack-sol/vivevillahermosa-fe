@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { publishSchema, construirAgenteContacto } from './publishSchema';
+import { publishSchema, construirAgenteContacto, NUMERO_OPCIONAL } from './publishSchema';
 
 const baseValid = {
   tipo: 'casa',
@@ -107,5 +107,36 @@ describe('construirAgenteContacto', () => {
   it('never leaks the un-chosen channel — whatsapp method never includes email even if one was passed', () => {
     const r = construirAgenteContacto('Juan', 'whatsapp', '9931234567', 'a@b.com');
     expect(r.email).toBeUndefined();
+  });
+});
+
+describe('campos numéricos opcionales (m², recámaras, baños)', () => {
+  const valido = {
+    tipo: 'casa', operacion: 'venta', precio: 1_000_000, m2Construidos: 0, m2Terreno: 0, recamaras: 0, banos: 0,
+    municipio: 'Centro', colonia: 'Centro', titulo: 'Casa bonita en el centro', descripcion: 'a'.repeat(40),
+    riesgoInundacion: 'bajo', nombreContacto: 'Juan', metodoContacto: 'whatsapp', telefonoContacto: '9931234567',
+    aceptaTerminos: true,
+  };
+
+  // Bug real (auditoría 2026-09-23): vaciar "Recámaras" daba NaN con valueAsNumber,
+  // el esquema lo rechazaba y el envío moría sin ningún aviso visible.
+  it('NUMERO_OPCIONAL convierte un campo vacío en 0, no en NaN', () => {
+    expect(NUMERO_OPCIONAL.setValueAs('')).toBe(0);
+    expect(NUMERO_OPCIONAL.setValueAs(undefined)).toBe(0);
+    expect(NUMERO_OPCIONAL.setValueAs(null)).toBe(0);
+    expect(NUMERO_OPCIONAL.setValueAs('3')).toBe(3);
+    expect(publishSchema.safeParse({ ...valido, recamaras: NUMERO_OPCIONAL.setValueAs('') }).success).toBe(true);
+  });
+
+  it('NaN sigue siendo inválido en el esquema (por eso hay que convertirlo antes)', () => {
+    expect(publishSchema.safeParse({ ...valido, recamaras: NaN }).success).toBe(false);
+  });
+
+  it('un valor negativo da un mensaje en español, no el genérico de Zod', () => {
+    for (const campo of ['m2Construidos', 'm2Terreno', 'recamaras', 'banos']) {
+      const r = publishSchema.safeParse({ ...valido, [campo]: -1 });
+      expect(r.success).toBe(false);
+      if (!r.success) expect(r.error.issues[0].message).toMatch(/negativ/);
+    }
   });
 });

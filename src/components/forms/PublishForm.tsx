@@ -41,6 +41,7 @@ import {
   type ResultadoGPSFoto,
 } from '@/lib/publishFraudGuard';
 import { hashImagenDesdeFile, hashImagenDesdeUrl, distanciaHamming, UMBRAL_HASH_SIMILAR } from '@/lib/fotoHash';
+import { evaluarFotos, type ResultadoImagenIA, type AnalisisFoto } from '@/lib/publishFotoGuard';
 import { moverElemento } from '@/lib/reorderArray';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { useAuth } from '@/context/AuthContext';
@@ -51,21 +52,13 @@ import {
   publishSchema, type PublishFormData,
   TIPO_OPTIONS, MUNICIPIO_OPTIONS, MUNICIPIO_CENTERS, METODO_CONTACTO_OPTIONS, construirAgenteContacto,
   MAX_FOTOS,
+  NUMERO_OPCIONAL,
 } from '@/lib/publishSchema';
-interface ResultadoImagenIA {
-  apta: boolean;
-  relacionada: boolean;
-  señalesFraude: string[];
-  notas: string;
-  // Opcional — el backend todavía no lo manda (pendiente coordinar, ver
-  // AMENIDADES_OPTIONS en amenidades.ts para las labels válidas). Cuando
-  // exista, cada foto puede sugerir amenidades visibles en ella (alberca,
-  // jardín, etc.) — se usa para pre-marcar el selector manual de abajo,
-  // nunca para desmarcar lo que la persona ya eligió a mano.
-  amenidadesDetectadas?: string[];
-}
-
-type AnalisisFoto = 'pendiente' | ResultadoImagenIA;
+// ResultadoImagenIA/AnalisisFoto viven en publishFotoGuard.ts — el mismo
+// tipo que ya usa evaluarFotos() para decidir si esto bloquea publicar.
+// `amenidadesDetectadas` SÍ llega hoy del backend (verificado en vivo
+// 2026-09-23, ej. ["Jardín","Estacionamiento techado"]) — el comentario
+// viejo que decía "el backend todavía no lo manda" quedó desactualizado.
 
 async function analizarFoto(file: File): Promise<ResultadoImagenIA> {
   const NEUTRAL: ResultadoImagenIA = { apta: true, relacionada: true, señalesFraude: [], notas: '' };
@@ -140,6 +133,10 @@ const ETIQUETAS_CAMPO: Partial<Record<keyof FormData, string>> = {
   tipo: 'Tipo de propiedad',
   operacion: 'Operación (venta o renta)',
   precio: 'Precio',
+  m2Terreno: 'm² de terreno',
+  m2Construidos: 'm² construidos',
+  recamaras: 'Recámaras',
+  banos: 'Baños',
   municipio: 'Municipio',
   colonia: 'Colonia',
   riesgoInundacion: 'Historial de inundación',
@@ -149,6 +146,7 @@ const ETIQUETAS_CAMPO: Partial<Record<keyof FormData, string>> = {
   metodoContacto: 'Método de contacto',
   telefonoContacto: 'WhatsApp',
   emailContacto: 'Correo electrónico',
+  aceptaTerminos: 'Términos y Condiciones',
 };
 
 type FormData = PublishFormData;
@@ -339,9 +337,33 @@ export function PublishForm() {
   }
 
   async function addFiles(files: FileList | File[]) {
-    const candidatos = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    // Bug real reportado 2026-09-23 ("subo 1 foto y no carga la miniatura —
+    // solo se ve el ícono de que ahí va una imagen"): reproducido en vivo
+    // con un navegador real. `file.type` lo asigna EL NAVEGADOR a partir de
+    // la extensión — cuando no la reconoce (extensión rara, algunos HEIC de
+    // iPhone, archivos compartidos por WhatsApp/Drive sin metadata), llega
+    // vacío (`""`), `"".startsWith('image/')` es `false`, y el archivo se
+    // descartaba aquí ANTES de cualquier aviso — ni toast ni miniatura ni
+    // ícono roto, solo no pasaba nada. Con 1 sola foto eso se ve exactamente
+    // como "la miniatura no carga"; con varias, las que sí tenían `type`
+    // reconocido sí aparecían y el problema pasaba desapercibido.
+    // Se acepta también por extensión conocida — `createImageBitmap()` más
+    // abajo (ya existía) sigue siendo el árbitro real de "es una imagen de
+    // verdad decodificable", con su propio toast si falla; esto solo evita
+    // el descarte silencioso de un archivo que nunca llegó a intentarse.
+    const EXTENSIONES_IMAGEN = /\.(jpe?g|png|webp|gif|heic|heif|bmp|avif)$/i;
+    const todos = Array.from(files);
+    const candidatos = todos.filter((f) => f.type.startsWith('image/') || EXTENSIONES_IMAGEN.test(f.name));
+    const noImagen = todos.length - candidatos.length;
+    if (noImagen > 0) {
+      toast.error(`${noImagen} archivo${noImagen !== 1 ? 's' : ''} no ${noImagen !== 1 ? 'parecen' : 'parece'} una imagen (usa JPG, PNG, WebP o HEIC) y no se ${noImagen !== 1 ? 'agregaron' : 'agregó'}.`);
+    }
     const slots = MAX_FOTOS - fotos.length;
     const porRevisar = candidatos.slice(0, slots);
+    const sobrantes = candidatos.length - porRevisar.length;
+    if (sobrantes > 0) {
+      toast.error(`Solo caben ${MAX_FOTOS} fotos: ${sobrantes} ${sobrantes !== 1 ? 'no se agregaron' : 'no se agregó'}.`);
+    }
 
     // Bug real reportado desde el día anterior ("algunas fotos caen como
     // rotas, otras sí pasan"): una foto de cámara reciente (>15MB antes,
@@ -1104,11 +1126,11 @@ export function PublishForm() {
 
   const stepFields: (keyof FormData)[][] = [
     ['tipo', 'operacion'],
-    ['precio'],            // m2, recámaras, baños son opcionales — no bloquean avance
+    ['precio', 'm2Terreno', 'm2Construidos', 'recamaras', 'banos'], // opcionales, pero si traen un valor inválido deben avisar aquí, no al publicar
     ['municipio', 'colonia', 'riesgoInundacion'],
     ['titulo', 'descripcion'],
     [],                    // fotos — opcional, sin validación
-    ['nombreContacto', 'metodoContacto', 'telefonoContacto', 'emailContacto'],
+    ['nombreContacto', 'metodoContacto', 'telefonoContacto', 'emailContacto', 'aceptaTerminos'],
   ];
 
   // Campos del paso actual que ya fallaron validación — `errors` solo trae
@@ -1131,15 +1153,15 @@ export function PublishForm() {
   // otra foto real respaldando la publicación (ver unicaFotoConAdvertencia
   // más abajo para el caso contrario). La única excepción real es un texto
   // tan incoherente que no describe ninguna propiedad real (ver ai.ts).
-  const fotoNoApta = fotos.find((f) => f.analisis !== 'pendiente' && !f.analisis.apta);
-  // Si la ÚNICA foto del set trae advertencia (no parece ser del inmueble,
-  // o señal de fraude), no hay ninguna otra foto real respaldando la
-  // publicación — pedido explícito 2026-09-17: en ese caso sí bloquea,
-  // aunque con 2+ fotos una advertencia sola no lo haga.
-  const unicaFotoConAdvertencia = fotos.length === 1 && (() => {
-    const a = fotos[0].analisis;
-    return a !== 'pendiente' && a.apta && (!a.relacionada || a.señalesFraude.length > 0);
-  })();
+  //
+  // Lógica movida a evaluarFotos() (src/lib/publishFotoGuard.ts, con
+  // pruebas propias) — auditoría 2026-09-23: verificado en vivo que
+  // `relacionada: false` (no `apta: false`) es la causa real más común de
+  // "subí 1 foto y no puedo publicar" — de 6 fotos de prueba reales/
+  // sintéticas contra el backend, ninguna volvió `apta: false`, pero 4
+  // volvieron `relacionada: false` (museo, cueva, playa, foto negra).
+  const evalFotos = evaluarFotos(fotos);
+  const { fotoNoApta, unicaFotoConAdvertencia, sinFotos } = evalFotos;
   // Sistema de 3 niveles (pedido explícito 2026-08-31) — bajo: no bloquea.
   // medio: se marca (banner ámbar, no bloquea). alto: ahora SÍ bloquea —
   // antes solo se mostraba como advertencia y la publicación seguía
@@ -1164,8 +1186,7 @@ export function PublishForm() {
   // fotos reales" — antes stepFields[4] estaba vacío a propósito ("fotos —
   // opcional"), ahora exige al menos 1. Mismo patrón imperativo que
   // fotoNoApta (no es un campo de react-hook-form, no se puede validar con
-  // trigger()).
-  const sinFotos = fotos.length === 0;
+  // trigger()). `sinFotos` ya viene desestructurado de evalFotos, arriba.
 
   const goNext = async () => {
     if (step === 4 && fotoNoApta) {
@@ -1194,6 +1215,21 @@ export function PublishForm() {
       setStep((s) => Math.min(s + 1, STEPS.length - 1));
     } else {
       setStepError(true);
+    }
+  };
+
+  // Sin este callback, handleSubmit descarta el envío en silencio cuando el
+  // esquema falla en un campo de un paso que ya no se está viendo (ej. un
+  // borrador restaurado con un valor inválido): el botón giraba un instante
+  // y no pasaba nada. Lleva a la persona al primer paso con error.
+  const alFallarValidacion = (errs: typeof errors) => {
+    const paso = stepFields.findIndex((campos) => campos.some((c) => errs[c]));
+    if (paso >= 0) {
+      setStep(paso);
+      setStepError(true);
+      toast.error(`Hay campos por corregir en el paso "${STEPS[paso]}".`);
+    } else {
+      toast.error('No se pudo validar el formulario — revisa los campos e intenta de nuevo.');
     }
   };
 
@@ -1373,10 +1409,12 @@ export function PublishForm() {
     // sessionStorage: son datos personales que la página de "gracias" no
     // necesita (solo lee `id`), y dejarlos ahí sería una exposición
     // innecesaria de PII (hallazgo H3 de la auditoría).
-    sessionStorage.setItem(
-      'lastPublishedProperty',
-      JSON.stringify({ id: created.id }),
-    );
+    // Puede lanzar (Safari en modo privado, cuota llena) — la propiedad ya
+    // está creada, así que un fallo aquí no debe frenar la redirección ni
+    // dejar el botón activo para publicar un duplicado.
+    try {
+      sessionStorage.setItem('lastPublishedProperty', JSON.stringify({ id: created.id }));
+    } catch { /* la página de gracias tolera su ausencia */ }
 
     // Evento clave para saber si la hipótesis de Fase 1 se cumple — sin
     // esto no hay forma de medir cuántas publicaciones de verdad se
@@ -1600,7 +1638,7 @@ export function PublishForm() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit, alFallarValidacion)} className="space-y-4">
 
         {/* Banner de error al intentar avanzar sin completar campos */}
         {stepError && (
@@ -1644,7 +1682,7 @@ export function PublishForm() {
           <>
             <Input label="Precio (MXN)" type="number" placeholder={watch('operacion') === 'renta' ? 'Precio mensual' : 'Precio de venta'} error={errors.precio?.message} {...register('precio', { valueAsNumber: true })} />
             {(tipo === 'terreno' || tipo === 'bodega') && (
-              <Input label="m² de terreno" type="number" placeholder="0" {...register('m2Terreno', { valueAsNumber: true })} />
+              <Input label="m² de terreno" type="number" min={0} placeholder="0" error={errors.m2Terreno?.message} {...register('m2Terreno', NUMERO_OPCIONAL)} />
             )}
             {/* Un terreno vacío no tiene m² construidos, recámaras ni
                 baños — se piden solo si confirma que ya hay algo
@@ -1668,15 +1706,15 @@ export function PublishForm() {
             {mostrarCamposConstruccion && (
               tipoConRecamaras ? (
                 <div className="grid grid-cols-2 gap-3">
-                  <Input label="m² construidos" type="number" placeholder="0" {...register('m2Construidos', { valueAsNumber: true })} />
-                  <Input label="Recámaras" type="number" placeholder="0" {...register('recamaras', { valueAsNumber: true })} />
+                  <Input label="m² construidos" type="number" min={0} placeholder="0" error={errors.m2Construidos?.message} {...register('m2Construidos', NUMERO_OPCIONAL)} />
+                  <Input label="Recámaras" type="number" min={0} placeholder="0" error={errors.recamaras?.message} {...register('recamaras', NUMERO_OPCIONAL)} />
                 </div>
               ) : (
-                <Input label="m² construidos" type="number" placeholder="0" {...register('m2Construidos', { valueAsNumber: true })} />
+                <Input label="m² construidos" type="number" min={0} placeholder="0" error={errors.m2Construidos?.message} {...register('m2Construidos', NUMERO_OPCIONAL)} />
               )
             )}
             {mostrarCamposConstruccion && (
-              <Input label="Baños" type="number" placeholder="0" {...register('banos', { valueAsNumber: true })} />
+              <Input label="Baños" type="number" min={0} placeholder="0" error={errors.banos?.message} {...register('banos', NUMERO_OPCIONAL)} />
             )}
             {watch('operacion') === 'renta' && (
               <div className="pt-1">
@@ -1974,7 +2012,17 @@ export function PublishForm() {
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                 onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => { e.preventDefault(); setDragOver(false); addFiles(e.dataTransfer.files); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  const soltados = Array.from(e.dataTransfer.files);
+                  if (soltados.length === 0) {
+                    // Arrastrar una imagen desde otra página trae un enlace, no un archivo.
+                    toast.error('No se recibió ningún archivo. Guarda la foto en tu equipo y arrástrala desde ahí.');
+                    return;
+                  }
+                  addFiles(soltados);
+                }}
               >
                 <input
                   ref={fileInputRef}
@@ -1982,12 +2030,19 @@ export function PublishForm() {
                   accept="image/*"
                   multiple
                   className="sr-only"
-                  onChange={(e) => e.target.files && addFiles(e.target.files)}
+                  onChange={(e) => {
+                    // Copiar ANTES de vaciar: FileList es "vivo" y `value = ''` lo deja vacío.
+                    // Sin vaciar el input, volver a elegir el MISMO archivo (tras quitarlo,
+                    // o tras un rechazo por borroso/pesado) no dispara onChange: cero reacción.
+                    const elegidos = e.target.files ? Array.from(e.target.files) : [];
+                    e.target.value = '';
+                    if (elegidos.length > 0) addFiles(elegidos);
+                  }}
                 />
                 <ImagePlus size={32} className="mx-auto text-gray-300 mb-3" />
                 <p className="text-sm font-medium text-gray-600">Arrastra fotos aquí</p>
                 <p className="text-xs text-gray-400 mt-1">o <span className="text-brand font-semibold">haz clic para seleccionar</span></p>
-                <p className="text-xs text-gray-300 mt-2">JPG, PNG · Máximo {MAX_FOTOS - fotos.length} foto{MAX_FOTOS - fotos.length !== 1 ? 's' : ''} más</p>
+                <p className="text-xs text-gray-300 mt-2">JPG, PNG, WebP · Máximo {MAX_FOTOS - fotos.length} foto{MAX_FOTOS - fotos.length !== 1 ? 's' : ''} más</p>
               </div>
             )}
 
@@ -2052,10 +2107,11 @@ export function PublishForm() {
               <div className="grid grid-cols-3 gap-2">
                 {fotos.map((foto, i) => {
                   const analisis = foto.analisis;
-                  const pendiente = analisis === 'pendiente';
-                  const noApta = analisis !== 'pendiente' && !analisis.apta;
-                  const advertencia = analisis !== 'pendiente' && analisis.apta
-                    && (!analisis.relacionada || analisis.señalesFraude.length > 0);
+                  // Mismo cálculo que decide si el botón Publicar se
+                  // bloquea (evalFotos, arriba) — nunca duplicado a mano,
+                  // para que la miniatura y el bloqueo real no puedan
+                  // desincronizarse.
+                  const { pendiente, noApta, advertencia } = evalFotos.porFoto[i];
                   // Con 2+ fotos, `advertencia` sola no bloquea (hay otra
                   // foto real de respaldo) — pero si ÉSTA es la única foto
                   // del set, sí (ver unicaFotoConAdvertencia arriba). Se
@@ -2107,6 +2163,7 @@ export function PublishForm() {
                         bloqueante ? 'ring-2 ring-red-500' : ''
                       } ${dragIdx === i ? 'opacity-40' : ''}`}
                     >
+                      {/* eslint-disable-next-line @next/next/no-img-element -- preview blob: local, next/image no optimiza blob: */}
                       <img src={foto.preview} alt={`Foto ${i + 1}`} className="w-full h-full object-cover pointer-events-none" />
                       {/* Barra vertical de "aquí se suelta" — pedido
                           explícito 2026-09-17, mismo patrón que apps de
@@ -2165,7 +2222,10 @@ export function PublishForm() {
                           <p className="text-white text-[10px] font-bold leading-tight">Tu única foto — agrega otra real para publicar</p>
                         </div>
                       )}
-                      {advertencia && !bloqueante && (
+                      {/* `advertencia` (de evalFotos) ya garantiza analisis !== 'pendiente',
+                          pero TS no puede ver esa relación a través de otro objeto —
+                          se repite el chequeo aquí, sin cambiar el resultado real. */}
+                      {advertencia && !bloqueante && analisis !== 'pendiente' && (
                         <div className="absolute bottom-1.5 left-1.5 right-1.5 bg-amber-500 text-white text-[9px] font-bold px-1.5 py-1 rounded-md leading-tight flex items-center gap-1">
                           <AlertCircle size={11} className="flex-shrink-0" />
                           {!analisis.relacionada ? '¿Es del inmueble?' : 'Posible foto no original'}

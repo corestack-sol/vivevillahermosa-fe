@@ -16,6 +16,7 @@ import { mapBackendProperty, type BackendPublicProperty } from '@/lib/api';
 import {
   publishSchema, type PublishFormData, type MetodoContacto,
   TIPO_OPTIONS, MUNICIPIO_OPTIONS, METODO_CONTACTO_OPTIONS, MAX_FOTOS,
+  NUMERO_OPCIONAL,
 } from '@/lib/publishSchema';
 import { AMENIDADES_OPTIONS } from '@/lib/amenidades';
 import { SERVICIOS_RENTA } from '@/lib/servicios';
@@ -509,7 +510,7 @@ export default function EditarPropiedadPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6 md:p-8 space-y-4">
+      <form onSubmit={handleSubmit(onSubmit, () => toast.error('Hay campos por corregir — revisa los marcados en rojo.'))} className="bg-white border border-gray-100 rounded-3xl shadow-sm p-6 md:p-8 space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <Select label="Tipo de propiedad" options={TIPO_OPTIONS} error={errors.tipo?.message} {...register('tipo')} />
           <Select label="Operación" options={OPERACION_OPTIONS} error={errors.operacion?.message} {...register('operacion')} />
@@ -520,7 +521,7 @@ export default function EditarPropiedadPage() {
         {/* "m² de terreno" para terreno/bodega, igual que en el formulario
             de publicar. */}
         {(tipoActual === 'terreno' || tipoActual === 'bodega') && (
-          <Input label="m² de terreno" type="number" {...register('m2Terreno', { valueAsNumber: true })} />
+          <Input label="m² de terreno" type="number" min={0} error={errors.m2Terreno?.message} {...register('m2Terreno', NUMERO_OPCIONAL)} />
         )}
         {/* Un terreno vacío no tiene m² construidos, recámaras ni baños —
             se piden solo si confirma que ya hay algo construido encima. */}
@@ -540,15 +541,15 @@ export default function EditarPropiedadPage() {
         {mostrarCamposConstruccion && (
           tipoConRecamaras ? (
             <div className="grid grid-cols-2 gap-3">
-              <Input label="m² construidos" type="number" {...register('m2Construidos', { valueAsNumber: true })} />
-              <Input label="Recámaras" type="number" {...register('recamaras', { valueAsNumber: true })} />
+              <Input label="m² construidos" type="number" min={0} error={errors.m2Construidos?.message} {...register('m2Construidos', NUMERO_OPCIONAL)} />
+              <Input label="Recámaras" type="number" min={0} error={errors.recamaras?.message} {...register('recamaras', NUMERO_OPCIONAL)} />
             </div>
           ) : (
-            <Input label="m² construidos" type="number" {...register('m2Construidos', { valueAsNumber: true })} />
+            <Input label="m² construidos" type="number" min={0} error={errors.m2Construidos?.message} {...register('m2Construidos', NUMERO_OPCIONAL)} />
           )
         )}
         {mostrarCamposConstruccion && (
-          <Input label="Baños" type="number" {...register('banos', { valueAsNumber: true })} />
+          <Input label="Baños" type="number" min={0} error={errors.banos?.message} {...register('banos', NUMERO_OPCIONAL)} />
         )}
 
         <div>

@@ -44,6 +44,14 @@ export const METODO_CONTACTO_OPTIONS = [
   { value: 'ambos', label: 'Ambos' },
 ] as const;
 
+// m², recámaras y baños son opcionales: un campo vaciado a mano debe contar
+// como 0, no como NaN — `valueAsNumber` daba NaN, el esquema lo rechazaba y
+// esos campos no bloqueaban "Siguiente", así que el error solo aparecía al
+// publicar, sin ningún aviso visible.
+export const NUMERO_OPCIONAL = {
+  setValueAs: (v: unknown) => (v === '' || v === null || v === undefined ? 0 : Number(v)),
+} as const;
+
 const baseSchema = z.object({
   tipo:          str('Elige el tipo de propiedad antes de continuar').min(1, 'Elige el tipo de propiedad antes de continuar'),
   operacion:     str('Indica si es venta o renta').min(1, 'Indica si es venta o renta'),
@@ -53,10 +61,10 @@ const baseSchema = z.object({
   // verdad lo hace cumplir, mismo criterio que LIMITE_PROPIEDADES en
   // PublishForm.tsx — esto solo evita el caso obvio antes de enviarlo.
   precio:        num('Escribe el precio de la propiedad').positive('El precio debe ser mayor a $0').max(500_000_000, 'Ese precio parece un error — verifica la cifra'),
-  m2Construidos: num('Metros cuadrados inválidos').min(0).optional(),
-  m2Terreno:     num('Metros de terreno inválidos').min(0).optional(),
-  recamaras:     num('Número de recámaras inválido').min(0).optional(),
-  banos:         num('Número de baños inválido').min(0).optional(),
+  m2Construidos: num('Metros cuadrados inválidos').min(0, 'Los metros no pueden ser negativos').optional(),
+  m2Terreno:     num('Metros de terreno inválidos').min(0, 'Los metros no pueden ser negativos').optional(),
+  recamaras:     num('Número de recámaras inválido').min(0, 'Las recámaras no pueden ser negativas').optional(),
+  banos:         num('Número de baños inválido').min(0, 'Los baños no pueden ser negativos').optional(),
   municipio:     str('Selecciona el municipio donde está la propiedad').min(1, 'Selecciona el municipio donde está la propiedad'),
   colonia:       str('Escribe el nombre de la colonia o fraccionamiento').min(2, 'Escribe el nombre de la colonia o fraccionamiento'),
   titulo:        str('Escribe un título para tu anuncio').min(10, 'El título está muy corto — sé más descriptivo (mín. 10 caracteres)'),
