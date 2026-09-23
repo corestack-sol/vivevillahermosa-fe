@@ -40,7 +40,7 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(data.titulo, {
       body: data.mensaje,
       icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
+      badge: '/icons/badge-96.png', // silueta blanca sobre transparente — Android pinta solo el alfa; icon-192 (opaco) salía como cuadrado blanco
       data: { url: data.url },
     })
   );
