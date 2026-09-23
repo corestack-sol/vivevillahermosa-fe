@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
-  matchColonia, matchColoniaCandidates, sugerirColonias, getColoniaByKey, buscarColoniaEnTexto, completarColoniaDesdeTexto, jitterCoord, getPuntoPublico,
+  matchColonia, matchColoniaCandidates, matchColoniaEnMunicipio, coloniasHomonimasEnOtrosMunicipios, sugerirColonias, getColoniaByKey, buscarColoniaEnTexto, completarColoniaDesdeTexto, jitterCoord, getPuntoPublico,
   normalizarNombreColonia, RADIO_COLONIA_KM, coloniaCercana, evaluarPinVsColonia, distanciaKm, COLONIAS_COORDS,
 } from './colonias';
 
@@ -392,5 +392,56 @@ describe('precargarColoniasDescubiertas (network-dependent, server-guard behavio
     await precargarColoniasDescubiertas();
     await precargarColoniasDescubiertas();
     expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Reporte 2026-09-23: el input de colonia del formulario de publicar es libre,
+// pero escribir "Periférico" en Centro lo "verificaba" como "Periférico de
+// Balancán" (matchColonia cae a otros municipios), colocaba el pin allá y
+// después bloqueaba por "el pin no corresponde con la colonia".
+describe('matchColoniaEnMunicipio — lo escrito se acepta tal cual en el municipio elegido', () => {
+  it('"Periférico" existe solo en Balancán: en otro municipio NO se adivina esa colonia', () => {
+    expect(matchColonia('periferico', 'Centro')?.municipio).toBe('Balancán'); // el comportamiento amplio de siempre (búsquedas)
+    expect(matchColoniaEnMunicipio('periferico', 'Centro')).toBeUndefined();
+    expect(matchColoniaEnMunicipio('Periférico', 'Nacajuca')).toBeUndefined();
+  });
+
+  it('en su propio municipio sí la reconoce', () => {
+    const c = matchColoniaEnMunicipio('periferico', 'Balancán');
+    expect(c?.municipio).toBe('Balancán');
+    expect(c?.label).toBe('Periférico');
+  });
+
+  it('sin municipio se comporta como matchColonia', () => {
+    expect(matchColoniaEnMunicipio('periferico')?.municipio).toBe('Balancán');
+  });
+
+  it('un nombre inventado nunca se resuelve a nada', () => {
+    expect(matchColoniaEnMunicipio('Colonia Que No Existe Jamás', 'Centro')).toBeUndefined();
+  });
+
+  it('un typo se corrige solo dentro del municipio elegido', () => {
+    expect(matchColoniaEnMunicipio('Periferco', 'Centro')).toBeUndefined();
+    expect(matchColoniaEnMunicipio('Periferco', 'Balancán')?.municipio).toBe('Balancán');
+  });
+});
+
+describe('matchColoniaCandidates con soloMunicipio', () => {
+  it('sin coincidencia en el municipio elegido no ofrece las de otros municipios', () => {
+    expect(matchColoniaCandidates('periferico', 'Centro').length).toBeGreaterThan(0); // comportamiento amplio
+    expect(matchColoniaCandidates('periferico', 'Centro', { soloMunicipio: true })).toEqual([]);
+  });
+  it('con coincidencia en el municipio la devuelve igual', () => {
+    expect(matchColoniaCandidates('periferico', 'Balancán', { soloMunicipio: true }).map((c) => c.municipio)).toEqual(['Balancán']);
+  });
+});
+
+describe('coloniasHomonimasEnOtrosMunicipios', () => {
+  it('avisa dónde existe un homónimo exacto', () => {
+    expect(coloniasHomonimasEnOtrosMunicipios('Periférico', 'Centro').map((c) => c.municipio)).toEqual(['Balancán']);
+  });
+  it('no incluye el propio municipio ni devuelve nada sin municipio', () => {
+    expect(coloniasHomonimasEnOtrosMunicipios('Periférico', 'Balancán')).toEqual([]);
+    expect(coloniasHomonimasEnOtrosMunicipios('Periférico')).toEqual([]);
   });
 });

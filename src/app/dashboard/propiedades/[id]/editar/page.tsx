@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Button, buttonClasses } from '@/components/ui/Button';
 import { useToast } from '@/context/ToastContext';
-import { backendFetch, BackendApiError } from '@/lib/backendApi';
+import { backendFetch, BackendApiError, esLimiteDePeticiones } from '@/lib/backendApi';
 import { mapBackendProperty, type BackendPublicProperty } from '@/lib/api';
 import {
   publishSchema, type PublishFormData, type MetodoContacto,
@@ -20,13 +20,14 @@ import {
 } from '@/lib/publishSchema';
 import { AMENIDADES_OPTIONS } from '@/lib/amenidades';
 import { SERVICIOS_RENTA } from '@/lib/servicios';
-import { distanciaKm, matchColonia, precargarColoniasDescubiertas } from '@/lib/colonias';
+import { distanciaKm, matchColoniaEnMunicipio, precargarColoniasDescubiertas } from '@/lib/colonias';
 import { detectarRiesgoInundacion } from '@/lib/zonas-inundacion';
 import { ColoniaAutocomplete } from '@/components/forms/ColoniaAutocomplete';
 import { dentroDeRadioPermitido, RADIO_MAXIMO_PIN_KM } from '@/lib/mapPin';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { MAX_SOURCE_BYTES } from '@/lib/imageResize';
 import { prepararFoto, blobParaSubir, mensajeRechazoFoto, type MotivoRechazoFoto, type FormatoImagen } from '@/lib/fotoArchivo';
+import { subirFotos } from '@/lib/subidaFotos';
 import { SolicitarCambioPinModal } from '@/components/property/SolicitarCambioPinModal';
 import { generarTituloAutomatico } from '@/lib/tituloGenerator';
 import { formatTelefonoInput } from '@/lib/phone';
@@ -196,7 +197,7 @@ export default function EditarPropiedadPage() {
   // (que no se puede mover lo suficiente para "perseguir" una colonia
   // lejana), así que solo se avisa, nunca se mueve el pin solo.
   const coloniaVerificada = useMemo(
-    () => (coloniaActual ? matchColonia(coloniaActual, municipioActual) : undefined),
+    () => (coloniaActual ? matchColoniaEnMunicipio(coloniaActual, municipioActual) : undefined),
     [coloniaActual, municipioActual, coloniasReady], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const distanciaPinColonia = coords && coloniaVerificada
@@ -258,8 +259,12 @@ export default function EditarPropiedadPage() {
     }
     rechazos.forEach((x) => toast.error(mensajeRechazoFoto(x.motivo, x.cantidad, x.formato)));
 
-    const resultados = await Promise.allSettled(
-      preparadas.map(async (file) => {
+    // Máximo 2 subidas a la vez y reintento del 429 (ver src/lib/subidaFotos.ts).
+    const subida = await subirFotos(
+      preparadas,
+      new Map<File, string>(),
+      (f) => f,
+      async (file) => {
         // Límite real del backend: 8MB por archivo en /propiedades/fotos.
         // Si el navegador no puede reducirla, sube el original.
         const blob = await blobParaSubir(file, 1920, 0.92);
@@ -267,14 +272,13 @@ export default function EditarPropiedadPage() {
         body.append('file', blob, file.name);
         const { url } = await backendFetch<{ url: string }>('/propiedades/fotos', { method: 'POST', body });
         return url;
-      }),
+      },
+      { concurrencia: 2, reintentosPorLimite: 2, esperaMs: (n) => 2000 * (n + 1), esLimite: esLimiteDePeticiones },
     );
-    const nuevasUrls = resultados
-      .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
-      .map((r) => r.value);
-    const fallidas = resultados.length - nuevasUrls.length;
-    const primerFallo = resultados.find((r): r is PromiseRejectedResult => r.status === 'rejected');
-    const motivoFallo = primerFallo?.reason instanceof Error ? primerFallo.reason.message : null;
+    const nuevasUrls = subida.urls.filter((u): u is string => u !== null);
+    const fallidas = subida.fallos.length;
+    const primerFallo = subida.fallos[0];
+    const motivoFallo = primerFallo?.error instanceof Error ? primerFallo.error.message : null;
     if (fallidas > 0) {
       toast.error(`${fallidas} foto${fallidas !== 1 ? 's' : ''} no se ${fallidas !== 1 ? 'pudieron' : 'pudo'} subir${motivoFallo ? ` (${motivoFallo})` : ''}.`);
     }

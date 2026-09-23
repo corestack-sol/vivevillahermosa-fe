@@ -29,10 +29,10 @@ import { TermsModal } from './TermsModal';
 import { Modal } from '@/components/ui/Modal';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useToast } from '@/context/ToastContext';
-import { backendFetch, BackendApiError } from '@/lib/backendApi';
+import { backendFetch, BackendApiError, esLimiteDePeticiones, MENSAJE_LIMITE_PETICIONES } from '@/lib/backendApi';
 import { getAllProperties } from '@/lib/api';
 import posthog from 'posthog-js';
-import { matchColonia, matchColoniaCandidates, evaluarPinVsColonia, distanciaKm, precargarColoniasDescubiertas, type ColoniaCoord } from '@/lib/colonias';
+import { matchColoniaEnMunicipio, matchColoniaCandidates, coloniasHomonimasEnOtrosMunicipios, evaluarPinVsColonia, distanciaKm, precargarColoniasDescubiertas, type ColoniaCoord } from '@/lib/colonias';
 import { ColoniaAutocomplete } from './ColoniaAutocomplete';
 import { coordsAutoDesdeColonia } from '@/lib/mapPin';
 import { landmarksCercanos, precargarLandmarks } from '@/lib/landmarks';
@@ -43,6 +43,9 @@ import {
 import { hashImagenDesdeFile, hashImagenDesdeUrl, distanciaHamming, UMBRAL_HASH_SIMILAR } from '@/lib/fotoHash';
 import { evaluarFotos, type ResultadoImagenIA, type AnalisisFoto } from '@/lib/publishFotoGuard';
 import { prepararFoto, blobParaSubir, mensajeRechazoFoto, type MotivoRechazoFoto, type FormatoImagen } from '@/lib/fotoArchivo';
+import { crearEjecutorConEnfriamiento } from '@/lib/ejecutorConEnfriamiento';
+import { subirFotos } from '@/lib/subidaFotos';
+import { memoConTtl } from '@/lib/memoConTtl';
 import { moverElemento } from '@/lib/reorderArray';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { useAuth } from '@/context/AuthContext';
@@ -61,35 +64,33 @@ import {
 // 2026-09-23, ej. ["Jardín","Estacionamiento techado"]) — el comentario
 // viejo que decía "el backend todavía no lo manda" quedó desactualizado.
 
-async function analizarFoto(file: File): Promise<ResultadoImagenIA> {
+// Catálogo completo para el chequeo de teléfono reutilizado: una descarga por minuto, no una por pausa al teclear.
+const getCatalogoCompleto = memoConTtl(getAllProperties, 60_000);
+
+// POST /ia/analizar-imagen tiene un límite MUY estricto (medido en vivo
+// 2026-09-23: 429 desde la primera petición y durante minutos). Antes se
+// llamaba una vez por foto, todas a la vez; ahora de una en una y, tras el
+// primer 429, no se vuelve a llamar por un rato (ver ejecutorConEnfriamiento.ts).
+const ejecutorAnalisisImagen = crearEjecutorConEnfriamiento({ cooldownMs: 90_000, esLimite: esLimiteDePeticiones });
+
+function analizarFoto(file: File): Promise<ResultadoImagenIA> {
   const NEUTRAL: ResultadoImagenIA = { apta: true, relacionada: true, señalesFraude: [], notas: '' };
-  try {
-    // 512px basta para que el modelo juzgue contenido/relevancia — no hace
-    // falta mandar la foto a resolución completa solo para esto.
-    // Bug real encontrado y verificado en vivo 2026-08-31 (reporte:
-    // "aparece como rota" al subir una foto de ~5MB): sin especificar
-    // formato, resizeImageToDataUrl() cae al default 'image/png' —
-    // PNG SIN PÉRDIDA de una foto real (textura, ruido de sensor) a 512px
-    // pesa fácilmente 600KB+, por encima del límite de tamaño del backend.
-    // POST /ia/analizar-imagen respondía 413 "request entity too large" en
-    // silencio (analizarFoto() atrapa el error y sigue con NEUTRAL,
-    // fail-open) — la miniatura en sí nunca se rompe (usa el archivo
-    // original vía URL.createObjectURL, ver addFiles más abajo, ajeno a
-    // esta llamada), pero la detección de amenidades/señales de fraude por
-    // foto se perdía sin aviso para cualquier foto con suficiente detalle.
-    // Mismo patrón ya usado en el resto del archivo (línea ~833) y en
-    // portafolio de servicios para foto de contenido real: JPEG con
-    // pérdida, no PNG.
-    const dataUrl = await resizeImageToDataUrl(file, 512, 'image/jpeg', 0.82);
-    return await backendFetch<ResultadoImagenIA>('/ia/analizar-imagen', {
-      method: 'POST',
-      body: JSON.stringify({ imagen: dataUrl }),
-    });
-  } catch {
-    // Fail open — un error de red no debe bloquear publicar, igual que el
-    // resto de las funciones de IA de la plataforma.
-    return NEUTRAL;
-  }
+  return ejecutorAnalisisImagen.ejecutar(() => analizarFotoEnRed(file), () => NEUTRAL).catch(() => NEUTRAL);
+}
+
+// Sin try/catch a propósito: el 429 tiene que llegar al ejecutor de arriba, que
+// decide (enfriamiento) — cualquier otro error lo convierte analizarFoto() en
+// el resultado neutral (fail-open: un fallo de red no debe bloquear publicar).
+async function analizarFotoEnRed(file: File): Promise<ResultadoImagenIA> {
+  // 512px basta para que el modelo juzgue contenido/relevancia — no hace
+  // falta mandar la foto a resolución completa solo para esto. JPEG con
+  // pérdida, no PNG (verificado en vivo 2026-08-31: un PNG de una foto real
+  // a 512px pesa 600KB+ y el backend responde 413).
+  const dataUrl = await resizeImageToDataUrl(file, 512, 'image/jpeg', 0.82);
+  return backendFetch<ResultadoImagenIA>('/ia/analizar-imagen', {
+    method: 'POST',
+    body: JSON.stringify({ imagen: dataUrl }),
+  });
 }
 
 type DeteccionUI =
@@ -670,10 +671,14 @@ export function PublishForm() {
   // primero en silencio; aquí se detecta cuándo hay más de un candidato
   // exacto y se le pide a la persona que elija, en vez de adivinar.
   const coloniaCandidatas = useMemo(
-    () => (colonia ? matchColoniaCandidates(colonia, municipio) : []),
+    () => (colonia ? matchColoniaCandidates(colonia, municipio, { soloMunicipio: true }) : []),
     [colonia, municipio, coloniasReady], // eslint-disable-line react-hooks/exhaustive-deps
   );
   const coloniaEsAmbigua = coloniaCandidatas.length > 1;
+  const coloniaHomonimas = useMemo(
+    () => (colonia && municipio ? coloniasHomonimasEnOtrosMunicipios(colonia, municipio) : []),
+    [colonia, municipio, coloniasReady], // eslint-disable-line react-hooks/exhaustive-deps
+  );
   const [coloniaElegidaKey, setColoniaElegidaKey] = useState<string | null>(null);
   useEffect(() => {
     function olvidarEleccionAlCambiarTexto() { setColoniaElegidaKey(null); }
@@ -685,7 +690,9 @@ export function PublishForm() {
     if (coloniaEsAmbigua) {
       return coloniaElegidaKey ? coloniaCandidatas.find((c) => c.key === coloniaElegidaKey) : undefined;
     }
-    return matchColonia(colonia, municipio);
+    // Solo dentro del municipio elegido: lo escrito se acepta tal cual aunque no esté
+    // en el catálogo — nunca se "adivina" una colonia homónima de otro municipio.
+    return matchColoniaEnMunicipio(colonia, municipio);
   }, [colonia, municipio, coloniasReady, coloniaEsAmbigua, coloniaElegidaKey, coloniaCandidatas]); // eslint-disable-line react-hooks/exhaustive-deps
   const distanciaPinColonia = coords && coloniaVerificada
     ? distanciaKm(coords.lat, coords.lng, coloniaVerificada.lat, coloniaVerificada.lng)
@@ -943,6 +950,10 @@ export function PublishForm() {
   // respuesta que no sea la de la llamada más reciente.
   const [fraudCheckPendiente, setFraudCheckPendiente] = useState(false);
   const evaluarSeqRef = useRef(0);
+  // Clave de la última evaluación pedida: no se repite la llamada si nada cambió
+  // (antes se volvía a pedir cada vez que se entraba a un paso, aunque el texto
+  // fuera el mismo — /ia/analizar-fraude es una llamada de IA con límite).
+  const ultimaClaveFraudeRef = useRef('');
   useEffect(() => {
     if (step < 3) return;
 
@@ -950,8 +961,6 @@ export function PublishForm() {
       const titulo = values.titulo || '';
       const descripcion = values.descripcion || '';
       if (!titulo.trim() && !descripcion.trim()) return;
-      const seq = ++evaluarSeqRef.current;
-      setFraudCheckPendiente(true);
       // Señales que el texto por sí solo no puede evadir reescribiéndose
       // (pedido explícito 2026-08-31) — se mandan como query params, no en
       // el body: el backend hoy los ignora sin romper la llamada
@@ -963,6 +972,11 @@ export function PublishForm() {
       if (gpsContradiccionRef.current !== null) qs.set('exifDistanciaKm', String(Math.round(gpsContradiccionRef.current)));
       if (contactoReutilizadoRef.current > 0) qs.set('contactoReutilizado', String(contactoReutilizadoRef.current));
       const query = qs.toString();
+      const clave = JSON.stringify([titulo, descripcion, values.precio || 0, values.municipio || '', values.tipo || '', values.operacion || '', query]);
+      if (clave === ultimaClaveFraudeRef.current) return;
+      ultimaClaveFraudeRef.current = clave;
+      const seq = ++evaluarSeqRef.current;
+      setFraudCheckPendiente(true);
       backendFetch<{ riesgo: string; señales: string[]; bloqueado?: boolean; motivoBloqueo?: string }>(`/ia/analizar-fraude${query ? `?${query}` : ''}`, {
         method: 'POST',
         body: JSON.stringify({
@@ -978,7 +992,10 @@ export function PublishForm() {
           if (seq !== evaluarSeqRef.current) return; // respuesta obsoleta, descartar
           if (data.riesgo) setFraudCheck(data);
         })
-        .catch(() => {})
+        .catch(() => {
+          // Falló (red/límite): permitir reintentar la misma evaluación más tarde.
+          if (seq === evaluarSeqRef.current) ultimaClaveFraudeRef.current = '';
+        })
         .finally(() => {
           if (seq === evaluarSeqRef.current) setFraudCheckPendiente(false);
         });
@@ -1035,7 +1052,7 @@ export function PublishForm() {
     async function evaluarContacto(tel: string) {
       if (!tel) { setContactoReutilizado(0); contactoReutilizadoRef.current = 0; return; }
       try {
-        const propiedades = await getAllProperties();
+        const propiedades = await getCatalogoCompleto();
         if (cancelado) return;
         const veces = contarContactoReutilizado(propiedades, tel);
         setContactoReutilizado(veces);
@@ -1231,7 +1248,30 @@ export function PublishForm() {
     }
   };
 
+  // Candado contra doble envío. `isSubmitting` de react-hook-form solo cambia
+  // en el siguiente render: un doble clic/toque rápido o Enter repetido puede
+  // colar un segundo envío antes de que el botón se deshabilite — y cada envío
+  // real crea una propiedad (y sus alertas) y vuelve a subir las fotos.
+  // Reporte 2026-09-23: "solo se debería enviar una vez".
+  const enviandoRef = useRef(false);
+  const publicadoRef = useRef(false);
+  // Fotos ya subidas en un intento anterior (por archivo) — un reintento de
+  // Publicar solo envía las que faltan, no todas otra vez.
+  const fotosSubidasRef = useRef(new Map<File, string>());
+
   const onSubmit = async (data: FormData) => {
+    if (enviandoRef.current || publicadoRef.current) return;
+    enviandoRef.current = true;
+    try {
+      await publicar(data);
+    } finally {
+      // Tras publicar con éxito se queda bloqueado hasta que termine la
+      // navegación a /publicar/gracias; en cualquier otro caso se libera.
+      if (!publicadoRef.current) enviandoRef.current = false;
+    }
+  };
+
+  const publicar = async (data: FormData) => {
     if (fotoNoApta) {
       toast.error('Quita la foto marcada como inapropiada antes de publicar.');
       setStep(4);
@@ -1290,36 +1330,38 @@ export function PublishForm() {
     // tras otro. `Promise.allSettled` mantiene el orden real de selección
     // del usuario (importa: la primera es la foto "Principal", ver el badge
     // en el paso de fotos) sin importar cuál termine primero.
-    const resultados = await Promise.allSettled(
-      fotos.slice(0, MAX_FOTOS).map(async (f) => {
-        // 1280px/0.85 -> 1920px/0.92 — 2026-08-22: confirmado con backend
-        // (docs/BACKEND-FOTOS-CLOUDINARY-22082026.md) que el único límite
-        // real es 8MB por archivo en /propiedades/fotos, sin ninguna
-        // compresión de su lado (Cloudinary guarda el original tal cual).
-        // El ajuste viejo era muy conservador frente a ese margen — una
-        // foto de propiedad a 1920px/calidad 0.92 se queda típicamente en
-        // 1-3MB, muy por debajo del límite, con mejor detalle al hacer
-        // zoom en la ficha.
-        // blobParaSubir(): reduce a 1920px; si el navegador no puede
-        // abrirla, sube el ORIGINAL (el backend valida por bytes) en vez de
-        // descartar la foto.
+    // subirFotos(): reutiliza lo ya subido en un intento anterior, máximo 2
+    // subidas a la vez y reintenta un 429 con espera antes de rendirse (ver
+    // src/lib/subidaFotos.ts).
+    const subida = await subirFotos(
+      fotos.slice(0, MAX_FOTOS),
+      fotosSubidasRef.current,
+      (f) => f.file,
+      async (f) => {
+        // 1920px/0.92 — límite real del backend: 8MB por archivo en
+        // /propiedades/fotos (docs/BACKEND-FOTOS-CLOUDINARY-22082026.md).
+        // blobParaSubir(): reduce; si el navegador no puede abrirla, sube el
+        // ORIGINAL (el backend valida por bytes) en vez de descartarla.
         const blob = await blobParaSubir(f.file, 1920, 0.92);
         const body = new FormData();
         body.append('file', blob, f.file.name);
-        const { url } = await backendFetch<{ url: string }>('/propiedades/fotos', {
-          method: 'POST',
-          body,
-        });
+        const { url } = await backendFetch<{ url: string }>('/propiedades/fotos', { method: 'POST', body });
         return url;
-      }),
+      },
+      { concurrencia: 2, reintentosPorLimite: 2, esperaMs: (n) => 2000 * (n + 1), esLimite: esLimiteDePeticiones },
     );
-    const fotosUrls = resultados
-      .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
-      .map((r) => r.value);
+    const fotosUrls = subida.urls.filter((u): u is string => u !== null);
+    // Con un 429 que no cedió NO se publica con menos fotos (la "Principal"
+    // podría quedar fuera): se avisa y lo ya subido se conserva — al volver a
+    // presionar Publicar solo se envían las que faltan.
+    if (subida.fallos.some((x) => x.limite)) {
+      toast.error(`${MENSAJE_LIMITE_PETICIONES} Tus fotos ya subidas se conservan: al reintentar solo se envían las que faltan.`);
+      return;
+    }
     // La razón real del primer fallo (rechazo del backend, peso, etc.) en vez
     // de asumir "conexión" — sin esto la persona no sabe qué corregir.
-    const primerFallo = resultados.find((r): r is PromiseRejectedResult => r.status === 'rejected');
-    const motivoFalloSubida = primerFallo && (primerFallo.reason instanceof Error) ? primerFallo.reason.message : null;
+    const primerFallo = subida.fallos[0];
+    const motivoFalloSubida = primerFallo && (primerFallo.error instanceof Error) ? primerFallo.error.message : null;
     // Bug real reportado 2026-09-17: `sinFotos` (arriba) solo exige que
     // haya al menos 1 foto SELECCIONADA antes de llegar aquí — no que
     // alguna haya llegado a subirse de verdad. Si TODAS fallan (red,
@@ -1334,7 +1376,7 @@ export function PublishForm() {
     }
     // Antes esto pasaba en silencio: la propiedad se publicaba con menos
     // fotos de las seleccionadas sin ningún aviso de cuál(es) fallaron.
-    const fotosFallidas = resultados.length - fotosUrls.length;
+    const fotosFallidas = subida.fallos.length;
     if (fotosFallidas > 0) {
       toast.error(`${fotosFallidas} foto${fotosFallidas !== 1 ? 's' : ''} no se ${fotosFallidas !== 1 ? 'pudieron' : 'pudo'} subir${motivoFalloSubida ? ` (${motivoFalloSubida})` : ''} y se publicará${fotosFallidas !== 1 ? 'n' : ''} sin ella${fotosFallidas !== 1 ? 's' : ''}.`);
     }
@@ -1443,6 +1485,7 @@ export function PublishForm() {
     // enlace real a la ficha pública) ya se puede resolver: Property es
     // real en el backend, así que `created.id` ya es una URL pública
     // válida — /publicar/gracias la usa (ver ese archivo).
+    publicadoRef.current = true;
     router.push('/publicar/gracias');
   };
 
@@ -1642,7 +1685,7 @@ export function PublishForm() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit, alFallarValidacion)} className="space-y-4">
+      <form onSubmit={(e) => handleSubmit(onSubmit, alFallarValidacion)(e)} className="space-y-4">
 
         {/* Banner de error al intentar avanzar sin completar campos */}
         {stepError && (
@@ -1789,6 +1832,32 @@ export function PublishForm() {
                 NADA — ni se colocaba el pin ni se avisaba por qué. Ahora,
                 mientras no exista ya un pin por otro medio, se avisa dónde
                 colocarlo a mano en vez de quedar en silencio. */}
+            {/* Hay una colonia con ese nombre exacto pero en OTRO municipio: se
+                avisa sin adivinar por la persona — lo escrito se guarda tal cual. */}
+            {colonia && !coloniaVerificada && coloniaHomonimas.length > 0 && (
+              <div className="-mt-2 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5">
+                <p className="mb-1.5">
+                  Existe una colonia llamada &quot;{colonia.trim()}&quot; en {coloniaHomonimas.map((c) => c.municipio).join(' y en ')}, pero elegiste otro municipio.
+                  Se guardará tal como la escribiste. ¿Querías la de otro municipio?
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {coloniaHomonimas.map((c) => (
+                    <button
+                      key={c.key}
+                      type="button"
+                      onClick={() => {
+                        setValue('municipio', c.municipio, { shouldValidate: true, shouldDirty: true });
+                        setValue('colonia', c.label, { shouldValidate: true, shouldDirty: true });
+                      }}
+                      className="px-2.5 py-1 rounded-full border border-gray-200 bg-white hover:border-brand hover:text-brand transition-colors"
+                    >
+                      Cambiar municipio a {c.municipio}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {colonia && colonia.trim().length >= 3 && !coloniaVerificada && !coloniaEsAmbigua && !coords && (
               <p className="flex items-start gap-1.5 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 -mt-2">
                 <MapPin size={13} className="flex-shrink-0 mt-0.5 text-gray-400" />

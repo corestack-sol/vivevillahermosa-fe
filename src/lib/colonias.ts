@@ -717,6 +717,53 @@ export function matchColonia(nombre: string, municipioHint?: string): ColoniaCoo
 }
 
 /**
+ * Como `matchColonia`, pero SOLO dentro del municipio dado — nunca cae a una
+ * colonia homónima o parecida de OTRO municipio. Es lo que necesita el
+ * formulario de publicar/editar: ahí la persona ya eligió el municipio, y
+ * lo que escribe debe aceptarse tal cual aunque no esté en el catálogo.
+ *
+ * Reporte 2026-09-23: escribir "Periférico" en Centro (o cualquier otro
+ * municipio) lo "verificaba" como "Periférico de Balancán" — el pin se
+ * colocaba allá y, al ponerlo en el municipio correcto, se marcaba error de
+ * "el pin no corresponde con la colonia". El input era libre; la validación
+ * era la que adivinaba una colonia de otro lugar. Sin municipio, se
+ * comporta igual que `matchColonia`.
+ */
+export function matchColoniaEnMunicipio(nombre: string, municipio?: string): ColoniaCoord | undefined {
+  if (!municipio) return matchColonia(nombre);
+  const n = normalizarNombreColonia(nombre);
+  if (!n) return undefined;
+  const municipioNorm = normalizarBase(municipio);
+  const enMunicipio = todasLasColonias().filter((c) => normalizarBase(c.municipio) === municipioNorm);
+
+  const exacto = enMunicipio.find((c) => nombreColoniaCoincide(c, n));
+  if (exacto) return exacto;
+
+  const margen = Math.min(3, Math.max(1, Math.floor(n.length / 8)));
+  const cercanos = enMunicipio.filter((c) =>
+    [c.label, ...(c.aliases ?? [])].map(normalizarNombreColonia).some((e) => distanciaLevenshtein(e, n) <= margen),
+  );
+  return cercanos.length === 1 ? cercanos[0] : undefined;
+}
+
+/**
+ * Colonias con ESE nombre exacto pero en OTROS municipios — para avisar
+ * ("existe una en Balancán") sin adivinar por la persona.
+ */
+export function coloniasHomonimasEnOtrosMunicipios(nombre: string, municipio?: string): ColoniaCoord[] {
+  const n = normalizarNombreColonia(nombre);
+  if (!n || !municipio) return [];
+  const municipioNorm = normalizarBase(municipio);
+  const vistos = new Set<string>();
+  return todasLasColonias().filter((c) => {
+    if (!nombreColoniaCoincide(c, n) || normalizarBase(c.municipio) === municipioNorm) return false;
+    if (vistos.has(normalizarBase(c.municipio))) return false;
+    vistos.add(normalizarBase(c.municipio));
+    return true;
+  });
+}
+
+/**
  * Como `matchColonia`, pero devuelve TODOS los candidatos con match exacto
  * de nombre (no solo el primero) — para que quien llama pueda ofrecer
  * desambiguación real en vez de adivinar en silencio. `matchColonia` en sí
@@ -726,7 +773,7 @@ export function matchColonia(nombre: string, municipioHint?: string): ColoniaCoo
  * varios nombres reales repetidos en el catálogo (ej. "Pino Suárez",
  * "La Ceiba") mientras se ampliaba a 269 colonias.
  */
-export function matchColoniaCandidates(nombre: string, municipioHint?: string): ColoniaCoord[] {
+export function matchColoniaCandidates(nombre: string, municipioHint?: string, opciones: { soloMunicipio?: boolean } = {}): ColoniaCoord[] {
   const n = normalizarNombreColonia(nombre);
   if (!n) return [];
   const municipioNorm = municipioHint ? normalizarBase(municipioHint) : undefined;
@@ -734,6 +781,9 @@ export function matchColoniaCandidates(nombre: string, municipioHint?: string): 
   if (municipioNorm) {
     const enMunicipio = exactos.filter((c) => normalizarBase(c.municipio) === municipioNorm);
     if (enMunicipio.length > 0) return enMunicipio;
+    // Formularios de publicar/editar: sin coincidencia en el municipio
+    // elegido NO se ofrecen las de otros municipios (ver matchColoniaEnMunicipio).
+    if (opciones.soloMunicipio) return [];
   }
   return exactos;
 }

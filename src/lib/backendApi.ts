@@ -31,6 +31,12 @@ export interface BackendUser {
   esAdmin: boolean;
 }
 
+export const MENSAJE_LIMITE_PETICIONES = 'Hay muchas peticiones al servidor en este momento. Espera un minuto e inténtalo de nuevo.';
+
+export function esLimiteDePeticiones(e: unknown): e is BackendApiError {
+  return e instanceof BackendApiError && e.status === 429;
+}
+
 export class BackendApiError extends Error {
   constructor(
     public readonly status: number,
@@ -47,6 +53,9 @@ export class BackendApiError extends Error {
   // quien lo ve. Un solo campo inválido sigue mandando `message` como
   // string normal, eso no cambia.
   private static extraerMensaje(status: number, body: unknown): string {
+    // 429 (ThrottlerException): el texto crudo del backend ("ThrottlerException:
+    // Too Many Requests") no le dice nada a quien lo ve — reporte 2026-09-23.
+    if (status === 429) return MENSAJE_LIMITE_PETICIONES;
     if (typeof body !== 'object' || !body || !('message' in body)) {
       return `Backend respondió ${status}`;
     }
