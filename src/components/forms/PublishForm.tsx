@@ -42,6 +42,7 @@ import {
 } from '@/lib/publishFraudGuard';
 import { hashImagenDesdeFile, hashImagenDesdeUrl, distanciaHamming, UMBRAL_HASH_SIMILAR } from '@/lib/fotoHash';
 import { evaluarFotos, type ResultadoImagenIA, type AnalisisFoto } from '@/lib/publishFotoGuard';
+import { prepararFoto, blobParaSubir, mensajeRechazoFoto, type MotivoRechazoFoto, type FormatoImagen } from '@/lib/fotoArchivo';
 import { moverElemento } from '@/lib/reorderArray';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { useAuth } from '@/context/AuthContext';
@@ -205,7 +206,7 @@ export function PublishForm() {
   // suficiente sola (ver ContactoReuso más abajo).
   const [contactoReutilizado, setContactoReutilizado] = useState(0);
   const contactoReutilizadoRef = useRef(0);
-  const [fotos, setFotos]         = useState<{ file: File; preview: string; analisis: AnalisisFoto; calidad: CalidadFoto | null }[]>([]);
+  const [fotos, setFotos]         = useState<{ file: File; preview: string; analisis: AnalisisFoto; calidad: CalidadFoto | null; sinVistaPrevia?: boolean }[]>([]);
   // Arrastrar para reordenar fotos — pedido explícito 2026-09-17: la que
   // quede primero es la "Principal" (mismo criterio que usarComoPortada,
   // ahora también manual/libre, no solo por sugerencia de calidad).
@@ -337,30 +338,18 @@ export function PublishForm() {
   }
 
   async function addFiles(files: FileList | File[]) {
-    // Bug real reportado 2026-09-23 ("subo 1 foto y no carga la miniatura —
-    // solo se ve el ícono de que ahí va una imagen"): reproducido en vivo
-    // con un navegador real. `file.type` lo asigna EL NAVEGADOR a partir de
-    // la extensión — cuando no la reconoce (extensión rara, algunos HEIC de
-    // iPhone, archivos compartidos por WhatsApp/Drive sin metadata), llega
-    // vacío (`""`), `"".startsWith('image/')` es `false`, y el archivo se
-    // descartaba aquí ANTES de cualquier aviso — ni toast ni miniatura ni
-    // ícono roto, solo no pasaba nada. Con 1 sola foto eso se ve exactamente
-    // como "la miniatura no carga"; con varias, las que sí tenían `type`
-    // reconocido sí aparecían y el problema pasaba desapercibido.
-    // Se acepta también por extensión conocida — `createImageBitmap()` más
-    // abajo (ya existía) sigue siendo el árbitro real de "es una imagen de
-    // verdad decodificable", con su propio toast si falla; esto solo evita
-    // el descarte silencioso de un archivo que nunca llegó a intentarse.
-    const EXTENSIONES_IMAGEN = /\.(jpe?g|png|webp|gif|heic|heif|bmp|avif)$/i;
-    const todos = Array.from(files);
-    const candidatos = todos.filter((f) => f.type.startsWith('image/') || EXTENSIONES_IMAGEN.test(f.name));
-    const noImagen = todos.length - candidatos.length;
-    if (noImagen > 0) {
-      toast.error(`${noImagen} archivo${noImagen !== 1 ? 's' : ''} no ${noImagen !== 1 ? 'parecen' : 'parece'} una imagen (usa JPG, PNG, WebP o HEIC) y no se ${noImagen !== 1 ? 'agregaron' : 'agregó'}.`);
-    }
+    // Reportes reales 2026-09-23 (Android): "no carga la miniatura" y luego
+    // "imagen no válida" con fotos genuinas de WhatsApp y propias, mientras
+    // que en iPhone todo funcionaba. Antes aquí se decidía si una foto
+    // "servía" según `file.type`, la extensión y `createImageBitmap` — los
+    // tres dependen del navegador y en Android fallan por motivos ajenos a
+    // la foto. Ahora el navegador ya no decide: prepararFoto() (ver
+    // src/lib/fotoArchivo.ts) copia el archivo a memoria, detecta el formato
+    // por sus bytes (igual que el backend) y solo rechaza lo que de verdad
+    // no es una imagen o no se pudo leer, con el motivo real.
     const slots = MAX_FOTOS - fotos.length;
-    const porRevisar = candidatos.slice(0, slots);
-    const sobrantes = candidatos.length - porRevisar.length;
+    const porRevisar = Array.from(files).slice(0, slots);
+    const sobrantes = files.length - porRevisar.length;
     if (sobrantes > 0) {
       toast.error(`Solo caben ${MAX_FOTOS} fotos: ${sobrantes} ${sobrantes !== 1 ? 'no se agregaron' : 'no se agregó'}.`);
     }
@@ -380,22 +369,31 @@ export function PublishForm() {
       toast.error(`${pesadas} foto${pesadas !== 1 ? 's' : ''} ${pesadas !== 1 ? 'pesan' : 'pesa'} demasiado (máx. ${maxMb}MB) y no se ${pesadas !== 1 ? 'agregaron' : 'agregó'}.`);
     }
 
-    const validaciones = await Promise.all(
-      sinSobrepeso.map(async (file) => {
-        try {
-          const bitmap = await createImageBitmap(file);
-          bitmap.close();
-          return { file, valido: true };
-        } catch {
-          return { file, valido: false };
-        }
-      })
-    );
-    const validos = validaciones.filter((v) => v.valido).map((v) => v.file);
-    const rechazados = validaciones.length - validos.length;
-    if (rechazados > 0) {
-      toast.error(`${rechazados} archivo${rechazados !== 1 ? 's' : ''} no ${rechazados !== 1 ? 'son' : 'es'} una imagen válida y no se agregó.`);
+    // De una en una, no en paralelo: convertir/leer varias fotos de cámara
+    // a la vez puede agotar la memoria de un teléfono modesto.
+    const validos: File[] = [];
+    const rechazos = new Map<string, { motivo: MotivoRechazoFoto; formato?: FormatoImagen; cantidad: number }>();
+    for (const original of sinSobrepeso) {
+      const r = await prepararFoto(original);
+      if (r.ok) {
+        validos.push(r.file);
+        // Solo cuando la foto NO era un formato normal (HEIC/AVIF convertido)
+        // o el navegador la entregó sin tipo — sirve para ver en producción
+        // qué dispositivos mandan qué.
+        if (r.convertida || !original.type) posthog.capture('foto_preparada_especial', { formato: r.formatoOriginal, convertida: r.convertida, tipoDeclarado: original.type || '(vacío)', kb: Math.round(original.size / 1024) });
+      } else {
+        const clave = `${r.motivo}:${r.formato ?? ''}`;
+        const previo = rechazos.get(clave);
+        rechazos.set(clave, { motivo: r.motivo, formato: r.formato, cantidad: (previo?.cantidad ?? 0) + 1 });
+        // Sin nombre de archivo ni contenido: solo lo necesario para saber
+        // POR QUÉ falla en cada dispositivo.
+        posthog.capture('foto_rechazada', {
+          motivo: r.motivo, formato: r.formato ?? null, error: r.error, tipoDeclarado: original.type || '(vacío)',
+          extension: (original.name.split('.').pop() ?? '').toLowerCase().slice(0, 8), kb: Math.round(original.size / 1024),
+        });
+      }
     }
+    rechazos.forEach((x) => toast.error(mensajeRechazoFoto(x.motivo, x.cantidad, x.formato)));
 
     // Chequeo técnico (nitidez/brillo) — 100% local, no espera a la IA del
     // backend. Borrosa SÍ bloquea (pedido explícito 2026-08-22) — excepto
@@ -1302,8 +1300,10 @@ export function PublishForm() {
         // foto de propiedad a 1920px/calidad 0.92 se queda típicamente en
         // 1-3MB, muy por debajo del límite, con mejor detalle al hacer
         // zoom en la ficha.
-        const dataUrl = await resizeImageToDataUrl(f.file, 1920, 'image/jpeg', 0.92);
-        const blob = await (await fetch(dataUrl)).blob();
+        // blobParaSubir(): reduce a 1920px; si el navegador no puede
+        // abrirla, sube el ORIGINAL (el backend valida por bytes) en vez de
+        // descartar la foto.
+        const blob = await blobParaSubir(f.file, 1920, 0.92);
         const body = new FormData();
         body.append('file', blob, f.file.name);
         const { url } = await backendFetch<{ url: string }>('/propiedades/fotos', {
@@ -1316,6 +1316,10 @@ export function PublishForm() {
     const fotosUrls = resultados
       .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
       .map((r) => r.value);
+    // La razón real del primer fallo (rechazo del backend, peso, etc.) en vez
+    // de asumir "conexión" — sin esto la persona no sabe qué corregir.
+    const primerFallo = resultados.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+    const motivoFalloSubida = primerFallo && (primerFallo.reason instanceof Error) ? primerFallo.reason.message : null;
     // Bug real reportado 2026-09-17: `sinFotos` (arriba) solo exige que
     // haya al menos 1 foto SELECCIONADA antes de llegar aquí — no que
     // alguna haya llegado a subirse de verdad. Si TODAS fallan (red,
@@ -1325,14 +1329,14 @@ export function PublishForm() {
     // corriéndose al momento equivocado. Se corta aquí: nunca se crea una
     // publicación con cero fotos reales, sin importar por qué llegó a 0.
     if (fotosUrls.length === 0) {
-      toast.error('Ninguna foto se pudo subir — revisa tu conexión e intenta publicar de nuevo.');
+      toast.error(`Ninguna foto se pudo subir — ${motivoFalloSubida ?? 'revisa tu conexión e intenta publicar de nuevo'}.`);
       return;
     }
     // Antes esto pasaba en silencio: la propiedad se publicaba con menos
     // fotos de las seleccionadas sin ningún aviso de cuál(es) fallaron.
     const fotosFallidas = resultados.length - fotosUrls.length;
     if (fotosFallidas > 0) {
-      toast.error(`${fotosFallidas} foto${fotosFallidas !== 1 ? 's' : ''} no se ${fotosFallidas !== 1 ? 'pudieron' : 'pudo'} subir y se publicará${fotosFallidas !== 1 ? 'n' : ''} sin ella${fotosFallidas !== 1 ? 's' : ''}.`);
+      toast.error(`${fotosFallidas} foto${fotosFallidas !== 1 ? 's' : ''} no se ${fotosFallidas !== 1 ? 'pudieron' : 'pudo'} subir${motivoFalloSubida ? ` (${motivoFalloSubida})` : ''} y se publicará${fotosFallidas !== 1 ? 'n' : ''} sin ella${fotosFallidas !== 1 ? 's' : ''}.`);
     }
 
     const centro = MUNICIPIO_CENTERS[data.municipio] ?? MUNICIPIO_CENTERS['Centro'];
@@ -2163,8 +2167,22 @@ export function PublishForm() {
                         bloqueante ? 'ring-2 ring-red-500' : ''
                       } ${dragIdx === i ? 'opacity-40' : ''}`}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element -- preview blob: local, next/image no optimiza blob: */}
-                      <img src={foto.preview} alt={`Foto ${i + 1}`} className="w-full h-full object-cover pointer-events-none" />
+                      {foto.sinVistaPrevia ? (
+                        // La foto SÍ se sube (el backend la valida por bytes); solo este
+                        // navegador no puede dibujarla — no se descarta por eso.
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-gray-100 text-gray-400 pointer-events-none">
+                          <ImagePlus size={22} />
+                          <span className="text-[10px] font-medium px-2 text-center leading-tight">Sin vista previa — se subirá igual</span>
+                        </div>
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element -- preview blob: local, next/image no optimiza blob:
+                        <img
+                          src={foto.preview}
+                          alt={`Foto ${i + 1}`}
+                          onError={() => setFotos((prev) => prev.map((f) => (f.file === foto.file ? { ...f, sinVistaPrevia: true } : f)))}
+                          className="w-full h-full object-cover pointer-events-none"
+                        />
+                      )}
                       {/* Barra vertical de "aquí se suelta" — pedido
                           explícito 2026-09-17, mismo patrón que apps de
                           arrastrar-y-soltar conocidas (Trello, Notion):

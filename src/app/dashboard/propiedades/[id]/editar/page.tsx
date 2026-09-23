@@ -25,7 +25,8 @@ import { detectarRiesgoInundacion } from '@/lib/zonas-inundacion';
 import { ColoniaAutocomplete } from '@/components/forms/ColoniaAutocomplete';
 import { dentroDeRadioPermitido, RADIO_MAXIMO_PIN_KM } from '@/lib/mapPin';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
-import { resizeImageToDataUrl, MAX_SOURCE_BYTES } from '@/lib/imageResize';
+import { MAX_SOURCE_BYTES } from '@/lib/imageResize';
+import { prepararFoto, blobParaSubir, mensajeRechazoFoto, type MotivoRechazoFoto, type FormatoImagen } from '@/lib/fotoArchivo';
 import { SolicitarCambioPinModal } from '@/components/property/SolicitarCambioPinModal';
 import { generarTituloAutomatico } from '@/lib/tituloGenerator';
 import { formatTelefonoInput } from '@/lib/phone';
@@ -245,13 +246,23 @@ export default function EditarPropiedadPage() {
     if (sinSobrepeso.length === 0) return;
 
     setSubiendoFoto(true);
+    // Mismo criterio que PublishForm.tsx (reporte Android 2026-09-23): el
+    // navegador no decide si la foto "sirve" — ver src/lib/fotoArchivo.ts.
+    const preparadas: File[] = [];
+    const rechazos = new Map<string, { motivo: MotivoRechazoFoto; formato?: FormatoImagen; cantidad: number }>();
+    for (const original of sinSobrepeso) {
+      const r = await prepararFoto(original);
+      if (r.ok) { preparadas.push(r.file); continue; }
+      const clave = `${r.motivo}:${r.formato ?? ''}`;
+      rechazos.set(clave, { motivo: r.motivo, formato: r.formato, cantidad: (rechazos.get(clave)?.cantidad ?? 0) + 1 });
+    }
+    rechazos.forEach((x) => toast.error(mensajeRechazoFoto(x.motivo, x.cantidad, x.formato)));
+
     const resultados = await Promise.allSettled(
-      sinSobrepeso.map(async (file) => {
-        // Mismo ajuste que PublishForm.tsx (2026-08-22, límite real
-        // confirmado con backend: 8MB por archivo en /propiedades/fotos,
-        // sin compresión de su lado).
-        const dataUrl = await resizeImageToDataUrl(file, 1920, 'image/jpeg', 0.92);
-        const blob = await (await fetch(dataUrl)).blob();
+      preparadas.map(async (file) => {
+        // Límite real del backend: 8MB por archivo en /propiedades/fotos.
+        // Si el navegador no puede reducirla, sube el original.
+        const blob = await blobParaSubir(file, 1920, 0.92);
         const body = new FormData();
         body.append('file', blob, file.name);
         const { url } = await backendFetch<{ url: string }>('/propiedades/fotos', { method: 'POST', body });
@@ -262,8 +273,10 @@ export default function EditarPropiedadPage() {
       .filter((r): r is PromiseFulfilledResult<string> => r.status === 'fulfilled')
       .map((r) => r.value);
     const fallidas = resultados.length - nuevasUrls.length;
+    const primerFallo = resultados.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+    const motivoFallo = primerFallo?.reason instanceof Error ? primerFallo.reason.message : null;
     if (fallidas > 0) {
-      toast.error(`${fallidas} foto${fallidas !== 1 ? 's' : ''} no se ${fallidas !== 1 ? 'pudieron' : 'pudo'} subir.`);
+      toast.error(`${fallidas} foto${fallidas !== 1 ? 's' : ''} no se ${fallidas !== 1 ? 'pudieron' : 'pudo'} subir${motivoFallo ? ` (${motivoFallo})` : ''}.`);
     }
     if (nuevasUrls.length > 0) setFotos((prev) => [...prev, ...nuevasUrls]);
     setSubiendoFoto(false);
