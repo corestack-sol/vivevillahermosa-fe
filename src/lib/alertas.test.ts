@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { construirCuerpoAlerta, validarFiltrosAlerta, alertaSinFiltros, etiquetaAlerta, ALERTAS_POR_COLONIA_DISPONIBLE } from './alertas';
+import { construirCuerpoAlerta, validarFiltrosAlerta, alertaSinFiltros, etiquetaAlerta, esAlertaDuplicada, ALERTAS_POR_COLONIA_DISPONIBLE } from './alertas';
 
 const base = { dosBocas: false, sinRiesgo: false };
 
@@ -12,8 +12,18 @@ describe('construirCuerpoAlerta', () => {
     expect(c.municipio).toBe('Centro');
   });
 
-  it('la constante de producción sigue en false hasta que el backend confirme el contrato', () => {
-    expect(ALERTAS_POR_COLONIA_DISPONIBLE).toBe(false);
+  it('la constante de producción está activa (el backend ya soporta colonia)', () => {
+    expect(ALERTAS_POR_COLONIA_DISPONIBLE).toBe(true);
+  });
+
+  it('con la constante de producción, la colonia viaja junto al municipio y se recorta', () => {
+    const c = construirCuerpoAlerta({ ...base, municipio: 'Centro', colonia: '  Tabasco 2000 ' });
+    expect(c.colonia).toBe('Tabasco 2000');
+  });
+
+  it('con la constante de producción, una colonia en blanco NO se manda (el backend responde 400)', () => {
+    expect(construirCuerpoAlerta({ ...base, municipio: 'Centro', colonia: '   ' })).not.toHaveProperty('colonia');
+    expect(construirCuerpoAlerta({ ...base, municipio: 'Centro', colonia: '' })).not.toHaveProperty('colonia');
   });
 
   it('con colonia habilitada, manda colonia recortada junto al municipio', () => {
@@ -47,6 +57,12 @@ describe('construirCuerpoAlerta', () => {
 });
 
 describe('validarFiltrosAlerta', () => {
+  it('texto escrito sin elegir una sugerencia es error (solo valen las de la lista)', () => {
+    expect(validarFiltrosAlerta({ municipio: 'Centro', coloniaEscrita: 'tabasco', colonia: '' }, { coloniaHabilitada: true })).toMatch(/lista de sugerencias/);
+    expect(validarFiltrosAlerta({ municipio: 'Centro', coloniaEscrita: 'Tabasco 2000', colonia: 'Tabasco 2000' }, { coloniaHabilitada: true })).toBeNull();
+    expect(validarFiltrosAlerta({ municipio: 'Centro', coloniaEscrita: '', colonia: '' }, { coloniaHabilitada: true })).toBeNull();
+  });
+
   it('colonia sin municipio es error cuando la función está habilitada', () => {
     expect(validarFiltrosAlerta({ colonia: 'Centro' }, { coloniaHabilitada: true })).toMatch(/municipio/i);
   });
@@ -76,5 +92,24 @@ describe('alertaSinFiltros / etiquetaAlerta', () => {
 
   it('sin filtros dice "Todas las propiedades"', () => {
     expect(etiquetaAlerta({ dosBocas: false, sinRiesgo: false })).toBe('Todas las propiedades');
+  });
+});
+
+describe('esAlertaDuplicada', () => {
+  const existente = { municipio: 'Centro', tipo: null, operacion: 'renta', precioMax: null, dosBocas: false, sinRiesgo: false };
+
+  it('detecta una alerta idéntica (null, undefined y "" cuentan igual)', () => {
+    expect(esAlertaDuplicada([existente], construirCuerpoAlerta({ municipio: 'Centro', operacion: 'renta', tipo: '', precioMax: '', dosBocas: false, sinRiesgo: false }))).toBe(true);
+  });
+  it('no distingue mayúsculas ni espacios sobrantes', () => {
+    expect(esAlertaDuplicada([existente], { municipio: ' centro ', operacion: 'RENTA', dosBocas: false, sinRiesgo: false })).toBe(true);
+  });
+  it('un solo criterio distinto ya es otra alerta', () => {
+    expect(esAlertaDuplicada([existente], { municipio: 'Centro', operacion: 'venta', dosBocas: false, sinRiesgo: false })).toBe(false);
+    expect(esAlertaDuplicada([existente], { municipio: 'Centro', operacion: 'renta', precioMax: 1_000_000, dosBocas: false, sinRiesgo: false })).toBe(false);
+    expect(esAlertaDuplicada([existente], { municipio: 'Centro', operacion: 'renta', dosBocas: true, sinRiesgo: false })).toBe(false);
+  });
+  it('sin alertas previas nunca es duplicada', () => {
+    expect(esAlertaDuplicada([], { dosBocas: false, sinRiesgo: false })).toBe(false);
   });
 });

@@ -9,12 +9,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { backendFetch, BackendApiError } from '@/lib/backendApi';
+import { backendFetch, BackendApiError, esLimiteDePeticiones } from '@/lib/backendApi';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { MUNICIPIO_OPTIONS } from '@/lib/publishSchema';
 import { ColoniaAutocomplete } from '@/components/forms/ColoniaAutocomplete';
 import {
-  ALERTAS_POR_COLONIA_DISPONIBLE, construirCuerpoAlerta, validarFiltrosAlerta, alertaSinFiltros, etiquetaAlerta,
+  ALERTAS_POR_COLONIA_DISPONIBLE, construirCuerpoAlerta, validarFiltrosAlerta, alertaSinFiltros, etiquetaAlerta, esAlertaDuplicada,
 } from '@/lib/alertas';
 import { obtenerEstadoPush, suscribirPush, desuscribirPush, fueDesactivadoManualmente, type EstadoPush } from '@/lib/push';
 
@@ -57,6 +57,9 @@ export default function AlertasPage() {
   const [fetching, setFetching] = useState(true);
   const [eliminando, setEliminando] = useState<Set<string>>(new Set());
   const formRef = useRef<HTMLDivElement>(null);
+  // Candado contra doble envío (crear / deshacer): el backend NO deduplica
+  // alertas, cada repetida avisa otra vez de la misma propiedad.
+  const creandoRef = useRef(false);
   // Push — pedido explícito 2026-09-02, ver docs/BACKEND-PUSH-
   // NOTIFICACIONES-02092026.md. 'inactivo' por default (no
   // 'no-soportado') para no mostrar "sin soporte" un instante antes de
@@ -74,7 +77,12 @@ export default function AlertasPage() {
   });
 
   const municipioElegido = useWatch({ control, name: 'municipio' });
-  const coloniaEscrita = useWatch({ control, name: 'colonia' });
+  // `colonia` del formulario guarda SOLO la colonia elegida de la lista de
+  // sugerencias; lo que se va escribiendo vive aparte (coloniaTexto). Sin esto
+  // el campo aceptaba texto libre, pero el backend empareja por nombre exacto.
+  const coloniaElegida = useWatch({ control, name: 'colonia' });
+  const [coloniaTexto, setColoniaTexto] = useState('');
+  const [errorColonia, setErrorColonia] = useState<string | null>(null);
 
   function irAlFormulario() {
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -143,12 +151,19 @@ export default function AlertasPage() {
   }
 
   async function onSubmit(data: FormData) {
-    const errorFiltros = validarFiltrosAlerta(data);
+    const errorFiltros = validarFiltrosAlerta({ municipio: data.municipio, colonia: data.colonia, coloniaEscrita: coloniaTexto });
     if (errorFiltros) {
+      setErrorColonia(errorFiltros);
       toast.error(errorFiltros);
       return;
     }
+    setErrorColonia(null);
     const body = construirCuerpoAlerta(data);
+    if (creandoRef.current) return;
+    if (esAlertaDuplicada(alertas, body)) {
+      toast.error('Ya tienes una alerta con esos mismos criterios — no hace falta crearla otra vez.');
+      return;
+    }
     // Sin ningún filtro, la alerta coincide con TODA publicación futura —
     // válido (etiquetaAlerta ya contempla "Todas las propiedades"), pero
     // merece una confirmación explícita en vez de crearse con un clic.
@@ -156,6 +171,7 @@ export default function AlertasPage() {
     if (vacia && !window.confirm('No elegiste ningún filtro — esta alerta te avisará de TODAS las propiedades nuevas que se publiquen. ¿Crearla así?')) {
       return;
     }
+    creandoRef.current = true;
     try {
       const d = await backendFetch<{ alerta: Alerta }>('/alertas', {
         method: 'POST',
@@ -163,11 +179,14 @@ export default function AlertasPage() {
       });
       setAlertas((prev) => [d.alerta, ...prev]);
       reset();
+      setColoniaTexto('');
       toast.success('Alerta creada — te avisaremos cuando haya coincidencias.');
-    } catch {
+    } catch (err) {
       // Antes fallaba en silencio: el usuario no se enteraba si la alerta
       // no se guardó (ej. por rate limit o error del servidor).
-      toast.error('No se pudo crear la alerta. Intenta de nuevo.');
+      toast.error(esLimiteDePeticiones(err) ? err.message : 'No se pudo crear la alerta. Intenta de nuevo.');
+    } finally {
+      creandoRef.current = false;
     }
   }
 
@@ -195,6 +214,10 @@ export default function AlertasPage() {
   // confirmó en el servidor, así que restaurar es un POST nuevo, no revertir
   // la misma fila (tendrá un id distinto, pero el mismo efecto para el usuario).
   async function restoreAlerta(a: Alerta) {
+    // El botón "Deshacer" del aviso se puede tocar varias veces: cada toque
+    // sin este candado creaba otra alerta igual.
+    if (creandoRef.current) return;
+    creandoRef.current = true;
     try {
       const d = await backendFetch<{ alerta: Alerta }>('/alertas', {
         method: 'POST',
@@ -212,6 +235,8 @@ export default function AlertasPage() {
       toast.success('Alerta restaurada.');
     } catch (err) {
       toast.error(err instanceof BackendApiError ? err.message : 'No se pudo restaurar la alerta.');
+    } finally {
+      creandoRef.current = false;
     }
   }
 
@@ -295,11 +320,11 @@ export default function AlertasPage() {
         <h2 className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-4">
           <Plus size={15} className="text-brand" /> Nueva alerta
         </h2>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={(e) => handleSubmit(onSubmit)(e)} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Municipio</label>
-              <select {...register('municipio')}
+              <select {...register('municipio', { onChange: () => { setValue('colonia', ''); setColoniaTexto(''); setErrorColonia(null); } })}
                 className="w-full rounded-xl border border-gray-200 px-3 py-2 text-base sm:text-sm focus:outline-none focus:border-brand bg-white">
                 <option value="">Cualquiera</option>
                 {MUNICIPIO_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -333,12 +358,19 @@ export default function AlertasPage() {
             <div>
               <ColoniaAutocomplete
                 label="Colonia (opcional)"
-                placeholder={municipioElegido ? 'Ej. Tabasco 2000' : 'Elige primero un municipio'}
+                placeholder={municipioElegido ? 'Escribe y elige una sugerencia' : 'Elige primero un municipio'}
                 municipio={municipioElegido || undefined}
-                value={coloniaEscrita ?? ''}
-                onChange={(texto) => setValue('colonia', texto, { shouldDirty: true })}
+                soloMunicipio
+                disabled={!municipioElegido}
+                value={coloniaTexto}
+                error={errorColonia ?? undefined}
+                onChange={(texto) => { setColoniaTexto(texto); setErrorColonia(null); setValue('colonia', '', { shouldDirty: true }); }}
+                onSeleccionar={(c) => setValue('colonia', c.label, { shouldDirty: true })}
               />
-              <p className="text-xs text-gray-400 mt-1">Solo te avisamos de propiedades publicadas en esa colonia.</p>
+              {coloniaElegida && (
+                <p className="text-xs text-brand mt-1 font-medium">Colonia elegida: {coloniaElegida}</p>
+              )}
+              <p className="text-xs text-gray-400 mt-1">Solo te avisamos de propiedades publicadas en esa colonia. Solo puedes elegir una de las sugeridas.</p>
             </div>
           )}
 

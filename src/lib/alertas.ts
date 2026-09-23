@@ -4,15 +4,15 @@
  */
 
 /**
- * Alertas por colonia — pedido 2026-09-23. Verificado en vivo contra el
- * backend real ese mismo día: POST /alertas con `colonia` en el body
- * responde 400 ("property colonia should not exist") y como query param
- * lo acepta pero lo descarta sin guardarlo. Mientras el backend no la
- * guarde ni la use al emparejar publicaciones, ofrecerla en el formulario
- * rompería TODA creación de alertas. Cambiar a `true` SOLO cuando el
- * backend confirme el contrato de docs/BACKEND-ALERTAS-COLONIA-23092026.md.
+ * Alertas por colonia — pedido 2026-09-23. El backend la soporta desde su
+ * PR #145 (verificado en vivo el mismo día contra producción: 201 con
+ * `colonia` en la respuesta, 400 `COLONIA_REQUIERE_MUNICIPIO` sin municipio,
+ * 400 con colonia vacía, y una propiedad en la colonia dispara UN aviso
+ * "Nueva propiedad en <colonia>" mientras que otra colonia no dispara nada).
+ * Antes de eso el body con `colonia` daba 400 y rompía toda creación de
+ * alertas, por eso vivía apagada. Contrato: docs/BACKEND-ALERTAS-COLONIA-23092026.md.
  */
-export const ALERTAS_POR_COLONIA_DISPONIBLE = false;
+export const ALERTAS_POR_COLONIA_DISPONIBLE = true;
 
 export interface FiltrosAlerta {
   municipio?: string;
@@ -36,9 +36,14 @@ export interface CuerpoAlerta {
 
 /** Mensaje de error del formulario, o `null` si los filtros son válidos. */
 export function validarFiltrosAlerta(
-  f: Pick<FiltrosAlerta, 'municipio' | 'colonia'>,
+  f: Pick<FiltrosAlerta, 'municipio' | 'colonia'> & { coloniaEscrita?: string },
   { coloniaHabilitada = ALERTAS_POR_COLONIA_DISPONIBLE }: { coloniaHabilitada?: boolean } = {},
 ): string | null {
+  // El backend empareja por el NOMBRE exacto (normalizado) de la colonia: solo
+  // sirve una colonia elegida de la lista de sugerencias, no texto libre.
+  if (coloniaHabilitada && f.coloniaEscrita?.trim() && !f.colonia?.trim()) {
+    return 'Elige una colonia de la lista de sugerencias, o deja el campo vacío.';
+  }
   // Muchos nombres de colonia se repiten entre municipios (ej. "Centro") —
   // sin municipio la alerta avisaría de propiedades de cualquier lado.
   if (coloniaHabilitada && f.colonia?.trim() && !f.municipio) {
@@ -90,4 +95,23 @@ export function etiquetaAlerta(a: AlertaGuardada): string {
   if (a.dosBocas) partes.push('Dos Bocas');
   if (a.sinRiesgo) partes.push('zona segura');
   return partes.length ? partes.join(' · ') : 'Todas las propiedades';
+}
+
+const norm = (v: string | number | null | undefined) => (v === null || v === undefined || v === '' ? null : String(v).trim().toLowerCase());
+
+/**
+ * ¿Ya existe una alerta con exactamente los mismos criterios? El backend NO
+ * deduplica (verificado en vivo 2026-09-23: 3 envíos idénticos guardaron 3
+ * alertas) y cada alerta repetida genera su propio aviso por cada propiedad
+ * que coincide — con 4 iguales, la misma propiedad avisa 4 veces.
+ */
+export function esAlertaDuplicada(existentes: AlertaGuardada[], nueva: CuerpoAlerta): boolean {
+  return existentes.some((a) =>
+    norm(a.municipio) === norm(nueva.municipio)
+    && norm(a.colonia) === norm(nueva.colonia)
+    && norm(a.tipo) === norm(nueva.tipo)
+    && norm(a.operacion) === norm(nueva.operacion)
+    && norm(a.precioMax) === norm(nueva.precioMax)
+    && !!a.dosBocas === !!nueva.dosBocas
+    && !!a.sinRiesgo === !!nueva.sinRiesgo);
 }

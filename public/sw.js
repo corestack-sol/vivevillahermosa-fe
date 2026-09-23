@@ -42,6 +42,11 @@ self.addEventListener('push', (event) => {
       icon: '/icons/icon-192.png',
       badge: '/icons/badge-96.png', // silueta blanca sobre transparente — Android pinta solo el alfa; icon-192 (opaco) salía como cuadrado blanco
       data: { url: data.url },
+      // Mismo `tag` = la notificación NUEVA reemplaza a la anterior en vez de
+      // apilarse. Si el servidor manda la misma alerta varias veces (alertas
+      // repetidas, suscripciones duplicadas), en el teléfono se ve UNA — reporte
+      // 2026-09-23 de avisos repetidos ×4. Con `tag` propio del backend se usa ese.
+      tag: data.tag || `${data.url}|${data.titulo}`,
     })
   );
 });

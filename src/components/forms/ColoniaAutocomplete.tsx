@@ -12,7 +12,17 @@ interface ColoniaAutocompleteProps {
   label?: string;
   placeholder?: string;
   error?: string;
+  /**
+   * Modo cerrado (alertas): solo se sugieren colonias DEL municipio dado, y
+   * quien usa el componente debe quedarse únicamente con lo que llegue por
+   * `onSeleccionar` — lo escrito a mano sin elegir una sugerencia no cuenta.
+   */
+  soloMunicipio?: boolean;
+  onSeleccionar?: (c: ColoniaCoord) => void;
+  disabled?: boolean;
 }
+
+const sinAcentos = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim();
 
 /**
  * Autocompletar de colonia — sugiere del catálogo (curado a mano +
@@ -25,11 +35,12 @@ interface ColoniaAutocompleteProps {
  * mano si no aparece en la lista.
  */
 export function ColoniaAutocomplete({
-  value, municipio, onChange, label = 'Colonia', placeholder = 'Nombre de la colonia', error,
+  value, municipio, onChange, label = 'Colonia', placeholder = 'Nombre de la colonia', error, soloMunicipio = false, onSeleccionar, disabled = false,
 }: ColoniaAutocompleteProps) {
   const [abierto, setAbierto] = useState(false);
   const [resaltado, setResaltado] = useState(0);
   const [sugerencias, setSugerencias] = useState<ColoniaCoord[]>([]);
+  const [sinCoincidencias, setSinCoincidencias] = useState(false);
   const contenedorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -42,7 +53,12 @@ export function ColoniaAutocomplete({
 
   function manejarCambio(texto: string) {
     onChange(texto);
-    const nuevas = sugerirColonias(texto, municipio);
+    let nuevas = sugerirColonias(texto, municipio, soloMunicipio ? 200 : 8);
+    if (soloMunicipio) {
+      const m = sinAcentos(municipio ?? '');
+      nuevas = nuevas.filter((c) => sinAcentos(c.municipio) === m).slice(0, 8);
+    }
+    setSinCoincidencias(soloMunicipio && texto.trim().length >= 2 && nuevas.length === 0);
     setSugerencias(nuevas);
     setResaltado(0);
     setAbierto(nuevas.length > 0);
@@ -50,6 +66,8 @@ export function ColoniaAutocomplete({
 
   function elegir(c: ColoniaCoord) {
     onChange(c.label);
+    onSeleccionar?.(c);
+    setSinCoincidencias(false);
     setAbierto(false);
   }
 
@@ -69,10 +87,14 @@ export function ColoniaAutocomplete({
         error={error}
         value={value}
         autoComplete="off"
+        disabled={disabled}
         onChange={(e) => manejarCambio(e.target.value)}
         onFocus={() => { if (sugerencias.length > 0) setAbierto(true); }}
         onKeyDown={manejarTeclado}
       />
+      {sinCoincidencias && (
+        <p className="mt-1 text-xs text-gray-500">No hay colonias sugeridas con ese nombre en {municipio}. Prueba con otra parte del nombre.</p>
+      )}
       {abierto && (
         <ul className="absolute z-20 mt-1 w-full max-h-56 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg py-1">
           {sugerencias.map((c, i) => (
