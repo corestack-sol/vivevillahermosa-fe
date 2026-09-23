@@ -42,6 +42,37 @@
 
   --color-sand:         #F0E6D6; /* pergamino cálido */
 
+  /* Historial de inundación (ficha de propiedad) — tríada terrosa derivada de
+     la paleta del sitio en vez de los rojo/ámbar/verde genéricos de
+     Tailwind, que chocaban con crema/verde bosque/terracota: bajo = salvia
+     y verde bosque, medio = ocre (mismo ocre del tipo "casa"), alto =
+     ladrillo. Pares texto/fondo calculados a ≥5:1 (WCAG AA); `chip` es el
+     círculo del ícono (≥3.6:1 contra blanco) y `soft` la versión clara para
+     usar sobre fondos oscuros (píldora del panel verde de la ficha). */
+  --color-flood-bajo-bg:     #E6EEDF;
+  --color-flood-bajo-border: #B7CBAE;
+  --color-flood-bajo-title:  #1D4A2C;
+  --color-flood-bajo-body:   #2C5537;
+  --color-flood-bajo-muted:  #4A6A52;
+  --color-flood-bajo-chip:   #3F6B4A;
+  --color-flood-bajo-soft:   #A8CDA0;
+
+  --color-flood-medio-bg:     #F8EFD9;
+  --color-flood-medio-border: #E3C98A;
+  --color-flood-medio-title:  #66400E;
+  --color-flood-medio-body:   #75500F;
+  --color-flood-medio-muted:  #7F5C1E;
+  --color-flood-medio-chip:   #B7791F;
+  --color-flood-medio-soft:   #EBC377;
+
+  --color-flood-alto-bg:     #F8E3DA;
+  --color-flood-alto-border: #E2A793;
+  --color-flood-alto-title:  #8A2C1C;
+  --color-flood-alto-body:   #963626;
+  --color-flood-alto-muted:  #9C4535;
+  --color-flood-alto-chip:   #B23A2A;
+  --color-flood-alto-soft:   #F2A99A;
+
   /* "Vida" — un tercer acento puntual, no otro tono apagado más. Viene de
      las flores coral de src/assets/3.jpeg: en la foto de referencia son
      justo lo que rompe el verde/terracota apagados de la pared y el piso,

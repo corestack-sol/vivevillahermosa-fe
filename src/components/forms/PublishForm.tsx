@@ -2624,6 +2624,13 @@ export function PublishForm() {
                 {deteccion.confianza === 'probable' && (
                   <span className="text-[11px] opacity-60"> · coincidencia parcial</span>
                 )}
+                {/* Mismo criterio que el aviso de móvil (arriba): el Atlas no nombra
+                    24 de las 88 zonas del catálogo — es un estimado, no una cita. */}
+                {!deteccion.citadaEnAtlas && (
+                  <span className="block mt-1 text-[11px] text-gray-500">
+                    Estimado por nuestro catálogo — el Atlas de Riesgos no nombra esta colonia en particular.
+                  </span>
+                )}
               </p>
             ) : colonia && colonia.length >= 4 ? (
               <div className="space-y-2">

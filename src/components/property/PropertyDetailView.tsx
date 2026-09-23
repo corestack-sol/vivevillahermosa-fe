@@ -276,9 +276,12 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
                   terracota (--color-accent-dark, pedido explícito
                   2026-09-17) en vez del gris neutro anterior — más oscuro
                   que bg-gray-100, sigue leyéndose como "footer" aparte. */}
-              <div className="px-5 py-5 bg-accent-dark/15 rounded-b-2xl">
-                <h2 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-gray-500 mb-3">
-                  <Droplets size={13} className="flex-shrink-0" /> Historial de inundación
+              {/* 2026-09-23: fondo pergamino (--color-sand) en vez del tinte
+                  rosado que salía de mezclar accent-dark al 15% — sigue
+                  leyéndose como "footer" aparte, pero dentro de la paleta. */}
+              <div className="px-5 py-5 bg-sand/70 border-t border-gray-200 rounded-b-2xl">
+                <h2 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.12em] text-gray-600 mb-3">
+                  <Droplets size={13} className="flex-shrink-0 text-accent" /> Historial de inundación
                 </h2>
                 <FloodRiskBadge nivel={property.riesgoInundacion} fuente={property.riesgoInundacionFuente} municipio={property.municipio} />
               </div>
