@@ -25,14 +25,14 @@ function Placeholder({ tipo, className = '' }: { tipo?: PropertyType; className?
   );
 }
 
-function Photo({ src, tipo, alt, className = '', preset = 'full' }: { src?: string; tipo?: PropertyType; alt: string; className?: string; preset?: 'thumb' | 'full' }) {
+function Photo({ src, tipo, alt, className = '', preset = 'full', fit = 'cover' }: { src?: string; tipo?: PropertyType; alt: string; className?: string; preset?: 'thumb' | 'full'; fit?: 'cover' | 'contain' }) {
   const [failed, setFailed] = useState(false);
   if (src && !failed) {
     return (
       <img
         src={cloudinaryTransform(src, preset)}
         alt={alt}
-        className={`w-full h-full object-cover ${className}`}
+        className={`w-full h-full ${fit === 'contain' ? 'object-contain' : 'object-cover'} ${className}`}
         onError={() => setFailed(true)}
       />
     );
@@ -209,8 +209,12 @@ export function PropertyGallery({ fotos, titulo, tipo }: PropertyGalleryProps) {
               </button>
             )}
 
-            <div className="w-full max-w-4xl max-h-full aspect-video rounded-xl overflow-hidden shadow-2xl">
-              <Photo src={fotos[active]} tipo={tipo} alt={`${titulo} — foto ${active + 1}`} />
+            {/* La galería y las tarjetas recortan (object-cover) para llenar su
+                marco; al presionar la foto el visor la muestra COMPLETA
+                (object-contain) — una foto vertical de teléfono ya no pierde
+                arriba y abajo. Pedido 2026-09-23. */}
+            <div className="w-full max-w-4xl h-full">
+              <Photo src={fotos[active]} tipo={tipo} alt={`${titulo} — foto ${active + 1}`} fit="contain" />
             </div>
 
             {total > 1 && (
