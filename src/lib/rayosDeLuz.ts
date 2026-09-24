@@ -186,7 +186,17 @@ void main() {
     }
     halo = clamp(halo / 6.0, 0.0, 1.0) * (1.0 - ocluso(fr));
     luz *= 1.0 - 0.55 * sombra * (1.0 - ocluso(fr));
-    luz += halo * (0.18 + 0.4 * haz) * (0.6 + 0.8 * bruma);
+    // La luz llega de arriba: el halo es claro en la mitad superior del logo y se
+    // oscurece de la mitad hacia abajo, donde el reflejo ya no le da.
+    float alto = (fr.y - u_occ.y) / u_occ.w;
+    float reflejo = 1.0 - 0.92 * smoothstep(0.35, 0.80, alto);
+    // Reflejo vivo: el brillo del halo ondula alrededor del contorno, como la luz
+    // que rebota en el agua sobre el logo (lento, de aguas tranquilas).
+    vec2 cc = vec2((u_occ.x + u_occ.z * 0.5) * asp, u_occ.y + u_occ.w * 0.5);
+    float rodea = atan(p.y - cc.y, p.x - cc.x);
+    float vivo = 0.55 + 0.30 * sin(t * 0.55 + rodea * 2.0)
+                      + 0.15 * sin(t * 0.90 - rodea * 5.0 + p.y * 8.0);
+    luz += halo * reflejo * vivo * (0.18 + 0.4 * haz) * (0.6 + 0.8 * bruma);
   }
 
   // Polvo: tres capas (fino, medio y bokeh grande), solo donde hay luz.
