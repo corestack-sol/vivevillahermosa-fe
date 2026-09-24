@@ -23,6 +23,8 @@ import { SERVICIOS_RENTA } from '@/lib/servicios';
 import { distanciaKm, matchColoniaEnMunicipio, precargarColoniasDescubiertas } from '@/lib/colonias';
 import { detectarRiesgoInundacion } from '@/lib/zonas-inundacion';
 import { ColoniaAutocomplete } from '@/components/forms/ColoniaAutocomplete';
+import { CampoDeCuenta } from '@/components/forms/CampoDeCuenta';
+import { useAuth } from '@/context/AuthContext';
 import { dentroDeRadioPermitido, RADIO_MAXIMO_PIN_KM } from '@/lib/mapPin';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { MAX_SOURCE_BYTES } from '@/lib/imageResize';
@@ -78,6 +80,7 @@ export default function EditarPropiedadPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const toast = useToast();
+  const { user } = useAuth();
   // undefined = todavía resolviendo en el efecto, null = no existe/no es tuya
   const [property, setProperty] = useState<Property | null | undefined>(undefined);
 
@@ -386,6 +389,19 @@ export default function EditarPropiedadPage() {
       aceptaTerminos: true,
     });
   }, [property, reset]);
+
+  // Nombre y correo de contacto son FIJOS y vienen de la cuenta (decisión
+  // 2026-09-23, mismo criterio que PublishForm.tsx) — se re-aplican tras
+  // cargar la propiedad para que un valor viejo guardado no se cuele.
+  useEffect(() => {
+    function aplicarDatosDeLaCuenta() {
+      if (!user) return;
+      setValue('nombreContacto', user.nombre, { shouldValidate: false });
+      setValue('emailContacto', user.email, { shouldValidate: false });
+    }
+    aplicarDatosDeLaCuenta();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.nombre, user?.email, property]);
 
   async function onSubmit(data: PublishFormData) {
     if (!property) return;
@@ -833,7 +849,7 @@ export default function EditarPropiedadPage() {
         </div>
 
         <div className="pt-1 border-t border-gray-100" />
-        <Input label="Nombre de contacto" error={errors.nombreContacto?.message} {...register('nombreContacto')} />
+        <CampoDeCuenta label="Nombre de contacto" value={user?.nombre ?? ''} hint="Es el nombre de tu cuenta." error={errors.nombreContacto?.message} />
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">¿Cómo quieres que te contacten?</label>
@@ -871,7 +887,7 @@ export default function EditarPropiedadPage() {
             />
           )}
           {(watch('metodoContacto') === 'correo' || watch('metodoContacto') === 'ambos') && (
-            <Input label="Correo electrónico" error={errors.emailContacto?.message} {...register('emailContacto')} />
+            <CampoDeCuenta label="Correo electrónico" value={user?.email ?? ''} hint="Es el correo de tu cuenta." error={errors.emailContacto?.message} />
           )}
         </div>
 

@@ -12,7 +12,7 @@ import { Button, buttonClasses } from '@/components/ui/Button';
 import {
   CheckCircle, ChevronRight, ChevronLeft, ChevronUp, Sparkles, ImagePlus, X, Images, AlertCircle, GripVertical,
   Home, DollarSign, MapPin, FileText, Camera, Phone, Info, ShieldAlert, ShieldX, Droplets,
-  Tag, Key, Lightbulb, ShieldCheck, Loader2, EyeOff, RefreshCw, TrendingUp, Star,
+  Tag, Key, Lightbulb, ShieldCheck, Loader2, EyeOff, RefreshCw, TrendingUp, Star, Pencil,
 } from 'lucide-react';
 import { SERVICIOS_RENTA } from '@/lib/servicios';
 import { AMENIDADES_OPTIONS, AMENIDADES_MAP } from '@/lib/amenidades';
@@ -46,6 +46,9 @@ import { prepararFoto, blobParaSubir, mensajeRechazoFoto, type MotivoRechazoFoto
 import { crearEjecutorConEnfriamiento } from '@/lib/ejecutorConEnfriamiento';
 import { subirFotos } from '@/lib/subidaFotos';
 import { memoConTtl } from '@/lib/memoConTtl';
+import { contactoDeUltimaPropiedad, type ContactoPrevio } from '@/lib/contactoPrevio';
+import { CampoDeCuenta } from './CampoDeCuenta';
+import { AvisoVerificarCorreo } from '@/components/account/AvisoVerificarCorreo';
 import { moverElemento } from '@/lib/reorderArray';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { useAuth } from '@/context/AuthContext';
@@ -248,13 +251,17 @@ export function PublishForm() {
   // más abajo, fotoHash.ts). Sin llamada extra al backend.
   const [propiasFotos, setPropiasFotos] = useState<{ id: string; titulo: string; fotos: string[] }[]>([]);
   const hashesPropiosRef = useRef<Map<string, string>>(new Map());
+  // Contacto de la última propiedad de esta persona: precarga el WhatsApp y sus
+  // preferencias (ver más abajo). Nombre y correo no salen de aquí, son de la cuenta.
+  const [contactoPrevio, setContactoPrevio] = useState<ContactoPrevio | null>(null);
   useEffect(() => {
     let cancelado = false;
-    backendFetch<{ propiedades: { id: string; estado: string; titulo: string; fotos: string[] }[] }>('/propiedades/mias')
+    backendFetch<{ propiedades: { id: string; estado: string; titulo: string; fotos: string[]; createdAt?: string; agenteWhatsapp?: string | null; agenteEmail?: string | null; requiereMensajePrimero?: boolean | null }[] }>('/propiedades/mias')
       .then(({ propiedades }) => {
         if (cancelado) return;
         setLimiteAlcanzado(contarPropiedadesVivas(propiedades) >= LIMITE_PROPIEDADES);
         setPropiasFotos(propiedades.filter((p) => p.fotos.length > 0));
+        setContactoPrevio(contactoDeUltimaPropiedad(propiedades));
       })
       .catch(() => {});
     return () => { cancelado = true; };
@@ -549,6 +556,7 @@ export function PublishForm() {
     watch,
     setValue,
     getValues,
+    setFocus,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
@@ -583,6 +591,7 @@ export function PublishForm() {
 
   function continuarBorrador() {
     if (!borradorPendiente) return;
+    borradorContinuadoRef.current = true;
     reset(borradorPendiente.valores);
     setAmenidades(borradorPendiente.amenidades);
     setServicios(borradorPendiente.servicios);
@@ -613,6 +622,49 @@ export function PublishForm() {
     return () => unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [borradorResuelto, amenidades, servicios, coords, step]);
+
+  // Nombre y correo de contacto son FIJOS y salen de la cuenta (decisión
+  // 2026-09-23: la plataforma es para quien está registrado y cada agente
+  // tiene su propia cuenta — reportes y auditorías siempre ligan la
+  // publicación a los mismos datos). Se re-aplican cuando cambia la cuenta o
+  // se retoma un borrador, para que ningún valor viejo se cuele.
+  useEffect(() => {
+    function aplicarDatosDeLaCuenta() {
+      if (!user) return;
+      setValue('nombreContacto', user.nombre, { shouldValidate: false });
+      setValue('emailContacto', user.email, { shouldValidate: false });
+    }
+    aplicarDatosDeLaCuenta();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.nombre, user?.email, borradorResuelto]);
+
+  // WhatsApp y preferencias de contacto: se precargan UNA vez desde la última
+  // propiedad de la persona (no si retomó un borrador, ese manda). El
+  // WhatsApp se ve como solo lectura hasta tocar el lápiz.
+  const [editandoTelefono, setEditandoTelefono] = useState(false);
+  const [telefonoPrecargado, setTelefonoPrecargado] = useState('');
+  const contactoPrecargadoRef = useRef(false);
+  const borradorContinuadoRef = useRef(false);
+  useEffect(() => {
+    function precargarContactoPrevio() {
+      if (!borradorResuelto || contactoPrecargadoRef.current || !contactoPrevio) return;
+      contactoPrecargadoRef.current = true;
+      if (borradorContinuadoRef.current) return;
+      setValue('metodoContacto', contactoPrevio.metodo);
+      setValue('requiereMensajePrimero', contactoPrevio.requiereMensajePrimero);
+      if (contactoPrevio.whatsapp && !getValues('telefonoContacto')) {
+        const formateado = formatTelefonoInput(contactoPrevio.whatsapp);
+        setValue('telefonoContacto', formateado);
+        setTelefonoPrecargado(formateado);
+      }
+    }
+    precargarContactoPrevio();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [borradorResuelto, contactoPrevio]);
+  const telefonoActual = watch('telefonoContacto') ?? '';
+  const telefonoEditable = !telefonoPrecargado || editandoTelefono || telefonoActual !== telefonoPrecargado;
+  // Verificación de correo obligatoria para publicar (decisión 2026-09-23).
+  const correoVerificado = !!user?.emailVerificado;
 
   const tipo        = watch('tipo');
   // Un terreno vacío no tiene m² construidos, recámaras ni baños — pedirlos
@@ -1272,6 +1324,13 @@ export function PublishForm() {
   };
 
   const publicar = async (data: FormData) => {
+    // Correo verificado obligatorio (decisión 2026-09-23). El aviso de arriba
+    // ya ofrece reenviar el correo y detecta solo cuando se verifica.
+    if (!correoVerificado) {
+      toast.error('Verifica tu correo para poder publicar — usa el aviso de arriba para reenviarlo.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     if (fotoNoApta) {
       toast.error('Quita la foto marcada como inapropiada antes de publicar.');
       setStep(4);
@@ -1684,6 +1743,8 @@ export function PublishForm() {
           </div>
         </div>
       </div>
+
+      <AvisoVerificarCorreo className="mb-4" />
 
       <form onSubmit={(e) => handleSubmit(onSubmit, alFallarValidacion)(e)} className="space-y-4">
 
@@ -2552,7 +2613,7 @@ export function PublishForm() {
                 </div>
               </div>
             )}
-            <Input label="Tu nombre" placeholder="Nombre completo" error={errors.nombreContacto?.message} {...register('nombreContacto')} />
+            <CampoDeCuenta label="Tu nombre" value={user?.nombre ?? ''} hint="Es el nombre de tu cuenta: así te ven quienes te contacten." error={errors.nombreContacto?.message} />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">¿Cómo quieres que te contacten?</label>
@@ -2584,6 +2645,22 @@ export function PublishForm() {
                 placeholder="993 123 4567"
                 maxLength={12}
                 error={errors.telefonoContacto?.message}
+                hint={!telefonoEditable ? 'Es el número de tu última propiedad. Toca el lápiz si quieres usar otro.' : undefined}
+                readOnly={!telefonoEditable}
+                className={!telefonoEditable ? 'bg-gray-50 text-gray-600' : ''}
+                trailing={
+                  !telefonoEditable ? (
+                    <button
+                      type="button"
+                      onClick={() => { setEditandoTelefono(true); setTimeout(() => setFocus('telefonoContacto'), 0); }}
+                      aria-label="Editar WhatsApp de contacto"
+                      title="Editar número"
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-400 hover:text-brand hover:bg-brand-pale transition-colors"
+                    >
+                      <Pencil size={16} />
+                    </button>
+                  ) : undefined
+                }
                 {...register('telefonoContacto')}
                 onChange={(e) => setValue('telefonoContacto', formatTelefonoInput(e.target.value), { shouldValidate: true })}
               />
@@ -2598,7 +2675,7 @@ export function PublishForm() {
               </p>
             )}
             {(watch('metodoContacto') === 'correo' || watch('metodoContacto') === 'ambos') && (
-              <Input label="Correo electrónico" type="email" placeholder="tu@correo.com" error={errors.emailContacto?.message} {...register('emailContacto')} />
+              <CampoDeCuenta label="Correo electrónico" value={user?.email ?? ''} hint="Es el correo de tu cuenta." error={errors.emailContacto?.message} />
             )}
             <p className="flex items-start gap-1.5 text-xs text-gray-500 bg-gray-50 rounded-xl p-3">
               <ShieldCheck size={14} className="flex-shrink-0 mt-0.5" />
@@ -2668,7 +2745,7 @@ export function PublishForm() {
               Siguiente <ChevronRight size={16} />
             </Button>
           ) : (
-            <Button type="submit" variant="primary" className="flex-1" isLoading={isSubmitting || fraudCheckPendiente}>
+            <Button type="submit" variant="primary" className="flex-1" isLoading={isSubmitting || fraudCheckPendiente} disabled={!correoVerificado} title={!correoVerificado ? 'Verifica tu correo para poder publicar' : undefined}>
               <CheckCircle size={16} /> Publicar propiedad
             </Button>
           )}

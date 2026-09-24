@@ -6,13 +6,15 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   icon?: ReactNode;
+  /** Contenido anclado a la derecha, dentro del campo (ej. un botón de lápiz). Reserva espacio para no tapar el texto. */
+  trailing?: ReactNode;
   hint?: string;
   labelClassName?: string;
   dark?: boolean;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, icon, hint, className = '', id, labelClassName, dark = false, ...props }, ref) => {
+  ({ label, error, icon, trailing, hint, className = '', id, labelClassName, dark = false, ...props }, ref) => {
     const inputId = id ?? label?.toLowerCase().replace(/\s+/g, '-');
     return (
       <div className="w-full">
@@ -30,7 +32,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={inputId}
-            className={`w-full rounded-xl border text-base sm:text-sm transition-colors duration-150 focus:outline-none focus:ring-2 ${icon ? 'pl-10' : 'pl-4'} pr-4 py-2.5 ${
+            className={`w-full rounded-xl border text-base sm:text-sm transition-colors duration-150 focus:outline-none focus:ring-2 ${icon ? 'pl-10' : 'pl-4'} ${trailing ? 'pr-12' : 'pr-4'} py-2.5 ${
               dark
                 ? `bg-white/10 text-white placeholder-white/30 focus:ring-yellow-400/30 ${error ? 'border-red-400 focus:border-red-400' : 'border-white/15 focus:border-yellow-400/50'}`
                 : `bg-white text-gray-800 placeholder-gray-400 focus:ring-brand/40 ${error ? 'border-danger focus:border-danger' : 'border-gray-200 focus:border-brand'}`
@@ -64,6 +66,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             }}
             {...props}
           />
+          {trailing && <span className="absolute right-1.5 top-1/2 -translate-y-1/2">{trailing}</span>}
         </div>
         {hint && !error && <p className={`mt-1 text-xs ${dark ? 'text-white/70' : 'text-gray-500'}`}>{hint}</p>}
         {error && <p className={`mt-1 text-xs ${dark ? 'text-red-300' : 'text-danger'}`}>{error}</p>}

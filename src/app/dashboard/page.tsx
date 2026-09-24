@@ -19,6 +19,7 @@ import { evaluarCartera } from '@/lib/coach';
 import { CoachModal } from '@/components/dashboard/CoachModal';
 import { useLimitePropiedades, MENSAJE_LIMITE_PROPIEDADES } from '@/hooks/useLimitePropiedades';
 import { useToast } from '@/context/ToastContext';
+import { AvisoVerificarCorreo } from '@/components/account/AvisoVerificarCorreo';
 import { getViewedCount } from '@/lib/recentlyViewed';
 
 // "buscador" se queda mapeado a la nueva etiqueta — el backend todavía no
@@ -67,25 +68,6 @@ export default function DashboardPage() {
     function leerVistasRecientes() { setVistasRecientesCount(getViewedCount(user?.userId ?? null)); }
     leerVistasRecientes();
   }, [user?.userId]);
-
-  // Verificación de correo — pedido explícito 2026-09-03, cierra el hallazgo
-  // de seguridad más grave que quedaba pendiente en la auditoría de Fase 1
-  // (cualquiera podía registrarse con un correo que no le pertenece, sin
-  // que nadie lo confirmara). El backend ya lo tenía construido
-  // (`POST /auth/verificar-email`, `POST /auth/reenviar-verificacion`) —
-  // solo faltaba exponerlo en el frontend.
-  const [reenviando, setReenviando] = useState(false);
-  async function reenviarVerificacion() {
-    setReenviando(true);
-    try {
-      await backendFetch('/auth/reenviar-verificacion', { method: 'POST' });
-      toast.success('Te reenviamos el correo de verificación — revisa tu bandeja de entrada.');
-    } catch {
-      toast.error('No se pudo reenviar el correo. Intenta de nuevo en unos minutos.');
-    } finally {
-      setReenviando(false);
-    }
-  }
 
   useEffect(() => {
     if (!loading && !user) { router.push('/auth/login'); return; }
@@ -233,27 +215,8 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Correo sin verificar — pedido explícito 2026-09-03. AlertTriangle
-          ya estaba importado (se usa más abajo en otra alerta). */}
-      {!user.emailVerificado && (
-        <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6">
-          <AlertTriangle size={15} className="text-amber-600 flex-shrink-0 mt-0.5" />
-          <div className="min-w-0 flex-1">
-            <p className="text-xs text-amber-800 leading-relaxed">
-              <strong>Todavía no verificas tu correo.</strong> Revisa tu bandeja de entrada, o pide que te lo reenviemos.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={reenviarVerificacion}
-            disabled={reenviando}
-            className="flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold text-amber-800 hover:text-amber-900 underline disabled:opacity-50"
-          >
-            {reenviando && <Loader2 size={12} className="animate-spin" />}
-            Reenviar correo
-          </button>
-        </div>
-      )}
+      {/* Correo sin verificar — mismo aviso (reenviar + detección automática) que el formulario de publicar. */}
+      <AvisoVerificarCorreo className="mb-6" />
 
       {/* Solo para profesionales — "Contactos recibidos" ya es real
           (confirmado en vivo 2026-09-02), "Vistas totales" sigue pendiente.
