@@ -32,11 +32,15 @@ export default function CorestackAnimationPage() {
           <div className={styles.luzLogo} aria-hidden="true" />
         </div>
 
-        <p className={styles.terminal}>
-          <span className={styles.prompt} aria-hidden="true">$</span>
-          <span className={styles.typed}>Corestack Solutions</span>
-        </p>
+        <p className={styles.titulo}>Corestack Solutions</p>
       </div>
+
+      {/* Capa superior: los rayos que cruzan el logo van ENCIMA de él (screen = solo suma luz). */}
+      <RayosDeLuz
+        modo="sobre"
+        className="pointer-events-none absolute inset-0 z-[3] mix-blend-screen"
+        oclusor={{ selector: '[data-rayos-oclusor]', src: corestackLogo.src }}
+      />
     </div>
   );
 }

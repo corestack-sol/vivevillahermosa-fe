@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calidadDeRender, FRAGMENT_SHADER } from './rayosDeLuz';
+import { DURACION_CHISPAS, ESCALA_MINIMA, UMBRAL_CUADRO_MS, siguienteEscala, PERIODO_RAFAGA, calidadDeRender, campoDeSilueta, desenfocar, envolventeRafaga, FRAGMENT_SHADER, hayRayosOChispas, T_ESTATICO } from './rayosDeLuz';
 
 describe('calidadDeRender', () => {
   it('en escritorio usa la densidad del dispositivo con tope de 1.5', () => {
@@ -23,5 +23,94 @@ describe('shader', () => {
   it('declara los uniforms que el código le manda', () => {
     expect(FRAGMENT_SHADER).toContain('uniform vec2 u_res');
     expect(FRAGMENT_SHADER).toContain('uniform float u_t');
+    expect(FRAGMENT_SHADER).toContain('uniform float u_solo');
+  });
+  it('la capa superior solo dibuja los rayos (no repite el fondo)', () => {
+    expect(FRAGMENT_SHADER).toMatch(/if \(u_solo > 0\.5\) \{[\s\S]*?return;/);
+  });
+});
+
+describe('envolventeRafaga', () => {
+  it('las ráfagas son esporádicas: fuera del golpe no hay rayos', () => {
+    expect(envolventeRafaga(0)).toBe(0);
+    expect(envolventeRafaga(3)).toBe(0);
+    expect(envolventeRafaga(PERIODO_RAFAGA - 0.1)).toBeCloseTo(0, 5);
+  });
+  it('en el golpe llega al máximo y se repite cada PERIODO_RAFAGA segundos', () => {
+    expect(envolventeRafaga(0.4)).toBeCloseTo(1, 5);
+    expect(envolventeRafaga(0.4 + PERIODO_RAFAGA * 3)).toBeCloseTo(1, 5);
+  });
+  it('hay un segundo golpe más débil poco después', () => {
+    const v = envolventeRafaga(1.6);
+    expect(v).toBeGreaterThan(0.4);
+    expect(v).toBeLessThan(0.6);
+  });
+  it('el cuadro fijo de "reducir movimiento" cae dentro de una ráfaga', () => {
+    expect(envolventeRafaga(T_ESTATICO)).toBeGreaterThan(0.9);
+  });
+});
+
+describe('campo de silueta (base de los rayos)', () => {
+  const ancho = 40, alto = 40;
+  // Cuadrado sólido de 10x10 en el centro.
+  const alfa = new Uint8Array(ancho * alto);
+  for (let y = 15; y < 25; y++) for (let x = 15; x < 25; x++) alfa[y * ancho + x] = 255;
+
+  it('desenfocar reparte la silueta hacia afuera y mantiene su masa aproximada', () => {
+    const d = desenfocar(alfa, ancho, alto, 4);
+    expect(d[20 * ancho + 26]).toBeGreaterThan(0); // fuera del cuadrado ahora hay campo
+    expect(d[0]).toBe(0); // lejos sigue en 0
+    const antes = alfa.reduce((a, v) => a + v, 0);
+    const despues = d.reduce((a, v) => a + v, 0);
+    expect(Math.abs(despues - antes) / antes).toBeLessThan(0.02);
+  });
+  it('el campo decae al alejarse del logo (permite trazar rayos por nivel)', () => {
+    const d = desenfocar(alfa, ancho, alto, 4);
+    const cerca = d[20 * ancho + 26], lejos = d[20 * ancho + 32];
+    expect(cerca).toBeGreaterThan(lejos);
+  });
+  it('arma la textura RGBA: R silueta, G y B difuminadas, A opaco', () => {
+    const t = campoDeSilueta(alfa, ancho, alto, 4, 2);
+    expect(t).toHaveLength(ancho * alto * 4);
+    const i = (20 * ancho + 20) * 4;
+    expect(t[i]).toBe(255);
+    expect(t[i + 3]).toBe(255);
+    const f = (20 * ancho + 27) * 4; // justo fuera del borde
+    expect(t[f]).toBe(0);
+    expect(t[f + 1]).toBeGreaterThan(0);
+    expect(t[f + 2]).toBeGreaterThan(0);
+  });
+});
+
+describe('capa superior (rayos y chispas)', () => {
+  it('sigue dibujando mientras las chispas rebotan, aunque los rayos ya se apagaron', () => {
+    expect(envolventeRafaga(2.5)).toBeLessThan(0.01); // los rayos ya terminaron
+    expect(hayRayosOChispas(2.5)).toBe(true); // pero puede haber chispas en el aire
+  });
+  it('se queda vacía (sin gastar GPU) el resto del ciclo', () => {
+    expect(hayRayosOChispas(DURACION_CHISPAS + 0.5)).toBe(false);
+    expect(hayRayosOChispas(PERIODO_RAFAGA - 0.5)).toBe(false);
+  });
+  it('vuelve a activarse en la ráfaga siguiente', () => {
+    expect(hayRayosOChispas(PERIODO_RAFAGA + 0.3)).toBe(true);
+  });
+});
+
+describe('calidad adaptativa', () => {
+  it('con buen rendimiento no toca la escala', () => {
+    expect(siguienteEscala(1, 16.7)).toBe(1);
+    expect(siguienteEscala(1, UMBRAL_CUADRO_MS)).toBe(1);
+  });
+  it('si no sostiene ~40 fps baja la resolución un 20 %', () => {
+    expect(siguienteEscala(1, 40)).toBeCloseTo(0.8);
+    expect(siguienteEscala(0.8, 40)).toBeCloseTo(0.64);
+  });
+  it('nunca baja de la escala mínima', () => {
+    let e = 1;
+    for (let i = 0; i < 20; i++) e = siguienteEscala(e, 80);
+    expect(e).toBe(ESCALA_MINIMA);
+  });
+  it('nunca vuelve a subir (evita oscilar entre dos calidades)', () => {
+    expect(siguienteEscala(0.64, 8)).toBe(0.64);
   });
 });

@@ -23,6 +23,8 @@
   -webkit-mask-image: radial-gradient(ellipse at center, black 0%, transparent 70%);
   mask-image: radial-gradient(ellipse at center, black 0%, transparent 70%);
   animation: gridPan 12s linear infinite;
+  /* Con cada ráfaga de rayos el suelo se ilumina (--carga la publica el efecto). */
+  filter: brightness(calc(1 + var(--carga, 0) * 1.6));
 }
 
 .scanlines {
@@ -66,7 +68,8 @@
      con una sombra fría que cae hacia el lado contrario. */
   filter:
     saturate(1.05) contrast(1.04) brightness(1.02)
-    drop-shadow(-2px -2px 10px rgba(90, 190, 255, 0.28))
+    drop-shadow(-2px -2px 10px rgba(90, 190, 255, calc(0.28 + var(--carga, 0) * 0.5)))
+    drop-shadow(0 0 calc(var(--carga, 0) * 18px) rgba(120, 200, 255, calc(var(--carga, 0) * 0.85)))
     drop-shadow(10px 14px 16px rgba(0, 0, 0, 0.65));
 }
 
@@ -91,41 +94,18 @@
   animation: destelloLuz 7s ease-in-out infinite;
 }
 
-.terminal {
+.titulo {
   position: relative;
   z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  margin: 0;
+  color: #c2f0ff;
   font-family: 'Courier New', ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: clamp(22px, 5vw, 34px);
   letter-spacing: 0.04em;
   /* Legible sobre la parte más clara de los haces. */
   text-shadow: 0 0 6px rgba(0, 0, 0, 0.9), 0 1px 14px rgba(0, 0, 0, 0.8);
-}
-
-.prompt {
-  color: #38bdf8;
-  font-weight: 700;
-  /* Termina de "escribirse" a los 2.3s (0.5s delay + 1.8s typeIn) — 5s
-     más tarde (~7.3s) el $ se desvanece, pedido explícito 2026-09-14. */
-  animation: promptFadeOut 0.6s ease-out 7.3s forwards;
-}
-
-.typed {
-  display: inline-block;
-  overflow: hidden;
-  white-space: nowrap;
-  color: #c2f0ff;
-  border-right: 3px solid transparent;
-  max-width: 0;
-  animation:
-    typeIn 1.8s steps(1, jump-end) 0.5s forwards,
-    /* 9 parpadeos de 0.85s ≈ 7.65s desde que carga la página — deja de
-       parpadear (vuelve solo al transparent base) justo alrededor de los
-       ~5s después de terminar de escribir, sin pelearse por la propiedad
-       border-color con una segunda animación de desvanecido. */
-    caretBlink 0.85s step-end 9;
+  /* Aparece completo, de una vez, con un fade in (sin tecleo). */
+  animation: aparecer 1.6s ease-out 0.4s backwards;
 }
 
 @keyframes float {
@@ -133,45 +113,9 @@
   50%      { transform: translateY(-14px); }
 }
 
-/* Cadencia de tecleo humano — 19 caracteres de "Corestack Solutions" con
-   tiempos IRREGULARES entre letra y letra (ráfagas rápidas + una pausa
-   notoria en el espacio entre palabras + pequeñas vacilaciones), en vez
-   de un steps(19) parejo que se sentía mecánico (pedido explícito
-   2026-09-14: "efecto más real de velocidad humana, no todo de
-   corrido"). steps(1, jump-end) hace que cada letra aparezca de golpe
-   justo en su marca de tiempo, no interpolada entre pasos — mismo
-   ancho final que antes (520px, con margen de sobra en vez de "ch" para
-   que nunca corte el texto a medio carácter). */
-@keyframes typeIn {
-  0%     { max-width: 0; }      /* — */
-  5.1%   { max-width: 27px; }   /* C */
-  9.1%   { max-width: 55px; }   /* o */
-  13.7%  { max-width: 82px; }   /* r */
-  17.1%  { max-width: 110px; }  /* e */
-  25.7%  { max-width: 137px; }  /* s */
-  29.7%  { max-width: 164px; }  /* t */
-  33.4%  { max-width: 192px; }  /* a */
-  43.7%  { max-width: 219px; }  /* c */
-  56.3%  { max-width: 246px; }  /* k */
-  61.4%  { max-width: 274px; }  /* (espacio) */
-  65.7%  { max-width: 301px; }  /* S */
-  69.4%  { max-width: 328px; }  /* o */
-  73.4%  { max-width: 356px; }  /* l */
-  81.4%  { max-width: 383px; }  /* u */
-  84.9%  { max-width: 411px; }  /* t */
-  88.9%  { max-width: 438px; }  /* i */
-  92.6%  { max-width: 465px; }  /* o */
-  97.4%  { max-width: 493px; }  /* n */
-  100%   { max-width: 520px; }  /* s */
-}
-
-@keyframes caretBlink {
-  0%, 100% { border-color: transparent; }
-  50%      { border-color: #a5e9ff; }
-}
-
-@keyframes promptFadeOut {
-  to { opacity: 0; }
+@keyframes aparecer {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 @keyframes gridPan {
@@ -180,11 +124,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .grid, .logoWrap, .luzLogo, .typed, .prompt {
+  .grid, .logoWrap, .luzLogo, .titulo {
     animation: none !important;
-  }
-  .typed {
-    max-width: 520px;
-    border-right-color: transparent;
   }
 }
