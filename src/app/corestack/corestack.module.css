@@ -6,16 +6,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(ellipse at 50% 40%, #0a1730 0%, #050a16 55%, #01030a 100%);
+  /* El fondo lo pinta <RayosDeLuz> (rayos y polvo); negro por si tarda en cargar. */
+  background: #000;
 }
 
 .grid {
   position: absolute;
   inset: -10%;
   background-image:
-    radial-gradient(circle, rgba(56, 189, 248, 0.8) 2.1px, transparent 2.3px),
-    linear-gradient(rgba(56, 189, 248, 0.28) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(56, 189, 248, 0.28) 1px, transparent 1px);
+    radial-gradient(circle, rgba(56, 189, 248, 0.55) 2.1px, transparent 2.3px),
+    linear-gradient(rgba(56, 189, 248, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 189, 248, 0.18) 1px, transparent 1px);
   background-size: 48px 48px, 48px 48px, 48px 48px;
   transform: perspective(600px) rotateX(60deg) scale(1.8) translateY(6%);
   transform-origin: center bottom;
@@ -60,10 +61,18 @@
   display: block;
   width: 100%;
   height: auto;
+  /* Integra el logo al ambiente: tono azul eléctrico de la luz, contraste suave y un
+     resplandor eléctrico que sale del contorno hacia la fuente (arriba-izquierda)
+     con una sombra fría que cae hacia el lado contrario. */
+  filter:
+    saturate(1.05) contrast(1.04) brightness(1.02)
+    drop-shadow(-2px -2px 10px rgba(90, 190, 255, 0.28))
+    drop-shadow(10px 14px 16px rgba(0, 0, 0, 0.65));
 }
 
-.glitchRed,
-.glitchCyan {
+/* Luz que barre el logo: degradado eléctrico desde la esquina de la fuente,
+   recortado a la silueta. Un destello lento lo cruza para que "respire". */
+.luzLogo {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -75,8 +84,11 @@
   mask-repeat: no-repeat;
   -webkit-mask-position: center;
   mask-position: center;
-  mix-blend-mode: screen;
-  opacity: 0;
+  mix-blend-mode: soft-light;
+  background:
+    linear-gradient(115deg, rgba(200, 235, 255, 0.55) 0%, rgba(120, 190, 255, 0.28) 32%, rgba(0, 0, 0, 0.3) 78%),
+    linear-gradient(115deg, transparent 38%, rgba(235, 248, 255, 0.5) 50%, transparent 62%) 0 0 / 260% 100% no-repeat;
+  animation: destelloLuz 7s ease-in-out infinite;
 }
 
 .terminal {
@@ -88,6 +100,8 @@
   font-family: 'Courier New', ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: clamp(22px, 5vw, 34px);
   letter-spacing: 0.04em;
+  /* Legible sobre la parte más clara de los haces. */
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.9), 0 1px 14px rgba(0, 0, 0, 0.8);
 }
 
 .prompt {
@@ -102,7 +116,7 @@
   display: inline-block;
   overflow: hidden;
   white-space: nowrap;
-  color: #a5e9ff;
+  color: #c2f0ff;
   border-right: 3px solid transparent;
   max-width: 0;
   animation:
@@ -112,16 +126,6 @@
        ~5s después de terminar de escribir, sin pelearse por la propiedad
        border-color con una segunda animación de desvanecido. */
     caretBlink 0.85s step-end 9;
-}
-
-.glitchRed {
-  background: #ff2d55;
-  animation: glitchA 5s steps(1, end) infinite;
-}
-
-.glitchCyan {
-  background: #22d3ee;
-  animation: glitchB 5s steps(1, end) infinite;
 }
 
 @keyframes float {
@@ -175,26 +179,8 @@
   to   { background-position: 0 48px, 0 48px, 0 48px; }
 }
 
-@keyframes glitchA {
-  0%, 88%, 100% { opacity: 0; transform: translate3d(0, 0, 0); }
-  88.5%         { opacity: 0.85; transform: translate3d(-4px, 0, 0); }
-  90%           { opacity: 0.85; transform: translate3d(3px, 1px, 0); }
-  91.5%         { opacity: 0.6; transform: translate3d(-3px, -1px, 0); }
-  93%           { opacity: 0.85; transform: translate3d(2px, 0, 0); }
-  94%           { opacity: 0; transform: translate3d(0, 0, 0); }
-}
-
-@keyframes glitchB {
-  0%, 88%, 100% { opacity: 0; transform: translate3d(0, 0, 0); }
-  88.5%         { opacity: 0.85; transform: translate3d(4px, 0, 0); }
-  90%           { opacity: 0.85; transform: translate3d(-3px, -1px, 0); }
-  91.5%         { opacity: 0.6; transform: translate3d(3px, 1px, 0); }
-  93%           { opacity: 0.85; transform: translate3d(-2px, 0, 0); }
-  94%           { opacity: 0; transform: translate3d(0, 0, 0); }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .grid, .logoWrap, .glitchRed, .glitchCyan, .typed, .prompt {
+  .grid, .logoWrap, .luzLogo, .typed, .prompt {
     animation: none !important;
   }
   .typed {
