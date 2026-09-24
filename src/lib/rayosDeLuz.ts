@@ -118,31 +118,31 @@ void main() {
   // Como si la luz atravesara el agua: la superficie ondulada refracta los
   // haces, que se mecen de lado a lado (más al bajar) y cambian de posición
   // lentamente.
-  float sw = s + (0.030 * sin(p.y * 3.0 + t * 0.55 + s * 4.0)
-                + 0.018 * sin(p.y * 7.0 - t * 0.85 + s * 9.0)) * (0.4 + p.y);
+  float sw = s + (0.026 * sin(p.y * 3.0 + t * 0.20 + s * 4.0)
+                + 0.014 * sin(p.y * 7.0 - t * 0.30 + s * 9.0)) * (0.4 + p.y);
 
   // Haces: ruido a varias escalas de la coordenada (ya refractada), anchos y
   // difusos con otros más finos encima. Siempre queda una base de luz entre haz y haz.
-  float ra = 0.58 * noise1(sw * 6.0 + t * 0.10)
-           + 0.30 * noise1(sw * 14.0 - t * 0.14 + 5.3)
-           + 0.12 * noise1(sw * 30.0 + t * 0.18 + 11.7);
+  float ra = 0.58 * noise1(sw * 6.0 + t * 0.04)
+           + 0.30 * noise1(sw * 14.0 - t * 0.05 + 5.3)
+           + 0.12 * noise1(sw * 30.0 + t * 0.07 + 11.7);
   ra = 0.32 + 0.68 * smoothstep(0.05, 1.00, ra);
   ra = min(1.10, ra + 0.35 * haz);
 
   // La intensidad de cada haz late a su propio ritmo (fase distinta por haz) y
   // una onda de brillo corre por ellos hacia abajo: el centelleo del agua.
   float fase = noise1(s * 8.0 + 40.0) * 12.0;
-  float late = 0.72 + 0.28 * sin(t * 0.9 + fase);
-  float onda = 0.82 + 0.18 * sin(p.y * 6.0 - t * 1.3 + s * 5.0);
+  float late = 0.78 + 0.22 * sin(t * 0.32 + fase);
+  float onda = 0.82 + 0.18 * sin(p.y * 6.0 - t * 0.45 + s * 5.0);
   // Cáusticas finas cerca de la superficie: red de destellos que se deforma.
-  float caust = 0.5 + 0.5 * sin(p.x * 22.0 + 3.0 * sin(p.y * 9.0 + t * 0.8) + t * 0.6)
-                        * sin(p.y * 17.0 + 3.0 * sin(p.x * 11.0 - t * 0.7) - t * 0.5);
+  float caust = 0.5 + 0.5 * sin(p.x * 22.0 + 3.0 * sin(p.y * 9.0 + t * 0.28) + t * 0.22)
+                        * sin(p.y * 17.0 + 3.0 * sin(p.x * 11.0 - t * 0.25) - t * 0.18);
   float superficie = exp(-p.y * 3.5);
   ra *= late * onda * (1.0 - 0.35 * superficie + 0.35 * superficie * caust);
 
   // Reparto a lo ancho: toda la pantalla recibe luz, con zonas más y menos
   // intensas que derivan despacio.
-  float env = 0.72 + 0.28 * noise1(s * 1.6 + t * 0.03 + 20.0);
+  float env = 0.72 + 0.28 * noise1(s * 1.6 + t * 0.012 + 20.0);
   env = max(env, 0.6 * haz);
 
   // Bruma: manchas de humo (isotrópicas) más vetas a lo largo de los haces;
