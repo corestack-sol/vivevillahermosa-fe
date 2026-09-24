@@ -7,6 +7,7 @@ import { applyFilters } from '@/lib/filters';
 import { getAllProperties, searchProperties, type PropertiesSearchParams } from '@/lib/api';
 import { matchColonia } from '@/lib/colonias';
 import { getLandmark } from '@/lib/landmarks';
+import { reunirMarcadores } from '@/lib/marcadoresMapa';
 
 const PER_PAGE = 12;
 
@@ -86,6 +87,9 @@ function resolverParamsServidor(filters: SearchFilters, page: number): Propertie
  */
 export function useSearch(filters: SearchFilters, extraDeps: unknown[] = [], initial?: { results: Property[]; total: number }) {
   const [results, setResults] = useState<Property[]>(initial?.results ?? []);
+  // Pines del mapa: TODO lo que cumple los filtros, no solo la página visible
+  // (ver marcadoresMapa.ts). Arranca con lo mismo que el listado.
+  const [marcadores, setMarcadores] = useState<Property[]>(initial?.results ?? []);
   const [total, setTotal] = useState(initial?.total ?? 0);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
@@ -114,12 +118,24 @@ export function useSearch(filters: SearchFilters, extraDeps: unknown[] = [], ini
         // Guarda el catálogo filtrado completo en un ref para que loadMore
         // no tenga que volver a pedirlo — ver loadMoreCatalogoRef abajo.
         loadMoreCatalogoRef.current = filtrado;
+        setMarcadores(filtrado);
       } else {
         const { properties, total: t } = await searchProperties(resolverParamsServidor(filters, 1))
           .catch(() => ({ properties: [] as Property[], total: 0 }));
         if (requestIdRef.current !== id) return;
         setResults(properties);
         setTotal(t);
+        setMarcadores(properties);
+        // El listado ya se pintó; los pines que faltan llegan aparte, sin
+        // bloquearlo. Si la petición falla se queda con lo que ya tiene.
+        const params = resolverParamsServidor(filters, 1);
+        reunirMarcadores({
+          total: t,
+          primeraPagina: properties,
+          pedirPagina: (pagina, limite) => searchProperties({ ...params, page: pagina, limit: limite }).then((r) => r.properties),
+        })
+          .then((todos) => { if (requestIdRef.current === id) setMarcadores(todos); })
+          .catch(() => { /* el mapa sigue mostrando la página visible */ });
       }
       setPage(1);
       if (requestIdRef.current === id) setIsLoading(false);
@@ -158,6 +174,8 @@ export function useSearch(filters: SearchFilters, extraDeps: unknown[] = [], ini
     // PropertiesClient.tsx para el mapa embebido y "Todo lo demás" —
     // ambos simplificados a propósito para operar sobre esto, ver el doc.
     allResults: results,
+    /** Todo lo que cumple los filtros, para los pines del mapa (el listado sigue paginado). */
+    marcadores,
     total,
     hasMore: results.length < total,
     loadMore,

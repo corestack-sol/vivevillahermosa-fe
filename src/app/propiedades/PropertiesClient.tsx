@@ -132,7 +132,7 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
   // Descubiertas()/precargarLandmarks().
   const [coloniasReady, setColoniasReady] = useState(false);
   const [landmarksReady, setLandmarksReady] = useState(false);
-  const { results, allResults, total, hasMore, loadMore, isLoading } = useSearch(
+  const { results, allResults, marcadores, total, hasMore, loadMore, isLoading } = useSearch(
     filters, [coloniasReady, landmarksReady], { results: initialProperties, total: initialTotal },
   );
 
@@ -584,7 +584,9 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
   const resultadosMostrados = iaActivo ? iaResultados.slice(0, iaDisplayCount) : results;
   const totalMostrado = iaActivo ? iaResultados.length : total;
   const hasMoreMostrado = iaActivo ? iaDisplayCount < iaResultados.length : hasMore;
-  const marcadoresFuente = iaActivo ? iaResultados : allResults;
+  // El mapa muestra TODO lo que cumple los filtros (`marcadores`), no solo la
+  // página cargada del listado (`allResults`, 12 en 12).
+  const marcadoresFuente = iaActivo ? iaResultados : marcadores;
   function handleLoadMore() {
     if (iaActivo) { setIaDisplayCount((c) => c + PER_PAGE); return; }
     loadMore();
