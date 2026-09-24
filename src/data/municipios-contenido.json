@@ -45,23 +45,19 @@
     "secciones": [
       {
         "titulo": "Historia",
-        "texto": "Comalcalco fue una ciudad maya que alcanzó su mayor esplendor entre el 600 a. C. y el 900 d. C. y que después se abandonó de forma repentina. Desde fines del siglo XVI y durante casi dos siglos, los piratas que remontaban los ríos castigaron a toda la Chontalpa; para frenarlos, los vecinos taparon el cauce del Mezcalapa y dejaron lo que hoy se conoce como río Seco. Sobre una isla en ese cauce se fundó en 1827 el pueblo de San Isidro de Comalcalco, que en 1834 obtuvo su primer ayuntamiento. Más tarde se separó de su territorio la parte norte, que hoy forma el municipio de Paraíso."
+        "texto": "Comalcalco fue una ciudad maya que alcanzó su mayor esplendor entre el 600 a. C. y el 900 d. C. y que después se abandonó de forma repentina. Sobre una isla en el cauce del Mezcalapa se fundó en 1827 el pueblo de San Isidro de Comalcalco, que en 1834 obtuvo su primer ayuntamiento. Más tarde se separó de su territorio la parte norte, que hoy forma el municipio de Paraíso."
       },
       {
         "titulo": "Geografía y clima",
-        "texto": "Es un territorio plano, con muy pocas elevaciones y ninguna por encima de los 40 metros sobre el nivel del mar, sin litoral propio. Lo cruzan los ríos Cuxcuxapa, Seco, Tular y Cocohital. El clima es cálido y húmedo, con lluvias abundantes en verano: la temperatura media anual ronda los 26 °C y las precipitaciones superan los 2,000 milímetros al año, con septiembre como el mes más lluvioso."
+        "texto": "Es un territorio plano, con muy pocas elevaciones y ninguna por encima de los 40 metros sobre el nivel del mar, sin litoral propio. El clima es cálido y húmedo, con lluvias abundantes en verano: la temperatura media anual ronda los 26 °C y las precipitaciones superan los 2,000 milímetros al año."
       },
       {
         "titulo": "Economía",
-        "texto": "Es el mayor productor de cacao y de chocolate del país; en el año 2000 el cacao ocupaba el 60 % de las hectáreas agrícolas del municipio. También se cultivan coco, caña de azúcar, maíz, frijol y papaya, y la ganadería se practica de forma extensiva. En lo industrial pesa sobre todo el petróleo: en la ciudad opera la superintendencia de Pemex de la región Comalcalco y en el municipio hay cientos de pozos, baterías y estaciones de compresión, como las de los campos El Golpe, Santuario y Tupilco."
-      },
-      {
-        "titulo": "Qué visitar",
-        "texto": "La zona arqueológica, a unos 2 km de la ciudad, es la única ciudad maya edificada con ladrillo cocido, unido con una mezcla de concha de ostión molida; conserva una acrópolis con el Templo 1 y un museo de sitio. Las haciendas cacaoteras, como La Luz (de 1890, con museo del cacao y fábrica de chocolates) y Jesús María, muestran cómo se elabora el chocolate artesanal. A unos 20 km, en Cupilco, está el santuario de la Asunción de María, uno de los templos más fotografiados del estado. La feria municipal se celebra en mayo."
+        "texto": "Es el mayor productor de cacao y de chocolate del país. También se cultivan coco, caña de azúcar, maíz, frijol y papaya, y la ganadería se practica de forma extensiva. En lo industrial pesa sobre todo el petróleo: en la ciudad opera la superintendencia de Pemex de la región Comalcalco y en el municipio hay cientos de pozos, baterías y estaciones de compresión."
       },
       {
         "titulo": "Ubicación y conexiones",
-        "texto": "Comalcalco queda a unos 42 km en línea recta de Villahermosa. La carretera estatal Villahermosa–Comalcalco lo enlaza con Nacajuca y Jalpa de Méndez; la autopista Reforma–Dos Bocas, con Cunduacán y Paraíso, y la federal 187, con Cárdenas y Huimanguillo. En el Censo 2020 registró 214,877 habitantes repartidos en 116 localidades."
+        "texto": "Comalcalco queda a unos 42 km en línea recta de Villahermosa. La autopista Reforma–Dos Bocas lo enlaza con Cunduacán y Paraíso, y la federal 187, con Cárdenas y Huimanguillo. Se reparte en 116 localidades."
       }
     ],
     "fuentes": [
@@ -84,23 +80,19 @@
     "secciones": [
       {
         "titulo": "Historia",
-        "texto": "La zona estuvo ligada a la expansión olmeca desde La Venta, que podría remontarse a los años 800–400 a. C., y conserva vestigios mayas en Arroyo Hondo, La Azucena, Santuario y Sánchez Magallanes. Hacia 1524 pasaron por aquí las primeras expediciones españolas. Entre 1680 y 1689, los ataques del pirata Lorencillo obligaron a los habitantes de la costa a internarse y a los pueblos de la Chontalpa a cerrar el río Mezcalapa, lo que dio origen al río Seco. En 1797 se midieron las tierras de San Antonio de los Naranjos, hoy el centro de Heroica Cárdenas, terrenos que donó el presbítero José Eduardo de Cárdenas y Romero. El municipio se creó oficialmente el 18 de diciembre de 1883."
+        "texto": "La zona estuvo ligada a la expansión olmeca desde La Venta y conserva vestigios mayas en Arroyo Hondo, La Azucena, Santuario y Sánchez Magallanes. Entre 1680 y 1689, los ataques del pirata Lorencillo obligaron a los habitantes de la costa a internarse y a los pueblos de la Chontalpa a cerrar el río Mezcalapa, lo que dio origen al río Seco. El municipio se creó oficialmente el 18 de diciembre de 1883."
       },
       {
         "titulo": "Geografía y clima",
-        "texto": "Es un terreno casi plano, con altitudes de entre 2 y 17 metros (la ciudad está a 10), de suelos arcillosos muy húmedos que drenan mal. Tiene 66 km de costa y el mayor complejo de lagunas costeras del estado: las lagunas del Carmen y La Machona, que el Golfo de México separa mediante la barra de Santa Ana, junto con La Palma, Santa Teresa y El Pajaral. El clima es cálido y húmedo, con temperatura media anual de 27 °C y lluvias todo el año, más fuertes de junio a octubre."
+        "texto": "Es un terreno casi plano, con altitudes de entre 2 y 17 metros, de suelos arcillosos muy húmedos que drenan mal. Tiene 66 km de costa y el mayor complejo de lagunas costeras del estado, como las lagunas del Carmen y La Machona. El clima es cálido y húmedo, con temperatura media anual de 27 °C y lluvias todo el año, más fuertes de junio a octubre."
       },
       {
         "titulo": "Economía",
-        "texto": "Encabeza en Tabasco la producción de caña de azúcar, cacao, coco y arroz, y desde 1965 es sede del Plan Chontalpa, un proyecto agrícola que abarca toda la región. Operan los ingenios Benito Juárez y Santa Rosalía, además de una planta que procesa cacao y otra que beneficia arroz. Es también el municipio tabasqueño con más ductos y corredores petroleros. La ciudad de Heroica Cárdenas vive sobre todo del comercio, porque por ella pasa la ruta federal 180 que une a la capital estatal con el norte del país; ahí se concentran tiendas de cadenas nacionales, bancos y otros servicios. La pesca se concentra en Sánchez Magallanes, con ostión, róbalo, camarón y jaiba, entre otras especies."
-      },
-      {
-        "titulo": "Qué visitar",
-        "texto": "Sánchez Magallanes, un puerto de pescadores situado a 93 km de la ciudad de Cárdenas, se levanta en una península que separa la laguna del Carmen del mar abierto. Allí están los balnearios Ensueño del Trópico (unos 4 km de playa de arena fina y gris), Acapulquito y Barra de Panteones, y desde su muelle salen lanchas a la isla El Pajaral, donde anidan garzas, ibis, pelícanos y gaviotas. El Parque Ecológico de la Chontalpa cuida 277 hectáreas que incluyen uno de los dos últimos remanentes de selva de canacoite en México, con 124 especies de aves registradas. En la ciudad destacan el templo de San Antonio de Padua, el parque Independencia y el museo Carlos Pellicer. La feria municipal se celebra en junio, y la feria ostrícola, en julio, en Sánchez Magallanes."
+        "texto": "Encabeza en Tabasco la producción de caña de azúcar, cacao, coco y arroz, y desde 1965 es sede del Plan Chontalpa, un proyecto agrícola que abarca toda la región. La ciudad de Heroica Cárdenas vive sobre todo del comercio, porque por ella pasa la ruta federal 180 que une a la capital estatal con el norte del país. La pesca se concentra en Sánchez Magallanes."
       },
       {
         "titulo": "Ubicación y conexiones",
-        "texto": "Cárdenas queda a unos 46 km en línea recta de Villahermosa. La carretera federal 180, tanto la libre como la autopista de cuota, lo recorre de oeste a este, y la federal 187 Malpaso–El Bellote lo cruza de sur a norte. En el Censo 2020 contó 243,229 habitantes en 171 localidades; solo Centro tiene más población en el estado."
+        "texto": "Cárdenas queda a unos 46 km en línea recta de Villahermosa. La carretera federal 180 lo recorre de oeste a este, y la federal 187 Malpaso–El Bellote lo cruza de sur a norte. Tiene 171 localidades; solo Centro tiene más población en el estado."
       }
     ],
     "fuentes": [
@@ -123,23 +115,19 @@
     "secciones": [
       {
         "titulo": "Historia",
-        "texto": "Este territorio perteneció primero a Jalpa de Méndez y luego a Comalcalco. Desde 1557 los piratas asolaron sus barras, y cerros como el Teodomiro servían de puesto de vigilancia para avistar los barcos. El municipio se creó el 30 de junio de 1890 al separarse de Comalcalco, y en 1945 la villa de Paraíso recibió la categoría de ciudad."
+        "texto": "Este territorio perteneció primero a Jalpa de Méndez y luego a Comalcalco. Desde 1557 los piratas asolaron sus barras. El municipio se creó el 30 de junio de 1890 al separarse de Comalcalco, y en 1945 la villa de Paraíso recibió la categoría de ciudad."
       },
       {
         "titulo": "Geografía y clima",
-        "texto": "Ocupa una llanura costera muy baja frente al Golfo de México, con suelos arenosos cerca del mar y arcillosos tierra adentro, donde la humedad es constante y el drenaje, deficiente; los mantos freáticos están entre 0.5 y 4 metros de profundidad. Abundan las lagunas, los esteros y los pantanos: la laguna de Mecoacán es una de las principales productoras de ostión del país, y otras como Tupilco, El Arrastradero o Las Flores forman dos sistemas conectados por el canal del Jobo, que desembocan al Golfo por las barras de Chiltepec y de Tupilco. El clima es cálido y húmedo, con lluvias abundantes en verano y cerca de 1,750 milímetros al año."
+        "texto": "Ocupa una llanura costera muy baja frente al Golfo de México, con suelos arenosos cerca del mar y arcillosos tierra adentro, donde la humedad es constante y el drenaje, deficiente. Abundan las lagunas, los esteros y los pantanos: la laguna de Mecoacán es una de las principales productoras de ostión del país. El clima es cálido y húmedo, con lluvias abundantes en verano y cerca de 1,750 milímetros al año."
       },
       {
         "titulo": "Economía",
-        "texto": "El petróleo domina la producción del municipio: según cifras del INEGI citadas en la fuente, la extracción de crudo y gas natural aporta más del 98 % de lo que se genera aquí, y por el puerto de Dos Bocas sale buena parte del crudo de Tabasco y de la Sonda de Campeche. En 2019 arrancaron las obras de la nueva refinería de Dos Bocas, un proyecto federal pensado para procesar 340 mil barriles diarios. La pesca aporta más del 45 % de la producción pesquera del estado, con róbalo, camarón, jaiba y ostión entre las especies más capturadas. En el campo destacan el coco y, en segundo lugar, el cacao."
-      },
-      {
-        "titulo": "Qué visitar",
-        "texto": "Es uno de los destinos de playa más visitados de Tabasco, sobre todo en Semana Santa. Entre sus playas están Paraíso, Varadero, Sol, Bruja, Mar, Sol y Arena y la barra de Tupilco; en el Centro Turístico El Paraíso, el más concurrido, llegan a reportarse de 10 000 a 15 000 visitantes diarios en esas fechas. Puerto Ceiba y El Bellote, junto a la laguna de Mecoacán, ofrecen paseos en lancha por el río Seco, la barra de Dos Bocas y los manglares, además de restaurantes de pescados y mariscos. La cocina local gira alrededor del mar: empanadas de camarón, jaiba en chilpachole y ostión en escabeche."
+        "texto": "El petróleo domina la producción del municipio, y por el puerto de Dos Bocas sale buena parte del crudo de Tabasco y de la Sonda de Campeche. En 2019 arrancaron las obras de la nueva refinería de Dos Bocas, un proyecto federal pensado para procesar 340 mil barriles diarios. La pesca aporta más del 45 % de la producción pesquera del estado. En el campo destacan el coco y, en segundo lugar, el cacao."
       },
       {
         "titulo": "Ubicación y conexiones",
-        "texto": "Paraíso queda a unos 53 km en línea recta de Villahermosa. La autopista La Isla–Puerto Dos Bocas lo conecta con Comalcalco, Cunduacán y Villahermosa; la carretera federal 187 lo une con Comalcalco, Cárdenas y Huimanguillo, y la estatal Paraíso–Santa Cruz, con Frontera y Ciudad del Carmen. Según el Censo 2020 tiene 96,741 habitantes en 48 localidades."
+        "texto": "Paraíso queda a unos 53 km en línea recta de Villahermosa. La autopista La Isla–Puerto Dos Bocas lo conecta con Comalcalco, Cunduacán y Villahermosa, y la carretera federal 187, con Comalcalco, Cárdenas y Huimanguillo. Tiene 48 localidades."
       }
     ],
     "fuentes": [
@@ -162,23 +150,19 @@
     "secciones": [
       {
         "titulo": "Historia",
-        "texto": "Hacia 1550 ya vivían varias familias españolas en la villa de Xalpa, un asentamiento de gran peso en el Tabasco colonial, hasta el punto de ser nombrada capital de la Chontalpa. Su nombre náhuatl significa «sobre la arena». En 1834, al crearse el ayuntamiento de Comalcalco, se le quitó el territorio de los actuales Comalcalco y Paraíso. La villa se designó cabecera en 1852 y en 1887 recibió el nombre de Jalpa de Méndez como homenaje al coronel Gregorio Méndez Magaña, héroe local que combatió a los franceses entre 1863 y 1866. Fue elevada a ciudad el 26 de mayo de 1955."
+        "texto": "Hacia 1550 ya vivían varias familias españolas en la villa de Xalpa, un asentamiento de gran peso en el Tabasco colonial, hasta el punto de ser nombrada capital de la Chontalpa. La villa se designó cabecera en 1852 y en 1887 recibió el nombre de Jalpa de Méndez como homenaje al coronel Gregorio Méndez Magaña, héroe local que combatió a los franceses entre 1863 y 1866. Fue elevada a ciudad el 26 de mayo de 1955."
       },
       {
         "titulo": "Geografía y clima",
-        "texto": "El terreno es casi plano, con escasos lomeríos, lo que favorece el exceso de humedad; la cabecera se encuentra a 10 m de altitud. Recibe las aguas de los ríos Nacajuca y El Naranjo y tiene lagunas como Pomposú, El Eslabón, La Negrita, San Agustín, El Provecho, La Tinaja y El Troncón, que suman cerca de 2,320 hectáreas de agua. El clima es cálido y húmedo, con unos 1,700 milímetros de lluvia al año. Entre su fauna hay garzas, cotorras, manatíes y cocodrilos, y entre su vegetación, manglares, pantanos y humedales."
+        "texto": "El terreno es casi plano, con escasos lomeríos, lo que favorece el exceso de humedad; la cabecera se encuentra a 10 m de altitud. Recibe las aguas de los ríos Nacajuca y El Naranjo y tiene varias lagunas, que suman cerca de 2,320 hectáreas de agua. El clima es cálido y húmedo, con unos 1,700 milímetros de lluvia al año."
       },
       {
         "titulo": "Economía",
-        "texto": "El cacao es el cultivo principal: en 1997 ocupaba el 55.7 % de la superficie sembrada, seguido por el maíz (32 %) y el coco (8 %). La ganadería se practica de forma extensiva y las lagunas apenas empiezan a aprovecharse para la acuicultura. La industria pesa poco; la excepción es el campo petrolero de Mecoacán, que se explota en su territorio. La cabecera es el principal centro comercial, con tiendas de cadenas nacionales e internacionales, y sus artesanos son conocidos por las jícaras labradas, de las artesanías más buscadas de Tabasco."
-      },
-      {
-        "titulo": "Qué visitar",
-        "texto": "En la cabecera están el parque central, con una fuente coronada por una gran jícara labrada, la iglesia de San Francisco de Asís y la Casa Museo del coronel Gregorio Méndez, una casa de principios del siglo XIX que es museo desde 1984 y tiene seis salas. Muy cerca queda la laguna Pomposú, con restaurantes de mariscos y paseos en lancha. Los pueblos de Ayapa y Mecoacán destacan por sus iglesias de fachadas de colores. El carnaval arranca el 20 de enero y la feria municipal se celebra a finales de mayo."
+        "texto": "El cacao es el cultivo principal: en 1997 ocupaba el 55.7 % de la superficie sembrada, seguido por el maíz (32 %) y el coco (8 %). La industria pesa poco; la excepción es el campo petrolero de Mecoacán, que se explota en su territorio. La cabecera es el principal centro comercial, y sus artesanos son conocidos por las jícaras labradas, de las artesanías más buscadas de Tabasco."
       },
       {
         "titulo": "Ubicación y conexiones",
-        "texto": "Jalpa de Méndez queda a unos 23 km en línea recta de Villahermosa. La carretera estatal Villahermosa–Comalcalco lo une con la capital, con Nacajuca y con Comalcalco; la Samaria–Jalpa de Méndez, con Cunduacán; la Tulipán–Jalpa de Méndez, con la federal 187, y la Jalpa de Méndez–Chiltepec, con Paraíso. En el Censo 2020 tenía 91,185 habitantes en 64 localidades."
+        "texto": "Jalpa de Méndez queda a unos 23 km en línea recta de Villahermosa. La carretera estatal Villahermosa–Comalcalco lo une con la capital, con Nacajuca y con Comalcalco. Tiene 64 localidades."
       }
     ],
     "fuentes": [
@@ -201,23 +185,19 @@
     "secciones": [
       {
         "titulo": "Historia",
-        "texto": "Se cree que los primeros asentamientos surgieron cuando se abandonaron ciudades mayas del periodo clásico como Palenque, Tikal o Comalcalco y parte de su población siguió los ríos hasta la planicie de Tabasco. Cuando llegaron los españoles, el delta que forman los ríos Mezcalapa, Grijalva y Usumacinta era territorio de los mayas chontales. Hernán Cortés cruzó la zona entre 1524 y 1525 rumbo a las Hibueras, y Bernal Díaz del Castillo anotó el poblado de Nacaxuxuca, cuyo nombre náhuatl se traduce como «lugar de caras pálidas», en alusión a los habitantes del pantano, presa fácil del paludismo. Desde 1550 los españoles se establecieron en sus pueblos para explotar el cacao; en 1665 el partido tenía 13 pueblos y en 1852 un decreto del congreso estatal fijó los que integraban el municipio."
+        "texto": "Cuando llegaron los españoles, el delta que forman los ríos Mezcalapa, Grijalva y Usumacinta era territorio de los mayas chontales. Bernal Díaz del Castillo anotó el poblado de Nacaxuxuca, cuyo nombre náhuatl se traduce como «lugar de caras pálidas», en alusión a los habitantes del pantano, presa fácil del paludismo. Desde 1550 los españoles se establecieron en sus pueblos para explotar el cacao."
       },
       {
         "titulo": "Geografía y clima",
-        "texto": "Es un municipio completamente bajo, sin elevaciones y a unos 10 metros de altitud; según la fuente consultada, es de los que tienen más superficie inundable del estado. Lo recorren los ríos Nacajuca, González, Calzada, San Cipriano, Naranjo, Jahuactal y Mango, y tiene lagunas como Basayú, Juliva, Pucté, Madrigal, Palma, Horizonte, San Francisco, Bush, Manguito y Tintalito. El clima es cálido, húmedo y lluvioso."
+        "texto": "Es un municipio completamente bajo, sin elevaciones y a unos 10 metros de altitud; según la fuente consultada, es de los que tienen más superficie inundable del estado. El clima es cálido, húmedo y lluvioso."
       },
       {
         "titulo": "Economía y artesanías",
-        "texto": "Los cultivos principales son maíz y frijol, sobre todo para autoconsumo: en 1997 el maíz ocupó el 78 % de la superficie agrícola. En la zona chontal se cultiva sobre camellones, al estilo de las chinampas, y en los canales dragados se cría pescado en jaulas. Hay ganadería extensiva, pesca a pequeña escala y pequeños talleres que fabrican muebles, piloncillo, escobas y ropa. Es de los municipios con más variedad artesanal de Tabasco: tejidos de palma y fibra de jacinto, figuras de joloche, jícaras y cerámica. Destacan las tiras bordadas, que decoran el traje regional femenino y las bandas que lucen las representantes de cada municipio en la feria estatal."
-      },
-      {
-        "titulo": "Qué visitar",
-        "texto": "Sobre la carretera Villahermosa–Nacajuca, a lo largo de unos 24 km, se extiende el corredor gastronómico Bijhi Yoko’tan, con muchos restaurantes de pescados y mariscos; entre los platillos típicos están el pejelagarto asado y el chorote (maíz con cacao). En los pueblos chontales —Mazateupa, Tecoluta, Tucta, Tapotzingo, Guatacalca, Guaytalpa y Olcuatitán— hay iglesias de colores, artesanías y comida típica, y es posible conocer los camellones donde se cultiva sobre el agua. En la ciudad está el templo de San Antonio de Padua, de cantera y estilo gótico, frente al parque principal. La feria municipal se celebra a finales de agosto."
+        "texto": "Los cultivos principales son maíz y frijol, sobre todo para autoconsumo. En la zona chontal se cultiva sobre camellones, al estilo de las chinampas. Es de los municipios con más variedad artesanal de Tabasco: tejidos de palma y fibra de jacinto, figuras de joloche, jícaras y cerámica."
       },
       {
         "titulo": "Ubicación y conexiones",
-        "texto": "Nacajuca, que colinda con Centro, queda a unos 12 km en línea recta de Villahermosa. La carretera estatal Villahermosa–Comalcalco lo comunica con la capital, Jalpa de Méndez, Comalcalco y Paraíso, y la Nacajuca–Cunduacán, con Cunduacán. En el Censo 2020 tenía 150,300 habitantes en 76 localidades."
+        "texto": "Nacajuca, que colinda con Centro, queda a unos 12 km en línea recta de Villahermosa. La carretera estatal Villahermosa–Comalcalco lo comunica con la capital, Jalpa de Méndez, Comalcalco y Paraíso. Tiene 76 localidades."
       }
     ],
     "fuentes": [
@@ -240,23 +220,19 @@
     "secciones": [
       {
         "titulo": "Historia",
-        "texto": "Hacia el año 1000 a. C. floreció aquí la cultura olmeca, con su centro político y religioso en lo que hoy es La Venta; su esplendor comenzó a decaer entre el 600 y el 400 a. C. Entre los años 400 y 900 d. C. destacaron los chontales, un pueblo de comerciantes de raíces mayas con influencia náhuatl. Durante la Colonia, el territorio fue disputado entre Tabasco y las autoridades de Veracruz y Guatemala: en 1811 el doctor José Eduardo de Cárdenas pidió en las Cortes de Cádiz que se anexara a Tabasco; en 1840 volvió a separarse para unirse a Acayucan, y la Constitución de 1857 lo reintegró de forma definitiva, aunque durante el Segundo Imperio (1865) se separó por poco tiempo más. La Venta fue dada a conocer en 1925 por los exploradores Frans Blom y Oliver La Farge, y en 1938 el arqueólogo Matthew Stirling encontró allí las cabezas colosales. En 1957 se inauguró el Ferrocarril del Sureste, con seis estaciones en el municipio."
+        "texto": "Hacia el año 1000 a. C. floreció aquí la cultura olmeca, con su centro político y religioso en lo que hoy es La Venta. Durante la Colonia, el territorio fue disputado entre Tabasco y las autoridades de Veracruz y Guatemala, y la Constitución de 1857 lo reintegró de forma definitiva. En 1938 el arqueólogo Matthew Stirling encontró en La Venta las cabezas colosales."
       },
       {
         "titulo": "Geografía y clima",
-        "texto": "Ningún otro municipio de Tabasco es tan grande, y por eso se le llama «el gigante de Tabasco». El 87 % de su superficie es planicie; el 11 %, al sur, es montañoso, y el 2 %, al occidente, corresponde a suelos de zona costera. Aquí se encuentra el cerro Mono Pelado, de unos 1,000 metros de altura, el punto más alto del estado y límite con Chiapas. Hay dos climas: en las zonas bajas, cálido húmedo con lluvias abundantes en verano y unos 26 °C de temperatura media, y en la sierra, también cálido húmedo, pero con lluvia en todos los meses. La precipitación media supera los 2,290 milímetros anuales. La selva alta ha sido muy talada en gran parte, y hay extensas sabanas (unas 140,000 hectáreas) dedicadas sobre todo a la ganadería."
+        "texto": "Ningún otro municipio de Tabasco es tan grande, y por eso se le llama «el gigante de Tabasco». El 87 % de su superficie es planicie y el 11 %, al sur, es montañoso. Aquí se encuentra el cerro Mono Pelado, de unos 1,000 metros de altura, el punto más alto del estado y límite con Chiapas. La precipitación media supera los 2,290 milímetros anuales."
       },
       {
         "titulo": "Economía",
-        "texto": "Es el principal productor de cítricos de Tabasco y el primero del estado en piña; también se cultivan maíz, cacao, caña de azúcar y arroz. Ocupa el segundo lugar estatal en ganado bovino de carne y leche y el primero en aves de corral. Según la fuente consultada, es el municipio con más plantaciones forestales comerciales del país, con más de 15,000 hectáreas de eucalipto, melina, teca y hule. En lo industrial pesa el petróleo: Pemex tiene cientos de instalaciones, entre ellas el Complejo Procesador de Gas La Venta y las baterías de Tecominoacán, Paredón y Jujo, además de pozos como Cinco Presidentes, Magallanes, Ogarrio y Blasillo."
-      },
-      {
-        "titulo": "Qué visitar",
-        "texto": "La zona arqueológica de La Venta tuvo su apogeo entre el 1000 y el 600 a. C., llegó a cubrir cerca de 200 hectáreas y conserva una pirámide que se considera la más antigua de Mesoamérica; cuenta con museo de sitio, y las cabezas colosales que se hallaron aquí se exhiben en el Parque Museo La Venta de Villahermosa. En la sierra, a unos 142 km de la capital, Agua Selva es una zona ecoturística de cerca de mil hectáreas con cabañas, restaurante, rapel, senderos y cascadas, como Las Flores, de más de cien metros de altura. La zona arqueológica de Malpasito, de cultura zoque (700–900 d. C.), tiene juego de pelota y petroglifos en sus alrededores, y el Parque Olmeca Zoque, cerca de la laguna del Rosario, ofrece cabañas y actividades de ecoturismo."
+        "texto": "Es el principal productor de cítricos de Tabasco y el primero del estado en piña; también se cultivan maíz, cacao, caña de azúcar y arroz. Ocupa el segundo lugar estatal en ganado bovino de carne y leche y el primero en aves de corral. En lo industrial pesa el petróleo: Pemex tiene cientos de instalaciones, entre ellas el Complejo Procesador de Gas La Venta."
       },
       {
         "titulo": "Ubicación y conexiones",
-        "texto": "Huimanguillo queda a unos 49 km en línea recta de Villahermosa. La carretera federal 180 pasa por el norte del municipio y enlaza La Venta con Huimanguillo, Cárdenas y Villahermosa; la federal 187 Malpaso–El Bellote atraviesa el oriente, con una autopista de cuatro carriles que une Huimanguillo con Cárdenas. También lo atraviesa el Ferrocarril del Sureste, con estaciones como Villa Chontalpa, la más importante. En el Censo 2020 tenía 190,885 habitantes repartidos en 331 localidades."
+        "texto": "Huimanguillo queda a unos 49 km en línea recta de Villahermosa. La carretera federal 180 pasa por el norte del municipio y enlaza La Venta con Huimanguillo, Cárdenas y Villahermosa. También lo atraviesa el Ferrocarril del Sureste. Tiene 331 localidades."
       }
     ],
     "fuentes": [
@@ -279,27 +255,23 @@
     "secciones": [
       {
         "titulo": "Historia",
-        "texto": "Cuando llegaron los españoles, en 1518, estas llanuras estaban muy pobladas por mayas chontales, y su centro principal era Potonchán, capital del señorío de Tabscoob y punto de comercio entre el Petén, Yucatán y el Altiplano. Ese año Juan de Grijalva descubrió el río que hoy lleva su nombre. El 14 de marzo de 1519, en las llanuras de Cintla, Hernán Cortés libró la Batalla de Centla, considerada el primer gran choque armado entre indígenas y españoles en la Nueva España; en ella el caballo se estrenó como arma de guerra en el continente. Días después fundó aquí la villa de Santa María de la Victoria, considerada la primera población española en México. Los ataques de piratas, desde 1557, fueron vaciando la villa hasta que en 1641 los poderes de la provincia se trasladaron a San Juan Bautista, hoy Villahermosa. El puerto de Frontera se fundó en 1780 como villa de San Fernando de la Frontera y, por decreto de Benito Juárez, es sede de la aduana marítima de Tabasco desde 1871."
+        "texto": "Cuando llegaron los españoles, en 1518, estas llanuras estaban muy pobladas por mayas chontales, y su centro principal era Potonchán. El 14 de marzo de 1519, en las llanuras de Cintla, Hernán Cortés libró la Batalla de Centla, considerada el primer gran choque armado entre indígenas y españoles en la Nueva España. Días después fundó aquí la villa de Santa María de la Victoria, que suele considerarse la primera población española del país."
       },
       {
         "titulo": "Geografía y clima",
-        "texto": "El territorio es completamente plano, con llanuras costeras, pantanos, dunas y llanura aluvial, y su altitud máxima es de 10 metros sobre el nivel del mar. Aquí se unen los ríos Grijalva y Usumacinta, los de mayor caudal del país, y llegan juntos al mar por la barra de Frontera; el punto donde se encuentran se conoce como Tres Brazos. Hay unas 16,117 hectáreas de lagunas, entre ellas El Viento, Chichicastle, El Tocoal, Santa Anita, El Loncho y San Pedrito, además de manglares y extensas zonas de pantano. Tiene cerca de 80 km de litoral y un clima tropical con lluvias regulares durante seis meses del año."
+        "texto": "El territorio es completamente plano, con llanuras costeras, pantanos, dunas y llanura aluvial, y su altitud máxima es de 10 metros sobre el nivel del mar. Aquí se unen los ríos Grijalva y Usumacinta, los de mayor caudal del país, y llegan juntos al mar por la barra de Frontera. Tiene cerca de 80 km de litoral y un clima tropical con lluvias regulares durante seis meses del año."
       },
       {
         "titulo": "Reserva de la Biosfera Pantanos de Centla",
-        "texto": "Decretada reserva de la biosfera en 1992, abarca 302,706 hectáreas en el delta que forman el Usumacinta y el Grijalva, e incluye zonas de Centla, Jonuta y Macuspana, y se le considera uno de los humedales más importantes del mundo. Se han identificado unas 260 especies de plantas y, entre otras, 39 de peces, 60 de mamíferos y 110 de aves; manatíes, cocodrilos, tortuga blanca y cigüeña jabirú figuran entre las especies amenazadas. Dentro de la reserva están la estación Tres Brazos, centro de vigilancia y monitoreo, y la Casa del Agua, con museo, torre panorámica y muelle para recorridos turísticos."
+        "texto": "Decretada reserva de la biosfera en 1992, abarca 302,706 hectáreas en el delta que forman el Usumacinta y el Grijalva, e incluye zonas de Centla, Jonuta y Macuspana, y se le considera uno de los humedales más importantes del mundo. Manatíes, cocodrilos, tortuga blanca y cigüeña jabirú figuran entre las especies amenazadas."
       },
       {
         "titulo": "Economía",
-        "texto": "Durante los años noventa el coco dominaba el campo (en 1997 ocupó el 70 % de la superficie sembrada), junto con maíz, frijol y pimienta, y la ganadería se practicaba de forma extensiva. La pesca sigue siendo importante: con 80 km de litoral, se considera el municipio de mayor potencial pesquero del estado y se capturan pigua, camarón, róbalo y mojarra. La industria más relevante son los talleres de reparación de embarcaciones, el mayor de ellos el de la Quinta Zona Naval Militar, y el comercio se ha ampliado con cadenas y autoservicios en Frontera y en las villas."
-      },
-      {
-        "titulo": "Qué visitar",
-        "texto": "Las playas Miramar (unos 5 km de longitud, a 65 km de Villahermosa), Pico de Oro (unos 3 km, a 70 km), El Bosque (a 90 km), La Bocana y La Victoria reciben sobre todo a visitantes locales y regionales. En La Bocana, sobre la bahía que forma el Grijalva antes de llegar al mar, se pueden hacer recorridos en lancha hasta mar abierto. En la reserva se practica el ecoturismo y el avistamiento de aves. La feria municipal se celebra en la última semana de mayo, la Feria de la Integración de Frontera va del 26 de enero al 2 de febrero y el 1 de diciembre comienzan las fiestas patronales de la Virgen de Guadalupe."
+        "texto": "La pesca sigue siendo importante: con 80 km de litoral, se considera el municipio de mayor potencial pesquero del estado y se capturan pigua, camarón, róbalo y mojarra. Durante los años noventa el coco dominaba el campo. La industria más relevante son los talleres de reparación de embarcaciones, y el comercio se ha ampliado con cadenas y autoservicios en Frontera y en las villas."
       },
       {
         "titulo": "Ubicación y conexiones",
-        "texto": "Centla queda a unos 69 km en línea recta de Villahermosa, al norte del estado, frente al Golfo de México y con límite con Campeche al oriente. La cabecera es Frontera, ciudad y puerto. En el Censo 2020 tenía 107,731 habitantes en 200 localidades."
+        "texto": "Centla queda a unos 69 km en línea recta de Villahermosa, al norte del estado, frente al Golfo de México y con límite con Campeche al oriente. La cabecera es Frontera, ciudad y puerto. Tiene 200 localidades."
       }
     ],
     "fuentes": [
@@ -322,23 +294,19 @@
     "secciones": [
       {
         "titulo": "Historia",
-        "texto": "Macuspana fue un asentamiento maya chontal que surgió donde se juntan el río Puxcatán y el arroyo Huapinol. Según la tradición, en 1665 apareció en ese punto una imagen del Señor de la Salud, guardada en una caja de cedro; el cura de Jalapa dispuso construir una ermita y a su alrededor se pobló la actual cabecera. En 1825 se creó el partido de Macuspana y en 1883 pasó a ser uno de los 17 municipios del estado. En 1848 la villa sirvió como sede provisional del gobierno estatal, y en 1860 el presbítero Manuel Gil y Sáenz, guiado por indígenas, halló cerca de San Fernando un afloramiento de petróleo: el primer aviso de una riqueza que aún se extrae en campos como Fortuna Nacional, José Colomo, Vernet y Sarlat. Macuspana recibió la categoría de ciudad en 1930."
+        "texto": "Macuspana fue un asentamiento maya chontal que surgió donde se juntan el río Puxcatán y el arroyo Huapinol. En 1825 se creó el partido de Macuspana y en 1883 pasó a ser uno de los 17 municipios del estado. En 1860 el presbítero Manuel Gil y Sáenz, guiado por indígenas, halló cerca de San Fernando un afloramiento de petróleo: el primer aviso de una riqueza que aún se extrae. Macuspana recibió la categoría de ciudad en 1930."
       },
       {
         "titulo": "Geografía y clima",
-        "texto": "La mayor parte del territorio es plana, pero al sur el terreno se eleva en lomeríos y montañas, primeras estribaciones de la sierra, y la altura media es de 32 metros; hay cerros como El Tortuguero, El Encajonado, El Campanario y La Paloma, además del Tepezintla, en el límite con Chiapas. En el norte hay una planicie pantanosa incluida en la Reserva de la Biosfera Pantanos de Centla. Lo cruzan los ríos Tepetitán, Puxcatán, Tulijá, Maluco, Sácame si Puedes y Chilapa, y tiene unas 27 lagunas que suman más de 12,000 hectáreas. El clima es cálido y húmedo, con lluvias abundantes en verano —según la fuente, más de 3,000 mm al año— y, en la parte sur, lluvias durante todo el año. En el Parque Estatal Agua Blanca y en la reserva sobreviven especies en peligro como el mono saraguato y el jaguar."
+        "texto": "La mayor parte del territorio es plana, pero al sur el terreno se eleva en lomeríos y montañas, primeras estribaciones de la sierra, y la altura media es de 32 metros. En el norte hay una planicie pantanosa incluida en la Reserva de la Biosfera Pantanos de Centla. Tiene unas 27 lagunas que suman más de 12,000 hectáreas. El clima es cálido y húmedo, con lluvias abundantes en verano —según la fuente, más de 3,000 mm al año— y, en la parte sur, lluvias durante todo el año."
       },
       {
         "titulo": "Economía",
-        "texto": "Los cultivos básicos son maíz, frijol y yuca, sobre todo para autoconsumo, y en 2016 se sembraron además cerca de 800 hectáreas de hule. La ganadería es extensiva y, aunque hay unas 27 lagunas, la pesca está poco desarrollada. La actividad industrial gira en torno al petróleo y al gas: aquí se encuentra el Complejo Procesador de Gas Ciudad Pemex, de los principales productores de gas del país, desde donde salen gasoductos hacia el centro de México y hacia Mérida, además de campos petroleros y de una planta de cemento. La ciudad de Macuspana concentra un intenso comercio de ropa, muebles, alimentos, ferretería y materiales de construcción."
-      },
-      {
-        "titulo": "Qué visitar",
-        "texto": "Las Cascadas y grutas de Agua Blanca son el principal centro turístico: hay varias cascadas, albercas, restaurante y grutas que se pueden explorar, dentro de un parque ecológico estatal de selva protegida. En la ciudad, el malecón del río Puxcatán permite ver fauna y vegetación locales, y la laguna Francisco Bates, la principal del municipio, se llena de bañistas en Semana Santa y en vacaciones de verano. Tepetitán es el poblado más antiguo de la zona, y el antiguo Campamento Sarlat marca el sitio donde en 1860 se descubrieron los primeros yacimientos de petróleo del estado. El sitio maya de El Tortuguero, donde se halló la célebre Estela 6, no está abierto al público. La fiesta de San Isidro y la feria municipal se celebran entre el 8 y el 19 de mayo."
+        "texto": "Los cultivos básicos son maíz, frijol y yuca, sobre todo para autoconsumo. La ganadería es extensiva y, aunque hay unas 27 lagunas, la pesca está poco desarrollada. La actividad industrial gira en torno al petróleo y al gas: aquí se encuentra el Complejo Procesador de Gas Ciudad Pemex, de los principales productores de gas del país. La ciudad de Macuspana concentra un intenso comercio de ropa, muebles, alimentos, ferretería y materiales de construcción."
       },
       {
         "titulo": "Ubicación y conexiones",
-        "texto": "Macuspana queda a unos 45 km en línea recta de Villahermosa. Se llega por la carretera federal 186 Villahermosa–Escárcega (entronque en el kilómetro 46), por la estatal Villahermosa–Jalapa–Macuspana y por la Jonuta–Ciudad Pemex–Macuspana. Tiene dos aeropistas, en Nicolás Bravo y en Ciudad Pemex, y dos estaciones del ferrocarril Coatzacoalcos–Mérida: El Zopo y Santuario 1.ª Sección. En el Censo 2020 registró 158,601 habitantes en 219 localidades."
+        "texto": "Macuspana queda a unos 45 km en línea recta de Villahermosa. Se llega por la carretera federal 186 Villahermosa–Escárcega y por la estatal Villahermosa–Jalapa–Macuspana. Tiene 219 localidades."
       }
     ],
     "fuentes": [
@@ -361,23 +329,19 @@
     "secciones": [
       {
         "titulo": "Historia",
-        "texto": "Los primeros pobladores de los que se tiene memoria fueron los ahualulcos, que huyendo de los piratas dejaron la costa de Cárdenas y fundaron pueblos como Huimango, Cúlico, Anta, Cucultiupa y Cimatán. Cultivaban cacao y comerciaban con Yucatán y el Altiplano Central; cuando llegaron los españoles, Cimatán era el punto de mayor comercio del área. Los cimatecos resistieron con tenacidad y fueron los últimos tabasqueños en rendirse, hacia 1560. La actual cabecera se fundó el 8 de septiembre de 1625, entre Cucultiupa y Cimatán, como villa de la Natividad de Cunduacán. En 1863, en sus campos, el coronel Gregorio Méndez Magaña ganó la Batalla de El Jahuactal contra las tropas francesas."
+        "texto": "Los primeros pobladores de los que se tiene memoria fueron los ahualulcos, que huyendo de los piratas dejaron la costa de Cárdenas y fundaron pueblos como Huimango, Cúlico, Anta, Cucultiupa y Cimatán. La actual cabecera se fundó el 8 de septiembre de 1625 como villa de la Natividad de Cunduacán. En 1863, en sus campos, el coronel Gregorio Méndez Magaña ganó la Batalla de El Jahuactal contra las tropas francesas."
       },
       {
         "titulo": "Geografía y clima",
-        "texto": "Es un municipio completamente plano, parte de la llanura costera del Golfo, sin alturas mayores a 40 metros; la cabecera está a 10. El río Mezcalapa marca su límite sur con Centro y, poco antes de la ciudad de Cunduacán se divide en dos: una rama da origen al río Carrizal, que rodea Villahermosa por el oeste y el norte hasta unirse al Grijalva, y la otra forma el río Samaria, que cruza el municipio y sigue hacia Jalpa de Méndez y Nacajuca. También lo recorren los ríos Guayabal, Cucuyulapa, Barí y Tular, y tiene las lagunas Cucuyulapa y Ballona. El clima es cálido y húmedo, con lluvias abundantes en verano y una temperatura media anual de unos 26 °C. Por la ganadería y la agricultura ya casi no queda vegetación original, salvo una pequeña porción de selva junto a Cárdenas."
+        "texto": "Es un municipio completamente plano, parte de la llanura costera del Golfo, sin alturas mayores a 40 metros; la cabecera está a 10. El río Mezcalapa marca su límite sur con Centro y, poco antes de la ciudad de Cunduacán se divide en dos: una rama da origen al río Carrizal y la otra forma el río Samaria. El clima es cálido y húmedo, con lluvias abundantes en verano y una temperatura media anual de unos 26 °C."
       },
       {
         "titulo": "Economía",
-        "texto": "En cacao ocupa el segundo lugar estatal, tanto en superficie sembrada como en volumen, y también se cultivan plátano, caña de azúcar, pimienta, coco, maíz, frijol y naranja. La pesca es de autoconsumo y la ganadería, extensiva. Pemex ocupa con sus instalaciones buena parte del municipio, más de la mitad, y rodea la cabecera: hay baterías de separación, estaciones de compresión, una planta deshidratadora y decenas de corredores de ductos, como los de Ciudad Pemex–Coatzacoalcos y Cactus–Dos Bocas. Su ubicación, en el corazón de la zona petrolera y cerca del puerto de Dos Bocas, ha impulsado la instalación de empresas, entre ellas un parque industrial."
-      },
-      {
-        "titulo": "Qué visitar",
-        "texto": "La hacienda La Chonita, de 1800 y con 30 hectáreas, es parada obligada de la ruta del cacao y ofrece talleres de chocolate, recorridos por las plantaciones y hospedaje rural. A unos 5 km de la cabecera, la iglesia de Las Mirandillas (templo Padre Jesús de Nazaret) conserva en su fachada barroca la inscripción «Año de 1724» y es considerada patrimonio cultural de la nación. En el centro se encuentran el templo de la Natividad de María, de 1725, y dos murales del pintor Marcelino Colorado Hernández: uno sobre la Batalla de El Jahuactal y otro, «Historia de Tabasco», en el palacio municipal. La feria municipal se celebra a inicios de mayo, y cada 8 de septiembre se recuerda el día en que se fundó la villa."
+        "texto": "En cacao ocupa el segundo lugar estatal, tanto en superficie sembrada como en volumen, y también se cultivan plátano, caña de azúcar, pimienta, coco, maíz, frijol y naranja. Pemex ocupa con sus instalaciones buena parte del municipio, más de la mitad, y rodea la cabecera."
       },
       {
         "titulo": "Ubicación y conexiones",
-        "texto": "Cunduacán queda a unos 25 km en línea recta de Villahermosa y colinda con Cárdenas, Comalcalco, Jalpa de Méndez, Nacajuca, Centro y Chiapas. En el Censo 2020 tenía 137,257 habitantes en 116 localidades."
+        "texto": "Cunduacán queda a unos 25 km en línea recta de Villahermosa y colinda con Cárdenas, Comalcalco, Jalpa de Méndez, Nacajuca, Centro y Chiapas. Tiene 116 localidades."
       }
     ],
     "fuentes": [
@@ -400,23 +364,19 @@
     "secciones": [
       {
         "titulo": "Historia",
-        "texto": "La ocupación de este territorio podría remontarse al periodo preclásico maya, y en él floreció la ciudad de Pomoná. Hernán Cortés pasó por aquí en 1525 rumbo a las Hibueras; en 1537 se fundó la villa de San Pedro Tanoche, que pronto se despobló por la lejanía y la hostilidad indígena, y un mapa de la provincia de 1579 ya registra el pueblo de Tenosique. Entre 1854 y 1858 formó parte del efímero Territorio del Carmen. A fines del siglo XIX el hule y las maderas preciosas dieron un gran auge a la villa, y el municipio se creó el 30 de junio de 1890, separándose de Balancán. En 1911 un ajuste de límites entregó a Chiapas una parte de su territorio, que incluye la zona arqueológica de Yaxchilán. El primer tren de pasajeros llegó a la ciudad el 6 de enero de 1947."
+        "texto": "La ocupación de este territorio podría remontarse al periodo preclásico maya, y en él floreció la ciudad de Pomoná. Un mapa de la provincia de 1579 ya registra el pueblo de Tenosique. A fines del siglo XIX el hule y las maderas preciosas dieron un gran auge a la villa, y el municipio se creó el 30 de junio de 1890, separándose de Balancán."
       },
       {
         "titulo": "Geografía y clima",
-        "texto": "Es de relieve bajo, con lomeríos aislados y de escasa pendiente; solo en el límite con Guatemala hay un pequeño macizo de unos 250 metros de altura. Por Tenosique entra a México el río Usumacinta, uno de los mayores del país, con raudales como San José, Agua Azul, Anaité y Colorado; también entra por aquí el río San Pedro Mártir, que viene del Petén y se une al Usumacinta en Balancán. Buena parte de su selva forma parte de la Reserva Ecológica Cañón del Usumacinta. El clima es cálido y húmedo, con lluvias durante todo el año y mucho calor de marzo a junio."
+        "texto": "Es de relieve bajo, con lomeríos aislados y de escasa pendiente; solo en el límite con Guatemala hay un pequeño macizo de unos 250 metros de altura. Por Tenosique entra a México el río Usumacinta, uno de los mayores del país. Buena parte de su selva forma parte de la Reserva Ecológica Cañón del Usumacinta. El clima es cálido y húmedo, con lluvias durante todo el año y mucho calor de marzo a junio."
       },
       {
         "titulo": "Economía",
-        "texto": "La economía antigua giraba en torno al chicle y las maderas preciosas; con la llegada del ferrocarril y de la carretera a la capital ganaron peso la agricultura y la ganadería. Hoy se siembran sobre todo maíz, frijol, sandía, chile verde y caña de azúcar, y la ganadería de bovinos de carne y leche era, según la fuente, la tercera del estado. La pesca es de autoconsumo, aunque el Usumacinta ofrece unos 300 km de cuenca con gran potencial. También hay aserraderos, carpinterías, apicultura y elaboración de quesos, y el gobierno local promueve el turismo como forma de proteger su patrimonio arqueológico."
-      },
-      {
-        "titulo": "Qué visitar",
-        "texto": "La zona arqueológica de Pomoná es una de las más importantes del estado y tiene museo de sitio; San Claudio, descubierta en 1997 al construir la carretera hacia El Ceibo, tiene 94 estructuras y 20 entierros, y Panhalé fue un mirador maya sobre el Usumacinta, a 5 km de la ciudad. A 23 km al sur, en Santo Tomás, se ubican los cenotes Yaax Ha y Aktun Ha, los únicos que se conocen en Tabasco, y varias cuevas. Los rápidos de San José y Desempeño se recorren en rafting, y el balneario Boca del Cerro, junto al puente del mismo nombre, ofrece restaurantes, palapas y paseos en lancha hacia el Cañón del Usumacinta. Cada febrero se celebra el Carnaval, de raíces prehispánicas, con la Danza del Pochó y el lanzamiento de harina."
+        "texto": "La economía antigua giraba en torno al chicle y las maderas preciosas; con la llegada del ferrocarril y de la carretera a la capital ganaron peso la agricultura y la ganadería. Hoy se siembran sobre todo maíz, frijol, sandía, chile verde y caña de azúcar. La pesca es de autoconsumo, aunque el Usumacinta ofrece unos 300 km de cuenca con gran potencial."
       },
       {
         "titulo": "Ubicación y conexiones",
-        "texto": "Tenosique queda a unos 171 km en línea recta de Villahermosa, en la frontera con Guatemala. La carretera federal 203 lo comunica con Emiliano Zapata y con la capital del estado; la internacional hacia El Ceibo y Tikal, terminada en 2009, lo une con Guatemala, y la estatal Tulipán–Balancán, con Balancán. El paso fronterizo de El Ceibo abrió el 27 de octubre de 2009. En el Censo 2020 tenía 62,310 habitantes en 136 localidades."
+        "texto": "Tenosique queda a unos 171 km en línea recta de Villahermosa, en la frontera con Guatemala. La carretera federal 203 lo comunica con Emiliano Zapata y con la capital del estado, y la internacional hacia El Ceibo y Tikal lo une con Guatemala. Tiene 136 localidades."
       }
     ],
     "fuentes": [
@@ -439,23 +399,19 @@
     "secciones": [
       {
         "titulo": "Historia",
-        "texto": "Los asentamientos más antiguos que se conocen se remontan al siglo V a. C., época en que grupos mayas empezaron a ocupar las tierras bajas junto al Usumacinta; en sus ruinas del preclásico hay objetos de origen olmeca, señal de intercambio con esa civilización. Cuando Hernán Cortés pasó por aquí en 1525, las ciudades del clásico ya estaban abandonadas y en el sitio de la actual ciudad se encontraba el poblado de Istapan. Misioneros dominicos llamaron Monte de Cristo a la pequeña comunidad de la margen izquierda del río, de donde salió el nombre de Montecristo, que en 1883 se dio al municipio al separarse de Jonuta. Durante años fue paso obligado de los viajeros que remontaban el Usumacinta hacia Palenque, Bonampak y Yaxchilán. El 27 de diciembre de 1927 se le cambió el nombre por el de Emiliano Zapata."
+        "texto": "Los asentamientos más antiguos que se conocen se remontan al siglo V a. C., época en que grupos mayas empezaron a ocupar las tierras bajas junto al Usumacinta. Misioneros dominicos llamaron Monte de Cristo a la pequeña comunidad de la margen izquierda del río, de donde salió el nombre de Montecristo, que en 1883 se dio al municipio al separarse de Jonuta. El 27 de diciembre de 1927 se le cambió el nombre por el de Emiliano Zapata."
       },
       {
         "titulo": "Geografía y clima",
-        "texto": "Casi todo el territorio es plano, con lomeríos que no pasan de 30 metros de altura en el centro y alrededor de la cabecera. El río principal es el Usumacinta, que recibe las aguas del Chacamax y de arroyos como Hondo, Jobo y Pochote. Su potencial lacustre es de unas 32,800 hectáreas, con lagunas como Mariche, Saquilá, Chaschoc, Seja, San Ignacio, San Marcos, San Francisco, Guanal, Chacamax, Chinchil, Nueva Esperanza, Las Delicias y Pochote. El clima es cálido y húmedo, con lluvias abundantes en verano y otoño y cerca de 1,860 milímetros al año; septiembre es el mes más lluvioso y abril el más seco."
+        "texto": "Casi todo el territorio es plano, con lomeríos que no pasan de 30 metros de altura en el centro y alrededor de la cabecera. El río principal es el Usumacinta, que recibe las aguas del Chacamax y de arroyos como Hondo, Jobo y Pochote. Su potencial lacustre es de unas 32,800 hectáreas. El clima es cálido y húmedo, con lluvias abundantes en verano y otoño y cerca de 1,860 milímetros al año."
       },
       {
         "titulo": "Economía",
-        "texto": "El campo es un recurso clave, con maíz, arroz, frijol, sorgo y sandía. La ganadería se practica de forma extensiva, con unas 49 mil cabezas y predominio de razas cebuínas como brahmán, nelore, indubrasil y gyr. La pesca ribereña es una de las actividades más importantes, con róbalo, carpa, mojarra, bobo, pejelagarto y pigua. La industria es de mediana importancia: fábricas de hielo, purificadoras de agua, escobas, muebles, materiales de construcción y pequeños negocios familiares como queserías, molinos de nixtamal y dulces. Cerca de la cabecera hay además un vivero forestal que suministra plantas de eucalipto a los municipios vecinos."
-      },
-      {
-        "titulo": "Qué visitar",
-        "texto": "Se le llama el «Balcón del Usumacinta» porque la ciudad, construida sobre suaves colinas, ofrece vistas panorámicas del río; en la temporada de estiaje, cerca de abril, aparecen playones frente a ella donde se baña la gente y hay música y deportes acuáticos. Antes de llegar a la ciudad, el parador de la laguna Nueva Esperanza tiene restaurantes y es buen sitio para pescar. La laguna Chas-Choc recibe aves migratorias de enero a fines de mayo, y en sus alrededores se escucha al mono saraguato. En la villa Chable se conserva la fachada de la segunda iglesia más antigua de Tabasco y el casco de una antigua hacienda. El Parqueológico, de 52 hectáreas, ofrece paseos a caballo y en bicicleta y una pista de motocross."
+        "texto": "El campo es un recurso clave, con maíz, arroz, frijol, sorgo y sandía. La ganadería se practica de forma extensiva, con unas 49 mil cabezas. La pesca ribereña es una de las actividades más importantes, con róbalo, carpa, mojarra, bobo, pejelagarto y pigua. La industria es de mediana importancia: fábricas de hielo, purificadoras de agua, escobas, muebles y materiales de construcción."
       },
       {
         "titulo": "Ubicación y conexiones",
-        "texto": "Emiliano Zapata queda a unos 127 km en línea recta de Villahermosa, en el oriente de Tabasco, con Campeche al norte y Chiapas al sur. La carretera federal 203 lo comunica con Tenosique y con la capital del estado. En el Censo 2020 tenía 32,181 habitantes en 69 localidades, con un crecimiento medio de 0.89 % anual desde 2010."
+        "texto": "Emiliano Zapata queda a unos 127 km en línea recta de Villahermosa, en el oriente de Tabasco, con Campeche al norte y Chiapas al sur. La carretera federal 203 lo comunica con Tenosique y con la capital del estado. Tiene 69 localidades."
       }
     ],
     "fuentes": [
@@ -478,23 +434,19 @@
     "secciones": [
       {
         "titulo": "Historia",
-        "texto": "Los mayas habitaron esta zona desde el preclásico; en Aguada Fénix, sitio anunciado en 2017, se han fechado construcciones hacia el año 1000 a. C., y entre los años 250 y 600 d. C. surgieron centros como Moral-Reforma, El Arenal, Santa Elena y Tierra Blanca. En el posclásico el territorio perteneció al señorío chontal de Acalán. En 1535 el capitán Alonso de Ávila fundó aquí la villa de Salamanca de Acalán, primera población española de la zona, que abandonó meses después ante los ataques mayas. Entre 1668 y 1671 los pueblos del Usumacinta se sublevaron contra los abusos coloniales, hasta que fueron sometidos por un ejército. En 1854 Balancán pasó al efímero Territorio del Carmen y volvió a Tabasco en 1857; en 1883 quedó como uno de los 17 municipios del estado. Su cabecera lleva el nombre del coronel José Eusebio Domínguez Suárez, muerto en el combate del 18 de agosto de 1914. A los balancanenses se les llama «mata-cura» por un episodio de 1930, en tiempos de Tomás Garrido Canabal."
+        "texto": "Los mayas habitaron esta zona desde el preclásico; en Aguada Fénix, sitio anunciado en 2017, se han fechado construcciones hacia el año 1000 a. C. En el posclásico el territorio perteneció al señorío chontal de Acalán. En 1854 Balancán pasó al efímero Territorio del Carmen y volvió a Tabasco en 1857; en 1883 quedó como uno de los 17 municipios del estado."
       },
       {
         "titulo": "Geografía y clima",
-        "texto": "Con 3,577 km², es el segundo municipio más extenso de Tabasco, después de Huimanguillo, y representa el 16.4 % de la superficie estatal. El terreno es plano con pequeños lomeríos; la cabecera está a 30 metros sobre el nivel del mar y el resto del municipio va de los 10 a los 50. Lo riegan los ríos Usumacinta y San Pedro y tiene unas 48 lagunas, entre ellas El Mangal, Chaschoc, Multé, Suniná y el Popalillo, en pleno centro de la ciudad. El clima es cálido húmedo con lluvias en verano; en el noroeste, junto a Campeche y Guatemala, es cálido subhúmedo y es la zona menos lluviosa del estado. La fuente consultada apunta que ahí no llueve más de 1,865 mm al año, con una temperatura media de 26 °C. Los cedros, ceibas, guayacanes y otras maderas siguen presentes, aunque la vegetación ha sufrido mucho."
+        "texto": "Con 3,577 km², es el segundo municipio más extenso de Tabasco, después de Huimanguillo, y representa el 16.4 % de la superficie estatal. El terreno es plano con pequeños lomeríos; la cabecera está a 30 metros sobre el nivel del mar. Lo riegan los ríos Usumacinta y San Pedro y tiene unas 48 lagunas. El clima es cálido húmedo con lluvias en verano; en el noroeste, junto a Campeche y Guatemala, es cálido subhúmedo y es la zona menos lluviosa del estado."
       },
       {
         "titulo": "Economía",
-        "texto": "La ganadería extensiva es la actividad principal: en 1997 se registraron unas 294 mil cabezas de bovino, y el 77 % del territorio se destinaba a pastizales. En 1972 el Plan Balancán–Tenosique desmontó cerca de 200 mil hectáreas de selva para convertirlas en pastos y cultivos, con costos ambientales serios. Se siembran maíz, arroz, sorgo, frijol y sandía, esta última con destino a la exportación, y desde finales de los noventa cobró fuerza la papaya, con una empacadora. En la cabecera destaca la elaboración de quesos y otros lácteos, además de dulces y conservas. La pesca ribereña captura robalo, mojarra, bobo, pejelagarto y pigua, sobre todo en la cabecera y en San Pedro."
-      },
-      {
-        "titulo": "Qué visitar",
-        "texto": "Durante el estiaje se forman playones en el Usumacinta —Vicente Guerrero, Netzahualcóyotl, Multé y Balancán— y se abren los balnearios de Reforma y El Limón, además del arroyo El Chorrito, en Mactún. Las lagunas Popalillo, Leona Vicario y Misicab son otros sitios de paseo. Entre los vestigios prehispánicos figuran las zonas arqueológicas de Moral-Reforma y Santa Elena, y en la cabecera el Museo Arqueológico José Gómez Panaco. La primera feria municipal se celebró en 1965 y es una tradición hasta hoy."
+        "texto": "La ganadería extensiva es la actividad principal: en 1997 se registraron unas 294 mil cabezas de bovino, y el 77 % del territorio se destinaba a pastizales. Se siembran maíz, arroz, sorgo, frijol y sandía, esta última con destino a la exportación, y desde finales de los noventa cobró fuerza la papaya, con una empacadora. En la cabecera destaca la elaboración de quesos y otros lácteos, además de dulces y conservas."
       },
       {
         "titulo": "Ubicación y conexiones",
-        "texto": "Balancán queda a unos 154 km en línea recta de Villahermosa, en el oriente del estado, con Campeche al norte y al este y Guatemala al sur. Se llega por la carretera federal 186 Villahermosa–Escárcega y por la federal 203 hacia Tenosique; el puente sobre el Usumacinta, inaugurado en 1987, lo conecta con Emiliano Zapata y Tenosique. El Ferrocarril del Sureste tiene tres estaciones: Mactún, San Pedro y Villa El Triunfo. En el Censo 2020 registró 58,524 habitantes en 357 localidades."
+        "texto": "Balancán queda a unos 154 km en línea recta de Villahermosa, en el oriente del estado, con Campeche al norte y al este y Guatemala al sur. Se llega por la carretera federal 186 Villahermosa–Escárcega y por la federal 203 hacia Tenosique. Tiene 357 localidades."
       }
     ],
     "fuentes": [
@@ -517,23 +469,19 @@
     "secciones": [
       {
         "titulo": "Historia",
-        "texto": "Aquí estuvo Xonuta, ciudad maya chontal por donde pasaba el comercio que iba del puerto de Xicalango hacia el señorío de Acalán. Entre los siglos VIII y XIII fue un gran centro alfarero, y sus vasos, platos y figurillas de barro llegaron a lugares distantes de Mesoamérica. En 1579 los españoles trasladaron hasta aquí a los habitantes de Xicalango, y el sitio pasó a llamarse Jonuta. Una plaga de langostas en 1767 y las presiones de las autoridades coloniales dejaron el pueblo con apenas 131 vecinos en 1784. En 1825 se creó el partido de Jonuta, en 1844 fue cabecera del distrito de Usumacinta y en 1883 recibió el rango de municipio. Tras la intervención francesa, las tropas extranjeras ocuparon la ciudad desde marzo de 1863 y no la dejaron sino hasta 1866."
+        "texto": "Aquí estuvo Xonuta, ciudad maya chontal por donde pasaba el comercio que iba del puerto de Xicalango hacia el señorío de Acalán. Entre los siglos VIII y XIII fue un gran centro alfarero. En 1579 los españoles trasladaron hasta aquí a los habitantes de Xicalango, y el sitio pasó a llamarse Jonuta. En 1825 se creó el partido de Jonuta y en 1883 recibió el rango de municipio."
       },
       {
         "titulo": "Geografía y clima",
-        "texto": "El terreno es plano, con algunos lomeríos que no rebasan los 30 metros. El Usumacinta cruza el municipio y forma las islas Montserrat y El Chinal; de él se desprenden los ríos Chico, San Antonio, Palizada y San Pedro y San Pablo, este último límite natural con Campeche. Entre sus lagunas están El Pital, La Sombra, Atascadero, Playa Larga y Laguna Alegre. Gran parte del territorio es pantano y forma parte de los Pantanos de Centla, reserva de la biosfera. El clima es cálido húmedo, con unos 26.5 °C de media y cerca de 2,000 mm de lluvia al año, con septiembre como el mes más lluvioso y enero como el más seco."
+        "texto": "El terreno es plano, con algunos lomeríos que no rebasan los 30 metros. El Usumacinta cruza el municipio y forma las islas Montserrat y El Chinal. Gran parte del territorio es pantano y forma parte de los Pantanos de Centla, reserva de la biosfera. El clima es cálido húmedo, con unos 26.5 °C de media y cerca de 2,000 mm de lluvia al año, con septiembre como el mes más lluvioso y enero como el más seco."
       },
       {
         "titulo": "Economía",
-        "texto": "Se cultivan maíz, frijol, sorgo y arroz, y la ganadería bovina para carne y leche es la base del campo: la fuente consultada lo considera la principal cuenca lechera del estado, y de ahí salen quesos y mantequillas. La pesca aprovecha unas 14,600 hectáreas de aguas interiores, donde se capturan mojarra, pejelagarto, pigua, robalo, bobo, guabina y topén; buena parte se vende en Villahermosa y otra llega hasta Veracruz, Puebla y la Ciudad de México. La industria es pequeña: lácteos, conservas, lanchas de fibra de vidrio, blocks, muebles y artesanías."
-      },
-      {
-        "titulo": "Qué visitar",
-        "texto": "Casi todo lo que ver está en la cabecera. El Cuyo, hecho de arcilla, fue una pirámide de la antigua Xonuta; una escalera lleva a la cima, con vista de toda la ciudad. El Museo Arqueológico de Jonuta, de dos niveles, muestra piezas mayas encontradas alrededor del Cuyo, además de objetos de la intervención francesa, de la Revolución y de la vida cotidiana de los siglos XIX y XX. En la temporada seca el río Usumacinta deja playones frente a la ciudad, y en Semana Santa se organizan actividades deportivas y musicales. Entre las artesanías destacan la talla en madera, la talabartería, los sombreros y abanicos de fibra de jacinto y bejuco, y las figuras de barro."
+        "texto": "Se cultivan maíz, frijol, sorgo y arroz, y la ganadería bovina para carne y leche es la base del campo: la fuente consultada lo considera la principal cuenca lechera del estado, y de ahí salen quesos y mantequillas. La pesca aprovecha unas 14,600 hectáreas de aguas interiores, donde se capturan mojarra, pejelagarto, pigua, robalo, bobo, guabina y topén. La industria es pequeña: lácteos, conservas, lanchas de fibra de vidrio, blocks, muebles y artesanías."
       },
       {
         "titulo": "Ubicación y conexiones",
-        "texto": "Jonuta queda a unos 87 km en línea recta de Villahermosa, sobre el Usumacinta y cerca del límite con Campeche. Se llega por la carretera estatal Ciudad Pemex–Jonuta y por las interestatales Zapatero–Jonuta y Palizada–Jonuta; también hay embarcaciones que navegan el río hacia comunidades de los Pantanos de Centla. En el Censo 2020 tenía 30,798 habitantes en 157 localidades."
+        "texto": "Jonuta queda a unos 87 km en línea recta de Villahermosa, sobre el Usumacinta y cerca del límite con Campeche. Se llega por la carretera estatal Ciudad Pemex–Jonuta y por las interestatales Zapatero–Jonuta y Palizada–Jonuta. Tiene 157 localidades."
       }
     ],
     "fuentes": [
@@ -556,23 +504,19 @@
     "secciones": [
       {
         "titulo": "Historia",
-        "texto": "Su nombre viene del náhuatl Xal-apan, «ribera de arena». Se cree que la antigua Zagoatán, mencionada por Hernán Cortés y Bernal Díaz del Castillo en su viaje a las Hibueras, estuvo donde hoy se levanta la ciudad. En 1614 se ordenó levantar aquí iglesias y casas reales, y hacia 1700 era una de las villas más importantes de la provincia, paso obligado hacia Tacotalpa, entonces capital. En 1677 las fuerzas tabasqueñas derrotaron en Astapa a corsarios ingleses que iban a atacar la capital. En 1833 el cólera diezmó a la población, y en 1863 las tropas del coronel Lino Merino y los hermanos Bastar Sozaya tomaron el pueblo a los invasores franceses. En 1873 se instaló aquí el primer ingenio azucarero de vapor del estado, y en 1883 Jalapa quedó como uno de los 17 municipios de Tabasco."
+        "texto": "Su nombre viene del náhuatl Xal-apan, «ribera de arena». Se cree que la antigua Zagoatán, mencionada por Hernán Cortés y Bernal Díaz del Castillo en su viaje a las Hibueras, estuvo donde hoy se levanta la ciudad. Hacia 1700 era una de las villas más importantes de la provincia, paso obligado hacia Tacotalpa, entonces capital. En 1873 se instaló aquí el primer ingenio azucarero de vapor del estado, y en 1883 Jalapa quedó como uno de los 17 municipios de Tabasco."
       },
       {
         "titulo": "Geografía y clima",
-        "texto": "La mayor parte del municipio es planicie, con pequeños lomeríos al noreste, en el límite con Macuspana y Centro. Su río principal es el de la Sierra, nombre que toma el Tacotalpa al cruzar Jalapa, y al que se suman los ríos Teapa y Puyacatengo; también pasa el Puente Grande, el Teapa marca el límite con Centro y el San Cristóbal, con Macuspana. Tiene varios arroyos y tres lagunas que suman unas 450 hectáreas. Entre su fauna hay mono aullador, mono araña, tepezcuintle, tucán, iguana y cocodrilo, algunas de ellas en peligro. Con 643 km², es un municipio pequeño, poco más del 2.6 % del estado."
+        "texto": "La mayor parte del municipio es planicie, con pequeños lomeríos al noreste, en el límite con Macuspana y Centro. Su río principal es el de la Sierra, nombre que toma el Tacotalpa al cruzar Jalapa, y al que se suman los ríos Teapa y Puyacatengo. Tiene varios arroyos y tres lagunas que suman unas 450 hectáreas. Con 643 km², es un municipio pequeño, poco más del 2.6 % del estado."
       },
       {
         "titulo": "Economía",
-        "texto": "Vive sobre todo de la ganadería y del comercio a pequeña escala; mucha gente trabaja en el ayuntamiento o viaja a Villahermosa. En el campo se siembran granos básicos y frutales, con el maíz como cultivo principal. La imagen del municipio la dan sus productos artesanales: las pastas de fruta envueltas en joloche, el chile amashito curtido, los quesos y el rompope de la cabecera. En los últimos años también creció el cultivo de palma de aceite, y hay una planta que la procesa."
-      },
-      {
-        "titulo": "Qué visitar",
-        "texto": "Lo más característico son los dulces en hoja de joloche —de naranja, de coco con piña o de coco con camote—, el rompope y las artesanías en madera, barro y piel. En la temporada seca y en Semana Santa la gente va al playón de Buena Vista y a Astapa a bañarse en el río de la Sierra. En Astapa, el parque principal conserva un cañón de un barco pirata que recuerda el triunfo sobre los corsarios ingleses, y también hay una iglesia. La feria municipal va del 14 al 29 de junio; la fiesta de San Sebastián en Jahuacapa es el 20 de enero, y la de Astapa, el quinto viernes de Cuaresma."
+        "texto": "Vive sobre todo de la ganadería y del comercio a pequeña escala; mucha gente trabaja en el ayuntamiento o viaja a Villahermosa. En el campo se siembran granos básicos y frutales, con el maíz como cultivo principal. La imagen del municipio la dan sus productos artesanales: las pastas de fruta envueltas en joloche, el chile amashito curtido, los quesos y el rompope de la cabecera."
       },
       {
         "titulo": "Ubicación y conexiones",
-        "texto": "Jalapa queda a unos 36 km en línea recta de Villahermosa, en la subregión de la Sierra; colinda con Centro, Macuspana, Tacotalpa y Teapa. En el Censo 2020 tenía 37,749 habitantes en 64 localidades."
+        "texto": "Jalapa queda a unos 36 km en línea recta de Villahermosa, en la subregión de la Sierra; colinda con Centro, Macuspana, Tacotalpa y Teapa. Tiene 64 localidades."
       }
     ],
     "fuentes": [
@@ -595,23 +539,19 @@
     "secciones": [
       {
         "titulo": "Historia",
-        "texto": "Su nombre viene del náhuatl y se interpreta como «tierra de breñas y malezas». Zoques de cultura maya se asentaron aquí hacia los siglos V y VI, y en las grutas de Cuesta Chica, cerca de Tapijulapa, se hallaron piezas de los siglos VIII a X que apuntan a un uso ceremonial. En 1546 los franciscanos iniciaron la colonización, y en 1572 empezó la construcción del convento de Oxolotán, que los dominicos terminaron en 1633. En 1677, después de que piratas ingleses incendiaron la capital de la provincia, el alcalde mayor Diego de Loyola trasladó los poderes a un sitio junto a Tacotalpa, llamado desde entonces Tacotalpa de la Real Corona; ese hecho se toma como la fundación de la ciudad. La iglesia de Nuestra Señora de la Asunción se levantó entre 1703 y 1710. En 1883 Tacotalpa quedó como uno de los 17 municipios del estado. Entre 1934 y 1936, en pleno garridismo, la cabecera se trasladó a Tapijulapa, donde el gobernador Tomás Garrido Canabal tenía la hacienda Villa Luz, y volvió a Tacotalpa en 1937."
+        "texto": "Su nombre viene del náhuatl y se interpreta como «tierra de breñas y malezas». En 1677, después de que piratas ingleses incendiaron la capital de la provincia, el alcalde mayor Diego de Loyola trasladó los poderes a un sitio junto a Tacotalpa, llamado desde entonces Tacotalpa de la Real Corona; ese hecho se toma como la fundación de la ciudad. En 1883 Tacotalpa quedó como uno de los 17 municipios del estado."
       },
       {
         "titulo": "Geografía y clima",
-        "texto": "Es tierra de cerros altos para Tabasco: El Madrigal, de 900 metros, es la segunda cumbre del estado, seguido de La Campana, Murciélago, Palo Quemado y Cora de Poaná. El río de la Sierra cruza el municipio de sur a norte y toma el nombre de Tacotalpa; lo acompañan el Puxcatán, el Oxolotán, el Amatán y El Chinal. El clima es cálido húmedo con lluvia todo el año: la temperatura media es de 25 °C y la fuente consultada registra más de 4,000 mm anuales, con octubre como el mes más lluvioso y abril como el más seco. Aún hay selva alta y mediana, donde se ven monos aulladores y guacamayas, y maderas como cedro rojo, caoba, jobo y ceiba. El municipio tiene 738 km² y 87 localidades según el Censo 2020."
+        "texto": "Es tierra de cerros altos para Tabasco: El Madrigal, de 900 metros, es la segunda cumbre del estado. El río de la Sierra cruza el municipio de sur a norte y toma el nombre de Tacotalpa. El clima es cálido húmedo con lluvia todo el año: la temperatura media es de 25 °C y la fuente consultada registra más de 4,000 mm anuales, con octubre como el mes más lluvioso y abril como el más seco."
       },
       {
         "titulo": "Economía",
-        "texto": "En el campo se siembran granos básicos, plátano y caña, con maíz y café como cultivos típicos de la sierra, y la ganadería es extensiva. La industria es mínima y se limita a talleres que hacen quesos y cremas. Tacotalpa es considerado uno de los municipios con mayor potencial forestal y agrícola de Tabasco, y el turismo ecológico y cultural, con Tapijulapa a la cabeza, va ganando peso. La artesanía local incluye muebles de madera, cestería de bejuco (que aquí llaman matusay), flores y figuras hechas con joloche y pintadas de colores, y sombreros de palma de guano en el ejido Miraflores."
-      },
-      {
-        "titulo": "Qué visitar",
-        "texto": "Tapijulapa, declarada Pueblo Mágico el 9 de junio de 2010, es el principal destino: calles adoquinadas, casas restauradas y el templo de Santiago Apóstol, del siglo XVII, con los ríos Oxolotán y Amatán a un lado. Desde ahí, un paseo en lancha de unos diez minutos lleva a Villa Luz, con pequeñas cascadas y arroyos de aguas sulfurosas, y cerca están las grutas donde vive la sardina ciega, que se celebra con una pesca ritual el Domingo de Ramos. En Oxolotán está el templo y exconvento de Santo Domingo de Guzmán (1572–1633), hoy sede del Museo de la Sierra. La iglesia de Nuestra Señora de la Asunción, en la cabecera, es de estilo renacentista franciscano y tiene torres de unos 25 metros. El centro ecoturístico Kolem Jaa ofrece cabañas, tirolesa y senderos, y el Parque Estatal de la Sierra protege más de 15,000 hectáreas de selva alta. La feria de Tapijulapa es del 23 al 25 de julio y la de Tacotalpa, del 12 al 18 de agosto."
+        "texto": "En el campo se siembran granos básicos, plátano y caña, con maíz y café como cultivos típicos de la sierra, y la ganadería es extensiva. La industria es mínima y se limita a talleres que hacen quesos y cremas. Tacotalpa es considerado uno de los municipios con mayor potencial forestal y agrícola de Tabasco, y el turismo ecológico y cultural, con Tapijulapa a la cabeza, va ganando peso."
       },
       {
         "titulo": "Ubicación y conexiones",
-        "texto": "Tacotalpa queda a unos 46 km en línea recta de Villahermosa, en la sierra, con Chiapas al sur y al este. Se llega por la carretera estatal Villahermosa–Jalapa–Tacotalpa o por la federal 195 hasta Teapa, y de ahí por la estatal Teapa–Tacotalpa. En el Censo 2020 tenía 47,905 habitantes."
+        "texto": "Tacotalpa queda a unos 46 km en línea recta de Villahermosa, en la sierra, con Chiapas al sur y al este. Se llega por la carretera estatal Villahermosa–Jalapa–Tacotalpa o por la federal 195 hasta Teapa, y de ahí por la estatal Teapa–Tacotalpa. Tiene 87 localidades."
       }
     ],
     "fuentes": [
@@ -634,23 +574,19 @@
     "secciones": [
       {
         "titulo": "Historia",
-        "texto": "Su nombre, del náhuatl, se interpreta como «río de piedras». Los primeros pobladores fueron zoques y, ya en la Colonia, el primer encomendero fue Bernal Díaz del Castillo en 1549, a quien se reconoce como fundador. Fray Bartolomé de las Casas pasó por aquí en 1544 rumbo a Chiapas, y entre 1715 y 1725 misioneros franciscanos levantaron las iglesias de piedra de Teapa y Tecomajiaca. En 1830 el gobierno federalista de Tabasco se refugió en la villa, y el Congreso le concedió el título de «Heroica» por haber sido bastión del federalismo. En 1851 fue elevada a ciudad y cabecera del departamento de la Sierra. En 1947 se inauguró la estación Morelos del Ferrocarril del Sureste, y la primera locomotora de vapor llegó el 12 de septiembre de 1949."
+        "texto": "Su nombre, del náhuatl, se interpreta como «río de piedras». Los primeros pobladores fueron zoques y, ya en la Colonia, el primer encomendero fue Bernal Díaz del Castillo en 1549, a quien se reconoce como fundador. En 1830 el gobierno federalista de Tabasco se refugió en la villa, y el Congreso le concedió el título de «Heroica» por haber sido bastión del federalismo. En 1851 fue elevada a ciudad y cabecera del departamento de la Sierra."
       },
       {
         "titulo": "Geografía y clima",
-        "texto": "Está en la transición entre la planicie y la sierra de Tabasco, con sierras bajas de pendientes suaves y cerros que no llegan a los 1,000 metros, como El Azufre y El Coconá; este último protege una zona natural de 442 hectáreas con grutas. Con 680 km², es el segundo municipio más pequeño del estado. Los ríos principales son Teapa, Puyacatengo y Pichucalco, y la laguna Sitio Grande. La cabecera está a 50 metros de altitud. El clima es cálido y húmedo, con lluvia todo el año y una media de casi 28 °C; septiembre es el mes más lluvioso y abril el menos. Domina la selva alta perennifolia, de 15 a 30 metros, con monos araña y aulladores, tepezcuintles, iguanas y cocodrilos."
+        "texto": "Está en la transición entre la planicie y la sierra de Tabasco, con sierras bajas de pendientes suaves y cerros que no llegan a los 1,000 metros, como El Azufre y El Coconá. Con 680 km², es el segundo municipio más pequeño del estado. El clima es cálido y húmedo, con lluvia todo el año y una media de casi 28 °C; septiembre es el mes más lluvioso y abril el menos."
       },
       {
         "titulo": "Economía",
-        "texto": "Es el principal productor de plátano de Tabasco: en 1997 ocupaba el 70 % de la superficie sembrada, y la fruta se vende en el centro del país y se exporta a Europa y Asia. También hay maíz, café, hule, naranja y otros frutales, ganadería extensiva y una pesca pequeña, de autoconsumo, en la laguna Sitio Grande. En lo industrial pesan las graveras, una fábrica de empaques de cartón y microindustrias de embutidos, lácteos y derivados del plátano. La ciudad concentra comercio, bancos y servicios para los alrededores."
-      },
-      {
-        "titulo": "Qué visitar",
-        "texto": "Según la fuente consultada, la ciudad recibió la denominación de Pueblo Mágico el 26 de junio de 2023, por sus monumentos, el manantial El Mure y sus casas del siglo XIX. Las Grutas de Coconá, a 2 km de la cabecera, tienen ocho salones, un recorrido de unos 500 metros con andadores, un lago interior y un espectáculo de luz y sonido. El balneario de aguas sulfurosas de la Hacienda El Azufre, sobre la federal 195, ofrece albercas, spa y cabañas, y el río Puyacatengo reúne varios balnearios que se llenan en Semana Santa. En la ciudad, el templo de Santiago Apóstol y el templo de Esquipulas (1780) son los principales monumentos, y el Mirador, a unos 60 metros de altura, da una vista del río Teapa. La charrería es una tradición local, con eventos en el Lienzo Charro, y la feria municipal va del 30 de abril al 5 de mayo."
+        "texto": "Es el principal productor de plátano de Tabasco: en 1997 ocupaba el 70 % de la superficie sembrada, y la fruta se vende en el centro del país y se exporta a Europa y Asia. También hay maíz, café, hule, naranja y otros frutales, ganadería extensiva y una pesca pequeña, de autoconsumo. En lo industrial pesan las graveras, una fábrica de empaques de cartón y microindustrias de embutidos, lácteos y derivados del plátano."
       },
       {
         "titulo": "Ubicación y conexiones",
-        "texto": "Teapa queda a unos 50 km en línea recta de Villahermosa, en el sur del estado y junto a Chiapas. La carretera federal 195 Villahermosa–Tuxtla Gutiérrez llega a la ciudad, a unos 50 km de la capital por carretera, y la estatal Teapa–Tacotalpa–Jalapa la une con la sierra. Cuenta con una estación del Ferrocarril del Sureste. En el Censo 2020 tenía 58,718 habitantes en 56 localidades."
+        "texto": "Teapa queda a unos 50 km en línea recta de Villahermosa, en el sur del estado y junto a Chiapas. La carretera federal 195 Villahermosa–Tuxtla Gutiérrez llega a la ciudad, y la estatal Teapa–Tacotalpa–Jalapa la une con la sierra. Tiene 56 localidades."
       }
     ],
     "fuentes": [
