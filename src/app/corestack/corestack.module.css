@@ -23,8 +23,6 @@
   -webkit-mask-image: radial-gradient(ellipse at center, black 0%, transparent 70%);
   mask-image: radial-gradient(ellipse at center, black 0%, transparent 70%);
   animation: gridPan 12s linear infinite;
-  /* Con cada ráfaga de rayos el suelo se ilumina (--carga la publica el efecto). */
-  filter: brightness(calc(1 + var(--carga, 0) * 1.6));
 }
 
 .scanlines {
@@ -56,21 +54,17 @@
   position: relative;
   z-index: 2;
   width: min(46vw, 220px);
-  animation: float 6s ease-in-out infinite;
 }
 
 .logo {
   display: block;
   width: 100%;
   height: auto;
-  /* Integra el logo al ambiente: tono azul eléctrico de la luz, contraste suave y un
-     resplandor eléctrico que sale del contorno hacia la fuente (arriba-izquierda)
-     con una sombra fría que cae hacia el lado contrario. */
+  /* Integra el logo al ambiente: tono azul eléctrico, contraste suave y un
+     resplandor propio del logo, igual por todos lados (no depende de la luz de arriba). */
   filter:
     saturate(1.05) contrast(1.04) brightness(1.02)
-    drop-shadow(-2px -2px 10px rgba(90, 190, 255, calc(0.28 + var(--carga, 0) * 0.5)))
-    drop-shadow(0 0 calc(var(--carga, 0) * 18px) rgba(120, 200, 255, calc(var(--carga, 0) * 0.85)))
-    drop-shadow(10px 14px 16px rgba(0, 0, 0, 0.65));
+    drop-shadow(0 0 10px rgba(90, 190, 255, 0.35));
 }
 
 /* Luz que barre el logo: degradado eléctrico desde la esquina de la fuente,
@@ -108,11 +102,6 @@
   animation: aparecer 1.6s ease-out 0.4s backwards;
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-14px); }
-}
-
 @keyframes aparecer {
   from { opacity: 0; }
   to   { opacity: 1; }
@@ -124,7 +113,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .grid, .logoWrap, .luzLogo, .titulo {
+  .grid, .luzLogo, .titulo {
     animation: none !important;
   }
 }

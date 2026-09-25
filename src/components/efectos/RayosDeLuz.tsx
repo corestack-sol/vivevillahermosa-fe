@@ -4,10 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import type { Oclusor } from '@/lib/rayosDeLuz';
 
 /**
- * Fondo de rayos de luz con polvo, animado en tiempo real. Debajo del canvas
- * va un degradado azul estático: se ve mientras arranca WebGL y es el
- * respaldo si el navegador no lo soporta. Con "reducir movimiento" activo se
- * dibuja un solo cuadro fijo.
+ * Fondo de rayos de luz con polvo, animado en tiempo real. Aparece con un fade
+ * in la primera vez. Si el navegador no soporta WebGL se muestra un degradado
+ * azul estático. Con "reducir movimiento" activo se dibuja un solo cuadro fijo.
  *
  * - `className` debe darle posición y tamaño (por ejemplo `fixed inset-0` o `relative h-screen`).
  * - `oclusor`: elemento (selector + imagen de silueta) con el que interactúa la luz.
@@ -16,7 +15,6 @@ import type { Oclusor } from '@/lib/rayosDeLuz';
  */
 export function RayosDeLuz({ className = 'relative h-full w-full', oclusor, modo = 'fondo' }: { className?: string; oclusor?: Oclusor; modo?: 'fondo' | 'sobre' }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [listo, setListo] = useState(false);
   const [fallo, setFallo] = useState(false);
 
   useEffect(() => {
@@ -35,7 +33,6 @@ export function RayosDeLuz({ className = 'relative h-full w-full', oclusor, modo
         estatico: reducir,
         oclusor,
         modo,
-        alPrimerCuadro: () => setListo(true),
         alFallar: () => setFallo(true),
       });
     };
@@ -56,15 +53,18 @@ export function RayosDeLuz({ className = 'relative h-full w-full', oclusor, modo
     // eslint-disable-next-line react-hooks/exhaustive-deps -- oclusor y modo son fijos durante la vida del efecto
   }, []);
 
+  // El fondo es negro hasta que el efecto arranca y aparece con un fade in DENTRO
+  // del shader (no con CSS): así el fade no se pierde aunque el navegador se
+  // trabe compilando el shader. El degradado azul solo es el respaldo si falla WebGL.
   return (
     <div
       className={`overflow-hidden ${className}`}
-      style={modo === 'sobre' ? undefined : { background: 'radial-gradient(ellipse at 0% 0%, #0a2a66 0%, #030a1c 45%, #000 80%)' }}
+      style={modo === 'sobre' || !fallo ? undefined : { background: 'radial-gradient(ellipse at 0% 0%, #0a2a66 0%, #030a1c 45%, #000 80%)' }}
     >
       <canvas
         ref={canvasRef}
         aria-hidden="true"
-        className={`absolute inset-0 h-full w-full transition-opacity duration-1000 ${listo && !fallo ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-0 h-full w-full ${fallo ? 'opacity-0' : ''}`}
       />
     </div>
   );

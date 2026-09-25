@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DURACION_CHISPAS, ESCALA_MINIMA, UMBRAL_CUADRO_MS, siguienteEscala, PERIODO_RAFAGA, calidadDeRender, campoDeSilueta, desenfocar, envolventeRafaga, FRAGMENT_SHADER, hayRayosOChispas, T_ESTATICO } from './rayosDeLuz';
+import { DURACION_CHISPAS, DURACION_FADE_IN, factorFadeIn, ESCALA_MINIMA, UMBRAL_CUADRO_MS, siguienteEscala, PERIODO_RAFAGA, calidadDeRender, campoDeSilueta, desenfocar, envolventeRafaga, FRAGMENT_SHADER, hayRayosOChispas, T_ESTATICO } from './rayosDeLuz';
 
 describe('calidadDeRender', () => {
   it('en escritorio usa la densidad del dispositivo con tope de 1.5', () => {
@@ -112,5 +112,29 @@ describe('calidad adaptativa', () => {
   });
   it('nunca vuelve a subir (evita oscilar entre dos calidades)', () => {
     expect(siguienteEscala(0.64, 8)).toBe(0.64);
+  });
+});
+
+describe('fade in de la primera aparición', () => {
+  it('empieza en negro y termina completo', () => {
+    expect(factorFadeIn(0)).toBe(0);
+    expect(factorFadeIn(DURACION_FADE_IN)).toBe(1);
+    expect(factorFadeIn(DURACION_FADE_IN + 5)).toBe(1);
+  });
+  it('sube de forma gradual y nunca retrocede', () => {
+    let previo = -1;
+    for (let s = 0; s <= DURACION_FADE_IN; s += 0.1) {
+      const v = factorFadeIn(s);
+      expect(v).toBeGreaterThanOrEqual(previo);
+      previo = v;
+    }
+    expect(factorFadeIn(DURACION_FADE_IN / 2)).toBeCloseTo(0.5, 5);
+  });
+  it('un valor negativo (reloj adelantado) no rompe nada', () => {
+    expect(factorFadeIn(-1)).toBe(0);
+  });
+  it('el shader multiplica el resultado por u_fade', () => {
+    expect(FRAGMENT_SHADER).toContain('uniform float u_fade');
+    expect(FRAGMENT_SHADER).toContain('col *= u_fade');
   });
 });

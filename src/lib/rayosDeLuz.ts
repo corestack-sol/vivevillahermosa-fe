@@ -14,6 +14,9 @@
 /** Segundos entre ráfagas de rayos. Lo usan el shader y la envolvente que sincroniza el CSS. */
 export const PERIODO_RAFAGA = 9;
 
+/** Relleno alrededor del logo en la textura (fracción de su tamaño): los rayos salen fuera de la silueta. */
+export const RELLENO_SILUETA = 0.45;
+
 export const VERTEX_SHADER = `
 attribute vec2 a_pos;
 void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
@@ -30,6 +33,7 @@ uniform float u_t;
 uniform sampler2D u_tex;   // campo del oclusor: R silueta, G y B silueta difuminada (ancha y fina)
 uniform vec4 u_occ;        // rect de la textura (logo + relleno) en fracciones del canvas: x, y (arriba-izq), ancho, alto
 uniform float u_hayOcc;    // 1.0 si hay oclusor con textura lista
+uniform float u_fade;      // 0 → 1: aparición gradual de todo el efecto la primera vez
 uniform float u_solo;      // 1.0: capa superior (solo los rayos, para ir SOBRE el logo)
 
 // Hash sin patrones visibles (Hoskins) e interpolación quíntica: sin bordes
@@ -168,7 +172,7 @@ vec3 chispas(vec2 p, float asp, float t) {
       vec2 pos = vec2(origen.x + vx * tau * (1.0 - 0.35 * tau / vida), alturaChispa(tau, origen.y, vy0, yF));
       // Zigzag corto, como el arco que salta.
       pos.x += sin(tau * 45.0 + hash(sem + 8.8) * 6.28) * 0.004;
-      float tauAntes = max(0.0, tau - 0.028);
+      float tauAntes = max(0.0, tau - 0.012);
       vec2 posAntes = vec2(origen.x + vx * tauAntes * (1.0 - 0.35 * tauAntes / vida), alturaChispa(tauAntes, origen.y, vy0, yF));
       // Distancia del píxel al trazo de la chispa (cabeza brillante y estela).
       vec2 seg = pos - posAntes;
@@ -176,9 +180,10 @@ vec3 chispas(vec2 p, float asp, float t) {
       float d = length(p - (posAntes + seg * u));
       float vive = pow(1.0 - tau / vida, 1.5);
       float titila = 0.65 + 0.35 * step(0.4, hash(vec2(k, floor(t * 30.0))));
-      float nucleo = smoothstep(0.0045, 0.0, d);
-      vec3 col = hash(sem + 6.6) < 0.6 ? vec3(1.0, 0.62, 0.20) : vec3(0.75, 0.92, 1.0);
-      sumaCol += mix(col, vec3(1.0, 0.95, 0.85), nucleo) * nucleo * vive * titila;
+      float nucleo = smoothstep(0.0042, 0.0, d);
+      float brillo = exp(-d * 95.0) * 0.55; // pequeño resplandor del propio color
+      vec3 col = hash(sem + 6.6) < 0.6 ? vec3(1.0, 0.50, 0.06) : vec3(0.22, 0.60, 1.0);
+      sumaCol += (mix(col, vec3(1.0, 0.96, 0.88), nucleo) * nucleo + col * brillo) * vive * titila;
     }
   }
   return sumaCol * 1.8;
@@ -217,6 +222,21 @@ vec3 rayos(vec2 p, vec2 fr, float asp, float t, float solo) {
   float flick = 0.70 + 0.30 * step(0.30, hash(vec2(paso, 3.3)));
   float bi = floor(t / ${PERIODO_RAFAGA.toFixed(1)});
   float tramo = floor(t * 4.0);
+  float naranja = step(0.5, noise1(rodea * 1.3 + bi * 3.7 + 30.0));
+
+  // Reflejo en el suelo (solo capa de fondo): una luz eléctrica tenue, ancha y
+  // baja, bajo el logo (la rejilla del suelo empieza hacia el 80 % de la altura).
+  vec3 piso = vec3(0.0);
+  if (solo < 0.5) {
+    float dx = (p.x - cc.x) / 0.55;
+    float dy = (p.y - 0.90) / 0.11;
+    piso = mix(vec3(0.05, 0.42, 1.0), vec3(1.0, 0.42, 0.05), naranja * 0.3)
+         * exp(-(dx * dx + dy * dy)) * 0.20 * ev * (0.6 + 0.4 * flick);
+  }
+  // Lejos del logo el campo vale 0 y no hay rayos que calcular: descartar aquí
+  // ahorra ~90 % del trabajo de la ráfaga (si no, la GPU se trababa justo cuando
+  // aparecen los rayos y todo parecía congelarse).
+  if (cf.g < 0.02) return piso + chis;
 
   // Arco cercano al contorno.
   float j1 = (fbm(p * 24.0 + sd) - 0.5) * 0.34 + (noise(p * 60.0 + sd.yx) - 0.5) * 0.09;
@@ -231,18 +251,17 @@ vec3 rayos(vec2 p, vec2 fr, float asp, float t, float solo) {
   float d3 = cf.g - 0.62 + j3;
   float seg3 = arco(rodea, vec2(bi * 7.7 + 41.0, tramo * 0.8 + 9.0), 0.60);
 
-  float naranja = step(0.5, noise1(rodea * 1.3 + bi * 3.7 + 30.0));
-  vec3 azulNucleo = vec3(0.80, 0.94, 1.0);
-  vec3 azulGlow = vec3(0.10, 0.45, 1.0);
-  vec3 narNucleo = vec3(1.0, 0.86, 0.60);
-  vec3 narGlow = vec3(1.0, 0.45, 0.08);
+  vec3 azulNucleo = vec3(0.85, 0.95, 1.0);
+  vec3 azulGlow = vec3(0.0, 0.40, 1.0);
+  vec3 narNucleo = vec3(1.0, 0.92, 0.68);
+  vec3 narGlow = vec3(1.0, 0.40, 0.02);
 
-  float l1 = smoothstep(0.070, 0.0, abs(d1)) * seg1 * 2.6;
-  float g1 = exp(-abs(d1) * 7.0) * 0.75 * seg1;
-  float l2 = smoothstep(0.070, 0.0, abs(d2)) * seg2 * 2.6;
-  float g2 = exp(-abs(d2) * 6.5) * 0.65 * seg2;
-  float l3 = smoothstep(0.065, 0.0, abs(d3)) * seg3 * 2.0;
-  float g3 = exp(-abs(d3) * 8.0) * 0.45 * seg3;
+  float l1 = smoothstep(0.050, 0.0, abs(d1)) * seg1 * 2.6;
+  float g1 = exp(-abs(d1) * 10.0) * 1.10 * seg1;
+  float l2 = smoothstep(0.050, 0.0, abs(d2)) * seg2 * 2.6;
+  float g2 = exp(-abs(d2) * 9.0) * 1.00 * seg2;
+  float l3 = smoothstep(0.048, 0.0, abs(d3)) * seg3 * 2.0;
+  float g3 = exp(-abs(d3) * 11.0) * 0.80 * seg3;
   // Solo cerca del logo: lejos el campo vale 0 y el ruido dibujaría contornos sueltos.
   float cerca = smoothstep(0.03, 0.12, cf.g);
   // El campo termina en el borde de la textura: se apaga hacia allá para que el
@@ -253,12 +272,12 @@ vec3 rayos(vec2 p, vec2 fr, float asp, float t, float solo) {
 
   // Halo de luz del propio color de cada rayo: ancho y suave, como el reflejo del
   // arco sobre el logo (en la capa superior cae encima de su superficie).
-  vec3 azulHalo = vec3(0.22, 0.58, 1.0);
-  vec3 narHalo = vec3(1.0, 0.50, 0.12);
-  float h1 = exp(-abs(d1 - 0.5 * j1) * 2.0) * arcoSuave(rodea, vec2(bi * 9.1, tramo * 0.9), 0.50);
-  float h2 = exp(-abs(d2 - 0.5 * j2) * 1.9) * arcoSuave(rodea, vec2(bi * 5.3 + 17.0, tramo * 1.1 + 3.0), 0.54);
-  float h3 = exp(-abs(d3 - 0.5 * j3) * 2.1) * arcoSuave(rodea, vec2(bi * 7.7 + 41.0, tramo * 0.8 + 9.0), 0.60);
-  vec3 halo = azulHalo * (h1 + h3) * 0.26 + mix(azulHalo, narHalo, naranja) * h2 * 0.23;
+  vec3 azulHalo = vec3(0.05, 0.42, 1.0);
+  vec3 narHalo = vec3(1.0, 0.42, 0.05);
+  float h1 = exp(-abs(d1 - 0.5 * j1) * 3.6) * arcoSuave(rodea, vec2(bi * 9.1, tramo * 0.9), 0.50);
+  float h2 = exp(-abs(d2 - 0.5 * j2) * 3.4) * arcoSuave(rodea, vec2(bi * 5.3 + 17.0, tramo * 1.1 + 3.0), 0.54);
+  float h3 = exp(-abs(d3 - 0.5 * j3) * 3.8) * arcoSuave(rodea, vec2(bi * 7.7 + 41.0, tramo * 0.8 + 9.0), 0.60);
+  vec3 halo = azulHalo * (h1 + h3) * 0.34 + mix(azulHalo, narHalo, naranja) * h2 * 0.30;
 
   vec3 rayo = halo * visible * ev * flick * (solo > 0.5 ? 1.3 : 1.0);
   rayo += (azulNucleo * (l1 + l3) + azulGlow * (g1 + g3)
@@ -267,14 +286,8 @@ vec3 rayos(vec2 p, vec2 fr, float asp, float t, float solo) {
   if (solo < 0.5) {
     // Resplandor pegado al borde del logo mientras dura la descarga.
     rayo += azulGlow * cf.b * (1.0 - cf.r) * 0.30 * ev * flick;
-    // Reflejo en el suelo: una luz eléctrica tenue, ancha y baja, bajo el logo
-    // (la rejilla del suelo empieza hacia el 80 % de la altura).
-    float dx = (p.x - cc.x) / 0.55;
-    float dy = (p.y - 0.90) / 0.11;
-    float suelo = exp(-(dx * dx + dy * dy));
-    rayo += mix(azulHalo, narHalo, naranja * 0.3) * suelo * 0.20 * ev * (0.6 + 0.4 * flick);
   }
-  return rayo + chis;
+  return rayo + piso + chis;
 }
 
 // Coordenada del haz: constante a lo largo de cada rayo. Los rayos nacen en una
@@ -292,7 +305,7 @@ void main() {
   vec2 fr = vec2(uv.x, 1.0 - uv.y);      // el mismo punto en fracciones del canvas
   float t = u_t;
   if (u_solo > 0.5) {
-    gl_FragColor = vec4(u_hayOcc > 0.5 ? rayos(p, fr, asp, t, 1.0) : vec3(0.0), 1.0);
+    gl_FragColor = vec4((u_hayOcc > 0.5 ? rayos(p, fr, asp, t, 1.0) : vec3(0.0)) * u_fade, 1.0);
     return;
   }
   float s = coordHaz(p, asp);
@@ -352,6 +365,11 @@ void main() {
   // Interacción con el oclusor: sombra proyectada y ráfagas de rayos.
   vec3 rayo = vec3(0.0);
   if (u_hayOcc > 0.5) {
+    rayo = rayos(p, fr, asp, t, 0.0);
+    // La sombra y el halo solo existen cerca del logo: lejos se salta todo el
+    // muestreo (30 lecturas de textura por píxel).
+    vec2 ccM = vec2((u_occ.x + u_occ.z * 0.5) * asp, u_occ.y + u_occ.w * 0.5);
+    if (length(p - ccM) < 0.5) {
     // Todo en el espacio con aspecto (p): sin distorsión entre ejes.
     // Sombra: se marcha desde el punto hacia la fuente acumulando silueta, en
     // un tramo corto y con más peso lo cercano — cae suave y se desvanece.
@@ -368,16 +386,41 @@ void main() {
     sombra = 1.0 - exp(-sombra * 0.30);
     luz *= 1.0 - 0.55 * sombra * (1.0 - ocluso(fr));
 
-    rayo = rayos(p, fr, asp, t, 0.0);
-
-    // Latido de energía: entre ráfagas el borde del logo respira con una luz
-    // eléctrica tenue (ciclo de ~3.6 s) para que nunca se vea apagado; durante
-    // la ráfaga cede el paso a los rayos.
-    vec3 cfl = campo(fr);
-    float latido = 0.5 + 0.5 * sin(t * 1.75);
-    latido = latido * latido * (3.0 - 2.0 * latido);
-    rayo += vec3(0.10, 0.45, 1.0) * (0.55 * cfl.b + 0.45 * cfl.g) * (1.0 - cfl.r)
-          * (0.20 + 0.34 * latido) * (1.0 - 0.6 * rafaga(t));
+    // Halo propio del logo, azul eléctrico (energía viva): rodea el contorno con
+    // la MISMA intensidad por todos lados (no depende de la luz de arriba). Solo
+    // late suavemente en el tiempo y se enciende más con cada ráfaga. El muestreo
+    // se gira por píxel para que no se marquen escalones.
+    float halo = 0.0;
+    for (int i = 0; i < 12; i++) {
+      float a = rot + float(i) * 0.5236;
+      float rad = mod(float(i), 2.0) < 0.5 ? 0.012 : 0.026;
+      vec2 pt = p + vec2(cos(a), sin(a)) * rad;
+      halo += ocluso(vec2(pt.x / asp, pt.y));
+    }
+    halo = clamp(halo / 6.0, 0.0, 1.0) * (1.0 - ocluso(fr));
+    // Halo VIVO: energía en movimiento continuo. Depende solo del tiempo (no del
+    // vaivén del logo), así nunca se queda quieto. Tiene dos partes:
+    //  - un anillo pegado al borde que late (siempre encendido) y parpadea con la
+    //    energía que pasa, y
+    //  - lenguas de energía que fluyen hacia arriba por todo el contorno, salen
+    //    hacia afuera y se apagan. Su intensidad media es pareja por todos lados.
+    vec2 ccH = vec2((u_occ.x + u_occ.z * 0.5) * asp, u_occ.y + u_occ.w * 0.5);
+    vec2 rel = p - ccH;
+    float radial = campo(fr).g; // ~0.5 en el borde, cae hacia afuera
+    // La energía FLUYE HACIA ARRIBA: el patrón se desplaza siempre hacia arriba
+    // (y crece hacia abajo en pantalla, por eso se suma t a la y del ruido),
+    // estirado en vertical como una llama, con un detalle más rápido encima.
+    float sube = fbm(vec2(rel.x * 9.0 + sin(t * 0.36) * 0.6, rel.y * 5.0 + t * 0.9));
+    float sube2 = noise(vec2(rel.x * 22.0 + t * 0.18, rel.y * 12.0 + t * 1.55));
+    float energia = smoothstep(0.32, 0.72, 0.65 * sube + 0.35 * sube2);
+    float lenguas = smoothstep(0.03, 0.42, radial) * (1.0 - ocluso(fr));
+    float latido = 0.70 + 0.30 * sin(t * 1.3 + 1.3 * sin(t * 0.45));
+    vec3 azulVivo = vec3(0.05, 0.42, 1.0);
+    vec3 nucleoVivo = vec3(0.25, 0.70, 1.0);
+    float fuerza = (1.15 + 0.9 * haz) * (1.0 + 0.9 * rafaga(t));
+    rayo += (azulVivo * halo * latido * (0.55 + 0.75 * energia) * 0.85
+           + mix(azulVivo, nucleoVivo, energia) * lenguas * energia * 0.85) * fuerza;
+    }
   }
 
   // Polvo: tres capas (fino, medio y bokeh grande), solo donde hay luz.
@@ -391,6 +434,7 @@ void main() {
   col = mix(col, vec3(0.62, 0.88, 1.0), smoothstep(0.95, 1.8, luz));
   col += vec3(0.65, 0.90, 1.0) * polvo * 0.6;
   col += rayo;
+  col *= u_fade;
 
   // Grano fino para evitar bandas en los degradados oscuros.
   col += (hash(gl_FragCoord.xy + fract(t)) - 0.5) * 0.014;
@@ -409,6 +453,23 @@ export function calidadDeRender(anchoCss: number, dpr: number): number {
   if (anchoCss > 1800) return base * 0.75;
   return base;
 }
+
+/** Segundos que tarda en aparecer el efecto (fade in) la primera vez. */
+export const DURACION_FADE_IN = 3;
+
+/**
+ * Factor de aparición (0..1, con suavizado) a los `seg` segundos del primer
+ * cuadro. Va en el shader y se mide con el reloj del efecto (que avanza como
+ * máximo 0.1 s por cuadro), así un tirón al compilar el shader no se "salta"
+ * el fade: la aparición se ve siempre gradual.
+ */
+export function factorFadeIn(seg: number): number {
+  const x = Math.min(1, Math.max(0, seg / DURACION_FADE_IN));
+  return x * x * (3 - 2 * x);
+}
+
+/** La capa superior (rayos y chispas) se dibuja a menor resolución: son trazos luminosos, no necesitan más, y así la ráfaga cuesta menos. */
+export const ESCALA_CAPA_SUPERIOR = 0.6;
 
 /** Escala mínima de resolución a la que puede bajar la calidad adaptativa. */
 export const ESCALA_MINIMA = 0.5;
@@ -449,8 +510,6 @@ export function hayRayosOChispas(t: number): boolean {
   return envolventeRafaga(t) >= 0.01 || ((t % PERIODO_RAFAGA) + PERIODO_RAFAGA) % PERIODO_RAFAGA < DURACION_CHISPAS;
 }
 
-/** Relleno alrededor del logo en la textura (fracción de su tamaño): los rayos salen fuera de la silueta. */
-export const RELLENO_SILUETA = 0.45;
 
 /** Resolución del campo del logo respecto a la imagen original (es un campo suave: no necesita más). */
 export const ESCALA_CAMPO = 0.5;
@@ -575,6 +634,8 @@ export function iniciarRayosDeLuz(canvas: HTMLCanvasElement, { modo = 'fondo', e
   const uOcc = gl.getUniformLocation(prog, 'u_occ');
   const uHayOcc = gl.getUniformLocation(prog, 'u_hayOcc');
   const uSolo = gl.getUniformLocation(prog, 'u_solo');
+  const uFade = gl.getUniformLocation(prog, 'u_fade');
+  let tPrimero = -1; // instante (del reloj del efecto) del primer cuadro dibujado
 
   // Textura del oclusor (transparente hasta que cargue la imagen).
   const textura = gl.createTexture();
@@ -615,7 +676,7 @@ export function iniciarRayosDeLuz(canvas: HTMLCanvasElement, { modo = 'fondo', e
   let vacio = false; // la capa superior ya está limpia: no hay que redibujar hasta la próxima ráfaga
 
   function ajustarTamano() {
-    const q = calidadDeRender(canvas.clientWidth, window.devicePixelRatio || 1) * escalaAdaptativa;
+    const q = calidadDeRender(canvas.clientWidth, window.devicePixelRatio || 1) * (solo ? ESCALA_CAPA_SUPERIOR : escalaAdaptativa);
     const w = Math.max(2, Math.round(canvas.clientWidth * q));
     const h = Math.max(2, Math.round(canvas.clientHeight * q));
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; vacio = false; }
@@ -625,7 +686,6 @@ export function iniciarRayosDeLuz(canvas: HTMLCanvasElement, { modo = 'fondo', e
   let raf = 0;
   let primero = true;
   let relX = 0, relY = 0; // relleno de la textura del oclusor, como fracción del tamaño del elemento
-  let cargaPrevia = -1;
 
   if (oclusor) {
     const img = new Image();
@@ -664,7 +724,9 @@ export function iniciarRayosDeLuz(canvas: HTMLCanvasElement, { modo = 'fondo', e
     ajustarTamano();
     gl!.uniform2f(uRes, canvas.width, canvas.height);
     gl!.uniform1f(uT, t);
+    if (tPrimero < 0) tPrimero = t;
     gl!.uniform1f(uSolo, solo ? 1 : 0);
+    gl!.uniform1f(uFade, estatico ? 1 : factorFadeIn(t - tPrimero));
     // El oclusor se mueve (el logo "flota"): se lee su rect en cada cuadro.
     const el = oclusor && texturaLista ? document.querySelector(oclusor.selector) : null;
     if (el) {
@@ -672,14 +734,6 @@ export function iniciarRayosDeLuz(canvas: HTMLCanvasElement, { modo = 'fondo', e
       // La textura incluye el relleno: se pasa su rect ampliado.
       gl!.uniform4f(uOcc, x - relX * w, y - relY * h, w * (1 + 2 * relX), h * (1 + 2 * relY));
       gl!.uniform1f(uHayOcc, 1);
-      // El logo se "carga" con cada ráfaga: se publica su intensidad para el CSS.
-      const carga = envolventeRafaga(t);
-      if (!solo && Math.abs(carga - cargaPrevia) > 0.02) {
-        // En la escena (abuelo del canvas: escena > contenedor > canvas): el logo
-        // y la rejilla del suelo heredan la variable.
-        (canvas.parentElement?.parentElement ?? (el as HTMLElement)).style.setProperty('--carga', carga.toFixed(2));
-        cargaPrevia = carga;
-      }
     } else {
       gl!.uniform1f(uHayOcc, 0);
     }
