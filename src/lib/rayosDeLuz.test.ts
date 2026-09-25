@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DURACION_CHISPAS, DURACION_FADE_IN, factorFadeIn, ESCALA_MINIMA, UMBRAL_CUADRO_MS, siguienteEscala, PERIODO_RAFAGA, calidadDeRender, campoDeSilueta, desenfocar, envolventeRafaga, FRAGMENT_SHADER, hayRayosOChispas, T_ESTATICO } from './rayosDeLuz';
+import { DURACION_NUBES, PERIODO_NUBES, hayNubes, DURACION_CHISPAS, DURACION_FADE_IN, factorFadeIn, ESCALA_MINIMA, UMBRAL_CUADRO_MS, siguienteEscala, PERIODO_RAFAGA, calidadDeRender, campoDeSilueta, desenfocar, envolventeRafaga, FRAGMENT_SHADER, hayRayosOChispas, T_ESTATICO } from './rayosDeLuz';
 
 describe('calidadDeRender', () => {
   it('en escritorio usa la densidad del dispositivo con tope de 1.5', () => {
@@ -87,9 +87,11 @@ describe('capa superior (rayos y chispas)', () => {
     expect(envolventeRafaga(2.5)).toBeLessThan(0.01); // los rayos ya terminaron
     expect(hayRayosOChispas(2.5)).toBe(true); // pero puede haber chispas en el aire
   });
-  it('se queda vacía (sin gastar GPU) el resto del ciclo', () => {
-    expect(hayRayosOChispas(DURACION_CHISPAS + 0.5)).toBe(false);
-    expect(hayRayosOChispas(PERIODO_RAFAGA - 0.5)).toBe(false);
+  it('se queda vacía (sin gastar GPU) cuando no hay rayos, chispas ni nubes', () => {
+    expect(hayRayosOChispas(5)).toBe(false);
+    expect(hayRayosOChispas(6)).toBe(false);
+    expect(DURACION_CHISPAS).toBeLessThan(5); // t = 5 está fuera de las chispas de la ráfaga
+    expect(PERIODO_RAFAGA).toBeGreaterThan(6);
   });
   it('vuelve a activarse en la ráfaga siguiente', () => {
     expect(hayRayosOChispas(PERIODO_RAFAGA + 0.3)).toBe(true);
@@ -136,5 +138,24 @@ describe('fade in de la primera aparición', () => {
   it('el shader multiplica el resultado por u_fade', () => {
     expect(FRAGMENT_SHADER).toContain('uniform float u_fade');
     expect(FRAGMENT_SHADER).toContain('col *= u_fade');
+  });
+});
+
+describe('nubes de energía delante del logo', () => {
+  it('no son continuas: pasan en olas y en medio hay silencio', () => {
+    expect(hayNubes(0.5)).toBe(true);
+    expect(hayNubes(DURACION_NUBES + 0.2)).toBe(false);
+    expect(hayNubes(PERIODO_NUBES - 0.2)).toBe(false);
+  });
+  it('se repiten cada PERIODO_NUBES segundos', () => {
+    expect(hayNubes(PERIODO_NUBES * 4 + 1)).toBe(true);
+    expect(hayNubes(PERIODO_NUBES * 4 + DURACION_NUBES + 0.5)).toBe(false);
+  });
+  it('mientras dura una ola la capa superior se sigue dibujando aunque no haya rayos', () => {
+    expect(hayRayosOChispas(PERIODO_NUBES * 3 + 0.5)).toBe(true);
+  });
+  it('el shader dibuja las nubes solo en la capa superior', () => {
+    expect(FRAGMENT_SHADER).toContain('vec3 nubes(');
+    expect(FRAGMENT_SHADER).toMatch(/rayos\(p, fr, asp, t, 1\.0\) \+ nubes\(/);
   });
 });

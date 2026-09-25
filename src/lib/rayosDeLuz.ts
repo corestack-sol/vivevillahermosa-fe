@@ -14,6 +14,10 @@
 /** Segundos entre ráfagas de rayos. Lo usan el shader y la envolvente que sincroniza el CSS. */
 export const PERIODO_RAFAGA = 9;
 
+/** Segundos entre "olas" de nubes de energía que suben por delante del logo, y cuánto dura cada una. */
+export const PERIODO_NUBES = 6.5;
+export const DURACION_NUBES = 3.4;
+
 /** Relleno alrededor del logo en la textura (fracción de su tamaño): los rayos salen fuera de la silueta. */
 export const RELLENO_SILUETA = 0.45;
 
@@ -290,6 +294,35 @@ vec3 rayos(vec2 p, vec2 fr, float asp, float t, float solo) {
   return rayo + piso + chis;
 }
 
+// Nubes de energía por DELANTE del logo (capa superior): el mismo halo azul que
+// hay detrás, pero mucho más tenue y transparente, en jirones que suben de abajo
+// hacia arriba. No son continuas: cada ${PERIODO_NUBES} s pasa una "ola" (una franja que
+// sube por el logo en ~${DURACION_NUBES} s) y en medio no hay nada. Solo se dibujan sobre el
+// logo y su entorno inmediato.
+vec3 nubes(vec2 p, vec2 fr, float asp, float t) {
+  float fase = mod(t, ${PERIODO_NUBES.toFixed(1)}) / ${DURACION_NUBES.toFixed(1)};
+  if (fase > 1.0) return vec3(0.0);
+  vec3 cf = campo(fr);
+  float cerca = smoothstep(0.05, 0.40, cf.g);
+  if (cerca <= 0.0) return vec3(0.0);
+  vec2 cc = vec2((u_occ.x + u_occ.z * 0.5) * asp, u_occ.y + u_occ.w * 0.5);
+  vec2 radio = vec2(0.5 * u_occ.z * asp, 0.5 * u_occ.w) / 1.9;
+  vec2 rel = p - cc;
+  // Aparece y se desvanece a los extremos de la ola.
+  float ola = smoothstep(0.0, 0.18, fase) * (1.0 - smoothstep(0.72, 1.0, fase));
+  // La franja sube desde abajo del logo hasta arriba.
+  float yc = 1.4 * radio.y * (1.0 - 2.0 * fase);
+  // (x * x, no pow: pow con base negativa no está definido en GLSL)
+  float dFranja = (rel.y - yc) / (0.85 * radio.y);
+  float franja = exp(-dFranja * dFranja);
+  // Jirones de nube que también van subiendo (el ruido se desplaza hacia arriba).
+  float onda = floor(t / ${PERIODO_NUBES.toFixed(1)});
+  float n = fbm(vec2(rel.x * 20.0 + onda * 13.7, rel.y * 12.0 + t * 0.7));
+  float n2 = noise(vec2(rel.x * 40.0 - onda * 5.3, rel.y * 24.0 + t * 1.2));
+  float nube = smoothstep(0.34, 0.64, 0.7 * n + 0.3 * n2);
+  return vec3(0.10, 0.45, 1.0) * nube * franja * ola * cerca * 0.55;
+}
+
 // Coordenada del haz: constante a lo largo de cada rayo. Los rayos nacen en una
 // fuente lejana sobre el borde superior, se abren hacia abajo (perspectiva) y
 // llevan una leve inclinación, así la luz cubre todo el ancho de la pantalla.
@@ -305,7 +338,7 @@ void main() {
   vec2 fr = vec2(uv.x, 1.0 - uv.y);      // el mismo punto en fracciones del canvas
   float t = u_t;
   if (u_solo > 0.5) {
-    gl_FragColor = vec4((u_hayOcc > 0.5 ? rayos(p, fr, asp, t, 1.0) : vec3(0.0)) * u_fade, 1.0);
+    gl_FragColor = vec4((u_hayOcc > 0.5 ? rayos(p, fr, asp, t, 1.0) + nubes(p, fr, asp, t) : vec3(0.0)) * u_fade, 1.0);
     return;
   }
   float s = coordHaz(p, asp);
@@ -315,7 +348,8 @@ void main() {
   if (u_hayOcc > 0.5) {
     vec2 c = u_occ.xy + u_occ.zw * 0.5;
     float sOcc = coordHaz(vec2(c.x * asp, c.y), asp);
-    haz = exp(-pow((s - sOcc) / 0.10, 2.0));
+    float dHaz = (s - sOcc) / 0.10;
+    haz = exp(-dHaz * dHaz); // (x * x: pow con base negativa no está definido en GLSL)
   }
 
   // Como si la luz atravesara el agua: la superficie ondulada refracta los
@@ -393,7 +427,7 @@ void main() {
     float halo = 0.0;
     for (int i = 0; i < 12; i++) {
       float a = rot + float(i) * 0.5236;
-      float rad = mod(float(i), 2.0) < 0.5 ? 0.012 : 0.026;
+      float rad = mod(float(i), 2.0) < 0.5 ? 0.009 : 0.019;
       vec2 pt = p + vec2(cos(a), sin(a)) * rad;
       halo += ocluso(vec2(pt.x / asp, pt.y));
     }
@@ -413,13 +447,13 @@ void main() {
     float sube = fbm(vec2(rel.x * 9.0 + sin(t * 0.36) * 0.6, rel.y * 5.0 + t * 0.9));
     float sube2 = noise(vec2(rel.x * 22.0 + t * 0.18, rel.y * 12.0 + t * 1.55));
     float energia = smoothstep(0.32, 0.72, 0.65 * sube + 0.35 * sube2);
-    float lenguas = smoothstep(0.03, 0.42, radial) * (1.0 - ocluso(fr));
+    float lenguas = smoothstep(0.14, 0.44, radial) * (1.0 - ocluso(fr));
     float latido = 0.70 + 0.30 * sin(t * 1.3 + 1.3 * sin(t * 0.45));
     vec3 azulVivo = vec3(0.05, 0.42, 1.0);
     vec3 nucleoVivo = vec3(0.25, 0.70, 1.0);
     float fuerza = (1.15 + 0.9 * haz) * (1.0 + 0.9 * rafaga(t));
-    rayo += (azulVivo * halo * latido * (0.55 + 0.75 * energia) * 0.85
-           + mix(azulVivo, nucleoVivo, energia) * lenguas * energia * 0.85) * fuerza;
+    rayo += (azulVivo * halo * latido * (0.55 + 0.75 * energia) * 0.6
+           + mix(azulVivo, nucleoVivo, energia) * lenguas * energia * 0.55) * fuerza;
     }
   }
 
@@ -505,9 +539,14 @@ export function envolventeRafaga(t: number): number {
 /** Segundos tras el inicio de cada ráfaga en que aún puede haber chispas en el aire (rebotando). */
 export const DURACION_CHISPAS = 3.4;
 
-/** ¿Hay algo que dibujar en la capa superior (rayos o chispas) en el instante `t`? */
+/** ¿Hay una ola de nubes de energía por delante del logo en el instante `t`? */
+export function hayNubes(t: number): boolean {
+  return (((t % PERIODO_NUBES) + PERIODO_NUBES) % PERIODO_NUBES) < DURACION_NUBES;
+}
+
+/** ¿Hay algo que dibujar en la capa superior (rayos, chispas o nubes) en el instante `t`? */
 export function hayRayosOChispas(t: number): boolean {
-  return envolventeRafaga(t) >= 0.01 || ((t % PERIODO_RAFAGA) + PERIODO_RAFAGA) % PERIODO_RAFAGA < DURACION_CHISPAS;
+  return envolventeRafaga(t) >= 0.01 || ((t % PERIODO_RAFAGA) + PERIODO_RAFAGA) % PERIODO_RAFAGA < DURACION_CHISPAS || hayNubes(t);
 }
 
 
