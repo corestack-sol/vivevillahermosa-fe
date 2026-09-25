@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DURACION_NUBES, PERIODO_NUBES, hayNubes, DURACION_CHISPAS, DURACION_FADE_IN, factorFadeIn, ESCALA_MINIMA, UMBRAL_CUADRO_MS, siguienteEscala, PERIODO_RAFAGA, calidadDeRender, campoDeSilueta, desenfocar, envolventeRafaga, FRAGMENT_SHADER, hayRayosOChispas, T_ESTATICO } from './rayosDeLuz';
+import { DURACION_NUBES, PERIODO_NUBES, hayNubes, DURACION_FADE_IN, factorFadeIn, ESCALA_MINIMA, UMBRAL_CUADRO_MS, siguienteEscala, PERIODO_RAFAGA, calidadDeRender, campoDeSilueta, desenfocar, envolventeRafaga, FRAGMENT_SHADER, NUCLEO, T_ESTATICO } from './rayosDeLuz';
 
 describe('calidadDeRender', () => {
   it('en escritorio usa la densidad del dispositivo con tope de 1.5', () => {
@@ -82,22 +82,6 @@ describe('campo de silueta (base de los rayos)', () => {
   });
 });
 
-describe('capa superior (rayos y chispas)', () => {
-  it('sigue dibujando mientras las chispas rebotan, aunque los rayos ya se apagaron', () => {
-    expect(envolventeRafaga(2.5)).toBeLessThan(0.01); // los rayos ya terminaron
-    expect(hayRayosOChispas(2.5)).toBe(true); // pero puede haber chispas en el aire
-  });
-  it('se queda vacía (sin gastar GPU) cuando no hay rayos, chispas ni nubes', () => {
-    expect(hayRayosOChispas(5)).toBe(false);
-    expect(hayRayosOChispas(6)).toBe(false);
-    expect(DURACION_CHISPAS).toBeLessThan(5); // t = 5 está fuera de las chispas de la ráfaga
-    expect(PERIODO_RAFAGA).toBeGreaterThan(6);
-  });
-  it('vuelve a activarse en la ráfaga siguiente', () => {
-    expect(hayRayosOChispas(PERIODO_RAFAGA + 0.3)).toBe(true);
-  });
-});
-
 describe('calidad adaptativa', () => {
   it('con buen rendimiento no toca la escala', () => {
     expect(siguienteEscala(1, 16.7)).toBe(1);
@@ -151,11 +135,32 @@ describe('nubes de energía delante del logo', () => {
     expect(hayNubes(PERIODO_NUBES * 4 + 1)).toBe(true);
     expect(hayNubes(PERIODO_NUBES * 4 + DURACION_NUBES + 0.5)).toBe(false);
   });
-  it('mientras dura una ola la capa superior se sigue dibujando aunque no haya rayos', () => {
-    expect(hayRayosOChispas(PERIODO_NUBES * 3 + 0.5)).toBe(true);
-  });
   it('el shader dibuja las nubes solo en la capa superior', () => {
     expect(FRAGMENT_SHADER).toContain('vec3 nubes(');
     expect(FRAGMENT_SHADER).toMatch(/rayos\(p, fr, asp, t, 1\.0\) \+ nubes\(/);
+  });
+});
+
+describe('núcleo de luz en el hueco del logo', () => {
+  it('la apertura y el núcleo caen dentro de la imagen del logo', () => {
+    expect(NUCLEO.cx - NUCLEO.hw).toBeGreaterThan(0);
+    expect(NUCLEO.cx + NUCLEO.hw).toBeLessThan(1);
+    expect(NUCLEO.cy - NUCLEO.hh).toBeGreaterThan(0);
+    expect(NUCLEO.cy + NUCLEO.hh).toBeLessThan(1);
+    expect(NUCLEO.nx - NUCLEO.radio).toBeGreaterThan(0);
+    expect(NUCLEO.ny + NUCLEO.radio).toBeLessThan(1);
+  });
+  it('el núcleo está en el rombo oscuro medido (0.508, ~0.43), por encima del centro de la imagen no: por debajo del centro de la apertura', () => {
+    expect(NUCLEO.nx).toBeCloseTo(0.508, 2);
+    expect(NUCLEO.ny).toBeGreaterThan(NUCLEO.cy);
+  });
+  it('el núcleo sobresale del borde de abajo de la apertura: es lo que recorta su parte inferior', () => {
+    expect(NUCLEO.ny + NUCLEO.radio).toBeGreaterThan(NUCLEO.cy + NUCLEO.hh);
+  });
+  it('el shader lo dibuja en la capa superior y lo recorta al rombo', () => {
+    expect(FRAGMENT_SHADER).toContain('vec3 nucleo(');
+    expect(FRAGMENT_SHADER).toMatch(/nucleo\(fr, t\)/);
+    expect(FRAGMENT_SHADER).toContain('uniform vec2 u_pad');
+    expect(FRAGMENT_SHADER).toContain('uniform float u_logoAsp');
   });
 });
