@@ -44,6 +44,16 @@ function marcarDesactivadoManualmente(valor: boolean): void {
 }
 
 /**
+ * La persona dijo "ahora no" al aviso de bienvenida (PushOnboarding): a partir
+ * de ahí "Mis alertas" NO debe lanzarle el permiso nativo por sorpresa al
+ * entrar (pedido 2026-09-25). Sigue teniendo el botón "Activar" en esa
+ * página; al activarlo (suscribirPush) el marcador se limpia solo.
+ */
+export function omitirPushAutomatico(): void {
+  marcarDesactivadoManualmente(true);
+}
+
+/**
  * Estado real del navegador respecto a push — no asume nada, pregunta
  * directo a las APIs (Notification.permission, PushManager). `denegado`
  * es un estado sin salida real: una vez que la persona bloquea permisos

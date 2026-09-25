@@ -29,6 +29,9 @@ import { getViewedCount } from '@/lib/recentlyViewed';
 // "Particular" en toda la plataforma (reporte explícito: "sigo viendo que
 // sigue apareciendo el rol buscador"). Los otros 4 valores del enum nuevo
 // se agregan de una vez para cuando el backend sí migre.
+// Cuántas notificaciones recientes se ven en el panel; el resto, en "Ver más".
+const NOTIFICACIONES_VISIBLES = 3;
+
 const ROL_LABEL: Record<string, string> = {
   buscador: 'Particular',
   particular: 'Particular',
@@ -389,7 +392,7 @@ export default function DashboardPage() {
             )}
           </div>
           <div className="divide-y divide-gray-50">
-            {notificaciones.slice(0, 5).map((n) => (
+            {notificaciones.slice(0, NOTIFICACIONES_VISIBLES).map((n) => (
               <Link
                 key={n.id}
                 href={notificacionHref(n)}
@@ -412,15 +415,18 @@ export default function DashboardPage() {
               </Link>
             ))}
           </div>
-          {/* Aquí solo se ven las 5 más recientes — el inbox completo
-              (sin ese tope) vive en su propia página, ver
-              dashboard/notificaciones/page.tsx. */}
-          <Link
-            href="/dashboard/notificaciones"
-            className="block text-center text-xs font-semibold text-brand hover:text-brand-dark py-2.5 border-t border-gray-100 hover:bg-gray-50 transition-colors"
-          >
-            Ver todas
-          </Link>
+          {/* Aquí solo se ven las 3 más recientes (pedido explícito 2026-09-25);
+              el inbox completo vive en su propia página, ver
+              dashboard/notificaciones/page.tsx. Sin más de 3 no hay nada
+              más que ver, así que el botón no aparece. */}
+          {notificaciones.length > NOTIFICACIONES_VISIBLES && (
+            <Link
+              href="/dashboard/notificaciones"
+              className="block text-center text-xs font-semibold text-brand hover:text-brand-dark py-2.5 border-t border-gray-100 hover:bg-gray-50 transition-colors"
+            >
+              Ver más
+            </Link>
+          )}
         </div>
       )}
 

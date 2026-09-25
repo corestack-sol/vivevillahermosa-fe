@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/ui/Pagination';
+import { ActivarPushBanner } from '@/components/push/ActivarPushBanner';
 import { combinarBandejaMensajes, type ConversacionResumen, type MensajeLegado, type ItemBandejaMensajes } from '@/lib/mensajeria';
 import { estaLegadoLeido, marcarLegadoLeido } from '@/lib/mensajesLegadoLeidos';
 
@@ -175,6 +176,9 @@ function MensajesContent() {
           <p className="text-sm text-gray-500">Tus conversaciones sobre propiedades, como interesado o como dueño</p>
         </div>
       </div>
+
+      {/* Solo mientras no se hayan aceptado los permisos de push. */}
+      <ActivarPushBanner className="mb-4" />
 
       {propiedadFiltro && (
         <div className="flex items-center justify-between gap-3 bg-brand-pale border border-brand/20 rounded-xl px-4 py-2.5 mb-4">

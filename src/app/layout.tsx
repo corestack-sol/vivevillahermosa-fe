@@ -11,6 +11,7 @@ import { ToastProvider } from '@/context/ToastContext';
 import { CompareProvider } from '@/context/CompareContext';
 import { FavoritesProvider } from '@/context/FavoritesContext';
 import { CompareBar } from '@/components/property/CompareBar';
+import { PushOnboarding } from '@/components/push/PushOnboarding';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -54,6 +55,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <main id="main-content" className="flex-1">{children}</main>
                 <Footer />
                 <CompareBar />
+                {/* Pide permiso de push, con explicación, la primera vez que se abre la app instalada en el celular. */}
+                <PushOnboarding />
               </FavoritesProvider>
             </CompareProvider>
           </ToastProvider>

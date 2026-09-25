@@ -269,30 +269,28 @@ export default function AlertasPage() {
       {/* Notificaciones push — pedido explícito 2026-09-02. Solo se
           muestra si el navegador las soporta en absoluto ('no-soportado'
           se salta, no tiene sentido ofrecer un botón que nunca va a
-          funcionar). 'denegado' no tiene botón — no hay nada que este
+          funcionar) y, desde 2026-09-25, solo mientras aún no se hayan
+          aceptado los permisos ('activo' no pinta nada, igual que en
+          Mensajes). 'denegado' no tiene botón — no hay nada que este
           código pueda hacer, el bloqueo vive en la configuración del
           navegador. */}
-      {estadoPush !== 'no-soportado' && (
+      {estadoPush !== 'no-soportado' && estadoPush !== 'activo' && (
         <div className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 mb-8 ${
-          estadoPush === 'activo' || activandoAuto ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200'
+          activandoAuto ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-gray-200'
         }`}>
           <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-            estadoPush === 'activo' || activandoAuto ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'
+            activandoAuto ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'
           }`}>
-            {estadoPush === 'activo' || activandoAuto ? <BellRing size={16} /> : <BellOff size={16} />}
+            {activandoAuto ? <BellRing size={16} /> : <BellOff size={16} />}
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-gray-800">
-              {activandoAuto
-                ? 'Activando notificaciones push…'
-                : estadoPush === 'activo'
-                  ? 'Notificaciones push activadas'
-                  : 'Activa las notificaciones push'}
+              {activandoAuto ? 'Activando notificaciones push…' : 'Activa las notificaciones push'}
             </p>
             <p className="text-xs text-gray-500">
               {estadoPush === 'denegado'
                 ? 'Bloqueadas en la configuración de tu navegador — actívalas ahí para recibir avisos.'
-                : estadoPush === 'activo' || activandoAuto
+                : activandoAuto
                   ? 'Te avisamos en cuanto una propiedad coincida con alguna alerta, aunque no tengas la pestaña abierta.'
                   : 'Recibe el aviso al instante, sin depender del correo ni de tener la pestaña abierta.'}
             </p>
@@ -302,14 +300,10 @@ export default function AlertasPage() {
               type="button"
               onClick={alternarPush}
               disabled={cambiandoPush}
-              className={`flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl transition-colors disabled:opacity-60 ${
-                estadoPush === 'activo'
-                  ? 'text-gray-500 border border-gray-200 hover:bg-gray-50'
-                  : 'bg-brand text-white hover:bg-brand-dark'
-              }`}
+              className="flex-shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-brand text-white hover:bg-brand-dark transition-colors disabled:opacity-60"
             >
               {cambiandoPush && <Loader2 size={13} className="animate-spin" />}
-              {estadoPush === 'activo' ? 'Desactivar' : 'Activar'}
+              Activar
             </button>
           )}
         </div>

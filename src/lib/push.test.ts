@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { urlBase64ToUint8Array, fueDesactivadoManualmente } from './push';
+import { urlBase64ToUint8Array, fueDesactivadoManualmente, omitirPushAutomatico } from './push';
 
 describe('urlBase64ToUint8Array', () => {
   it('decodifica un base64url sin padding a los mismos bytes que su base64 estándar equivalente', () => {
@@ -64,5 +64,30 @@ describe('fueDesactivadoManualmente', () => {
     // @ts-expect-error -- localStorage que lanza, como un navegador con storage deshabilitado
     globalThis.window = { localStorage: { getItem: () => { throw new Error('bloqueado'); } } };
     expect(fueDesactivadoManualmente()).toBe(false);
+  });
+});
+
+describe('omitirPushAutomatico ("ahora no" del aviso de bienvenida)', () => {
+  afterEach(() => {
+    // @ts-expect-error -- limpiar el window de prueba entre tests
+    delete globalThis.window;
+  });
+
+  it('marca que no se debe volver a pedir el permiso solo: fueDesactivadoManualmente pasa a true', () => {
+    const datos = new Map<string, string>();
+    globalThis.window = {
+      localStorage: {
+        getItem: (k: string) => datos.get(k) ?? null,
+        setItem: (k: string, v: string) => { datos.set(k, v); },
+        removeItem: (k: string) => { datos.delete(k); },
+      },
+    } as unknown as Window & typeof globalThis;
+    expect(fueDesactivadoManualmente()).toBe(false);
+    omitirPushAutomatico();
+    expect(fueDesactivadoManualmente()).toBe(true);
+  });
+
+  it('sin window (SSR) no explota', () => {
+    expect(() => omitirPushAutomatico()).not.toThrow();
   });
 });
