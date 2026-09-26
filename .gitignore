@@ -72,3 +72,4 @@ tabasco-proptech/*.pdf
 # Generados por scripts/build-corestack.mjs (efecto empaquetado + copia del logo)
 # para la página independiente /corestack — nunca a mano.
 /public/corestack/
+/src/corestack/generado.ts

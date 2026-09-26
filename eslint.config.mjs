@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generado por scripts/build-corestack.mjs (efecto minificado en un string).
+    "src/corestack/generado.ts",
   ]),
 ]);
 
