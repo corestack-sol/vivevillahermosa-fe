@@ -68,3 +68,7 @@ tabasco-proptech/*.pdf
 # para el porqué (Turbopack + worker de MapLibre).
 /public/maplibre-gl-worker.mjs
 /public/maplibre-gl-shared.mjs
+
+# Generados por scripts/build-corestack.mjs (efecto empaquetado + copia del logo)
+# para la página independiente /corestack — nunca a mano.
+/public/corestack/
