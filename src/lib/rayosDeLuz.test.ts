@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DURACION_NUBES, PERIODO_NUBES, hayNubes, DURACION_FADE_IN, factorFadeIn, ESCALA_MINIMA, UMBRAL_CUADRO_MS, siguienteEscala, PERIODO_RAFAGA, calidadDeRender, campoDeSilueta, desenfocar, bordesDeMascara, texturaEnergia, envolventeRafaga, FRAGMENT_SHADER, NUCLEO, T_ESTATICO, detectarNivel, perfilDeNivel, fragmentDeCapa, ANCHO_CAMPO, ENTRADA_LLEGADA, N_CHISPAS_ENTRADA, HALO_INICIO, HALO_APARICION, N_ONDAS_SUELO, PERIODO_ONDAS_SUELO } from './rayosDeLuz';
+import { DURACION_NUBES, PERIODO_NUBES, hayNubes, DURACION_FADE_IN, factorFadeIn, ESCALA_MINIMA, UMBRAL_CUADRO_MS, siguienteEscala, PERIODO_RAFAGA, calidadDeRender, campoDeSilueta, desenfocar, bordesDeMascara, texturaEnergia, envolventeRafaga, FRAGMENT_SHADER, NUCLEO, T_ESTATICO, detectarNivel, perfilDeNivel, fragmentDeCapa, ANCHO_CAMPO, ENTRADA_LLEGADA, N_CHISPAS_ENTRADA, HALO_INICIO, HALO_APARICION, N_ONDAS_SUELO, PERIODO_ONDAS_SUELO, ANILLOS_INICIO, ANILLOS_APARICION } from './rayosDeLuz';
 
 describe('calidadDeRender', () => {
   it('en escritorio usa la densidad del dispositivo con tope de 1.5', () => {
@@ -404,7 +404,7 @@ describe('anillos del suelo animados', () => {
   const f = () => FRAGMENT_SHADER.slice(FRAGMENT_SHADER.indexOf('vec3 anillosSuelo('), FRAGMENT_SHADER.indexOf('float coordHaz('));
   it('son ondas que nacen cerca del centro y crecen hacia afuera con el tiempo', () => {
     expect(f()).toContain(`for (int i = 0; i < ${N_ONDAS_SUELO}; i++)`);
-    expect(f()).toContain(`float u = fract(t / ${PERIODO_ONDAS_SUELO.toFixed(1)} + float(i) / ${N_ONDAS_SUELO}.0);`);
+    expect(f()).toContain(`float u = fract(tOnda / ${PERIODO_ONDAS_SUELO.toFixed(1)} + float(i) / ${N_ONDAS_SUELO}.0);`);
     expect(f()).toContain('float radioOnda = 0.12 + 1.75 * (1.0 - pow(1.0 - u, 1.5));');
     expect(f()).toContain('float a = (rr - radioOnda)');
   });
@@ -423,5 +423,22 @@ describe('anillos del suelo animados', () => {
   });
   it('las ondas van desfasadas: hay varias a la vez, no una sola', () => {
     expect(N_ONDAS_SUELO).toBeGreaterThan(1);
+  });
+});
+
+describe('anillos del suelo: aparecen tras formarse el núcleo', () => {
+  const f = () => FRAGMENT_SHADER.slice(FRAGMENT_SHADER.indexOf('vec3 anillosSuelo('), FRAGMENT_SHADER.indexOf('float coordHaz('));
+  it('empiezan después de que el núcleo se forma y con un fade in gradual', () => {
+    expect(ANILLOS_INICIO).toBeGreaterThan(ENTRADA_LLEGADA);
+    expect(ANILLOS_APARICION).toBeGreaterThan(1);
+    expect(f()).toContain(`float aparecen = smoothstep(${ANILLOS_INICIO.toFixed(1)}, ${(ANILLOS_INICIO + ANILLOS_APARICION).toFixed(1)}, u_entrada);`);
+    expect(f()).toContain('cian * anillos * fondo * aparecen * 0.22');
+  });
+  it('las ondas cuentan desde el inicio de la entrada (la primera nace en el centro); sin animar usan el reloj normal', () => {
+    expect(f()).toContain('float tOnda = u_entrada < 500.0 ? max(u_entrada, 0.0) : t;');
+  });
+  it('el brillo del suelo y la columna de luz no dependen de esa aparición (solo los anillos)', () => {
+    expect(f()).toContain('col += cian * exp(-rr * rr * 2.5) * 0.08;');
+    expect(f()).toContain('col += cian * exp(-dx * dx) * baja * 0.06;');
   });
 });

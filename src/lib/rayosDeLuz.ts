@@ -45,6 +45,9 @@ export const PERIODO_ONDAS_SUELO = 60.0;
 /** El halo del contorno del logo empieza a aparecer al formarse el núcleo (destello) y tarda HALO_APARICION s en llegar a su intensidad. */
 export const HALO_INICIO = ENTRADA_LLEGADA - 0.1;
 export const HALO_APARICION = 1.6;
+/** Los anillos del suelo aparecen (fade in) justo después de formarse el núcleo: empiezan ANILLOS_INICIO s después de que el logo está listo y tardan ANILLOS_APARICION s en verse completos. */
+export const ANILLOS_INICIO = ENTRADA_LLEGADA + 0.2;
+export const ANILLOS_APARICION = 2.5;
 
 /** Relleno alrededor del logo en la textura (fracción de su tamaño): los rayos salen fuera de la silueta. */
 export const RELLENO_SILUETA = 0.45;
@@ -630,9 +633,14 @@ vec3 anillosSuelo(vec2 p, float asp, float t) {
   float suelo = 0.90;
   vec2 d = vec2(p.x - cc.x, (p.y - suelo) / 0.20);
   float rr = length(d) / wl;                             // en anchos de logo
+  // Los anillos aparecen con un fade in justo después de formarse el núcleo, y las ondas
+  // cuentan desde que empezó la entrada: así la primera nace en el centro. (Sin animar
+  // u_entrada es enorme: ya aparecidos y con el reloj normal.)
+  float aparecen = smoothstep(${ANILLOS_INICIO.toFixed(1)}, ${(ANILLOS_INICIO + ANILLOS_APARICION).toFixed(1)}, u_entrada);
+  float tOnda = u_entrada < 500.0 ? max(u_entrada, 0.0) : t;
   float anillos = 0.0;
   for (int i = 0; i < ${N_ONDAS_SUELO}; i++) {
-    float u = fract(t / ${PERIODO_ONDAS_SUELO.toFixed(1)} + float(i) / ${N_ONDAS_SUELO}.0); // 0 = nace en el centro, 1 = ya se apagó
+    float u = fract(tOnda / ${PERIODO_ONDAS_SUELO.toFixed(1)} + float(i) / ${N_ONDAS_SUELO}.0); // 0 = nace en el centro, 1 = ya se apagó
     float radioOnda = 0.12 + 1.75 * (1.0 - pow(1.0 - u, 1.5)); // crece de adentro hacia afuera, frenando
     float a = (rr - radioOnda) / (0.028 + 0.03 * u);           // se ensancha un poco al crecer
     float vida = smoothstep(0.0, 0.10, u) * pow(1.0 - u, 1.3); // nace suave y se desvanece al alejarse
@@ -640,7 +648,7 @@ vec3 anillosSuelo(vec2 p, float asp, float t) {
   }
   float fondo = 1.0 - smoothstep(2.0, 2.6, rr);
   vec3 cian = vec3(0.15, 0.65, 1.0);
-  vec3 col = cian * anillos * fondo * 0.22;
+  vec3 col = cian * anillos * fondo * aparecen * 0.22;
   col += cian * exp(-rr * rr * 2.5) * 0.08;               // brillo del suelo bajo el logo
   // Columna de luz del logo al suelo.
   float dx = (p.x - cc.x) / (0.16 * wl);

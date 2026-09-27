@@ -58,17 +58,33 @@ function FooterFull() {
               terrenos, locales comerciales y habitaciones en los 17 municipios del estado. Gratis para todos.
             </p>
             <div className="space-y-2">
-              <a
-                href="mailto:corestack.sol@gmail.com"
-                className="flex items-center gap-2 text-sm text-white/70 hover:text-accent transition-colors"
-              >
+              <div className="flex items-center gap-3">
                 {/* Logo de Corestack Solutions en vez del ícono de sobre
                     genérico — pedido explícito 2026-08-19. Sin efecto glitch
-                    (se quitó a pedido, 2026-09-23). */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={CORESTACK_LOGO_SRC} alt="" className="h-[20px] w-auto flex-shrink-0" />
-                corestack.sol@gmail.com
-              </a>
+                    (se quitó a pedido, 2026-09-23). Enlaza a la animación del
+                    logo, /corestack (2026-09-26): es una página independiente
+                    (no una ruta de la app), por eso <a> y no <Link>, y sin
+                    botón de volver, por eso se abre en una pestaña nueva. El
+                    padding con margen negativo agranda el área de toque a 40px
+                    sin mover nada. */}
+                <a
+                  href="/corestack"
+                  target="_blank"
+                  rel="noopener"
+                  aria-label="Ver la animación de Corestack Solutions (se abre en una pestaña nueva)"
+                  title="Corestack Solutions"
+                  className="flex-shrink-0 p-2.5 -m-2.5 rounded-md transition-opacity hover:opacity-75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={CORESTACK_LOGO_SRC} alt="" className="h-[20px] w-auto" />
+                </a>
+                <a
+                  href="mailto:corestack.sol@gmail.com"
+                  className="text-sm text-white/70 hover:text-accent transition-colors"
+                >
+                  corestack.sol@gmail.com
+                </a>
+              </div>
               <span className="flex items-center gap-2 text-sm text-white/70">
                 {/* Rojo vivo #FF4D4D (3.1:1 sobre el verde del footer, mínimo 3:1 para
                     íconos; el rojo de marca daba 1.9:1) — pedido 2026-09-23. */}
