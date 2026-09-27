@@ -32,6 +32,20 @@ export const DURACION_NUBES = 3.4;
  */
 export const NUCLEO = { cx: 0.505, cy: 0.329, hw: 0.228, hh: 0.144, nx: 0.508, ny: 0.385, radio: 0.11 };
 
+/**
+ * Entrada del núcleo (chispas que se condensan): cantidad de chispas y segundo (desde que el
+ * logo está listo) en que llega la última: espera máx. 1.4 s + vuelo máx. 2.3 s.
+ */
+export const N_CHISPAS_ENTRADA = 24;
+export const ENTRADA_LLEGADA = 3.7;
+
+/** Anillos del suelo: ondas que crecen de adentro hacia afuera y se desvanecen; cuántas hay a la vez y segundos que dura el ciclo de cada una. */
+export const N_ONDAS_SUELO = 4;
+export const PERIODO_ONDAS_SUELO = 60.0;
+/** El halo del contorno del logo empieza a aparecer al formarse el núcleo (destello) y tarda HALO_APARICION s en llegar a su intensidad. */
+export const HALO_INICIO = ENTRADA_LLEGADA - 0.1;
+export const HALO_APARICION = 1.6;
+
 /** Relleno alrededor del logo en la textura (fracción de su tamaño): los rayos salen fuera de la silueta. */
 export const RELLENO_SILUETA = 0.45;
 
@@ -55,10 +69,17 @@ uniform float u_hayOcc;    // 1.0 si hay oclusor con textura lista
 uniform vec2 u_pad;         // relleno de la textura del logo (fracción de su tamaño, x e y)
 uniform float u_logoAsp;   // ancho / alto de la imagen del logo
 uniform float u_fade;      // 0 → 1: aparición gradual de todo el efecto la primera vez
+uniform float u_entrada;   // segundos desde que el logo está listo (entrada del núcleo); -1 = aún no, muy grande = ya pasó
 uniform float u_solo;      // 1.0: capa superior (solo los rayos, para ir SOBRE el logo)
 
 // Hash sin patrones visibles (Hoskins) e interpolación quíntica: sin bordes
 // duros ni cuadrícula en la bruma.
+// 0 mientras el núcleo se forma (entrada) y 1 justo después: las chispas que salen
+// proyectadas del núcleo hacia arriba no existen hasta que el cubo ya está formado.
+float trasNucleo() {
+  return smoothstep(${ENTRADA_LLEGADA.toFixed(1)}, ${(ENTRADA_LLEGADA + 0.5).toFixed(1)}, u_entrada);
+}
+
 float hash(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * 0.1031);
   p3 += dot(p3, p3.yzx + 33.33);
@@ -232,7 +253,7 @@ float arcoSuave(float rodea, vec2 semilla, float umbral) {
 // dibuja lo que cae encima de su silueta; la capa del fondo dibuja el resto.
 vec3 rayos(vec2 p, vec2 fr, float asp, float t, float solo) {
   // Las chispas (capa superior) duran más que la ráfaga porque rebotan en el suelo.
-  vec3 chis = solo > 0.5 ? chispas(p, asp, t) : vec3(0.0);
+  vec3 chis = solo > 0.5 ? chispas(p, asp, t) * trasNucleo() : vec3(0.0);
   float ev = rafaga(t);
   if (ev < 0.01) return chis;
   vec3 cf = campo(fr);
@@ -351,6 +372,56 @@ vec3 nubes(vec2 p, vec2 fr, float asp, float t) {
   return colNube * nube * franja * ola * cerca * 0.35;
 }
 
+// Entrada del núcleo: chispas que se condensan. Al aparecer el logo, chispas
+// redondas (azul eléctrico y naranja) llegan desde alrededor, cada una con su
+// espera, su duración y su giro al azar, atraídas hacia el centro del núcleo
+// (aceleran al acercarse, cada una a su ritmo, con su tamaño y su color: azul eléctrico
+// o naranja; aparecen con un fade in y al llegar son absorbidas). Conforme llegan el cubo se
+// va formando (crece y se enciende) y al llegar la última hay un destello; después
+// queda fijo. e son los segundos desde que el logo está listo (u_entrada).
+float entradaEspera(float k) { return 0.2 + 1.2 * hash(vec2(k, 41.7)); }
+float entradaVuelo(float k) { return 0.8 + 1.5 * hash(vec2(k, 47.3)); } // unas llegan rápido y otras despacio
+
+// Fracción (0..1) de chispas que ya llegaron al núcleo.
+float cargaNucleo(float e) {
+  if (e >= ${ENTRADA_LLEGADA.toFixed(1)}) return 1.0;
+  float suma = 0.0;
+  for (int i = 0; i < ${N_CHISPAS_ENTRADA}; i++) {
+    float k = float(i);
+    suma += smoothstep(0.0, 0.2, e - (entradaEspera(k) + entradaVuelo(k)));
+  }
+  return suma / ${N_CHISPAS_ENTRADA}.0;
+}
+
+// Destello (0..1) cuando llega la última chispa.
+float destelloEntrada(float e) {
+  return smoothstep(${(ENTRADA_LLEGADA - 0.5).toFixed(1)}, ${ENTRADA_LLEGADA.toFixed(1)}, e) * (1.0 - smoothstep(${ENTRADA_LLEGADA.toFixed(1)}, ${(ENTRADA_LLEGADA + 0.5).toFixed(1)}, e));
+}
+
+vec3 chispasEntrada(vec2 fr, float e) {
+  if (e < 0.0 || e > ${ENTRADA_LLEGADA.toFixed(1)}) return vec3(0.0);
+  vec2 lg = logoUV(fr);
+  vec2 q = vec2((lg.x - ${NUCLEO.nx}) * u_logoAsp, lg.y - ${NUCLEO.ny});
+  vec3 col = vec3(0.0);
+  for (int i = 0; i < ${N_CHISPAS_ENTRADA}; i++) {
+    float k = float(i);
+    float u = (e - entradaEspera(k)) / entradaVuelo(k);
+    if (u <= 0.0 || u >= 1.0) continue;
+    float hT = hash(vec2(k, 71.9)); // tamaño
+    float ex = 1.4 + 1.8 * hash(vec2(k, 73.1)); // cuánto acelera hacia el centro (unas casi constantes, otras se lanzan al final)
+    float a = 6.2832 * hash(vec2(k, 53.1)) + (hash(vec2(k, 61.3)) - 0.5) * 2.4 * u;
+    float r = (0.42 + 0.5 * hash(vec2(k, 59.9))) * (1.0 - pow(u, ex));
+    float d = length(q - vec2(cos(a), sin(a) * 0.9) * r);
+    // Al llegar la chispa es absorbida: se encoge y se apaga dentro del núcleo.
+    float absorbe = smoothstep(0.72, 1.0, u);
+    float rad = mix(0.008, 0.024, hT * hT) * (1.0 - 0.75 * absorbe); // unas grandes, otras chicas
+    float brillo = smoothstep(0.0, 0.35, u) * (1.0 - smoothstep(0.85, 1.0, u)) * (1.05 + 0.5 * hT); // aparece con fade in
+    vec3 c = hash(vec2(k, 67.7)) > 0.5 ? vec3(0.15, 0.55, 1.0) : vec3(1.0, 0.50, 0.10); // azul eléctrico o naranja
+    col += c * smoothstep(rad, rad * 0.3, d) * brillo; // punto redondo y limpio, sin halo
+  }
+  return col;
+}
+
 // Núcleo de luz eléctrica en el hueco del anillo superior del logo (capa
 // superior). Solo se pinta DENTRO de la apertura, y su centro queda hacia el borde
 // delantero del hueco: el resto lo recorta ese borde y solo asoma la parte de
@@ -368,6 +439,9 @@ vec3 nucleo(vec2 fr, float t) {
   // naranja y naranja rojizo), con una brasa que bulle por dentro. Centrado hacia
   // el borde de abajo: el borde delantero del hueco recorta su parte inferior.
   vec2 q = vec2((lg.x - ${NUCLEO.nx}) * u_logoAsp, lg.y - ${NUCLEO.ny});
+  // Entrada: el cubo crece y se enciende conforme le llegan las chispas (carga 0 → 1); con 1 es el núcleo de siempre.
+  float carga = cargaNucleo(u_entrada);
+  q = q / mix(0.3, 1.0, smoothstep(0.0, 1.0, carga));
   float W = ${NUCLEO.radio};      // semiancho del cubo (unidades de alto del logo)
   float Hd = W * 0.58;            // semialto del rombo de arriba
   float E = W * 0.80;             // altura de las aristas verticales
@@ -411,7 +485,8 @@ vec3 nucleo(vec2 fr, float t) {
   float brilloArco = (exp(-abs(d1) * 8.0) * 0.45 * s1 + exp(-abs(d2) * 8.0) * 0.40 * s2) * dentroNucleo;
   vec3 rayosNucleo = blanco * linea * 0.9;
 
-  return (base + rayosNucleo) * dentro;
+  float encendido = smoothstep(0.05, 0.9, carga) * (1.0 + 0.8 * destelloEntrada(u_entrada));
+  return (base + rayosNucleo) * dentro * encendido;
 }
 
 // Energía SOBRE el logo, como el mock: líneas de luz neón en los bordes de las
@@ -481,7 +556,7 @@ vec3 fugaNaranja(vec2 fr, float t) {
   vec2 q = vec2((lg.x - ${NUCLEO.nx}) * u_logoAsp, lg.y - ${NUCLEO.ny});
   float cerca = exp(-length(q) * 3.4);
   float brasa = noise(vec2(lg.x * 18.0, lg.y * 10.0 + t * 1.1));
-  return vec3(1.0, 0.5, 0.12) * rendija * cerca * (0.55 + 0.7 * brasa) * 0.7;
+  return vec3(1.0, 0.5, 0.12) * rendija * cerca * (0.55 + 0.7 * brasa) * 0.7 * smoothstep(0.25, 1.0, cargaNucleo(u_entrada));
 }
 
 // Brasas que salen impulsadas del núcleo hacia arriba (capa superior), como las
@@ -495,9 +570,11 @@ vec3 brasas(vec2 p, float asp, float t) {
   float hl = u_occ.w / (1.0 + 2.0 * u_pad.y);           // alto del logo (unidades de p)
   float wl = u_occ.z * asp / (1.0 + 2.0 * u_pad.x);     // ancho del logo
   vec2 nucleoP = vec2(cc.x + (${NUCLEO.nx} - 0.5) * wl, cc.y + (${NUCLEO.ny} - 0.5) * hl);
-  vec2 rel = p - nucleoP;
+  // Salen justo por encima del núcleo: del vértice de arriba del cubo (a ~0.11 del alto del logo sobre su centro), no de su interior.
+  vec2 origen = nucleoP + vec2(0.0, -0.115 * hl);
+  vec2 rel = p - origen;
   // Solo en la columna sobre el núcleo (fuera de ella no hay nada que calcular).
-  if (rel.y > 0.10 * hl || rel.y < -2.1 * hl || abs(rel.x) > 0.9 * wl) return vec3(0.0);
+  if (rel.y > 0.05 * hl || rel.y < -2.4 * hl || abs(rel.x) > 0.9 * wl) return vec3(0.0);
   vec3 suma = vec3(0.0);
   for (int i = 0; i < 16; i++) {
     float k = float(i);
@@ -505,7 +582,7 @@ vec3 brasas(vec2 p, float asp, float t) {
     float h2 = hash(vec2(k, 4.1));
     float h3 = hash(vec2(k, 8.3));
     float h4 = hash(vec2(k, 12.9));
-    float vida = 3.5 + 8.5 * h1;   // vidas muy distintas: las largas son las lentas
+    float vida = 2.6 + 6.4 * h1;   // vidas muy distintas: las largas son las lentas (un ~25 % más cortas que antes: más rápidas)
     float fase = t + h2 * vida * 3.0;
     float edad = mod(fase, vida);
     float ciclo = floor(fase / vida);
@@ -516,7 +593,7 @@ vec3 brasas(vec2 p, float asp, float t) {
     float hc2 = hash(vec2(k * 5.7, ciclo + 0.5));
     float hc3 = hash(vec2(k * 2.3, ciclo + 3.3));
     if (hc3 < 0.3) continue;
-    float x0 = (hc - 0.5) * 0.36 * wl;
+    float x0 = (hc - 0.5) * 0.16 * wl; // dentro del ancho del cubo (±0.08 del ancho del logo)
     float sube = 1.8 * hl * (0.3 + 0.85 * hc2);
     float amp = 0.07 * wl * (0.5 + h4);
     float frec = 0.9 + 0.7 * h4;
@@ -524,25 +601,28 @@ vec3 brasas(vec2 p, float asp, float t) {
     float u = edad / vida;
     float impulso = mix(1.2, 2.8, hc2 * hc2);            // 1.2: casi lineal y lento; 2.8: sale disparada y frena
     float avance = 1.0 - pow(1.0 - u, impulso);
-    vec2 pos = nucleoP + vec2(x0 + sin(edad * frec + h4 * 6.28) * amp * u, -sube * avance);
+    vec2 pos = origen + vec2(x0 + sin(edad * frec + h4 * 6.28) * amp * u, -sube * avance);
     // Redondas: un disco suave en la posición actual (el movimiento se ve al
     // desplazarse cada partícula, no por una estela).
     float d = length(p - pos);
-    float radio = 0.0042 * (0.7 + 0.6 * h3) * (1.0 - 0.4 * u);
-    float punto = smoothstep(radio, radio * 0.35, d);
-    float entra = smoothstep(0.0, 0.08, u);
-    float sale = 1.0 - u;
-    float titila = 0.65 + 0.35 * sin(t * 2.5 + h1 * 60.0);
+    float radio = 0.0050 * (0.7 + 0.6 * h3) * (1.0 - 0.4 * u);
+    // Brillosas y etéreas: un punto redondo, limpio (sin halo alrededor), con el centro
+    // casi blanco, que entra y se apaga despacio.
+    float punto = smoothstep(radio, radio * 0.30, d);
+    float entra = smoothstep(0.0, 0.20, u);
+    float sale = pow(1.0 - u, 1.5);
+    float titila = 0.70 + 0.30 * sin(t * 2.0 + h1 * 60.0);
     vec3 col = h4 > 0.4 ? vec3(1.0, 0.55, 0.15) : vec3(0.35, 0.85, 1.0);
-    suma += col * punto * entra * sale * sale * titila;
+    suma += (col * punto * 1.1 + vec3(1.0, 0.95, 0.85) * punto * 0.5) * entra * sale * titila;
   }
-  return suma * 0.75;
+  return suma * 0.85;
 }
 
-// Anillos de luz en el suelo, bajo el logo (capa de fondo), como los círculos
-// concéntricos del mock: elipses finas cian que respiran, más una columna de luz
-// tenue que baja del logo al suelo. Estáticos (sin barras que aparecen y
-// desaparecen).
+// Anillos de luz en el suelo, bajo el logo (capa de fondo): ondas que nacen cerca
+// del centro, crecen hacia afuera (frenando poco a poco, como una onda en el agua) y
+// se van desvaneciendo al alejarse. Hay ${N_ONDAS_SUELO} a la vez, desfasadas entre sí, cada una
+// con un ciclo de ${PERIODO_ONDAS_SUELO.toFixed(1)} s; al terminar una nace otra en el centro, sin cortes. Más un
+// brillo tenue del suelo y una columna de luz que baja del logo.
 vec3 anillosSuelo(vec2 p, float asp, float t) {
   vec2 cc = vec2((u_occ.x + u_occ.z * 0.5) * asp, u_occ.y + u_occ.w * 0.5);
   float wl = u_occ.z * asp / (1.0 + 2.0 * u_pad.x);
@@ -550,14 +630,17 @@ vec3 anillosSuelo(vec2 p, float asp, float t) {
   float suelo = 0.90;
   vec2 d = vec2(p.x - cc.x, (p.y - suelo) / 0.20);
   float rr = length(d) / wl;                             // en anchos de logo
-  float a1 = (rr - 0.75) / 0.03;
-  float a2 = (rr - 1.15) / 0.03;
-  float a3 = (rr - 1.60) / 0.03;
-  float respira = 0.75 + 0.25 * sin(t * 0.6);
-  float anillos = exp(-a1 * a1) * 0.9 + exp(-a2 * a2) * 0.6 * (0.8 + 0.2 * sin(t * 0.6 + 2.0)) + exp(-a3 * a3) * 0.35;
-  float fondo = 1.0 - smoothstep(1.7, 2.3, rr);
+  float anillos = 0.0;
+  for (int i = 0; i < ${N_ONDAS_SUELO}; i++) {
+    float u = fract(t / ${PERIODO_ONDAS_SUELO.toFixed(1)} + float(i) / ${N_ONDAS_SUELO}.0); // 0 = nace en el centro, 1 = ya se apagó
+    float radioOnda = 0.12 + 1.75 * (1.0 - pow(1.0 - u, 1.5)); // crece de adentro hacia afuera, frenando
+    float a = (rr - radioOnda) / (0.028 + 0.03 * u);           // se ensancha un poco al crecer
+    float vida = smoothstep(0.0, 0.10, u) * pow(1.0 - u, 1.3); // nace suave y se desvanece al alejarse
+    anillos += exp(-a * a) * vida;
+  }
+  float fondo = 1.0 - smoothstep(2.0, 2.6, rr);
   vec3 cian = vec3(0.15, 0.65, 1.0);
-  vec3 col = cian * anillos * respira * fondo * 0.16;
+  vec3 col = cian * anillos * fondo * 0.22;
   col += cian * exp(-rr * rr * 2.5) * 0.08;               // brillo del suelo bajo el logo
   // Columna de luz del logo al suelo.
   float dx = (p.x - cc.x) / (0.16 * wl);
@@ -580,9 +663,13 @@ void main() {
   vec2 p = vec2(uv.x * asp, 1.0 - uv.y);
   vec2 fr = vec2(uv.x, 1.0 - uv.y);      // el mismo punto en fracciones del canvas
   float t = u_t;
-#ifdef SOBRE
-  // Capa superior: solo los rayos y la energía que van encima del logo.
-  gl_FragColor = vec4((u_hayOcc > 0.5 ? rayos(p, fr, asp, t, 1.0) + nubes(p, fr, asp, t) + nucleo(fr, t) + fugaNaranja(fr, t) + energiaLogo(fr, t) + brasas(p, asp, t) : vec3(0.0)) * u_fade, 1.0);
+#if defined(SOBRE)
+  // Capa superior: los rayos, las nubes y las brasas que van encima del logo (luz suave).
+  gl_FragColor = vec4((u_hayOcc > 0.5 ? rayos(p, fr, asp, t, 1.0) + nubes(p, fr, asp, t) + brasas(p, asp, t) * trasNucleo() : vec3(0.0)) * u_fade, 1.0);
+#elif defined(DETALLE)
+  // Capa de detalle: solo el logo (núcleo, luz entre capas y líneas de energía), en un
+  // canvas del tamaño del logo y a resolución completa para que los bordes salgan nítidos.
+  gl_FragColor = vec4(u_hayOcc > 0.5 ? (nucleo(fr, t) + fugaNaranja(fr, t) + energiaLogo(fr, t)) * u_fade + chispasEntrada(fr, u_entrada) : vec3(0.0), 1.0);
 #else
   float s = coordHaz(p, asp);
 
@@ -695,7 +782,9 @@ void main() {
     vec3 azulVivo = vec3(0.05, 0.42, 1.0);
     vec3 nucleoVivo = vec3(0.25, 0.70, 1.0);
     vec3 naranjaVivo = vec3(1.0, 0.48, 0.12);
-    float fuerza = (1.15 + 0.9 * haz) * (1.0 + 0.9 * rafaga(t));
+    // El halo aparece justo después de formarse el núcleo (entrada): antes no existe.
+    float aparece = smoothstep(${HALO_INICIO.toFixed(1)}, ${(HALO_INICIO + HALO_APARICION).toFixed(1)}, u_entrada);
+    float fuerza = (1.15 + 0.9 * haz) * (1.0 + 0.9 * rafaga(t)) * aparece;
     // El halo mezcla el azul eléctrico con el naranja del logo: naranja hacia
     // arriba y hacia abajo (donde el logo es naranja), azul en la franja del medio
     // (donde es azul), con la energía que fluye mezclando ambos de forma orgánica.
@@ -703,15 +792,20 @@ void main() {
     float mezcla = clamp(0.15 + 0.7 * extremos + 0.35 * (energia - 0.5), 0.0, 1.0);
     vec3 colAnillo = mix(azulVivo, naranjaVivo, mezcla);
     vec3 colLenguas = mix(mix(azulVivo, nucleoVivo, energia), naranjaVivo, mezcla);
-    rayo += (colAnillo * halo * latido * (0.7 + 0.5 * energia) * 0.17
-           + colLenguas * lenguas * energia * 0.14) * fuerza;
+    rayo += (colAnillo * halo * latido * (0.7 + 0.5 * energia) * 0.12
+           + colLenguas * lenguas * energia * 0.10) * fuerza;
     }
   }
 
   // Polvo: tres capas (fino, medio y bokeh grande), solo donde hay luz.
-  float polvo = dust(p, 16.0, 0.10, 1.0, luz, t)
+  // Cada mota se ve según dónde está respecto al haz que cruza: 0 = lejos, 1 = en el
+  // centro. Lejos del centro casi no se ve, y al entrar o salir del haz (la orilla,
+  // a media intensidad) destella un poco más que en el centro.
+  float enHaz = smoothstep(0.25, 0.95, ra);
+  float visibilidadPolvo = (0.30 + 0.70 * enHaz) * (1.0 + 2.8 * enHaz * (1.0 - enHaz));
+  float polvo = (dust(p, 16.0, 0.10, 1.0, luz, t)
               + dust(p, 30.0, 0.16, 7.0, luz, t) * 0.8
-              + dust(p, 9.0, 0.06, 13.0, luz, t) * 0.35;
+              + dust(p, 9.0, 0.06, 13.0, luz, t) * 0.35) * visibilidadPolvo;
 
   // Rampa de color eléctrica (negro azulado → azul eléctrico → celeste → blanco hielo).
   vec3 col = mix(vec3(0.006, 0.012, 0.030), vec3(0.03, 0.20, 0.66), smoothstep(0.0, 0.65, luz));
@@ -728,15 +822,21 @@ void main() {
 }
 `;
 
+export type ModoCapa = 'fondo' | 'sobre' | 'detalle';
+
 /**
- * Cada capa compila SOLO su mitad del shader: con `#define SOBRE` la capa superior
- * (rayos, núcleo, energía del logo), sin él la de fondo. Compilar el shader entero
- * en cada una (eligiendo con un uniform) cuesta el doble; en una GPU modesta con la
- * caché del driver vacía (primera visita) esa compilación se medía en segundos.
+ * Cada capa compila SOLO su parte del shader: con `#define SOBRE` la capa superior
+ * (rayos, nubes y brasas), con `#define DETALLE` la del logo (núcleo, luz entre capas
+ * y líneas de energía) y sin nada la de fondo. Compilar el shader entero en cada una
+ * (eligiendo con un uniform) cuesta el triple; en una GPU modesta con la caché del
+ * driver vacía (primera visita) esa compilación se medía en segundos.
  */
-export function fragmentDeCapa(solo: boolean): string {
-  return solo ? `#define SOBRE
-${FRAGMENT_SHADER}` : FRAGMENT_SHADER;
+export function fragmentDeCapa(modo: ModoCapa): string {
+  if (modo === 'sobre') return `#define SOBRE
+${FRAGMENT_SHADER}`;
+  if (modo === 'detalle') return `#define DETALLE
+${FRAGMENT_SHADER}`;
+  return FRAGMENT_SHADER;
 }
 
 /**
@@ -807,8 +907,15 @@ export function hayNubes(t: number): boolean {
   return (((t % PERIODO_NUBES) + PERIODO_NUBES) % PERIODO_NUBES) < DURACION_NUBES;
 }
 
-/** Resolución del campo del logo respecto a la imagen original (es un campo suave: no necesita más). */
-export const ESCALA_CAMPO = 0.5;
+/**
+ * Ancho (px) al que se calculan las texturas del logo, sin contar el relleno. Antes era
+ * la mitad del original (163 px): los bordes de energía y las rendijas se veían en
+ * escalones. A 360 px salen definidos hasta en pantallas densas y el cálculo sigue
+ * repartido en pasos que ceden el hilo.
+ */
+export const ANCHO_CAMPO = 360;
+/** Grosor (px, a ANCHO_CAMPO) de la línea de luz de los bordes de las capas: mismo grosor visual que con la textura chica. */
+export const RADIO_BORDE = 4;
 
 /** Desenfoque gaussiano aproximado (3 pasadas de caja por eje) de un canal de 1 byte, `radio` en píxeles. */
 export function desenfocar(canal: Uint8Array, ancho: number, alto: number, radio: number): Uint8Array {
@@ -853,23 +960,24 @@ export function campoDeSilueta(alfa: Uint8Array, ancho: number, alto: number, ra
  * menos de 2 px de un píxel fuera de ella. Es la "línea de luz" de las capas del
  * logo (~2 px de grosor; el filtrado de la textura la suaviza).
  */
-export function bordesDeMascara(mascara: Uint8Array, ancho: number, alto: number): Uint8Array {
+export function bordesDeMascara(mascara: Uint8Array, ancho: number, alto: number, radio = 2): Uint8Array {
   const borde = new Uint8Array(mascara.length);
   const fuera = (x: number, y: number) => x < 0 || y < 0 || x >= ancho || y >= alto || mascara[y * ancho + x] === 0;
   for (let y = 0; y < alto; y++) {
     for (let x = 0; x < ancho; x++) {
       if (mascara[y * ancho + x] === 0) continue;
-      if (fuera(x - 1, y) || fuera(x + 1, y) || fuera(x, y - 1) || fuera(x, y + 1)
-        || fuera(x - 2, y) || fuera(x + 2, y) || fuera(x, y - 2) || fuera(x, y + 2)) borde[y * ancho + x] = 255;
+      for (let d = 1; d <= radio; d++) {
+        if (fuera(x - d, y) || fuera(x + d, y) || fuera(x, y - d) || fuera(x, y + d)) { borde[y * ancho + x] = 255; break; }
+      }
     }
   }
   return borde;
 }
 
 /** Textura de energía del logo: R borde de las capas azules, G borde de las naranjas, B capas azules, A capas naranjas. */
-export function texturaEnergia(azul: Uint8Array, naranja: Uint8Array, ancho: number, alto: number): Uint8Array {
-  const bAzul = bordesDeMascara(azul, ancho, alto);
-  const bNaranja = bordesDeMascara(naranja, ancho, alto);
+export function texturaEnergia(azul: Uint8Array, naranja: Uint8Array, ancho: number, alto: number, radioBorde = 2): Uint8Array {
+  const bAzul = bordesDeMascara(azul, ancho, alto, radioBorde);
+  const bNaranja = bordesDeMascara(naranja, ancho, alto, radioBorde);
   const out = new Uint8Array(ancho * alto * 4);
   for (let i = 0; i < azul.length; i++) {
     out[i * 4] = bAzul[i];
@@ -886,6 +994,15 @@ export function texturaEnergia(azul: Uint8Array, naranja: Uint8Array, ancho: num
  * cuadro (las capas de un mismo cuadro reciben la misma marca de tiempo) y no
  * corre mientras la pestaña está oculta.
  */
+/**
+ * Entrada compartida por todas las capas: el núcleo (capa de detalle) y el halo del
+ * contorno (capa de fondo) tienen que ir sincronizados, pero cada capa arranca cuando
+ * termina de compilar su shader. La capa de detalle marca aquí el instante (del reloj del
+ * efecto) en que el logo estuvo listo y las demás cuentan desde ahí. Si no hay capa de
+ * detalle, marca la primera capa que tenga logo.
+ */
+const entrada = { hayDetalle: false, tListo: -1 };
+
 const reloj = { acumulado: 0, ultimoAhora: -1 };
 function tiempoEfecto(ahora: number): number {
   if (ahora !== reloj.ultimoAhora) {
@@ -953,14 +1070,16 @@ export interface PerfilEfecto {
   fpsMax: number;
   /** Factor de resolución del canvas de fondo. */
   escalaFondo: number;
-  /** Factor de resolución de la capa superior (rayos, núcleo y bordes). */
+  /** Factor de resolución de la capa superior (rayos, nubes y brasas: luz suave). */
   escalaSobre: number;
+  /** Factor de resolución de la capa de detalle del logo (sobre los píxeles del dispositivo, hasta 2x). */
+  escalaDetalle: number;
 }
 
 export function perfilDeNivel(nivel: Exclude<NivelEfecto, 'minimo'>): PerfilEfecto {
   return nivel === 'ligero'
-    ? { fpsMax: 20, escalaFondo: 0.65, escalaSobre: 0.4 }
-    : { fpsMax: 30, escalaFondo: 1, escalaSobre: ESCALA_CAPA_SUPERIOR };
+    ? { fpsMax: 20, escalaFondo: 0.65, escalaSobre: 0.4, escalaDetalle: 0.75 }
+    : { fpsMax: 30, escalaFondo: 1, escalaSobre: ESCALA_CAPA_SUPERIOR, escalaDetalle: 1 };
 }
 
 // ---------------------------------------------------------------------------
@@ -1006,8 +1125,8 @@ async function calcularCampos(src: string): Promise<CamposLogo> {
   const img = new Image();
   img.src = src;
   await img.decode();
-  const w0 = Math.max(1, Math.round(img.naturalWidth * ESCALA_CAMPO));
-  const h0 = Math.max(1, Math.round(img.naturalHeight * ESCALA_CAMPO));
+  const w0 = ANCHO_CAMPO;
+  const h0 = Math.max(1, Math.round((ANCHO_CAMPO * img.naturalHeight) / img.naturalWidth));
   const px = Math.round(w0 * RELLENO_SILUETA), py = Math.round(h0 * RELLENO_SILUETA);
   const w = w0 + 2 * px, h = h0 + 2 * py;
   const c2d = document.createElement('canvas');
@@ -1031,16 +1150,18 @@ async function calcularCampos(src: string): Promise<CamposLogo> {
   await ceder();
   const campo = campoDeSilueta(alfa, w, h, w0 * 0.12, w0 * 0.04, rendijas);
   await ceder();
-  const energia = texturaEnergia(azules, naranjas, w, h);
+  const energia = texturaEnergia(azules, naranjas, w, h, RADIO_BORDE);
   return { ancho: w, alto: h, relX: px / w0, relY: py / h0, logoAsp: img.naturalWidth / img.naturalHeight, campo, energia };
 }
 
 export interface OpcionesRayos {
   /**
    * 'fondo' (por defecto): haces, bruma, polvo y rayos. 'sobre': capa transparente-aditiva
-   * con solo los rayos que caen sobre el logo; va encima de él con mix-blend-mode: screen.
+   * con los rayos, nubes y brasas que caen sobre el logo. 'detalle': canvas del tamaño del
+   * logo con su núcleo y sus líneas de energía a resolución completa. Las dos últimas van
+   * encima del logo con mix-blend-mode: screen.
    */
-  modo?: 'fondo' | 'sobre';
+  modo?: ModoCapa;
   /** Un solo cuadro, sin animar (movimiento reducido). */
   estatico?: boolean;
   /** Elemento cuya silueta interactúa con la luz (ej. el logo). */
@@ -1057,12 +1178,14 @@ export interface OpcionesRayos {
 export function iniciarRayosDeLuz(canvas: HTMLCanvasElement, { modo = 'fondo', estatico = false, oclusor, nivel = 'completo', alPrimerCuadro, alFallar }: OpcionesRayos = {}): () => void {
   if (nivel === 'minimo') { alFallar?.(); return () => {}; }
   const perfil = perfilDeNivel(nivel);
-  const solo = modo === 'sobre';
+  const solo = modo !== 'fondo'; // capa transparente-aditiva sobre el logo (rayos o detalle)
   const gl = canvas.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'low-power' });
   if (!gl) { alFallar?.(); return () => {}; }
 
   let cancelado = false;
   let detener: () => void = () => {};
+  if (modo === 'detalle') entrada.hayDetalle = true;
+  const soltarEntrada = () => { if (modo === 'detalle') { entrada.hayDetalle = false; entrada.tListo = -1; } };
 
   function compilar(tipo: number, fuente: string) {
     const s = gl!.createShader(tipo);
@@ -1072,7 +1195,7 @@ export function iniciarRayosDeLuz(canvas: HTMLCanvasElement, { modo = 'fondo', e
     return s;
   }
   const vs = compilar(gl.VERTEX_SHADER, VERTEX_SHADER);
-  const fs = compilar(gl.FRAGMENT_SHADER, fragmentDeCapa(solo));
+  const fs = compilar(gl.FRAGMENT_SHADER, fragmentDeCapa(modo));
   const prog = vs && fs ? gl.createProgram() : null;
   if (!vs || !fs || !prog) { alFallar?.(); return () => {}; }
   gl.attachShader(prog, vs);
@@ -1098,7 +1221,7 @@ export function iniciarRayosDeLuz(canvas: HTMLCanvasElement, { modo = 'fondo', e
     if (cancelado) return;
     // Sin este aviso un error del shader es invisible (el efecto simplemente no aparece).
     if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) console.error('[rayosDeLuz] el shader no compiló:', gl.getShaderInfoLog(fs));
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { alFallar?.(); return; }
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) { soltarEntrada(); alFallar?.(); return; }
     detener = arrancar();
   });
 
@@ -1118,6 +1241,7 @@ export function iniciarRayosDeLuz(canvas: HTMLCanvasElement, { modo = 'fondo', e
     const uHayOcc = gl!.getUniformLocation(prog!, 'u_hayOcc');
     const uSolo = gl!.getUniformLocation(prog!, 'u_solo');
     const uFade = gl!.getUniformLocation(prog!, 'u_fade');
+    const uEntrada = gl!.getUniformLocation(prog!, 'u_entrada');
     const uPad = gl!.getUniformLocation(prog!, 'u_pad');
     const uLogoAsp = gl!.getUniformLocation(prog!, 'u_logoAsp');
     let tPrimero = -1; // instante (del reloj del efecto) del primer cuadro dibujado
@@ -1168,8 +1292,12 @@ export function iniciarRayosDeLuz(canvas: HTMLCanvasElement, { modo = 'fondo', e
     let vacio = false; // la capa superior ya está limpia: no hay que redibujar
 
     function ajustarTamano() {
-      const base = solo ? perfil.escalaSobre : perfil.escalaFondo;
-      const q = calidadDeRender(canvas.clientWidth, window.devicePixelRatio || 1) * base * (solo ? 1 : escalaAdaptativa);
+      const dpr = window.devicePixelRatio || 1;
+      // El detalle es un canvas chico (el logo): se dibuja a los píxeles reales del dispositivo
+      // (hasta 2x) para que no se vea pixeleado; las demás capas usan la calidad general.
+      const q = modo === 'detalle'
+        ? Math.min(2, Math.max(1, dpr)) * perfil.escalaDetalle
+        : calidadDeRender(canvas.clientWidth, dpr) * (solo ? perfil.escalaSobre : perfil.escalaFondo * escalaAdaptativa);
       const w = Math.max(2, Math.round(canvas.clientWidth * q));
       const h = Math.max(2, Math.round(canvas.clientHeight * q));
       if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; vacio = false; }
@@ -1207,6 +1335,10 @@ export function iniciarRayosDeLuz(canvas: HTMLCanvasElement, { modo = 'fondo', e
       gl!.uniform1f(uFade, estatico ? 1 : factorFadeIn(t - tPrimero));
       // El oclusor se mueve (el logo "flota"): se lee su rect en cada cuadro.
       const el = oclusor && texturaLista ? document.querySelector(oclusor.selector) : null;
+      // La entrada (núcleo y halo) arranca cuando el logo está listo; ver `entrada` arriba.
+      if (el && entrada.tListo < 0 && (modo === 'detalle' || !entrada.hayDetalle)) entrada.tListo = t;
+      // Sin animar (movimiento reducido) todo ya está formado: la entrada se salta.
+      gl!.uniform1f(uEntrada, estatico ? 1e3 : entrada.tListo < 0 ? -1 : t - entrada.tListo);
       if (el) {
         const [x, y, w, h] = rectEnFracciones(el.getBoundingClientRect(), canvas.getBoundingClientRect());
         // La textura incluye el relleno: se pasa su rect ampliado.
@@ -1246,7 +1378,7 @@ export function iniciarRayosDeLuz(canvas: HTMLCanvasElement, { modo = 'fondo', e
       if (document.hidden) cancelAnimationFrame(raf);
       else { reanudarReloj(); ultimoTs = 0; raf = requestAnimationFrame(cuadro); }
     };
-    const alPerderContexto = (e: Event) => { e.preventDefault(); cancelAnimationFrame(raf); alFallar?.(); };
+    const alPerderContexto = (e: Event) => { e.preventDefault(); cancelAnimationFrame(raf); soltarEntrada(); alFallar?.(); };
 
     window.addEventListener('resize', alRedimensionar);
     document.addEventListener('visibilitychange', alVisibilidad);
@@ -1257,6 +1389,7 @@ export function iniciarRayosDeLuz(canvas: HTMLCanvasElement, { modo = 'fondo', e
 
     return () => {
       cancelAnimationFrame(raf);
+      soltarEntrada();
       window.removeEventListener('resize', alRedimensionar);
       document.removeEventListener('visibilitychange', alVisibilidad);
       canvas.removeEventListener('webglcontextlost', alPerderContexto);

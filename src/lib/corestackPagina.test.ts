@@ -9,13 +9,13 @@ describe('página independiente de /corestack', () => {
     expect(html).toContain('<meta name="robots" content="noindex,nofollow">');
     expect(html).toContain('<script>window.__efecto=1;</script>');
   });
-  it('trae los elementos que el efecto busca (escena, dos capas y el logo oclusor)', () => {
-    for (const id of ['escena', 'rayos-fondo', 'rayos-sobre']) expect(html).toContain(`id="${id}"`);
+  it('trae los elementos que el efecto busca (escena, tres capas y el logo oclusor)', () => {
+    for (const id of ['escena', 'rayos-fondo', 'rayos-sobre', 'rayos-detalle']) expect(html).toContain(`id="${id}"`);
     expect(html).toContain('data-rayos-oclusor');
     expect(html).toContain(`src="${RUTA_LOGO}"`);
   });
   it('precarga el logo con prioridad alta (es lo primero que se ve)', () => {
-    expect(html).toMatch(/<link rel="preload" as="image" href="\/corestack\/logo\.png" fetchpriority="high">/);
+    expect(html).toMatch(/<link rel="preload" as="image" href="\/corestack\/logo\.webp" fetchpriority="high">/);
   });
   it('no carga nada externo: ni scripts, ni estilos, ni fuentes', () => {
     expect(html).not.toMatch(/<script[^>]+src=/);

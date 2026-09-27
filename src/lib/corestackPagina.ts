@@ -12,6 +12,9 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden}
 .capa{position:absolute;inset:0;width:100%;height:100%;display:block}
 .escena.sin-efecto .capa{opacity:0}
 .capa-sobre{pointer-events:none;z-index:3;mix-blend-mode:screen}
+/* Va como hija directa de la escena (no dentro del logo, que tiene animación de opacidad): así el screen ve el fondo. Su posición la fija cliente.ts sobre el logo. */
+.capa-detalle{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;z-index:3;mix-blend-mode:screen}
+.escena.sin-efecto .capa-detalle{display:none}
 .rejilla{position:absolute;inset:-10%;background-image:radial-gradient(circle,rgba(56,189,248,.55) 2.1px,transparent 2.3px),linear-gradient(rgba(56,189,248,.18) 1px,transparent 1px),linear-gradient(90deg,rgba(56,189,248,.18) 1px,transparent 1px);background-size:48px 48px,48px 48px,48px 48px;transform:perspective(600px) rotateX(60deg) scale(1.8) translateY(6%);transform-origin:center bottom;-webkit-mask-image:radial-gradient(ellipse at center,#000 0%,transparent 70%);mask-image:radial-gradient(ellipse at center,#000 0%,transparent 70%)}
 .lineas{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0,rgba(255,255,255,.035) 1px,transparent 1px,transparent 3px);mix-blend-mode:overlay;opacity:.5}
 .pila{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
@@ -25,7 +28,7 @@ html,body{margin:0;height:100%;background:#000;overflow:hidden}
 `.trim();
 
 /** Ruta pública del logo (la copia scripts/build-corestack.mjs). */
-export const RUTA_LOGO = '/corestack/logo.png';
+export const RUTA_LOGO = '/corestack/logo.webp';
 
 /** Un `</script` dentro del código cerraría la etiqueta antes de tiempo. */
 export function escaparScript(js: string): string {
@@ -56,12 +59,13 @@ export function construirPagina(scriptEfecto: string, woff2Base64 = ''): string 
 <div class="lineas" aria-hidden="true"></div>
 <div class="pila">
 <div class="logo-caja" data-rayos-oclusor style="--mascara:url(${RUTA_LOGO})">
-<img class="logo" src="${RUTA_LOGO}" width="326" height="301" alt="Corestack" fetchpriority="high" decoding="async">
+<img class="logo" src="${RUTA_LOGO}" width="720" height="665" alt="Corestack" fetchpriority="high" decoding="async">
 <div class="luz-logo" aria-hidden="true"></div>
 </div>
 <p class="titulo">Corestack Solutions</p>
 </div>
 <canvas class="capa capa-sobre" id="rayos-sobre" aria-hidden="true"></canvas>
+<canvas class="capa-detalle" id="rayos-detalle" aria-hidden="true"></canvas>
 </div>
 <script>${escaparScript(scriptEfecto)}</script>
 </body>

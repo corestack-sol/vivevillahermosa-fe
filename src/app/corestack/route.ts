@@ -12,7 +12,8 @@ export function GET() {
   return new Response(construirPagina(SCRIPT_EFECTO, FUENTE_TITULO_BASE64), {
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
-      'Cache-Control': 'public, max-age=300, stale-while-revalidate=86400',
+      // En desarrollo sin caché: al cambiar el efecto hay que ver el cambio de inmediato.
+      'Cache-Control': process.env.NODE_ENV === 'production' ? 'public, max-age=300, stale-while-revalidate=86400' : 'no-store',
     },
   });
 }

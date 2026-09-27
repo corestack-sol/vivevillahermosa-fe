@@ -5,6 +5,7 @@
   "scripts": {
     "postinstall": "node scripts/copy-maplibre-worker.mjs && node scripts/build-corestack.mjs",
     "predev": "node scripts/build-corestack.mjs",
+    "corestack:watch": "node scripts/build-corestack.mjs --watch",
     "prebuild": "node scripts/build-corestack.mjs",
     "dev": "next dev",
     "build": "next build",
