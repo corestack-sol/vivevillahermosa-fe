@@ -1560,20 +1560,28 @@ export function iniciarRayosDeLuz(canvas: HTMLCanvasElement, { modo = 'fondo', e
     }
 
     function dibujar(t: number) {
+      // El oclusor se mueve (el logo "flota"): se lee su rect en cada cuadro. Leerlo ANTES
+      // de ajustarTamano() (que puede escribir canvas.width/height más abajo) — escribir y
+      // luego leer geometría en el mismo cuadro fuerza un reflow síncrono del layout.
+      // Medido con Chrome DevTools (CPU 6x, como un Android modesto): 40ms de reflow
+      // forzado justo en los primeros segundos, cuando el canvas cambia de tamaño por
+      // primera vez o por la calidad adaptativa — coincide con el freeze reportado justo
+      // cuando las chispas de entrada están por llegar al núcleo.
+      const el = oclusor && texturaLista ? document.querySelector(oclusor.selector) : null;
+      const elRect = el?.getBoundingClientRect();
+      const canvasRect = el ? canvas.getBoundingClientRect() : null;
       ajustarTamano();
       gl!.uniform2f(uRes, canvas.width, canvas.height);
       gl!.uniform1f(uT, t);
       if (tPrimero < 0) tPrimero = t;
       gl!.uniform1f(uSolo, solo ? 1 : 0);
       gl!.uniform1f(uFade, estatico ? 1 : factorFadeIn(t - tPrimero));
-      // El oclusor se mueve (el logo "flota"): se lee su rect en cada cuadro.
-      const el = oclusor && texturaLista ? document.querySelector(oclusor.selector) : null;
       // La entrada (núcleo y halo) arranca cuando el logo está listo; ver `entrada` arriba.
       if (el && entrada.tListo < 0 && (modo === 'detalle' || !entrada.hayDetalle)) entrada.tListo = t;
       // Sin animar (movimiento reducido) todo ya está formado: la entrada se salta.
       gl!.uniform1f(uEntrada, estatico ? 1e3 : entrada.tListo < 0 ? -1 : t - entrada.tListo);
-      if (el) {
-        const [x, y, w, h] = rectEnFracciones(el.getBoundingClientRect(), canvas.getBoundingClientRect());
+      if (el && elRect && canvasRect) {
+        const [x, y, w, h] = rectEnFracciones(elRect, canvasRect);
         // La textura incluye el relleno: se pasa su rect ampliado.
         gl!.uniform4f(uOcc, x - relX * w, y - relY * h, w * (1 + 2 * relX), h * (1 + 2 * relY));
         gl!.uniform1f(uHayOcc, 1);
