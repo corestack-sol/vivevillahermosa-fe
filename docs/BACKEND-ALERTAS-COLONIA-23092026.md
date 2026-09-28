@@ -36,3 +36,16 @@ En publicar, la colonia es texto libre con sugerencias. Una persona puede escrib
 4. `colonia` sin `municipio` → 400 con mensaje claro.
 
 Cuando esto esté desplegado, avisar para cambiar `ALERTAS_POR_COLONIA_DISPONIBLE` a `true` en el frontend.
+
+## Resuelto (23-09-2026, PR #145 — confirmado de nuevo por backend el 28-09-2026)
+
+Ya estaba resuelto y desplegado: el mismo 23-09-2026, después de escribir este pedido,
+se verificó en vivo contra producción (cuenta desechable) — 201 con `colonia` en la
+respuesta, 400 `COLONIA_REQUIERE_MUNICIPIO` sin municipio, 400 con colonia vacía, y una
+propiedad publicada en esa colonia disparó UN aviso mientras que otra colonia no disparó
+nada (los 4 puntos de "Cómo probarlo" de arriba, probados de verdad). `ALERTAS_POR_COLONIA_DISPONIBLE`
+en `src/lib/alertas.ts` está en `true` desde ese mismo día (commit `6309602`).
+
+El mensaje del backend del 28-09-2026 ("ya pueden activar el flag") es una confirmación
+tardía del mismo contrato — no trae nada nuevo ni distinto a lo ya verificado, y el flag
+ya estaba activo antes de recibirlo. Sin acción de frontend.

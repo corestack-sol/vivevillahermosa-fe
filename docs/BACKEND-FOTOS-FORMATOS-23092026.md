@@ -39,3 +39,7 @@ Cambios en el frontend (`src/lib/fotoArchivo.ts`):
 El límite de 5MB no bloquea JPEG/PNG/WebP en la práctica porque el navegador siempre puede decodificarlos y reducirlos antes de subir. HEIC sí era un riesgo real: Chrome/Firefox no lo decodifican nativamente, así que un HEIC de más de 5MB (el modo "48MP" de iPhone Pro lo produce fácil) se subía SIN reducir en cualquier navegador que no fuera Safari — y si pasaba de 5MB, la persona se enteraba hasta el final, al publicar.
 
 Cerrado con `libheif-js` (WASM, decodificador de HEIC en JavaScript puro, sin backend): `abrirHeicConWasm()` en `fotoArchivo.ts` se importa dinámicamente (nunca en el camino normal, solo si un HEIC pesado además falla al decodificar nativamente) y decodifica/reduce el HEIC en CUALQUIER navegador, no solo Safari. `advertenciaPesoExcesivo()` ahora solo avisa en el caso ya marginal de un HEIC corrupto/no estándar que ni siquiera libheif-js pueda leer.
+
+### Confirmación cruzada del backend (28-09-2026)
+
+El equipo de backend revisó los 3 puntos de PR #146 contra su código real (no contra este doc) y coinciden exacto, incluido el texto literal del mensaje del 413 ("El archivo supera el límite de 5MB.") carácter por carácter con lo que ya está documentado arriba. Nada pendiente de su lado. Sin cambios de frontend.
