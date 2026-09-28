@@ -122,9 +122,24 @@ float ocluso(vec2 f) { return campo(f).r; }
 // más débil. Debe coincidir con envolventeRafaga() de rayosDeLuz.ts.
 float rafaga(float t) {
   float ts = mod(t, ${PERIODO_RAFAGA.toFixed(1)});
-  float a = smoothstep(0.0, 0.08, ts) * (1.0 - smoothstep(0.5, 1.1, ts));
+  // El primer golpe se veía más saturado que el segundo (más brillante Y más largo: 1.1 s
+  // contra 0.55 s). Ahora usa la MISMA forma que el segundo (mismo brillo máximo 0.55, misma
+  // duración), solo que arranca en ts=0 en vez de ts=1.43: se ven igual de llenos de rayos.
+  float a = 0.55 * smoothstep(0.0, 0.08, ts) * (1.0 - smoothstep(0.22, 0.55, ts));
   float b = 0.55 * smoothstep(1.43, 1.51, ts) * (1.0 - smoothstep(1.65, 1.98, ts));
   return max(a, b);
+}
+
+// Progreso de TODA la ráfaga (0 → 1 → 0, un solo arco a lo largo del golpe principal y el
+// secundario): a diferencia de rafaga() (el brillo, con sus dos golpes por separado), esto
+// se usa para la CANTIDAD y el tamaño de los rayos — empieza con pocos y chicos, crece
+// hacia el pico y vuelve a bajar al terminar, en vez de aparecer todos de golpe.
+float progresoRafaga(float t) {
+  float ts = mod(t, ${PERIODO_RAFAGA.toFixed(1)});
+  // Sube rápido (0 a 0.25 s) para llegar al pico ANTES de que el golpe principal empiece a
+  // apagarse (ts 0.5): así el primer golpe se ve tan lleno de rayos como el segundo, no
+  // solo el segundo. Se mantiene arriba hasta el final del golpe secundario y ahí sí baja.
+  return smoothstep(0.0, 0.25, ts) * (1.0 - smoothstep(1.5, 1.98, ts));
 }
 
 // Motas de polvo: una por celda. Cada mota tiene su propia velocidad, fase y
@@ -237,6 +252,24 @@ vec3 chispas(vec2 p, float asp, float t) {
 // Tramo de arco alrededor del logo: ruido muestreado sobre un círculo (sin
 // costura en el ángulo ±π) con lomas muy anchas, así cada rayo es un tramo largo que puede envolver el logo
 // y hay pocos a la vez.
+
+// Trayectoria cuadricular, como el trazo de un circuito impreso: el círculo se reparte en
+// "pasos" tramos angulares, cada uno a un radio casi constante, con un escalón entre un
+// tramo y el siguiente (no una curva pareja, y tampoco un zigzag caótico). dureza chica
+// = esquinas más marcadas entre escalones.
+float escalonAngular(float rodea, vec2 semilla, float pasos, float dureza) {
+  // Los quiebres se intercalan cortos y largos (no parejos): se deforma el ángulo con una
+  // onda antes de repartirlo en pasos iguales — donde la onda comprime, los pasos quedan
+  // seguidos (tramo corto entre quiebres); donde estira, quedan separados (tramo largo).
+  float rodeaAlt = rodea + 0.6 * sin(rodea * 2.3 + semilla.x * 0.7 + semilla.y);
+  float u = (rodeaAlt / 6.2832 + 1.0) * pasos;
+  float celda = floor(u);
+  float a = hash(vec2(celda, semilla.x + semilla.y * 7.0));
+  float b = hash(vec2(celda + 1.0, semilla.x + semilla.y * 7.0));
+  float t = smoothstep(0.5 - dureza, 0.5 + dureza, fract(u));
+  return mix(a, b, t) - 0.5;
+}
+
 float arco(float rodea, vec2 semilla, float umbral) {
   float n = noise(vec2(cos(rodea), sin(rodea)) * 0.75 + semilla);
   return smoothstep(umbral, umbral + 0.06, n);
@@ -247,6 +280,57 @@ float arco(float rodea, vec2 semilla, float umbral) {
 float arcoSuave(float rodea, vec2 semilla, float umbral) {
   float n = noise(vec2(cos(rodea), sin(rodea)) * 0.75 + semilla);
   return smoothstep(umbral - 0.17, umbral + 0.20, n);
+}
+
+// Filamento delgado que sale disparado desde origen en dirección dir (unitaria) y se
+// afina hasta un punto en la punta, como las chispas que se desprenden de un arco
+// eléctrico real (ver referencia src/assets/electro.webp): no es recto, se quiebra en dos
+// escalas de ruido a lo largo de su propio eje.
+float ramificacion(vec2 p, vec2 origen, vec2 dir, float largo, vec2 semilla) {
+  vec2 perpDir = vec2(-dir.y, dir.x);
+  vec2 rel = p - origen;
+  float s = dot(rel, dir);
+  if (s < 0.0 || s > largo) return 0.0;
+  float perp = dot(rel, perpDir);
+  float u = s / largo;
+  float quiebreGrande = (noise(vec2(s * 90.0, 0.0) + semilla) - 0.5) * largo * 0.30;
+  float quiebreChico = (noise(vec2(s * 240.0, 11.0) + semilla) - 0.5) * largo * 0.09;
+  float centro = quiebreGrande + quiebreChico;
+  float d = abs(perp - centro);
+  float ancho = mix(largo * 0.045, 0.0012, u); // nace del tronco con algo de grosor, termina en un punto
+  float linea = smoothstep(ancho, 0.0, d);
+  float aparece = smoothstep(0.0, 0.12, u) * (1.0 - smoothstep(0.72, 1.0, u));
+  return linea * aparece;
+}
+
+// Un puñado de ramificaciones que salen disparadas del arco hacia afuera, en puntos y
+// direcciones distintas en cada ráfaga (algunas ni aparecen). Radio aproximado: no hace
+// falta que nazcan exactas sobre el trazo quebrado del arco, son cortas y fuera de la
+// silueta nadie compara el milímetro.
+vec3 ramas(vec2 p, vec2 cc, float asp, float bi, float tramo, float ev, float progreso) {
+  vec3 col = vec3(0.0);
+  float radioBase = (u_occ.z * asp + u_occ.w) * 0.25 * 1.14;
+  for (int i = 0; i < 6; i++) {
+    float k = float(i);
+    // Cada rama tiene su propio umbral de progreso: la primera aparece casi desde que
+    // arranca la ráfaga, la última solo cerca del pico — así el número de ramas también
+    // sube y baja con la ráfaga, no aparecen todas de golpe ni se apagan de golpe.
+    if (progreso < (k + 1.0) / 6.0 * 0.85) continue;
+    if (hash(vec2(k * 3.7 + 1.0, bi * 2.1 + 11.0)) < 0.35) continue; // menos ramas por ráfaga que antes
+    float ang = hash(vec2(k * 5.3 + 2.0, bi * 1.7 + tramo * 0.3 + 4.0)) * 6.2832;
+    vec2 dirFuera = normalize(vec2(cos(ang), sin(ang) * 0.9));
+    vec2 origen = cc + dirFuera * radioBase;
+    float giro = (hash(vec2(k * 2.1 + 3.0, bi * 3.3 + 8.0)) - 0.5) * 1.5; // se desvía de lo puramente radial
+    float c = cos(giro), sn = sin(giro);
+    vec2 dir = vec2(dirFuera.x * c - dirFuera.y * sn, dirFuera.x * sn + dirFuera.y * c);
+    float largo = mix(0.07, 0.20, hash(vec2(k * 4.4 + 4.0, bi * 0.7 + 2.0)));
+    float v = ramificacion(p, origen, dir, largo, vec2(k * 9.9, bi * 5.5 + 1.0));
+    // Casi blanco-violeta, como el arco de la foto de referencia (electro.webp), en vez
+    // de los azules/naranjas del resto del efecto: así se distinguen del halo del logo.
+    vec3 colRama = mix(vec3(0.75, 0.80, 1.0), vec3(1.0, 0.97, 0.92), hash(vec2(k + 0.5, bi + 1.3)));
+    col += colRama * v;
+  }
+  return col * ev * 1.6;
 }
 
 // Rayos eléctricos alrededor (y sobre) el logo. Cada rayo es una línea de nivel
@@ -262,12 +346,31 @@ vec3 rayos(vec2 p, vec2 fr, float asp, float t, float solo) {
   vec3 cf = campo(fr);
   vec2 cc = vec2((u_occ.x + u_occ.z * 0.5) * asp, u_occ.y + u_occ.w * 0.5);
   float rodea = atan(p.y - cc.y, p.x - cc.x);
-  float paso = floor(t * 18.0);
+  // Antes cambiaba de golpe 18 veces por segundo (un interruptor duro, step()): se sentía
+  // como una descarga violenta parpadeando. Ahora es más lento (10 Hz) y se interpola de un
+  // valor al siguiente en vez de saltar, y el rango de brillo es más chico (0.16, no 0.30):
+  // un parpadeo suave, no una electrificación agresiva.
+  float pasoF = t * 10.0;
+  float paso = floor(pasoF);
   vec2 sd = vec2(paso * 3.71, paso * 1.93);
-  float flick = 0.70 + 0.30 * step(0.30, hash(vec2(paso, 3.3)));
+  float flickA = hash(vec2(paso, 3.3));
+  float flickB = hash(vec2(paso + 1.0, 3.3));
+  float flick = 0.78 + 0.16 * mix(flickA, flickB, smoothstep(0.2, 0.8, fract(pasoF)));
   float bi = floor(t / ${PERIODO_RAFAGA.toFixed(1)});
   float tramo = floor(t * 4.0);
   float naranja = step(0.5, noise1(rodea * 1.3 + bi * 3.7 + 30.0));
+  // El tramo visible de cada arco arrancaba y terminaba en cualquier ángulo al azar,
+  // así que a veces se veía cortado, sin llegar a tocar el logo. Bajando el umbral
+  // donde el punto SÍ cae sobre la silueta sólida, el arco queda encendido justo ahí:
+  // su inicio y su final siempre coinciden con el contorno del logo, como si lo
+  // recorriera por delante (capa "sobre", visible = cf.r) y por detrás (capa de
+  // fondo, detrás de la imagen real, visible en los huecos transparentes).
+  float tocaLogo = max(cf.r, cf.b * 0.7) * 0.6;
+  // Al arrancar y al terminar la ráfaga se ven pocos rayos y cortos; hacia el pico, más y
+  // más largos. Un umbral extra que empieza alto (casi nada encendido) y baja a 0 en el
+  // pico, sumado al umbral normal de cada arco: a más umbral, arco() enciende menos círculo.
+  float progreso = progresoRafaga(t);
+  float umbralExtra = mix(0.34, 0.0, progreso);
 
   // Reflejo en el suelo (solo capa de fondo): una luz eléctrica tenue, ancha y
   // baja, bajo el logo (la rejilla del suelo empieza hacia el 80 % de la altura).
@@ -283,30 +386,64 @@ vec3 rayos(vec2 p, vec2 fr, float asp, float t, float solo) {
   // aparecen los rayos y todo parecía congelarse).
   if (cf.g < 0.02) return piso + chis;
 
-  // Arco cercano al contorno.
-  float j1 = (fbm(p * 24.0 + sd) - 0.5) * 0.34 + (noise(p * 60.0 + sd.yx) - 0.5) * 0.09;
-  float d1 = cf.g - 0.34 + j1;
-  float seg1 = arco(rodea, vec2(bi * 9.1, tramo * 0.9), 0.50);
-  // Arco más alejado.
-  float j2 = (fbm(p * 18.0 + sd * 1.3 + 7.0) - 0.5) * 0.44 + (noise(p * 48.0 + sd) - 0.5) * 0.08;
-  float d2 = cf.g - 0.17 + j2;
-  float seg2 = arco(rodea, vec2(bi * 5.3 + 17.0, tramo * 1.1 + 3.0), 0.54);
-  // Arco que se mete sobre el propio logo (más disperso).
-  float j3 = (fbm(p * 20.0 + sd * 0.9 + 13.0) - 0.5) * 0.78 + (noise(p * 55.0 + sd.yx * 1.1) - 0.5) * 0.10;
-  float d3 = cf.g - 0.62 + j3;
-  float seg3 = arco(rodea, vec2(bi * 7.7 + 41.0, tramo * 0.8 + 9.0), 0.60);
+  // Arco cercano al contorno. Como el arco eléctrico real de la referencia (electro.webp):
+  // un filamento fino y quebrado en muchas escalas a la vez (no una curva redonda, no un
+  // bloque cuadriculado limpio, no una maraña gruesa): un poco de escalón para que no sea
+  // perfectamente circular, una onda suave para la forma general y dos capas de ruido más
+  // fino encima para el crepitar — grietas chicas dentro de otras más grandes.
+  float j1 = escalonAngular(rodea, vec2(bi * 9.1, tramo * 0.9), 16.0, 0.10) * 0.04
+           + (fbm(p * 22.0 + sd) - 0.5) * 0.08
+           + (noise(p * 55.0 + sd.yx) - 0.5) * 0.13
+           + (noise(p * 115.0 + sd * 1.7) - 0.5) * 0.10;
+  float d1 = cf.g - 0.38 + j1;
+  float seg1 = arco(rodea, vec2(bi * 9.1, tramo * 0.9), 0.57 + umbralExtra - tocaLogo);
+  // Arco más alejado, pero ya no tan lejos como para redondearse (mismo motivo que arriba).
+  float j2 = escalonAngular(rodea, vec2(bi * 5.3 + 17.0, tramo * 1.1 + 3.0), 13.0, 0.12) * 0.05
+           + (fbm(p * 16.0 + sd * 1.3 + 7.0) - 0.5) * 0.10
+           + (noise(p * 46.0 + sd) - 0.5) * 0.12
+           + (noise(p * 98.0 + sd * 1.4 + 3.0) - 0.5) * 0.10;
+  float d2 = cf.g - 0.24 + j2;
+  float seg2 = arco(rodea, vec2(bi * 5.3 + 17.0, tramo * 1.1 + 3.0), 0.61 + umbralExtra - tocaLogo);
+  // Arco que se mete sobre el propio logo (más disperso: el más quebrado de los tres).
+  float j3 = escalonAngular(rodea, vec2(bi * 7.7 + 41.0, tramo * 0.8 + 9.0), 20.0, 0.08) * 0.06
+           + (fbm(p * 18.0 + sd * 0.9 + 13.0) - 0.5) * 0.20
+           + (noise(p * 50.0 + sd.yx * 1.1) - 0.5) * 0.20
+           + (noise(p * 108.0 + sd * 0.8 + 9.0) - 0.5) * 0.13;
+  // El mismo arco 3 (mismo color, mismo halo, mismo ritmo) se acerca mucho más al centro
+  // en algunos ángulos (una "lengua" que se mete hacia el núcleo, no un filamento aparte):
+  // así hay energía cruzando hacia el medio del logo, en armonía con el resto del arco.
+  float dip3 = smoothstep(0.60, 0.90, noise1(rodea * 1.1 + bi * 6.3 + 71.0)) * 0.26;
+  float d3 = cf.g - 0.62 - dip3 + j3;
+  float seg3 = arco(rodea, vec2(bi * 7.7 + 41.0, tramo * 0.8 + 9.0), 0.67 + umbralExtra - tocaLogo);
 
   vec3 azulNucleo = vec3(0.85, 0.95, 1.0);
   vec3 azulGlow = vec3(0.0, 0.40, 1.0);
   vec3 narNucleo = vec3(1.0, 0.92, 0.68);
   vec3 narGlow = vec3(1.0, 0.40, 0.02);
 
-  float l1 = smoothstep(0.050, 0.0, abs(d1)) * seg1 * 2.6;
-  float g1 = exp(-abs(d1) * 10.0) * 1.10 * seg1;
-  float l2 = smoothstep(0.050, 0.0, abs(d2)) * seg2 * 2.6;
-  float g2 = exp(-abs(d2) * 9.0) * 1.00 * seg2;
-  float l3 = smoothstep(0.048, 0.0, abs(d3)) * seg3 * 2.0;
-  float g3 = exp(-abs(d3) * 11.0) * 0.80 * seg3;
+  // El grosor de la línea crece con qué tan "adentro" del tramo está (seg1/2/3 ya es
+  // continuo 0→1, no un interruptor de golpe): así la punta, donde el tramo empieza o
+  // termina en el aire, se afina hasta quedar bien fina en vez de cortarse de golpe con
+  // el mismo grosor que tiene a la mitad del rayo. Un mínimo (no 0) evita que el ancho
+  // llegue a 0 justo (division por cero dentro del smoothstep).
+  // Afinado más marcado que el primer intento: la punta llega casi a 0 de grosor (no
+  // solo 0.006) y tarda más en alcanzar el grosor completo (hasta seg=0.45, no 0.35),
+  // así hay un tramo de punta fina más largo y notorio. El halo de cada línea (g1/g2/g3)
+  // también se angosta hacia la punta (tasa de caída más alta = resplandor más estrecho):
+  // si solo se afinaba la línea, el halo ancho de alrededor seguía viéndose como un
+  // bulto borroso del mismo grosor, y la punta no se leía fina.
+  float ancho1 = mix(0.0012, 0.026, smoothstep(0.0, 0.45, seg1));
+  float l1 = smoothstep(ancho1, 0.0, abs(d1)) * seg1 * 2.1;
+  float tasa1 = mix(34.0, 10.0, smoothstep(0.0, 0.45, seg1));
+  float g1 = exp(-abs(d1) * tasa1) * 1.10 * seg1;
+  float ancho2 = mix(0.0012, 0.026, smoothstep(0.0, 0.45, seg2));
+  float l2 = smoothstep(ancho2, 0.0, abs(d2)) * seg2 * 2.1;
+  float tasa2 = mix(30.0, 9.0, smoothstep(0.0, 0.45, seg2));
+  float g2 = exp(-abs(d2) * tasa2) * 1.00 * seg2;
+  float ancho3 = mix(0.0012, 0.024, smoothstep(0.0, 0.45, seg3));
+  float l3 = smoothstep(ancho3, 0.0, abs(d3)) * seg3 * 1.6;
+  float tasa3 = mix(36.0, 11.0, smoothstep(0.0, 0.45, seg3));
+  float g3 = exp(-abs(d3) * tasa3) * 0.80 * seg3;
   // Solo cerca del logo: lejos el campo vale 0 y el ruido dibujaría contornos sueltos.
   float cerca = smoothstep(0.03, 0.12, cf.g);
   // El campo termina en el borde de la textura: se apaga hacia allá para que el
@@ -316,12 +453,17 @@ vec3 rayos(vec2 p, vec2 fr, float asp, float t, float solo) {
   float visible = (solo > 0.5 ? cf.r : 1.0 - 0.9 * cf.r) * cerca * borde;
 
   // Halo de luz del propio color de cada rayo: ancho y suave, como el reflejo del
-  // arco sobre el logo (en la capa superior cae encima de su superficie).
+  // arco sobre el logo (en la capa superior cae encima de su superficie). Antes se
+  // apagaba del todo donde no había arco (mismo ángulo que seg1/seg2/seg3), y esa
+  // zona se veía "cortada" junto a un lado bien iluminado. Con HALO_BASE nunca baja
+  // de un mínimo: envuelve el logo por completo, más brillante justo donde SÍ pasa
+  // el arco de esta ráfaga.
   vec3 azulHalo = vec3(0.05, 0.42, 1.0);
   vec3 narHalo = vec3(1.0, 0.42, 0.05);
-  float h1 = exp(-abs(d1 - 0.5 * j1) * 3.6) * arcoSuave(rodea, vec2(bi * 9.1, tramo * 0.9), 0.50);
-  float h2 = exp(-abs(d2 - 0.5 * j2) * 3.4) * arcoSuave(rodea, vec2(bi * 5.3 + 17.0, tramo * 1.1 + 3.0), 0.54);
-  float h3 = exp(-abs(d3 - 0.5 * j3) * 3.8) * arcoSuave(rodea, vec2(bi * 7.7 + 41.0, tramo * 0.8 + 9.0), 0.60);
+  float HALO_BASE = 0.70;
+  float h1 = exp(-abs(d1 - 0.5 * j1) * 3.6) * mix(HALO_BASE, 1.0, arcoSuave(rodea, vec2(bi * 9.1, tramo * 0.9), 0.57 + umbralExtra - tocaLogo));
+  float h2 = exp(-abs(d2 - 0.5 * j2) * 3.4) * mix(HALO_BASE, 1.0, arcoSuave(rodea, vec2(bi * 5.3 + 17.0, tramo * 1.1 + 3.0), 0.61 + umbralExtra - tocaLogo));
+  float h3 = exp(-abs(d3 - 0.5 * j3) * 3.8) * mix(HALO_BASE, 1.0, arcoSuave(rodea, vec2(bi * 7.7 + 41.0, tramo * 0.8 + 9.0), 0.67 + umbralExtra - tocaLogo));
   vec3 halo = azulHalo * (h1 + h3) * 0.34 + mix(azulHalo, narHalo, naranja) * h2 * 0.30;
 
   vec3 rayo = halo * visible * ev * flick * (solo > 0.5 ? 1.3 : 1.0);
@@ -331,6 +473,8 @@ vec3 rayos(vec2 p, vec2 fr, float asp, float t, float solo) {
   if (solo < 0.5) {
     // Resplandor pegado al borde del logo mientras dura la descarga.
     rayo += azulGlow * cf.b * (1.0 - cf.r) * 0.30 * ev * flick;
+    // Ramificaciones que salen disparadas hacia afuera, como en la foto de referencia.
+    rayo += ramas(p, cc, asp, bi, tramo, ev, progreso);
   }
   return rayo + piso + chis;
 }
@@ -902,9 +1046,85 @@ function suave(a: number, b: number, x: number): number {
 /** Intensidad (0..1) de la ráfaga de rayos en el instante `t`. Espejo de rafaga() del shader. */
 export function envolventeRafaga(t: number): number {
   const ts = ((t % PERIODO_RAFAGA) + PERIODO_RAFAGA) % PERIODO_RAFAGA;
-  const a = suave(0, 0.08, ts) * (1 - suave(0.5, 1.1, ts));
+  const a = 0.55 * suave(0, 0.08, ts) * (1 - suave(0.22, 0.55, ts));
   const b = 0.55 * suave(1.43, 1.51, ts) * (1 - suave(1.65, 1.98, ts));
   return Math.max(a, b);
+}
+
+/**
+ * Cámara lenta durante la ráfaga (pedido explícito: "se tiene que ralentizar todo el
+ * ambiente", no solo los rayos): ralentiza el AVANCE del reloj del efecto (`tiempoEfecto`),
+ * así que afecta a todo lo que se dibuja con `t` — haces, bruma, polvo, halo, nubes,
+ * brasas — sin tocar cada función una por una. Con reducir movimiento no se aplica: ese
+ * modo dibuja un único cuadro fijo (T_ESTATICO), no avanza el reloj.
+ *
+ * Secuencia pedida (no una rampa que ya empieza a frenar antes del golpe):
+ *   1. Aparece el rayo (ts 0–FASE_APARECE_FIN, ~1 s) a velocidad NORMAL — el golpe se ve
+ *      de golpe, sin frenar de antemano.
+ *   2. Se activa la cámara lenta justo después, y dura RALENTI_DURACION_REAL s reales
+ *      (a RALENTI_FACTOR de velocidad, cubre también la ráfaga secundaria, ts 1.43–1.98).
+ *   3. Se apaga: el resto del ciclo (el rayo terminando de desaparecer — brasas, halo)
+ *      vuelve a velocidad normal.
+ */
+export const FASE_APARECE_FIN = 1.1;
+export const RALENTI_FACTOR = 0.15;
+export const RALENTI_DURACION_REAL = 4;
+/** Tramo de `ts` (ancho = RALENTI_DURACION_REAL * RALENTI_FACTOR) que dura la cámara lenta. */
+export const FASE_LENTA_FIN = FASE_APARECE_FIN + RALENTI_DURACION_REAL * RALENTI_FACTOR;
+/** Transición de entrada/salida corta: marca las tres fases sin que se sientan de golpe. */
+export const RALENTI_RAMPA = 0.03;
+
+/**
+ * No en TODAS las ráfagas: en promedio cada 2 o 3 (al azar, no una cada N fija), y si le tocó
+ * a una, a la siguiente le baja la probabilidad (para que no salgan seguidas ni muy seguido).
+ * "Hash" con seno igual que se usa en GLSL para ruido pseudoaleatorio.
+ */
+export const PROBABILIDAD_RALENTI_CICLO = 0.4; // probabilidad normal (si la anterior NO tuvo)
+export const PROBABILIDAD_RALENTI_TRAS_ACTIVA = 0.15; // probabilidad si la anterior SÍ tuvo
+function hashCiclo(bi: number): number {
+  const x = Math.sin(bi * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+/**
+ * ¿Le tocó cámara lenta al ciclo `bi`? Depende de si le tocó al anterior (`bi-1`): es una
+ * cadena, así que se cachea (una vez calculado un ciclo no se vuelve a recorrer la cadena
+ * completa desde 0 para los siguientes) — en uso normal `bi` sube de 1 en 1 cada
+ * PERIODO_RAFAGA segundos, así que en la práctica es O(1) por ciclo nuevo.
+ */
+// Tope duro: en producción `bi` sube de 1 en 1 para siempre mientras la pestaña esté
+// visible (pensado incluso para quedar de fondo de escritorio, días abierto sin recargar),
+// así que un Map sin tope crecería sin límite. Con esto, cuando se pasa el tope se olvida
+// el ciclo más viejo (orden de inserción de Map) — no importa: nada vuelve a preguntar por
+// un ciclo de hace más de CACHE_CICLO_TOPE ráfagas atrás (~17 min a PERIODO_RAFAGA=2s).
+const CACHE_CICLO_TOPE = 512;
+const cacheCicloActivo = new Map<number, boolean>();
+function activoEnCiclo(bi: number): boolean {
+  if (bi < 0) return false;
+  const enCache = cacheCicloActivo.get(bi);
+  if (enCache !== undefined) return enCache;
+  let previo = bi - 1;
+  while (previo >= 0 && !cacheCicloActivo.has(previo)) previo--;
+  let previoActivo = previo >= 0 ? (cacheCicloActivo.get(previo) as boolean) : false;
+  for (let i = previo + 1; i <= bi; i++) {
+    previoActivo = hashCiclo(i) < (previoActivo ? PROBABILIDAD_RALENTI_TRAS_ACTIVA : PROBABILIDAD_RALENTI_CICLO);
+    cacheCicloActivo.set(i, previoActivo);
+    if (cacheCicloActivo.size > CACHE_CICLO_TOPE) {
+      const masViejo = cacheCicloActivo.keys().next().value as number;
+      cacheCicloActivo.delete(masViejo);
+    }
+  }
+  return previoActivo;
+}
+
+/** Factor (0..1) al que avanza el reloj del efecto en el instante `t`: 1 = velocidad normal. */
+export function factorCamaraLenta(t: number): number {
+  const bi = Math.floor(t / PERIODO_RAFAGA);
+  if (!activoEnCiclo(bi)) return 1; // esta ráfaga no tiene cámara lenta
+  const ts = ((t % PERIODO_RAFAGA) + PERIODO_RAFAGA) % PERIODO_RAFAGA;
+  const dentro = suave(FASE_APARECE_FIN, FASE_APARECE_FIN + RALENTI_RAMPA, ts)
+               * (1 - suave(FASE_LENTA_FIN, FASE_LENTA_FIN + RALENTI_RAMPA, ts));
+  return 1 - (1 - RALENTI_FACTOR) * dentro;
 }
 
 /** Segundos tras el inicio de cada ráfaga en que aún puede haber chispas en el aire (rebotando). */
@@ -1014,7 +1234,12 @@ const entrada = { hayDetalle: false, tListo: -1 };
 const reloj = { acumulado: 0, ultimoAhora: -1 };
 function tiempoEfecto(ahora: number): number {
   if (ahora !== reloj.ultimoAhora) {
-    if (reloj.ultimoAhora >= 0) reloj.acumulado += Math.min(0.1, (ahora - reloj.ultimoAhora) / 1000);
+    if (reloj.ultimoAhora >= 0) {
+      const dtReal = Math.min(0.1, (ahora - reloj.ultimoAhora) / 1000);
+      // La velocidad de este instante se decide con el t ANTERIOR (el reloj antes de
+      // avanzar): así el avance nunca se autorreferencia dentro del mismo cuadro.
+      reloj.acumulado += dtReal * factorCamaraLenta(reloj.acumulado + 6);
+    }
     reloj.ultimoAhora = ahora;
   }
   return reloj.acumulado + 6;

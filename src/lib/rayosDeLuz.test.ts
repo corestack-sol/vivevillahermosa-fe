@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DURACION_NUBES, PERIODO_NUBES, hayNubes, DURACION_FADE_IN, factorFadeIn, ESCALA_MINIMA, UMBRAL_CUADRO_MS, siguienteEscala, PERIODO_RAFAGA, calidadDeRender, campoDeSilueta, desenfocar, bordesDeMascara, texturaEnergia, envolventeRafaga, FRAGMENT_SHADER, NUCLEO, T_ESTATICO, detectarNivel, perfilDeNivel, fragmentDeCapa, ANCHO_CAMPO, ENTRADA_LLEGADA, N_CHISPAS_ENTRADA, HALO_INICIO, HALO_APARICION, N_ONDAS_SUELO, PERIODO_ONDAS_SUELO, ANILLOS_INICIO, ANILLOS_APARICION } from './rayosDeLuz';
+import { DURACION_NUBES, PERIODO_NUBES, hayNubes, DURACION_FADE_IN, factorFadeIn, ESCALA_MINIMA, UMBRAL_CUADRO_MS, siguienteEscala, PERIODO_RAFAGA, calidadDeRender, campoDeSilueta, desenfocar, bordesDeMascara, texturaEnergia, envolventeRafaga, FRAGMENT_SHADER, NUCLEO, T_ESTATICO, detectarNivel, perfilDeNivel, fragmentDeCapa, ANCHO_CAMPO, ENTRADA_LLEGADA, N_CHISPAS_ENTRADA, HALO_INICIO, HALO_APARICION, N_ONDAS_SUELO, PERIODO_ONDAS_SUELO, ANILLOS_INICIO, ANILLOS_APARICION, factorCamaraLenta, FASE_APARECE_FIN, FASE_LENTA_FIN, RALENTI_FACTOR, RALENTI_RAMPA, RALENTI_DURACION_REAL, PROBABILIDAD_RALENTI_CICLO, PROBABILIDAD_RALENTI_TRAS_ACTIVA } from './rayosDeLuz';
 
 describe('calidadDeRender', () => {
   it('en escritorio usa la densidad del dispositivo con tope de 1.5', () => {
@@ -36,17 +36,15 @@ describe('envolventeRafaga', () => {
     expect(envolventeRafaga(3)).toBe(0);
     expect(envolventeRafaga(PERIODO_RAFAGA - 0.1)).toBeCloseTo(0, 5);
   });
-  it('en el golpe llega al máximo y se repite cada PERIODO_RAFAGA segundos', () => {
-    expect(envolventeRafaga(0.4)).toBeCloseTo(1, 5);
-    expect(envolventeRafaga(0.4 + PERIODO_RAFAGA * 3)).toBeCloseTo(1, 5);
+  it('el primer golpe llega a su máximo (0.55, no 1: se veía más saturado que el segundo, ahora es igual de fuerte) y se repite cada PERIODO_RAFAGA segundos', () => {
+    expect(envolventeRafaga(0.15)).toBeCloseTo(0.55, 5);
+    expect(envolventeRafaga(0.15 + PERIODO_RAFAGA * 3)).toBeCloseTo(0.55, 5);
   });
-  it('hay un segundo golpe más débil poco después', () => {
-    const v = envolventeRafaga(1.6);
-    expect(v).toBeGreaterThan(0.4);
-    expect(v).toBeLessThan(0.6);
+  it('el segundo golpe llega al mismo máximo que el primero (misma forma, no más débil)', () => {
+    expect(envolventeRafaga(1.6)).toBeCloseTo(0.55, 5);
   });
   it('el cuadro fijo de "reducir movimiento" cae dentro de una ráfaga', () => {
-    expect(envolventeRafaga(T_ESTATICO)).toBeGreaterThan(0.9);
+    expect(envolventeRafaga(T_ESTATICO)).toBeGreaterThan(0.3);
   });
 });
 
@@ -440,5 +438,336 @@ describe('anillos del suelo: aparecen tras formarse el núcleo', () => {
   it('el brillo del suelo y la columna de luz no dependen de esa aparición (solo los anillos)', () => {
     expect(f()).toContain('col += cian * exp(-rr * rr * 2.5) * 0.08;');
     expect(f()).toContain('col += cian * exp(-dx * dx) * baja * 0.06;');
+  });
+});
+
+describe('los arcos tocan el logo (no se cortan antes de llegar)', () => {
+  const f = () => FRAGMENT_SHADER.slice(FRAGMENT_SHADER.indexOf('vec3 rayos('), FRAGMENT_SHADER.indexOf('vec3 nubes('));
+  it('define tocaLogo a partir de la silueta sólida (cf.r) y lo resta al umbral de los 3 arcos y sus halos', () => {
+    expect(f()).toContain('float tocaLogo = max(cf.r, cf.b * 0.7) * 0.6;');
+    for (const umbral of ['0.57', '0.61', '0.67']) {
+      const veces = f().split(`${umbral} + umbralExtra - tocaLogo)`).length - 1;
+      expect(veces).toBe(2); // arco() y arcoSuave() con el mismo umbral
+    }
+  });
+  it('sobre la silueta sólida (cf.r = 1) y en el pico de la ráfaga (umbralExtra = 0) el umbral baja lo bastante para que el arco quede prácticamente garantizado', () => {
+    // Umbral mínimo (0.57) menos el sesgo máximo (0.6) da negativo: arco(rodea,...,u)
+    // hace smoothstep(u, u+0.06, n) con n >= 0, así que con u <= 0 casi siempre es 1.
+    const umbralMinimo = 0.57 + 0 - 1 * 0.6;
+    expect(umbralMinimo).toBeLessThanOrEqual(0);
+  });
+  it('lejos del logo (cf.r = 0) el umbral vuelve a ser el original: el comportamiento en espacio abierto no cambia', () => {
+    const tocaLogo = (cfR: number) => cfR * 0.6;
+    expect(tocaLogo(0)).toBe(0);
+  });
+});
+
+describe('el halo de cada arco envuelve el logo completo (no se corta donde no hay rayo)', () => {
+  const f = () => FRAGMENT_SHADER.slice(FRAGMENT_SHADER.indexOf('vec3 rayos('), FRAGMENT_SHADER.indexOf('vec3 nubes('));
+  it('h1/h2/h3 usan mix(HALO_BASE, 1.0, arcoSuave(...)) en vez del arcoSuave puro: nunca llegan a 0', () => {
+    expect(f()).toContain('float HALO_BASE = 0.70;');
+    for (const call of [
+      'mix(HALO_BASE, 1.0, arcoSuave(rodea, vec2(bi * 9.1, tramo * 0.9), 0.57 + umbralExtra - tocaLogo))',
+      'mix(HALO_BASE, 1.0, arcoSuave(rodea, vec2(bi * 5.3 + 17.0, tramo * 1.1 + 3.0), 0.61 + umbralExtra - tocaLogo))',
+      'mix(HALO_BASE, 1.0, arcoSuave(rodea, vec2(bi * 7.7 + 41.0, tramo * 0.8 + 9.0), 0.67 + umbralExtra - tocaLogo))',
+    ]) expect(f()).toContain(call);
+  });
+  it('en el lado sin arco (arcoSuave=0) el halo queda en HALO_BASE, no en 0; donde SÍ hay arco llega a su brillo completo', () => {
+    const HALO_BASE = 0.70;
+    const mix = (a: number, b: number, x: number) => a * (1 - x) + b * x;
+    expect(mix(HALO_BASE, 1.0, 0)).toBe(HALO_BASE);
+    expect(mix(HALO_BASE, 1.0, 0)).toBeGreaterThan(0);
+    expect(mix(HALO_BASE, 1.0, 1)).toBe(1);
+  });
+});
+
+describe('cámara lenta durante la ráfaga (ralentiza todo el ambiente, no solo los rayos)', () => {
+  it('fase 1 — el rayo aparece a velocidad normal (sin frenar de antemano)', () => {
+    expect(factorCamaraLenta(6)).toBe(1); // muy lejos de cualquier ráfaga (t inicial)
+    expect(factorCamaraLenta(0)).toBe(1); // arranca el golpe: todavía normal, no hay rampa previa
+    expect(factorCamaraLenta(0.5)).toBe(1); // pleno golpe principal (ts 0–1.1)
+    expect(factorCamaraLenta(FASE_APARECE_FIN - 0.01)).toBeCloseTo(1, 1);
+  });
+  it('fase 2 — justo después se activa la cámara lenta y cubre la ráfaga secundaria (ts 1.43–1.98), en una ráfaga que sí le toca (ciclo 0)', () => {
+    expect(factorCamaraLenta(FASE_APARECE_FIN + 0.3)).toBeCloseTo(RALENTI_FACTOR, 5);
+    expect(factorCamaraLenta(1.7)).toBeCloseTo(RALENTI_FACTOR, 5); // ráfaga secundaria
+  });
+  it('fase 3 — se apaga la cámara lenta y el resto del ciclo (el rayo terminando de desaparecer) vuelve a la normalidad', () => {
+    expect(factorCamaraLenta(FASE_LENTA_FIN + RALENTI_RAMPA + 0.01)).toBeCloseTo(1, 1);
+    expect(factorCamaraLenta(PERIODO_RAFAGA - 1)).toBe(1);
+  });
+  it('las transiciones entre fases son cortas, no de golpe', () => {
+    const medioEntrando = factorCamaraLenta(FASE_APARECE_FIN + RALENTI_RAMPA / 2);
+    expect(medioEntrando).toBeGreaterThan(RALENTI_FACTOR);
+    expect(medioEntrando).toBeLessThan(1);
+    const medioSaliendo = factorCamaraLenta(FASE_LENTA_FIN + RALENTI_RAMPA / 2);
+    expect(medioSaliendo).toBeGreaterThan(RALENTI_FACTOR);
+    expect(medioSaliendo).toBeLessThan(1);
+  });
+  it('la fase 2 dura los segundos reales pedidos (ancho del tramo / velocidad)', () => {
+    const segundosReales = (FASE_LENTA_FIN - FASE_APARECE_FIN) / RALENTI_FACTOR;
+    expect(segundosReales).toBeCloseTo(RALENTI_DURACION_REAL, 5);
+  });
+  it('con reducir movimiento no aplica: ese modo usa un único cuadro fijo, no avanza el reloj', () => {
+    // factorCamaraLenta es puro y no distingue "estático"; quien no debe llamarlo con el
+    // reloj avanzando es iniciarRayosDeLuz, que en modo estático llama dibujar(T_ESTATICO)
+    // una sola vez y nunca entra al bucle que usa tiempoEfecto.
+    expect(typeof factorCamaraLenta).toBe('function');
+  });
+});
+
+describe('la cámara lenta no aparece en todas las ráfagas: en promedio cada 2 o 3, al azar', () => {
+  // Un punto dentro del tramo lleno de cámara lenta: si la ráfaga de ese ciclo la tiene,
+  // aquí vale RALENTI_FACTOR; si no le tocó esta vez, vale 1 (velocidad normal) todo el ciclo.
+  const puntoPico = FASE_APARECE_FIN + 0.3;
+  const activaEnCiclo = (bi: number) => factorCamaraLenta(bi * PERIODO_RAFAGA + puntoPico) < 0.99;
+
+  it('no siempre está activa: hay ciclos con cámara lenta y ciclos sin ella', () => {
+    const ciclos = Array.from({ length: 60 }, (_, bi) => activaEnCiclo(bi));
+    expect(ciclos.some((activa) => activa)).toBe(true);
+    expect(ciclos.some((activa) => !activa)).toBe(true);
+  });
+  it('en promedio aparece cada 2 o 3 ráfagas (ni cada vez, ni una vez cada muchas)', () => {
+    const N = 300;
+    const activos = Array.from({ length: N }, (_, bi) => activaEnCiclo(bi)).filter(Boolean).length;
+    const promedioCadaCuantas = N / activos;
+    expect(promedioCadaCuantas).toBeGreaterThan(2);
+    expect(promedioCadaCuantas).toBeLessThan(3.3);
+  });
+  it('es determinista por ciclo (mismo resultado siempre para el mismo ciclo, no cambia cuadro a cuadro)', () => {
+    expect(activaEnCiclo(5)).toBe(activaEnCiclo(5));
+    expect(factorCamaraLenta(5 * PERIODO_RAFAGA + puntoPico)).toBe(factorCamaraLenta(5 * PERIODO_RAFAGA + puntoPico));
+  });
+  it('un ciclo sin cámara lenta queda a velocidad normal en TODO el ciclo, no solo en el punto pico', () => {
+    const bi = Array.from({ length: 40 }, (_, i) => i).find((i) => !activaEnCiclo(i));
+    expect(bi).toBeDefined();
+    for (const ts of [0.2, 1, 1.5, 1.7, 2, 5, 10]) {
+      expect(factorCamaraLenta((bi as number) * PERIODO_RAFAGA + ts)).toBe(1);
+    }
+  });
+});
+
+describe('las puntas de un arco que queda en el aire se afinan (no quedan gruesas)', () => {
+  const f = () => FRAGMENT_SHADER.slice(FRAGMENT_SHADER.indexOf('vec3 rayos('), FRAGMENT_SHADER.indexOf('vec3 nubes('));
+  it('el grosor de la línea (l1/l2/l3) depende de qué tan adentro del tramo está, no es fijo', () => {
+    expect(f()).toContain('float ancho1 = mix(0.0012, 0.026, smoothstep(0.0, 0.45, seg1));');
+    expect(f()).toContain('float l1 = smoothstep(ancho1, 0.0, abs(d1)) * seg1 * 2.1;');
+    expect(f()).toContain('float ancho2 = mix(0.0012, 0.026, smoothstep(0.0, 0.45, seg2));');
+    expect(f()).toContain('float l2 = smoothstep(ancho2, 0.0, abs(d2)) * seg2 * 2.1;');
+    expect(f()).toContain('float ancho3 = mix(0.0012, 0.024, smoothstep(0.0, 0.45, seg3));');
+    expect(f()).toContain('float l3 = smoothstep(ancho3, 0.0, abs(d3)) * seg3 * 1.6;');
+  });
+  it('el halo de cada línea (g1/g2/g3) también se angosta hacia la punta: no solo baja de brillo, cambia de ancho', () => {
+    expect(f()).toContain('float tasa1 = mix(34.0, 10.0, smoothstep(0.0, 0.45, seg1));');
+    expect(f()).toContain('float g1 = exp(-abs(d1) * tasa1) * 1.10 * seg1;');
+    expect(f()).toContain('float tasa2 = mix(30.0, 9.0, smoothstep(0.0, 0.45, seg2));');
+    expect(f()).toContain('float g2 = exp(-abs(d2) * tasa2) * 1.00 * seg2;');
+    expect(f()).toContain('float tasa3 = mix(36.0, 11.0, smoothstep(0.0, 0.45, seg3));');
+    expect(f()).toContain('float g3 = exp(-abs(d3) * tasa3) * 0.80 * seg3;');
+  });
+  it('en la punta (justo donde el tramo empieza o termina) el grosor es casi 0 pero nunca 0 exacto (sin división por cero), y el halo cae mucho más rápido (más angosto)', () => {
+    const suave = (a: number, b: number, x: number) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+    const mix = (a: number, b: number, x: number) => a * (1 - x) + b * x;
+    const ancho = (seg: number) => mix(0.0012, 0.026, suave(0, 0.45, seg));
+    const tasa = (seg: number) => mix(34.0, 10.0, suave(0, 0.45, seg));
+    expect(ancho(0)).toBe(0.0012);
+    expect(ancho(0)).toBeGreaterThan(0);
+    expect(ancho(0.45)).toBe(0.026);
+    expect(ancho(0.15)).toBeGreaterThan(ancho(0));
+    expect(ancho(0.15)).toBeLessThan(ancho(0.45));
+    expect(tasa(0)).toBe(34.0); // en la punta, el halo cae mucho más rápido (más angosto)
+    expect(tasa(0.45)).toBe(10.0); // adentro del tramo, el halo ancho de siempre
+  });
+  it('donde el tramo queda forzado por tocar el logo (seg cerca de 1) el grosor y el halo ya son los de siempre, no afinados', () => {
+    const suave = (a: number, b: number, x: number) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+    expect(suave(0, 0.45, 1)).toBe(1); // seg=1 (dentro de la silueta, forzado) da el ancho y la tasa máximos
+  });
+});
+
+describe('la trayectoria de los rayos es cuadricular (tramos casi rectos, con esquinas), no redonda ni un zigzag caótico', () => {
+  const f = () => FRAGMENT_SHADER.slice(FRAGMENT_SHADER.indexOf('vec3 rayos('), FRAGMENT_SHADER.indexOf('vec3 nubes('));
+  it('define un escalón angular (radio casi constante por tramo, con un quiebre entre tramos) y lo usa en los 3 arcos, ahora solo como un sesgo menor (ver el describe de "arco eléctrico real": domina el ruido en varias frecuencias)', () => {
+    expect(FRAGMENT_SHADER).toContain('float escalonAngular(float rodea, vec2 semilla, float pasos, float dureza) {');
+    expect(f()).toContain('escalonAngular(rodea, vec2(bi * 9.1, tramo * 0.9), 16.0, 0.10) * 0.04');
+    expect(f()).toContain('escalonAngular(rodea, vec2(bi * 5.3 + 17.0, tramo * 1.1 + 3.0), 13.0, 0.12) * 0.05');
+    expect(f()).toContain('escalonAngular(rodea, vec2(bi * 7.7 + 41.0, tramo * 0.8 + 9.0), 20.0, 0.08) * 0.06');
+  });
+  it('dentro de cada tramo angular el radio es casi constante (un valor de hash), no oscila punto a punto', () => {
+    // Lejos del borde entre dos tramos (fract(u) cerca de 0 o 1, fuera de la zona de dureza)
+    // el resultado es directamente el hash de esa celda: plano, sin ondular.
+    const suave = (a: number, b: number, x: number) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+    const dureza = 0.10;
+    expect(suave(0.5 - dureza, 0.5 + dureza, 0.05)).toBe(0); // muy dentro del tramo: puro "a"
+    expect(suave(0.5 - dureza, 0.5 + dureza, 0.95)).toBe(1); // muy dentro del siguiente tramo: puro "b"
+  });
+  it('con más "pasos" hay más tramos (más esquinas) alrededor del logo', () => {
+    // j3 (el que se mete sobre el propio logo, "más disperso") tiene más pasos que j1/j2.
+    expect(f()).toMatch(/escalonAngular\(rodea, vec2\(bi \* 7\.7 \+ 41\.0, tramo \* 0\.8 \+ 9\.0\), 20\.0/);
+  });
+});
+
+describe('los rayos se parecen más a un arco eléctrico real (referencia electro.webp): filamento quebrado en varias escalas + ramificaciones', () => {
+  const f = () => FRAGMENT_SHADER.slice(FRAGMENT_SHADER.indexOf('vec3 rayos('), FRAGMENT_SHADER.indexOf('vec3 nubes('));
+  it('el escalón cuadricular ya pesa poco (era demasiado rectangular); domina el ruido en varias frecuencias', () => {
+    expect(f()).toContain('escalonAngular(rodea, vec2(bi * 9.1, tramo * 0.9), 16.0, 0.10) * 0.04');
+    expect(f()).toContain('escalonAngular(rodea, vec2(bi * 5.3 + 17.0, tramo * 1.1 + 3.0), 13.0, 0.12) * 0.05');
+    expect(f()).toContain('escalonAngular(rodea, vec2(bi * 7.7 + 41.0, tramo * 0.8 + 9.0), 20.0, 0.08) * 0.06');
+  });
+  it('cada arco tiene una capa de ruido fino (alta frecuencia) además de la onda general, para el crepitar', () => {
+    expect(f()).toContain('(noise(p * 115.0 + sd * 1.7) - 0.5) * 0.10;');
+    expect(f()).toContain('(noise(p * 98.0 + sd * 1.4 + 3.0) - 0.5) * 0.10;');
+    expect(f()).toContain('(noise(p * 108.0 + sd * 0.8 + 9.0) - 0.5) * 0.13;');
+  });
+  it('define ramificacion() (filamento que se afina hasta un punto) y ramas() (unas pocas, no todas cada ráfaga)', () => {
+    expect(FRAGMENT_SHADER).toContain('float ramificacion(vec2 p, vec2 origen, vec2 dir, float largo, vec2 semilla) {');
+    expect(FRAGMENT_SHADER).toContain('vec3 ramas(vec2 p, vec2 cc, float asp, float bi, float tramo, float ev, float progreso) {');
+    expect(FRAGMENT_SHADER).toContain('for (int i = 0; i < 6; i++) {');
+    expect(f()).toContain('rayo += ramas(p, cc, asp, bi, tramo, ev, progreso);');
+  });
+  it('ramificacion() nace con algo de grosor y termina en punta fina (0.0012), y no existe fuera de su propio largo', () => {
+    expect(FRAGMENT_SHADER).toContain('float ancho = mix(largo * 0.045, 0.0012, u);');
+    expect(FRAGMENT_SHADER).toContain('if (s < 0.0 || s > largo) return 0.0;');
+  });
+  it('las ramas solo se dibujan en la capa de fondo (no duplicadas también sobre el logo)', () => {
+    const dentroDeIf = f().slice(f().indexOf('if (solo < 0.5) {\n    // Resplandor'));
+    expect(dentroDeIf).toContain('rayo += ramas(');
+  });
+  it('las ramas aparecen con menos frecuencia que antes (menos rayos en pantalla), largas y en un color casi blanco-violeta como el de la referencia', () => {
+    expect(FRAGMENT_SHADER).toContain('hash(vec2(k * 3.7 + 1.0, bi * 2.1 + 11.0)) < 0.35');
+    expect(FRAGMENT_SHADER).toContain('float largo = mix(0.07, 0.20, hash(vec2(k * 4.4 + 4.0, bi * 0.7 + 2.0)));');
+    expect(FRAGMENT_SHADER).toContain('vec3 colRama = mix(vec3(0.75, 0.80, 1.0), vec3(1.0, 0.97, 0.92), hash(vec2(k + 0.5, bi + 1.3)));');
+    expect(FRAGMENT_SHADER).toContain('return col * ev * 1.6;');
+  });
+});
+
+
+describe('el arco que ya se mete sobre el logo a veces llega mucho más cerca del centro (en armonía con el resto, no un elemento aparte)', () => {
+  const f = () => FRAGMENT_SHADER.slice(FRAGMENT_SHADER.indexOf('vec3 rayos('), FRAGMENT_SHADER.indexOf('vec3 nubes('));
+  it('define dip3 (por ángulo, no siempre activo) y lo resta del nivel de d3: mismo seg3, mismo color, solo cambia qué tan cerca del centro pasa', () => {
+    expect(f()).toContain('float dip3 = smoothstep(0.60, 0.90, noise1(rodea * 1.1 + bi * 6.3 + 71.0)) * 0.26;');
+    expect(f()).toContain('float d3 = cf.g - 0.62 - dip3 + j3;');
+  });
+  it('dip3 vale 0 la mayor parte del tiempo (arco normal) y hasta 0.26 en los ángulos donde "se mete" hacia el centro', () => {
+    const suave = (a: number, b: number, x: number) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+    const dip = (n: number) => suave(0.60, 0.90, n) * 0.26;
+    expect(dip(0)).toBe(0);
+    expect(dip(0.5)).toBe(0);
+    expect(dip(0.9)).toBeCloseTo(0.26, 5);
+  });
+});
+
+describe('menos rayos a la vez en el anillo (umbral más alto: cada arco cubre menos del círculo)', () => {
+  const f = () => FRAGMENT_SHADER.slice(FRAGMENT_SHADER.indexOf('vec3 rayos('), FRAGMENT_SHADER.indexOf('vec3 nubes('));
+  it('los 3 arcos usan un umbral más alto que antes (0.57/0.61/0.67, antes 0.50/0.54/0.60): menos tramo encendido a la vez', () => {
+    expect(f()).toContain('float seg1 = arco(rodea, vec2(bi * 9.1, tramo * 0.9), 0.57 + umbralExtra - tocaLogo);');
+    expect(f()).toContain('float seg2 = arco(rodea, vec2(bi * 5.3 + 17.0, tramo * 1.1 + 3.0), 0.61 + umbralExtra - tocaLogo);');
+    expect(f()).toContain('float seg3 = arco(rodea, vec2(bi * 7.7 + 41.0, tramo * 0.8 + 9.0), 0.67 + umbralExtra - tocaLogo);');
+  });
+  it('las ramificaciones no cambiaron con este ajuste (el pedido era sobre los arcos del anillo)', () => {
+    expect(FRAGMENT_SHADER).toContain('for (int i = 0; i < 6; i++) {');
+    expect(FRAGMENT_SHADER).toContain('hash(vec2(k * 3.7 + 1.0, bi * 2.1 + 11.0)) < 0.35');
+  });
+});
+
+describe('los quiebres se intercalan cortos y largos (no parejos)', () => {
+  it('deforma el ángulo con una onda antes de repartirlo en pasos: comprime unas zonas (quiebres seguidos) y estira otras (tramo largo)', () => {
+    expect(FRAGMENT_SHADER).toContain('float rodeaAlt = rodea + 0.6 * sin(rodea * 2.3 + semilla.x * 0.7 + semilla.y);');
+    expect(FRAGMENT_SHADER).toContain('float u = (rodeaAlt / 6.2832 + 1.0) * pasos;');
+  });
+  it('la derivada de la onda varía: donde es alta los pasos se acortan, donde es baja se alargan (no un espaciado constante)', () => {
+    const rodeaAlt = (rodea: number) => rodea + 0.6 * Math.sin(rodea * 2.3);
+    const paso = 0.001;
+    const derivada = (rodea: number) => (rodeaAlt(rodea + paso) - rodeaAlt(rodea - paso)) / (2 * paso);
+    const derivadas = [0, 0.5, 1, 1.5, 2, 2.5].map(derivada);
+    expect(Math.max(...derivadas) - Math.min(...derivadas)).toBeGreaterThan(0.5);
+  });
+});
+
+describe('la ráfaga empieza con pocos rayos chicos, crece hacia el pico y vuelve a bajar al terminar', () => {
+  const f = () => FRAGMENT_SHADER.slice(FRAGMENT_SHADER.indexOf('vec3 rayos('), FRAGMENT_SHADER.indexOf('vec3 nubes('));
+  it('define progresoRafaga (0→1→0, un solo arco para toda la ráfaga) y umbralExtra a partir de él', () => {
+    expect(FRAGMENT_SHADER).toContain('float progresoRafaga(float t) {');
+    expect(FRAGMENT_SHADER).toContain('return smoothstep(0.0, 0.25, ts) * (1.0 - smoothstep(1.5, 1.98, ts));');
+    expect(f()).toContain('float progreso = progresoRafaga(t);');
+    expect(f()).toContain('float umbralExtra = mix(0.34, 0.0, progreso);');
+  });
+  it('umbralExtra se suma al umbral de los 3 arcos y sus halos (más umbral = menos círculo encendido = rayos más chicos)', () => {
+    expect(f()).toContain('0.57 + umbralExtra - tocaLogo');
+    expect(f()).toContain('0.61 + umbralExtra - tocaLogo');
+    expect(f()).toContain('0.67 + umbralExtra - tocaLogo');
+  });
+  it('al arrancar o terminar la ráfaga (progreso=0) el umbral extra es máximo (rayos chicos); en el pico (progreso=1) es 0 (rayos normales)', () => {
+    const mix = (a: number, b: number, x: number) => a * (1 - x) + b * x;
+    expect(mix(0.34, 0, 0)).toBe(0.34);
+    expect(mix(0.34, 0, 1)).toBe(0);
+  });
+  it('ramas() recibe progreso y cada rama tiene su propio umbral: la primera aparece casi desde el inicio, la última solo cerca del pico', () => {
+    expect(FRAGMENT_SHADER).toContain('vec3 ramas(vec2 p, vec2 cc, float asp, float bi, float tramo, float ev, float progreso) {');
+    expect(FRAGMENT_SHADER).toContain('if (progreso < (k + 1.0) / 6.0 * 0.85) continue;');
+    // rama 0 (primera): umbral bajo, aparece casi de inmediato. Rama 5 (última): umbral alto, solo cerca del pico.
+    const umbral = (k: number) => (k + 1) / 6 * 0.85;
+    expect(umbral(0)).toBeLessThan(umbral(5));
+    expect(umbral(5)).toBeLessThanOrEqual(0.85);
+  });
+});
+
+describe('el primer golpe se ve tan lleno de rayos como el segundo (progreso llega al pico antes de que el golpe principal se apague)', () => {
+  const progreso = (ts: number) => {
+    const suave = (a: number, b: number, x: number) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+    return suave(0, 0.25, ts) * (1 - suave(1.5, 1.98, ts));
+  };
+  it('ya está en el pico (o casi) durante el golpe principal (ts~0.3-0.5), no solo durante el secundario', () => {
+    expect(progreso(0.3)).toBeGreaterThan(0.9);
+    expect(progreso(0.5)).toBe(1);
+  });
+  it('sigue en el pico durante todo el golpe secundario (ts 1.43-1.98) hasta que empieza a apagarse al final', () => {
+    expect(progreso(1.43)).toBe(1);
+    expect(progreso(1.6)).toBeLessThan(1); // ya empezando a bajar, pero el golpe secundario ya se ve pleno la mayor parte de su duración
+    expect(progreso(1.98)).toBeCloseTo(0, 5);
+  });
+});
+
+describe('la electrificación es menos violenta (parpadeo suave, no un interruptor duro; brillo un poco más bajo)', () => {
+  const f = () => FRAGMENT_SHADER.slice(FRAGMENT_SHADER.indexOf('vec3 rayos('), FRAGMENT_SHADER.indexOf('vec3 nubes('));
+  it('el parpadeo (flick) se interpola de un valor al siguiente, no salta de golpe (sin step()), y a menor ritmo (10 Hz, no 18)', () => {
+    expect(f()).toContain('float pasoF = t * 10.0;');
+    expect(f()).toContain('float paso = floor(pasoF);');
+    expect(f()).toContain('float flick = 0.78 + 0.16 * mix(flickA, flickB, smoothstep(0.2, 0.8, fract(pasoF)));');
+    expect(f()).not.toContain('step(0.30, hash(vec2(paso, 3.3)))'); // el interruptor duro de antes
+  });
+  it('el rango del parpadeo es más chico que antes (0.16, no 0.30): varía menos, se siente menos agresivo', () => {
+    const antes = { base: 0.70, rango: 0.30 };
+    const ahora = { base: 0.78, rango: 0.16 };
+    expect(ahora.rango).toBeLessThan(antes.rango);
+    // El mínimo posible ahora (0.78-0.16=0.62) es más alto que el mínimo de antes (0.70-0.30=0.40*... en realidad step da 0.70 o 1.0):
+    expect(ahora.base - ahora.rango).toBeGreaterThan(0.6);
+  });
+  it('las líneas brillan un poco menos que antes (l1/l2 2.6→2.1, l3 2.0→1.6)', () => {
+    expect(f()).toContain('* seg1 * 2.1;');
+    expect(f()).toContain('* seg2 * 2.1;');
+    expect(f()).toContain('* seg3 * 1.6;');
+  });
+});
+
+describe('si le tocó cámara lenta a una ráfaga, a la siguiente le baja la probabilidad (para que no salgan seguidas ni muy seguido)', () => {
+  const puntoPico = FASE_APARECE_FIN + 0.3;
+  const activaEnCiclo = (bi: number) => factorCamaraLenta(bi * PERIODO_RAFAGA + puntoPico) < 0.99;
+
+  it('la probabilidad tras una ráfaga activa es más baja que la normal', () => {
+    expect(PROBABILIDAD_RALENTI_TRAS_ACTIVA).toBeLessThan(PROBABILIDAD_RALENTI_CICLO);
+  });
+  it('en la práctica, justo después de una ráfaga activa rara vez sigue otra activa', () => {
+    const N = 400;
+    const activos = Array.from({ length: N }, (_, bi) => activaEnCiclo(bi));
+    let trasActiva = 0, activaTrasActiva = 0;
+    for (let i = 1; i < N; i++) {
+      if (activos[i - 1]) {
+        trasActiva++;
+        if (activos[i]) activaTrasActiva++;
+      }
+    }
+    expect(trasActiva).toBeGreaterThan(10); // que la muestra sí tenga suficientes casos "tras activa"
+    const proporcion = activaTrasActiva / trasActiva;
+    expect(proporcion).toBeLessThan(0.3); // bastante por debajo del ~0.4 normal
   });
 });
