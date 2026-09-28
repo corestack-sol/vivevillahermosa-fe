@@ -17,19 +17,27 @@
  *  1. Se lee el archivo completo a memoria al elegirlo (no vuelve a depender
  *     del archivo del teléfono, que puede volverse ilegible minutos después).
  *  2. El formato se detecta por los bytes.
- *  3. JPEG/PNG/WebP/GIF pasan SIN decodificar: no hay nada que pueda fallar.
- *  4. HEIC/AVIF/BMP (el backend no los acepta) se convierten a JPEG en el
- *     navegador si este sabe abrirlos (Safari HEIC, Chrome AVIF); si no, se
- *     avisa con la acción concreta, nunca con un genérico "no válida".
+ *  3. JPEG/PNG/WebP/GIF/HEIC/HEIF/AVIF pasan SIN decodificar: el backend ya
+ *     los acepta tal cual y convierte HEIC/HEIF/AVIF a JPEG él mismo con
+ *     Cloudinary (docs/BACKEND-FOTOS-FORMATOS-23092026.md, PR #146,
+ *     2026-09-27) — antes el navegador tenía que decodificarlos para
+ *     convertirlos, y Chrome/Firefox no saben abrir HEIC nativamente, así que
+ *     la mayoría de Android terminaba pidiéndole a la persona que la guardara
+ *     como JPG a mano. Ya no hace falta: se sube igual que un JPEG (y si pesa
+ *     más del límite, `abrirHeicConWasm` la reduce con libheif-js en
+ *     cualquier navegador, sin depender de Safari).
+ *  4. Solo BMP (el backend no lo acepta) se convierte a JPEG en el navegador
+ *     si este sabe abrirlo; si no, se avisa con la acción concreta, nunca
+ *     con un genérico "no válida".
  */
 
 export type FormatoImagen = 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif' | 'image/avif' | 'image/heic' | 'image/bmp';
 
-/** Los que el backend acepta tal cual (POST /propiedades/fotos, verificado en vivo). */
-const ACEPTADOS_POR_BACKEND: FormatoImagen[] = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+/** Los que el backend acepta tal cual (POST /propiedades/fotos, verificado en vivo; HEIC/AVIF los convierte él mismo). */
+const ACEPTADOS_POR_BACKEND: FormatoImagen[] = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/avif'];
 
-/** Límite real de POST /propiedades/fotos (docs/BACKEND-FOTOS-CLOUDINARY-22082026.md). */
-export const MAX_SUBIDA_BYTES = 8 * 1024 * 1024;
+/** Límite real de POST /propiedades/fotos: 5MB, no 8 (docs/BACKEND-FOTOS-FORMATOS-23092026.md, PR #146, confirmado 2026-09-27). */
+export const MAX_SUBIDA_BYTES = 5 * 1024 * 1024;
 
 const EXTENSION: Record<FormatoImagen, string> = {
   'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif',
@@ -84,14 +92,50 @@ interface ImagenAbierta {
 
 const ESPERA_MAX_IMG_MS = 10_000;
 
-/** createImageBitmap y, si falla, un <img> normal — con tope de espera para no colgarse. */
+/**
+ * Último recurso para HEIC: Chrome/Firefox/Android no lo decodifican nativamente
+ * (ni con `createImageBitmap` ni con `<img>`), así que aquí se decodifica con
+ * libheif-js (WASM, ~2MB) — SOLO se importa si de verdad hace falta, nunca en
+ * el camino normal (JPEG/PNG/WebP/HEIC-en-Safari ya se resuelven antes de
+ * llegar aquí). Esto es lo que cierra de verdad el riesgo de HEIC pesado
+ * (>5MB, típico del modo "48MP" de iPhone) bloqueando a alguien en Android:
+ * ya no depende de que decodifique para poder reducirlo antes de subir.
+ */
+async function abrirHeicConWasm(blob: Blob): Promise<ImagenAbierta | null> {
+  try {
+    const bytes = new Uint8Array(await leerBytes(blob));
+    const { default: libheif } = await import('libheif-js/wasm-bundle');
+    const imagenes = new libheif.HeifDecoder().decode(bytes);
+    if (!imagenes.length) return null;
+    const imagen = imagenes[0];
+    const w = imagen.get_width();
+    const h = imagen.get_height();
+    if (!w || !h) return null;
+    const imageData = new ImageData(w, h);
+    const ok = await new Promise<boolean>((resolve) => {
+      imagen.display(imageData, (resultado) => resolve(!!resultado));
+    });
+    if (!ok) return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.putImageData(imageData, 0, 0);
+    return { dibujable: canvas, width: w, height: h, liberar: () => imagen.free() };
+  } catch {
+    return null;
+  }
+}
+
+/** createImageBitmap, si falla un <img> normal y, si es HEIC, libheif-js — con tope de espera para no colgarse. */
 async function abrirImagen(blob: Blob): Promise<ImagenAbierta | null> {
   try {
     const bitmap = await createImageBitmap(blob);
     return { dibujable: bitmap, width: bitmap.width, height: bitmap.height, liberar: () => bitmap.close() };
   } catch { /* se intenta con <img> */ }
 
-  return new Promise((resolve) => {
+  const viaImg = await new Promise<ImagenAbierta | null>((resolve) => {
     let url: string;
     try { url = URL.createObjectURL(blob); } catch { resolve(null); return; }
     const img = new Image();
@@ -105,10 +149,34 @@ async function abrirImagen(blob: Blob): Promise<ImagenAbierta | null> {
     img.onerror = () => { clearTimeout(timer); URL.revokeObjectURL(url); resolve(null); };
     img.src = url;
   });
+  if (viaImg) return viaImg;
+
+  if (blob.type === 'image/heic') return abrirHeicConWasm(blob);
+  return null;
 }
 
+/**
+ * Cachea por (blob, maxLado, calidad): `advertenciaPesoExcesivo` y `blobParaSubir` se
+ * llaman sobre el MISMO File con los MISMOS parámetros (1920/0.92) — antes, un HEIC
+ * pesado que solo libheif-js puede abrir se decodificaba dos veces (una al elegir la
+ * foto, otra al publicar), y esa decodificación es la parte cara. `WeakMap` para que
+ * el File se pueda liberar de memoria normalmente cuando ya no se use en ningún lado.
+ */
+const cacheConversion = new WeakMap<Blob, Map<string, Promise<Blob | null>>>();
+
 /** Decodifica, reduce a `maxLado` y devuelve un JPEG; `null` si este navegador no puede abrir la imagen. */
-export async function convertirAJpeg(blob: Blob, maxLado: number, calidad: number): Promise<Blob | null> {
+export function convertirAJpeg(blob: Blob, maxLado: number, calidad: number): Promise<Blob | null> {
+  const clave = `${maxLado}:${calidad}`;
+  let porBlob = cacheConversion.get(blob);
+  if (!porBlob) { porBlob = new Map(); cacheConversion.set(blob, porBlob); }
+  const enCache = porBlob.get(clave);
+  if (enCache) return enCache;
+  const promesa = convertirAJpegSinCache(blob, maxLado, calidad);
+  porBlob.set(clave, promesa);
+  return promesa;
+}
+
+async function convertirAJpegSinCache(blob: Blob, maxLado: number, calidad: number): Promise<Blob | null> {
   const abierta = await abrirImagen(blob);
   if (!abierta) return null;
   try {
@@ -178,6 +246,31 @@ export async function blobParaSubir(file: File, maxLado = 1920, calidad = 0.92):
   throw new Error(`La foto pesa ${(file.size / 1024 / 1024).toFixed(1)}MB y este navegador no pudo reducirla (máx. ${MAX_SUBIDA_BYTES / 1024 / 1024}MB).`);
 }
 
+/**
+ * ¿Esta foto se puede llegar a subir? Se llama al ELEGIRLA, no hasta Publicar.
+ *
+ * `blobParaSubir()` reduce casi cualquier foto a unos cientos de KB — el límite
+ * del servidor (5MB) no bloquea JPEG/PNG/WebP/GIF en la práctica porque el
+ * navegador SIEMPRE puede decodificarlos para reducirlos, y HEIC ahora también
+ * se puede reducir en cualquier navegador vía `abrirHeicConWasm`. Esta función
+ * solo cubre el resto: un HEIC corrupto/no estándar que ni siquiera libheif-js
+ * pueda decodificar, y que además pese más de 5MB (pasa con el modo "48MP" de
+ * los iPhone Pro) — antes la persona se enteraba hasta el final, al publicar,
+ * después de llenar todo el formulario.
+ *
+ * Devuelve `null` si la foto no tiene problema (siempre, si ya pesa ≤5MB: no
+ * hace falta intentar reducirla para saber que va a caber). Solo para
+ * archivos MÁS PESADOS que el límite se intenta reducir aquí mismo, para
+ * avisar de inmediato si no se va a poder.
+ */
+export async function advertenciaPesoExcesivo(file: File): Promise<string | null> {
+  if (file.size <= MAX_SUBIDA_BYTES) return null;
+  const reducida = await convertirAJpeg(file, 1920, 0.92);
+  if (reducida && reducida.size > 0) return null;
+  const mb = (file.size / 1024 / 1024).toFixed(1);
+  return `Esta foto pesa ${mb}MB y no se pudo reducir automáticamente. Ábrela en tu galería, compártela o guárdala como JPG (pesa mucho menos) y vuelve a elegirla.`;
+}
+
 /** Texto para la persona, según la causa real — siempre con la acción concreta. */
 export function mensajeRechazoFoto(motivo: MotivoRechazoFoto, cantidad: number, formato?: FormatoImagen): string {
   const plural = cantidad !== 1;
@@ -190,7 +283,9 @@ export function mensajeRechazoFoto(motivo: MotivoRechazoFoto, cantidad: number, 
     case 'no-es-imagen':
       return `${sujeto} no ${plural ? 'son' : 'es'} una imagen (usa JPG, PNG o WebP).`;
     case 'formato-no-soportado': {
-      const nombre = formato === 'image/heic' ? 'HEIC' : formato === 'image/avif' ? 'AVIF' : 'un formato';
+      // HEIC/HEIF/AVIF ya no llegan aquí: el backend los acepta y los convierte él mismo
+      // (ver ACEPTADOS_POR_BACKEND). Lo único que puede caer en este caso hoy es BMP.
+      const nombre = formato === 'image/bmp' ? 'BMP' : 'un formato';
       return `${sujeto} en formato ${nombre} que este navegador no puede convertir. Cámbiala${plural ? 's' : ''} a JPG (en la galería: compartir o guardar como JPG) e inténtalo de nuevo.`;
     }
   }

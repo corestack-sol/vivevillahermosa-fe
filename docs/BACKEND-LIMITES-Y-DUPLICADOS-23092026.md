@@ -37,3 +37,10 @@ Pedido: que `endpoint` sea único (upsert) y confirmar que enviar el mismo push 
 ## 4. (Opcional) Idempotencia al publicar
 
 `POST /propiedades` con la misma petición dos veces crea dos propiedades (y dispara alertas dos veces). El front ya evita el doble envío, pero una cabecera `Idempotency-Key` cerraría el caso por completo.
+
+## Resuelto (27-09-2026)
+
+1. **`/ia/analizar-imagen`**: el límite no cambió (30/10min por IP + tope global de 18/día para todo el sitio, cupo gratuito de Gemini compartido). Ahora el 429 trae `Retry-After`, `X-RateLimit-Limit/Remaining/Reset`. Cambio en el front (`backendApi.ts`, `ejecutorConEnfriamiento.ts`, `PublishForm.tsx`): el enfriamiento tras un 429 usa el `Retry-After` real del servidor en vez de un fijo de 90s (que habría insistido cada 90s durante horas si el tope agotado era el diario, hasta 24h). El mensaje también distingue "espera Xs" de "por hoy ya no hay cupo, vuelve mañana" (`mensajeLimitePeticiones()`).
+2. **Alertas duplicadas**: `POST /alertas` con los mismos criterios ya no crea otra fila — responde 200 con la existente (201 si sí crea una nueva). No requiere cambios en el front (mismo body en ambos casos); no se implementó distinguir 200/201 en la UI, el front ya bloqueaba la creación de duplicados por su cuenta.
+3. **Suscripciones push**: sin cambio, ya estaba resuelto desde la implementación original (upsert por `endpoint`).
+4. **Idempotencia al publicar**: implementado en el front. `PublishForm.tsx` genera una clave (`crypto.randomUUID()`) una sola vez por formulario y la manda en `Idempotency-Key` en cada intento de `POST /propiedades` — un reintento tras timeout o un doble tap en Publicar ya no puede crear dos propiedades.

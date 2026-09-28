@@ -28,7 +28,7 @@ import { useAuth } from '@/context/AuthContext';
 import { dentroDeRadioPermitido, RADIO_MAXIMO_PIN_KM } from '@/lib/mapPin';
 import { estaEnTabasco } from '@/lib/tabascoBoundary';
 import { MAX_SOURCE_BYTES } from '@/lib/imageResize';
-import { prepararFoto, blobParaSubir, mensajeRechazoFoto, type MotivoRechazoFoto, type FormatoImagen } from '@/lib/fotoArchivo';
+import { prepararFoto, blobParaSubir, mensajeRechazoFoto, advertenciaPesoExcesivo, type MotivoRechazoFoto, type FormatoImagen } from '@/lib/fotoArchivo';
 import { subirFotos } from '@/lib/subidaFotos';
 import { SolicitarCambioPinModal } from '@/components/property/SolicitarCambioPinModal';
 import { generarTituloAutomatico } from '@/lib/tituloGenerator';
@@ -254,13 +254,23 @@ export default function EditarPropiedadPage() {
     // navegador no decide si la foto "sirve" — ver src/lib/fotoArchivo.ts.
     const preparadas: File[] = [];
     const rechazos = new Map<string, { motivo: MotivoRechazoFoto; formato?: FormatoImagen; cantidad: number }>();
+    // Mismo aviso que PublishForm.tsx (auditoría 2026-09-27): un HEIC de más de 5MB que
+    // ni siquiera libheif-js puede reducir se descarta aquí, con la acción concreta, en
+    // vez de fallar más abajo dentro de subirFotos con un error genérico.
+    const avisosPeso = new Set<string>();
     for (const original of sinSobrepeso) {
       const r = await prepararFoto(original);
-      if (r.ok) { preparadas.push(r.file); continue; }
+      if (r.ok) {
+        const advertencia = await advertenciaPesoExcesivo(r.file);
+        if (advertencia) { avisosPeso.add(advertencia); continue; }
+        preparadas.push(r.file);
+        continue;
+      }
       const clave = `${r.motivo}:${r.formato ?? ''}`;
       rechazos.set(clave, { motivo: r.motivo, formato: r.formato, cantidad: (rechazos.get(clave)?.cantidad ?? 0) + 1 });
     }
     rechazos.forEach((x) => toast.error(mensajeRechazoFoto(x.motivo, x.cantidad, x.formato)));
+    avisosPeso.forEach((mensaje) => toast.error(mensaje));
 
     // Máximo 2 subidas a la vez y reintento del 429 (ver src/lib/subidaFotos.ts).
     const subida = await subirFotos(
@@ -268,7 +278,7 @@ export default function EditarPropiedadPage() {
       new Map<File, string>(),
       (f) => f,
       async (file) => {
-        // Límite real del backend: 8MB por archivo en /propiedades/fotos.
+        // Límite real del backend: 5MB por archivo en /propiedades/fotos.
         // Si el navegador no puede reducirla, sube el original.
         const blob = await blobParaSubir(file, 1920, 0.92);
         const body = new FormData();

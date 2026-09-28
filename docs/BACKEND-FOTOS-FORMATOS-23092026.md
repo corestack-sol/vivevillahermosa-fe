@@ -21,3 +21,21 @@ Contexto: en Android, fotos genuinas fallaban al publicar; en iPhone no. El fron
 3. Mantener la validación por bytes y el límite de 8MB por archivo, con un mensaje explícito si se excede (el frontend ya reduce a 1920px antes de subir, pero si el navegador no puede reducir, sube el original).
 
 Cuando el punto 2 esté listo, avisar: el frontend puede dejar de convertir/rechazar HEIC y AVIF en el navegador.
+
+## Resuelto (27-09-2026, PR #146 en producción)
+
+Los 3 pedidos, resueltos:
+1. HEIC/HEIF corrupto ya da 400 con mensaje claro, no 500.
+2. HEIC, HEIF y AVIF se aceptan y se convierten a JPEG en el servidor (Cloudinary). La foto queda guardada como JPEG, visible en cualquier navegador.
+3. El límite real es **5MB**, no 8 — el mensaje del 413 ahora es explícito ("El archivo supera el límite de 5MB.").
+
+Cambios en el frontend (`src/lib/fotoArchivo.ts`):
+- `image/heic` y `image/avif` se movieron a `ACEPTADOS_POR_BACKEND`: ya no se intenta decodificar/convertir en el navegador (Chrome/Firefox no podían igual). Se suben tal cual, como un JPEG.
+- `MAX_SUBIDA_BYTES` bajó de 8MB a 5MB.
+- `mensajeRechazoFoto('formato-no-soportado', ...)` ya no menciona HEIC/AVIF (nunca vuelven a caer ahí); el único caso real hoy es BMP.
+
+### Riesgo real que quedaba (27-09-2026): HEIC pesado en Android/Chrome
+
+El límite de 5MB no bloquea JPEG/PNG/WebP en la práctica porque el navegador siempre puede decodificarlos y reducirlos antes de subir. HEIC sí era un riesgo real: Chrome/Firefox no lo decodifican nativamente, así que un HEIC de más de 5MB (el modo "48MP" de iPhone Pro lo produce fácil) se subía SIN reducir en cualquier navegador que no fuera Safari — y si pasaba de 5MB, la persona se enteraba hasta el final, al publicar.
+
+Cerrado con `libheif-js` (WASM, decodificador de HEIC en JavaScript puro, sin backend): `abrirHeicConWasm()` en `fotoArchivo.ts` se importa dinámicamente (nunca en el camino normal, solo si un HEIC pesado además falla al decodificar nativamente) y decodifica/reduce el HEIC en CUALQUIER navegador, no solo Safari. `advertenciaPesoExcesivo()` ahora solo avisa en el caso ya marginal de un HEIC corrupto/no estándar que ni siquiera libheif-js pueda leer.

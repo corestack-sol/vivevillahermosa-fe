@@ -33,6 +33,24 @@ export interface BackendUser {
 
 export const MENSAJE_LIMITE_PETICIONES = 'Hay muchas peticiones al servidor en este momento. Espera un minuto e inténtalo de nuevo.';
 
+/** Un límite de una hora o más ya no es "espera un minuto": es el cupo diario global de IA, no un pico de tráfico. */
+const UMBRAL_CUPO_DIARIO_S = 3600;
+
+/**
+ * Mensaje del límite de peticiones (429), con el tiempo de espera real cuando el backend lo
+ * manda (cabecera `Retry-After`). POST /ia/analizar-imagen la manda desde el 2026-09-27
+ * (docs/BACKEND-LIMITES-Y-DUPLICADOS-23092026.md): 10 min por IP, o hasta 24h si se agotó
+ * el cupo global diario (18/día, gratuito de Gemini, compartido entre todo el sitio) — vale
+ * la pena distinguir ese caso, no es lo mismo "espera un poco" que "hasta mañana".
+ */
+export function mensajeLimitePeticiones(retryAfterSegundos?: number): string {
+  if (retryAfterSegundos === undefined || retryAfterSegundos <= 0) return MENSAJE_LIMITE_PETICIONES;
+  if (retryAfterSegundos >= UMBRAL_CUPO_DIARIO_S) {
+    return 'Por hoy ya se acabó el cupo gratuito para analizar imágenes con IA. Puedes seguir publicando sin ese análisis; vuelve a intentarlo mañana.';
+  }
+  return `Hay muchas peticiones al servidor en este momento. Intenta de nuevo en ${retryAfterSegundos}s.`;
+}
+
 export function esLimiteDePeticiones(e: unknown): e is BackendApiError {
   return e instanceof BackendApiError && e.status === 429;
 }
@@ -41,8 +59,10 @@ export class BackendApiError extends Error {
   constructor(
     public readonly status: number,
     public readonly body: unknown,
+    /** Cabecera `Retry-After` del 429, en segundos, si el backend la mandó. */
+    public readonly retryAfterSegundos?: number,
   ) {
-    super(BackendApiError.extraerMensaje(status, body));
+    super(BackendApiError.extraerMensaje(status, body, retryAfterSegundos));
   }
 
   // BACKEND-AUDITORIA-EXHAUSTIVA-20082026: el ValidationPipe de NestJS (con
@@ -52,10 +72,10 @@ export class BackendApiError extends Error {
   // "email debe ser un correo,la contraseña es muy corta"), ilegible para
   // quien lo ve. Un solo campo inválido sigue mandando `message` como
   // string normal, eso no cambia.
-  private static extraerMensaje(status: number, body: unknown): string {
+  private static extraerMensaje(status: number, body: unknown, retryAfterSegundos?: number): string {
     // 429 (ThrottlerException): el texto crudo del backend ("ThrottlerException:
     // Too Many Requests") no le dice nada a quien lo ve — reporte 2026-09-23.
-    if (status === 429) return MENSAJE_LIMITE_PETICIONES;
+    if (status === 429) return mensajeLimitePeticiones(retryAfterSegundos);
     if (typeof body !== 'object' || !body || !('message' in body)) {
       return `Backend respondió ${status}`;
     }
@@ -67,9 +87,26 @@ export class BackendApiError extends Error {
   }
 }
 
+/**
+ * `Retry-After` acepta dos formatos por RFC 7231: segundos ("120") o una fecha HTTP
+ * ("Wed, 21 Oct 2026 07:28:00 GMT"). Hoy el backend solo manda segundos, pero si algún
+ * día cambia a fecha, `Number(crudo)` da `NaN` — sin este segundo intento, se perdía el
+ * valor real en silencio (undefined) en vez de usarlo.
+ */
+function parseRetryAfter(crudo: string | null): number | undefined {
+  if (crudo === null) return undefined;
+  const segundos = Number(crudo);
+  if (Number.isFinite(segundos)) return segundos;
+  const fecha = Date.parse(crudo);
+  return Number.isNaN(fecha) ? undefined : Math.max(0, Math.round((fecha - Date.now()) / 1000));
+}
+
 export async function parseResponse<T>(response: Response): Promise<T> {
   const body: unknown = await response.json().catch(() => null);
-  if (!response.ok) throw new BackendApiError(response.status, body);
+  if (!response.ok) {
+    const retryAfterSegundos = parseRetryAfter(response.headers.get('Retry-After'));
+    throw new BackendApiError(response.status, body, retryAfterSegundos);
+  }
   return body as T;
 }
 

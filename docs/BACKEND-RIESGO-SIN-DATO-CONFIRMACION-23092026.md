@@ -27,3 +27,7 @@ Desde el punto de vista de lectura no hay nada que bloquee: el front ya muestra 
 ## Su sugerencia sobre valores desconocidos
 
 De acuerdo, y ya está hecha del lado del front: cualquier valor de riesgo que no reconozca (`null`, un nivel nuevo, texto raro) se trata como `sin_dato` al leerlo, en vez de romper la ficha. Entra en el próximo despliegue. Del lado del backend, un default para lo que no reconozcan en las lecturas también ayuda.
+
+## Confirmado en producción (27-09-2026)
+
+Paso 3 (default `sin_dato`) ya está desplegado — con esto queda cerrado el plan de punta a punta. Sin cambios necesarios en el frontend: como se anticipó arriba, la lectura ya soportaba `sin_dato` en todas las superficies desde el paso 2, y el formulario del front siempre manda el campo, así que el nuevo default del backend no lo afecta. La sugerencia de un default del lado del backend para valores desconocidos en las lecturas no aplica: `riesgoInundacion` es un enum de Postgres, nunca puede traer un valor fuera de `bajo/medio/alto/sin_dato`.

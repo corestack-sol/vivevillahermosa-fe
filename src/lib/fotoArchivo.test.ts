@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { detectarFormatoImagen, prepararFoto, blobParaSubir, mensajeRechazoFoto, MAX_SUBIDA_BYTES } from './fotoArchivo';
+import { detectarFormatoImagen, prepararFoto, blobParaSubir, mensajeRechazoFoto, advertenciaPesoExcesivo, MAX_SUBIDA_BYTES } from './fotoArchivo';
 
 const ascii = (s: string) => [...s].map((c) => c.charCodeAt(0));
 const JPEG = [0xff, 0xd8, 0xff, 0xe0, 0, 0x10, 0x4a, 0x46, 0x49, 0x46, 0, 1, 2, 3];
@@ -8,6 +8,7 @@ const WEBP = [...ascii('RIFF'), 0, 0, 0, 0, ...ascii('WEBP')];
 const GIF = [...ascii('GIF89a'), 1, 0, 1, 0];
 const HEIC = [0, 0, 0, 0x18, ...ascii('ftyp'), ...ascii('heic'), 0, 0];
 const AVIF = [0, 0, 0, 0x1c, ...ascii('ftyp'), ...ascii('avif'), 0, 0];
+const BMP = [0x42, 0x4d, 0, 0, 0, 0, 0, 0, 0, 0];
 const TEXTO = ascii('hola mundo esto no es una imagen');
 
 const archivo = (bytes: number[], nombre = 'foto.jpg', tipo = 'image/jpeg') => new File([new Uint8Array(bytes)], nombre, { type: tipo });
@@ -20,7 +21,7 @@ function stubCanvasQueDevuelve(blob: Blob | null) {
   return { canvas, ctx };
 }
 
-afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.doUnmock('libheif-js/wasm-bundle'); vi.resetModules(); });
 
 describe('detectarFormatoImagen (por bytes, no por extensión)', () => {
   it('reconoce los formatos habituales', () => {
@@ -67,6 +68,24 @@ describe('prepararFoto — el navegador no decide si una foto sirve', () => {
     }
   });
 
+  // PR #146 (2026-09-27): el backend acepta HEIC/HEIF/AVIF y los convierte él mismo a
+  // JPEG con Cloudinary — el navegador ya no tiene que decodificarlos para nada, ni
+  // siquiera intentarlo (antes Chrome/Firefox no podían, y la mayoría de Android
+  // terminaba pidiéndole a la persona que la convirtiera a mano).
+  it('HEIC y AVIF también pasan SIN decodificar (el backend los convierte)', async () => {
+    const cib = vi.fn();
+    vi.stubGlobal('createImageBitmap', cib);
+    for (const [bytes, tipo, ext] of [[HEIC, 'image/heic', 'heic'], [AVIF, 'image/avif', 'avif']] as const) {
+      const r = await prepararFoto(archivo([...bytes], `foto.${ext}`, ''));
+      expect(r.ok).toBe(true);
+      if (r.ok) {
+        expect(r.file.type).toBe(tipo);
+        expect(r.convertida).toBe(false);
+      }
+    }
+    expect(cib).not.toHaveBeenCalled();
+  });
+
   it('el archivo devuelto está en memoria y conserva los bytes', async () => {
     const r = await prepararFoto(archivo(JPEG));
     expect(r.ok).toBe(true);
@@ -87,26 +106,26 @@ describe('prepararFoto — el navegador no decide si una foto sirve', () => {
     expect(await prepararFoto(archivo(TEXTO, 'nota.jpg', 'image/jpeg'))).toMatchObject({ ok: false, motivo: 'no-es-imagen' });
   });
 
-  it('HEIC que el navegador SÍ abre (Safari): se convierte a JPEG', async () => {
+  it('BMP que el navegador SÍ abre: se convierte a JPEG (el backend no acepta BMP)', async () => {
     vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({ width: 4000, height: 3000, close: () => {} }));
     const { canvas } = stubCanvasQueDevuelve(new Blob(['jpeg-convertido'], { type: 'image/jpeg' }));
-    const r = await prepararFoto(archivo(HEIC, 'IMG_0001.HEIC', ''));
+    const r = await prepararFoto(archivo(BMP, 'foto.bmp', ''));
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.convertida).toBe(true);
-      expect(r.formatoOriginal).toBe('image/heic');
+      expect(r.formatoOriginal).toBe('image/bmp');
       expect(r.file.type).toBe('image/jpeg');
-      expect(r.file.name).toBe('IMG_0001.jpg');
+      expect(r.file.name).toBe('foto.jpg');
     }
     expect(canvas.width).toBe(4000); // no agranda: 4000 ≤ 4096
   });
 
-  it('HEIC que el navegador NO abre (Chrome): motivo "formato-no-soportado" con el formato', async () => {
+  it('BMP que el navegador NO abre: motivo "formato-no-soportado" con el formato', async () => {
     vi.stubGlobal('createImageBitmap', vi.fn().mockRejectedValue(new Error('no soportado')));
     class ImgFalla { onerror: (() => void) | null = null; onload: (() => void) | null = null; set src(_v: string) { setTimeout(() => this.onerror?.(), 0); } }
     vi.stubGlobal('Image', ImgFalla);
     vi.stubGlobal('URL', { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} });
-    expect(await prepararFoto(archivo(HEIC, 'a.heic', ''))).toMatchObject({ ok: false, motivo: 'formato-no-soportado', formato: 'image/heic' });
+    expect(await prepararFoto(archivo(BMP, 'a.bmp', ''))).toMatchObject({ ok: false, motivo: 'formato-no-soportado', formato: 'image/bmp' });
   });
 });
 
@@ -134,16 +153,85 @@ describe('blobParaSubir', () => {
     vi.stubGlobal('Image', ImgFalla);
     vi.stubGlobal('URL', { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} });
     const grande = new File([new Uint8Array(MAX_SUBIDA_BYTES + 1)], 'grande.jpg', { type: 'image/jpeg' });
-    await expect(blobParaSubir(grande)).rejects.toThrow(/pesa .*MB.*máx\. 8MB/);
+    await expect(blobParaSubir(grande)).rejects.toThrow(/pesa .*MB.*máx\. 5MB/);
   });
 });
 
 describe('mensajeRechazoFoto', () => {
   it('cada motivo dice qué hacer, con singular/plural', () => {
-    expect(mensajeRechazoFoto('formato-no-soportado', 1, 'image/heic')).toMatch(/HEIC.*JPG/);
-    expect(mensajeRechazoFoto('formato-no-soportado', 2, 'image/avif')).toMatch(/2 archivos.*AVIF/);
+    expect(mensajeRechazoFoto('formato-no-soportado', 1, 'image/bmp')).toMatch(/BMP.*JPG/);
+    expect(mensajeRechazoFoto('formato-no-soportado', 2, 'image/bmp')).toMatch(/2 archivos.*BMP/);
     expect(mensajeRechazoFoto('vacio', 1)).toMatch(/Google Fotos/);
     expect(mensajeRechazoFoto('ilegible', 1)).toMatch(/galería/);
     expect(mensajeRechazoFoto('no-es-imagen', 3)).toMatch(/3 archivos no son una imagen/);
+  });
+});
+
+describe('advertenciaPesoExcesivo — avisa AL ELEGIR la foto, no hasta Publicar', () => {
+  it('una foto que ya pesa ≤5MB nunca tiene problema (ni se intenta reducir)', async () => {
+    const cib = vi.fn();
+    vi.stubGlobal('createImageBitmap', cib);
+    const chica = new File([new Uint8Array(1024)], 'foto.jpg', { type: 'image/jpeg' });
+    expect(await advertenciaPesoExcesivo(chica)).toBeNull();
+    expect(cib).not.toHaveBeenCalled(); // no hace falta decodificar para saber que cabe
+  });
+
+  it('una foto de más de 5MB que el navegador SÍ puede reducir: sin problema', async () => {
+    vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({ width: 6000, height: 4000, close: () => {} }));
+    stubCanvasQueDevuelve(new Blob(['reducida'], { type: 'image/jpeg' }));
+    const grande = new File([new Uint8Array(MAX_SUBIDA_BYTES + 1)], 'foto.jpg', { type: 'image/jpeg' });
+    expect(await advertenciaPesoExcesivo(grande)).toBeNull();
+  });
+
+  it('una foto de más de 5MB que el navegador NO puede reducir (HEIC en Chrome/Android): avisa con la acción concreta', async () => {
+    vi.stubGlobal('createImageBitmap', vi.fn().mockRejectedValue(new Error('no soportado')));
+    class ImgFalla { onerror: (() => void) | null = null; onload: (() => void) | null = null; set src(_v: string) { setTimeout(() => this.onerror?.(), 0); } }
+    vi.stubGlobal('Image', ImgFalla);
+    vi.stubGlobal('URL', { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} });
+    const grande = new File([new Uint8Array(MAX_SUBIDA_BYTES + 1)], 'foto.heic', { type: 'image/heic' });
+    const aviso = await advertenciaPesoExcesivo(grande);
+    expect(aviso).toMatch(/no se pudo reducir/);
+    expect(aviso).toMatch(/JPG/);
+    expect(aviso).not.toMatch(/Safari|iPhone/); // no se le puede pedir a alguien que cambie de teléfono
+  });
+
+  // Este SÍ decodifica de verdad: bytes de un HEIC inválido (arriba) hacen que
+  // libheif-js real falle al parsear, así que ese caso no prueba el camino que
+  // SÍ funciona. Aquí se simula un HeifDecoder que decodifica con éxito, para
+  // probar que abrirHeicConWasm usa bien su API (decode -> display -> canvas).
+  it('un HEIC que SÍ decodifica con libheif-js (Chrome/Android): se reduce igual, sin pedir cambiar de navegador', async () => {
+    vi.stubGlobal('createImageBitmap', vi.fn().mockRejectedValue(new Error('no soportado')));
+    class ImgFalla { onerror: (() => void) | null = null; onload: (() => void) | null = null; set src(_v: string) { setTimeout(() => this.onerror?.(), 0); } }
+    vi.stubGlobal('Image', ImgFalla);
+    vi.stubGlobal('URL', { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} });
+    class FakeImageData {
+      data: Uint8ClampedArray;
+      constructor(public width: number, public height: number) { this.data = new Uint8ClampedArray(width * height * 4); }
+    }
+    vi.stubGlobal('ImageData', FakeImageData);
+    const ctx = { fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn(), putImageData: vi.fn() };
+    const canvas = { width: 0, height: 0, getContext: () => ctx, toBlob: (cb: (b: Blob | null) => void) => cb(new Blob(['reducida'], { type: 'image/jpeg' })) };
+    vi.stubGlobal('document', { createElement: (tag: string) => { if (tag !== 'canvas') throw new Error(`inesperado: ${tag}`); return canvas; } });
+
+    vi.resetModules();
+    vi.doMock('libheif-js/wasm-bundle', () => ({
+      default: {
+        HeifDecoder: class {
+          decode() {
+            return [{
+              get_width: () => 2,
+              get_height: () => 2,
+              display: (imageData: { data: Uint8ClampedArray }, cb: (r: unknown) => void) => cb(imageData),
+              free: vi.fn(),
+            }];
+          }
+        },
+      },
+    }));
+
+    const grande = new File([new Uint8Array(MAX_SUBIDA_BYTES + 1)], 'foto.heic', { type: 'image/heic' });
+    const aviso = await advertenciaPesoExcesivo(grande);
+    expect(aviso).toBeNull(); // se pudo reducir vía WASM: nada que avisar
+    expect(ctx.putImageData).toHaveBeenCalledWith(expect.any(FakeImageData), 0, 0);
   });
 });

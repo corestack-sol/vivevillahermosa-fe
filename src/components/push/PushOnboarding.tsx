@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { BellRing, Loader2 } from 'lucide-react';
+import { BellRing, Loader2, MessageCircle } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
@@ -96,10 +96,9 @@ export function PushOnboarding() {
         Te avisamos al instante, aunque no tengas la app abierta.
       </p>
 
-      {/* Solo se promete lo que hoy llega como push: las alertas de propiedades.
-          Auditoría en vivo 2026-09-24: los mensajes nuevos generan aviso DENTRO de
-          la app pero el backend no manda push (docs/BACKEND-PUSH-NOTIFICACIONES-24092026.md).
-          Cuando lo haga, se vuelve a listar aquí. */}
+      {/* Mensajes vuelve a listarse aquí: el backend ya manda push para
+          mensaje_nuevo (docs/BACKEND-PUSH-NOTIFICACIONES-24092026.md, PR #147,
+          confirmado 2026-09-27) — antes solo generaba aviso DENTRO de la app. */}
       <ul className="space-y-3 mb-5">
         <li className="flex items-start gap-3">
           <span className="w-9 h-9 rounded-xl bg-brand-pale text-brand flex items-center justify-center flex-shrink-0">
@@ -108,6 +107,15 @@ export function PushOnboarding() {
           <div>
             <p className="text-sm font-semibold text-gray-800">Alertas de propiedades</p>
             <p className="text-xs text-gray-500">Cuando se publica algo que coincide con tus alertas. Créalas en Mis alertas.</p>
+          </div>
+        </li>
+        <li className="flex items-start gap-3">
+          <span className="w-9 h-9 rounded-xl bg-brand-pale text-brand flex items-center justify-center flex-shrink-0">
+            <MessageCircle size={16} />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-gray-800">Mensajes</p>
+            <p className="text-xs text-gray-500">Cuando alguien te escribe sobre una de tus propiedades.</p>
           </div>
         </li>
       </ul>

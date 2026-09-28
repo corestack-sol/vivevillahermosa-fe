@@ -9,9 +9,17 @@
  * otra vez por cada foto en cada reintento — cada llamada bloqueada seguía
  * sumando peticiones. Con esto, tras el primer 429 no se insiste.
  */
-export function crearEjecutorConEnfriamiento({ cooldownMs, esLimite, ahora = () => Date.now() }: {
+export function crearEjecutorConEnfriamiento({ cooldownMs, esLimite, obtenerEsperaMs, ahora = () => Date.now() }: {
+  /** Enfriamiento de respaldo cuando el error no trae su propio tiempo de espera. */
   cooldownMs: number;
   esLimite: (e: unknown) => boolean;
+  /**
+   * Si el 429 trae su propio tiempo de espera (`Retry-After` del servidor), úsalo en vez
+   * de `cooldownMs` fijo — 2026-09-27: /ia/analizar-imagen puede estar limitada por 10 min
+   * (por IP) o hasta 24h (cupo diario global agotado), y un `cooldownMs` fijo de 90s
+   * insistía cada 90s durante horas sin ninguna posibilidad de éxito en el segundo caso.
+   */
+  obtenerEsperaMs?: (e: unknown) => number | null | undefined;
   ahora?: () => number;
 }) {
   let cola: Promise<unknown> = Promise.resolve();
@@ -24,7 +32,8 @@ export function crearEjecutorConEnfriamiento({ cooldownMs, esLimite, ahora = () 
         return await tarea();
       } catch (e) {
         if (esLimite(e)) {
-          bloqueadoHasta = ahora() + cooldownMs;
+          const espera = obtenerEsperaMs?.(e);
+          bloqueadoHasta = ahora() + (espera ?? cooldownMs);
           return respaldo();
         }
         throw e;

@@ -20,3 +20,12 @@ El front ya lo hace así (campos con candado que apuntan a "Mi cuenta", aviso pa
 2. **Correo verificado obligatorio para publicar.** `POST /propiedades` responde 403 con un `code` estable (por ejemplo `EMAIL_NO_VERIFICADO`) si `emailVerificado` es `false`. El front ya bloquea antes de enviar y mostrará el mensaje del servidor si llegara.
 3. **Cuentas de agente.** Confirmar que cada agente creado desde la cuenta principal tiene su propio `nombre`, `email` y verificación, y que se aplican las mismas reglas. Si el contacto de una propiedad debiera mostrar a la inmobiliaria en vez del agente, avisar antes de implementar nada.
 4. `POST /auth/reenviar-verificacion`: el front lo llama con una espera de 60 s entre envíos. Confirmar el límite real y que responde 429 con un mensaje claro si se excede.
+
+## Resuelto (27-09-2026, PR #148 en producción)
+
+1. **Nombre y correo desde la cuenta, en vivo**: `POST`/`PATCH /propiedades` ignoran `agenteNombre`/`agenteEmail` del body (sin error); toda lectura (ficha, "revelar contacto", correo directo) sirve el nombre/correo de la cuenta dueña, leídos al momento — un cambio en "Mi cuenta" se refleja de inmediato en todas sus publicaciones. Propiedades existentes no se tocaron (no hace falta: ninguna lectura vuelve a usar el valor guardado). Sin cambio necesario en el frontend: el formulario ya trata esos campos como fijos, derivados de la cuenta.
+2. **Correo verificado obligatorio para publicar**: `POST /propiedades` da 403 `code: "EMAIL_NO_VERIFICADO"` si la cuenta no lo tiene verificado (`PATCH` para editar no lo exige). El front ya bloquea antes de mandar la petición.
+3. **Cuentas de agente**: esa jerarquía (cuenta principal administrando cuentas de agentes) no existe en el backend hoy — es un proyecto aparte si se necesita de verdad (tablas, permisos, límites). No se implementó nada del lado del front para esto.
+4. **Reenviar verificación**: el límite real es **3 por hora por cuenta** (no 60 s), con `code: "REENVIO_VERIFICACION_LIMITE"`.
+
+Resuelto en el front (27-09-2026, `src/lib/limiteReenvioVerificacion.ts`): antes solo había un candado de 60 s entre clics, así que 3 clics en 3 minutos gastaban la hora completa y el 4º clic recién se enteraba al chocar con el 429 real. Ahora se cuentan los intentos de verdad (localStorage, sobrevive a un recargo de página) y el botón avisa "Ya reenviaste el correo 3 veces esta hora, vuelve a intentarlo en N min" ANTES de llamar al servidor.

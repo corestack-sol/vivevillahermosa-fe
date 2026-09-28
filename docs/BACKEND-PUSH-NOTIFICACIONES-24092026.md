@@ -32,3 +32,14 @@ Por eso el aviso del front se limitó a prometer solo las alertas de propiedades
 - `POST /auth/registro` y `POST /auth/login` responden con **dos** `Set-Cookie: vv_session`: la buena y otra vacía y expirada (sin `Domain`) que borra una cookie local. Un cliente que guarde "la última" se queda sin sesión.
 - Throttling: tras ~13 registros y ~10 logins en pocos minutos, `registro` y `login` devolvieron `429` durante más de 10 minutos (registro, más de 20).
 - `POST /propiedades` con un título/descripción que incluye "prueba" fue rechazado como "contenido señalado como fraudulento"; con texto realista, aceptado. Las fotos sintéticas fueron rechazadas ("parece un fondo abstracto").
+
+## Resuelto (27-09-2026, PR #147 en producción)
+
+Los tres pedidos:
+1. **Push para `mensaje_nuevo`: implementado**, mismo payload `{titulo, mensaje, url, tag}` (`url` = `/dashboard/mensajes/<conversacionId>`, `tag` = id de la conversación).
+2. **SSRF cerrado**: `POST /push/suscripciones` valida el endpoint contra una lista blanca de hosts push reales (`*.googleapis.com`, `updates.push.services.mozilla.com`, `*.push.apple.com`, `*.notify.windows.com`, siempre https) — cualquier otro host da 400.
+3. Deduplicar `endpoint`: ya estaba resuelto desde la implementación original (upsert, `endpoint` único).
+
+Sin cambio de su lado en las observaciones (segundo `Set-Cookie` vacío intencional, throttling documentado, rechazo de contenido de prueba es el moderador funcionando bien).
+
+Cambio en el frontend (`src/components/push/PushOnboarding.tsx`, `ActivarPushBanner.tsx`): "Mensajes" vuelve a listarse en el aviso de permisos junto a "Alertas de propiedades".

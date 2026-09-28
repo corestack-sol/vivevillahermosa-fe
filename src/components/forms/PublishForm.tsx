@@ -42,7 +42,7 @@ import {
 } from '@/lib/publishFraudGuard';
 import { hashImagenDesdeFile, hashImagenDesdeUrl, distanciaHamming, UMBRAL_HASH_SIMILAR } from '@/lib/fotoHash';
 import { evaluarFotos, type ResultadoImagenIA, type AnalisisFoto } from '@/lib/publishFotoGuard';
-import { prepararFoto, blobParaSubir, mensajeRechazoFoto, type MotivoRechazoFoto, type FormatoImagen } from '@/lib/fotoArchivo';
+import { prepararFoto, blobParaSubir, mensajeRechazoFoto, advertenciaPesoExcesivo, type MotivoRechazoFoto, type FormatoImagen } from '@/lib/fotoArchivo';
 import { crearEjecutorConEnfriamiento } from '@/lib/ejecutorConEnfriamiento';
 import { subirFotos } from '@/lib/subidaFotos';
 import { memoConTtl } from '@/lib/memoConTtl';
@@ -74,7 +74,14 @@ const getCatalogoCompleto = memoConTtl(getAllProperties, 60_000);
 // 2026-09-23: 429 desde la primera petición y durante minutos). Antes se
 // llamaba una vez por foto, todas a la vez; ahora de una en una y, tras el
 // primer 429, no se vuelve a llamar por un rato (ver ejecutorConEnfriamiento.ts).
-const ejecutorAnalisisImagen = crearEjecutorConEnfriamiento({ cooldownMs: 90_000, esLimite: esLimiteDePeticiones });
+// Desde el 2026-09-27 el backend manda `Retry-After` real (10 min por IP, o hasta
+// 24h si se agotó el cupo diario global de 18 análisis) — se usa ese valor en vez
+// de los 90s fijos de antes, que habrían insistido cada 90s durante todo un día.
+const ejecutorAnalisisImagen = crearEjecutorConEnfriamiento({
+  cooldownMs: 90_000,
+  esLimite: esLimiteDePeticiones,
+  obtenerEsperaMs: (e) => (esLimiteDePeticiones(e) && e.retryAfterSegundos ? e.retryAfterSegundos * 1000 : null),
+});
 
 function analizarFoto(file: File): Promise<ResultadoImagenIA> {
   const NEUTRAL: ResultadoImagenIA = { apta: true, relacionada: true, señalesFraude: [], notas: '' };
@@ -381,9 +388,24 @@ export function PublishForm() {
     // a la vez puede agotar la memoria de un teléfono modesto.
     const validos: File[] = [];
     const rechazos = new Map<string, { motivo: MotivoRechazoFoto; formato?: FormatoImagen; cantidad: number }>();
+    // Aviso real, ni bien se elige la foto: 5MB (el límite del backend) casi
+    // nunca bloquea JPEG/PNG/WebP/GIF, porque el navegador siempre puede
+    // reducirlos — el caso real es HEIC en Chrome/Android, que se sube sin
+    // reducir si pesa de más. Antes esto solo se descubría hasta Publicar.
+    const avisosPeso = new Set<string>();
     for (const original of sinSobrepeso) {
       const r = await prepararFoto(original);
       if (r.ok) {
+        const advertencia = await advertenciaPesoExcesivo(r.file);
+        if (advertencia) {
+          avisosPeso.add(advertencia);
+          // Para saber en producción qué tan seguido pasa esto de verdad (y en
+          // qué dispositivos/formatos) — sin esto, es una suposición.
+          posthog.capture('foto_rechazada_peso_excesivo', {
+            formato: r.formatoOriginal, kb: Math.round(r.file.size / 1024), tipoDeclarado: original.type || '(vacío)',
+          });
+          continue;
+        }
         validos.push(r.file);
         // Solo cuando la foto NO era un formato normal (HEIC/AVIF convertido)
         // o el navegador la entregó sin tipo — sirve para ver en producción
@@ -402,6 +424,7 @@ export function PublishForm() {
       }
     }
     rechazos.forEach((x) => toast.error(mensajeRechazoFoto(x.motivo, x.cantidad, x.formato)));
+    avisosPeso.forEach((mensaje) => toast.error(mensaje));
 
     // Chequeo técnico (nitidez/brillo) — 100% local, no espera a la IA del
     // backend. Borrosa SÍ bloquea (pedido explícito 2026-08-22) — excepto
@@ -1310,6 +1333,12 @@ export function PublishForm() {
   // Fotos ya subidas en un intento anterior (por archivo) — un reintento de
   // Publicar solo envía las que faltan, no todas otra vez.
   const fotosSubidasRef = useRef(new Map<File, string>());
+  // Misma clave en todos los reintentos de este formulario (docs/BACKEND-LIMITES-Y-DUPLICADOS-23092026.md
+  // §4, cabecera Idempotency-Key soportada desde 2026-09-27): si POST /propiedades se
+  // publica pero la respuesta se pierde (timeout) o hay doble tap, el backend devuelve
+  // la MISMA propiedad en vez de crear otra. useState (no un ref) para que el valor
+  // inicial se calcule una sola vez, fuera del cuerpo del render (react-hooks/refs).
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
 
   const onSubmit = async (data: FormData) => {
     if (enviandoRef.current || publicadoRef.current) return;
@@ -1397,8 +1426,8 @@ export function PublishForm() {
       fotosSubidasRef.current,
       (f) => f.file,
       async (f) => {
-        // 1920px/0.92 — límite real del backend: 8MB por archivo en
-        // /propiedades/fotos (docs/BACKEND-FOTOS-CLOUDINARY-22082026.md).
+        // 1920px/0.92 — límite real del backend: 5MB por archivo en
+        // /propiedades/fotos (docs/BACKEND-FOTOS-FORMATOS-23092026.md, PR #146).
         // blobParaSubir(): reduce; si el navegador no puede abrirla, sube el
         // ORIGINAL (el backend valida por bytes) en vez de descartarla.
         const blob = await blobParaSubir(f.file, 1920, 0.92);
@@ -1449,6 +1478,7 @@ export function PublishForm() {
     try {
       created = await backendFetch<{ id: string }>('/propiedades', {
         method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
         body: JSON.stringify({
           titulo: data.titulo,
           descripcion: data.descripcion,

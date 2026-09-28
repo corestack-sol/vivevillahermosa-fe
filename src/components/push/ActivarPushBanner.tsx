@@ -22,7 +22,7 @@ export function ActivarPushBanner({ className = '' }: { className?: string }) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-gray-800">Activa las notificaciones</p>
-          <p className="text-xs text-gray-500">Te avisamos de las alertas de propiedades aunque no tengas la app abierta.</p>
+          <p className="text-xs text-gray-500">Te avisamos de tus alertas y tus mensajes aunque no tengas la app abierta.</p>
         </div>
         <button
           type="button"
