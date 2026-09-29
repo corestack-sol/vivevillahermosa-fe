@@ -369,12 +369,42 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
     try {
       const resultado = await buscarIA(texto);
       if (iaSeqRef.current !== seq) return; // respuesta vieja, ya hay una búsqueda más nueva en curso
-      setBuscandoIA(false);
       if (resultado.fueraDeCobertura) {
+        setBuscandoIA(false);
         toast.info('Por ahora solo operamos en el estado de Tabasco.');
         setIaQuery(null);
         return;
       }
+      // El backend empareja `colonia` por igualdad de texto exacta (ver comentario en
+      // buscarIA.ts) — una zona catalogada como "Centro Histórico" (que abarca VARIAS
+      // colonias reales, ninguna con ese nombre literal) siempre da cero ahí, aunque sí
+      // haya propiedades dentro. Con matchColonia (mismo catálogo que ya usa el resto
+      // del sitio para "cerca de X") se resuelve por proximidad real: primero lo que cae
+      // dentro de la zona, después el resto del municipio — pedido explícito 2026-09-29.
+      if (resultado.propiedades.length === 0 && resultado.todoLoDemas.length === 0 && resultado.filtros.colonia) {
+        const coord = matchColonia(resultado.filtros.colonia, resultado.filtros.municipio);
+        if (coord) {
+          try {
+            const [principal, resto] = await Promise.all([
+              searchProperties({ municipio: resultado.filtros.municipio, nearLat: coord.lat, nearLng: coord.lng, nearRadiusKm: coord.radioKm, limit: 50 }),
+              resultado.filtros.municipio
+                ? searchProperties({ municipio: resultado.filtros.municipio, limit: 50 })
+                : Promise.resolve({ properties: [] as Property[], total: 0 }),
+            ]);
+            if (iaSeqRef.current !== seq) return;
+            if (principal.properties.length > 0) {
+              setBuscandoIA(false);
+              const idsPrincipal = new Set(principal.properties.map((p) => p.id));
+              setIaResultados(principal.properties);
+              setIaTodoLoDemas(resto.properties.filter((p) => !idsPrincipal.has(p.id)));
+              setIaDisplayCount(PER_PAGE);
+              setIaQuery(texto);
+              return;
+            }
+          } catch { /* sigue con el resultado original (vacío) de /ia/buscar */ }
+        }
+      }
+      setBuscandoIA(false);
       setIaResultados(resultado.propiedades);
       setIaTodoLoDemas(resultado.todoLoDemas);
       setIaDisplayCount(PER_PAGE);
@@ -1120,7 +1150,7 @@ export function PropertiesClient({ initialProperties, initialTotal }: Props) {
                   <div className={`transition-opacity duration-150 ${cargandoMostrado ? 'opacity-40 pointer-events-none' : ''}`}>
                     {hayBusquedaActiva && (
                       <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">
-                        Resultados ({resultadosMostrados.length})
+                        {iaActivo ? 'Resultados con IA' : 'Resultados'} ({resultadosMostrados.length})
                       </p>
                     )}
                     {heroProperty && (

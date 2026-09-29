@@ -161,4 +161,20 @@ describe('buscarIA', () => {
     mockFetch.mockRejectedValue(new Error('network down'));
     await expect(buscarIA('casas en Centro')).rejects.toThrow('network down');
   });
+
+  // Auditoría 2026-09-29: `filtros` del backend es `Record<string, unknown>`, sin
+  // garantía de forma — PropertiesClient.tsx lo usa para el plan B de zonas
+  // catalogadas (Centro Histórico) cuando `/ia/buscar` da cero por comparar texto
+  // exacto en vez de proximidad real (ver comentario en ResultadoBusquedaIA).
+  it('filtros: expone municipio/colonia como texto cuando el backend los manda', async () => {
+    mockFetch.mockResolvedValue(respuesta({ filtros: { municipio: 'Centro', colonia: 'Centro Histórico' } }));
+    const r = await buscarIA('propiedades en el centro');
+    expect(r.filtros).toEqual({ municipio: 'Centro', colonia: 'Centro Histórico' });
+  });
+
+  it('filtros: ignora valores que no son texto (nunca revienta ni inventa un string)', async () => {
+    mockFetch.mockResolvedValue(respuesta({ filtros: { municipio: 42, colonia: null } as unknown as RespuestaBuscarIA['filtros'] }));
+    const r = await buscarIA('algo raro');
+    expect(r.filtros).toEqual({ municipio: undefined, colonia: undefined });
+  });
 });

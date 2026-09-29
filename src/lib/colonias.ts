@@ -142,6 +142,16 @@ export const COLONIAS_COORDS: ColoniaCoord[] = [
   // de tabasco" (el caso real que motivó el fix de 2026-08-06) puede volver
   // a perder precisión — se acepta el trade-off a pedido explícito.
   { key: 'centro-historico', label: 'Centro Histórico', municipio: 'Centro', lat: 17.99154641547893, lng: -92.91686241281937, radioKm: RADIO_COLONIA_KM, aliases: ['Zona Luz'] },
+  // "Zona Deportiva" — mismo caso que Centro Histórico (auditoría 2026-09-29): zona
+  // conocida por el nombre coloquial de un lugar real, no el nombre de una sola colonia.
+  // Ancla verificada vía Nominatim/OSM: nodo leisure=sports_centre "Ciudad Deportiva"
+  // (osm_id 461275343), dentro de "Fraccionamiento Deportiva" — un punto inequívoco (a
+  // diferencia de Centro Histórico, que no tuvo un nodo OSM propio y necesitó un
+  // sustituto). "Primero de Mayo" y "Guadalupe" (ambas ya catalogadas aquí, más abajo)
+  // quedan cerca pero son colonias propias con su propio key — una propiedad registrada
+  // en cualquiera de esas dos NO cuenta como "zona deportiva" (mismo criterio de
+  // exclusión que ya aplica filters.ts para colonias vecinas superpuestas).
+  { key: 'zona-deportiva', label: 'Zona Deportiva', municipio: 'Centro', lat: 17.9757433, lng: -92.9431107, radioKm: RADIO_COLONIA_KM, aliases: ['Ciudad Deportiva'] },
   { key: 'olmeca', label: 'Olmeca', municipio: 'Centro', lat: 17.9812, lng: -92.9502, radioKm: RADIO_COLONIA_KM },
   { key: 'gil-y-saenz', label: 'Gil y Sáenz', municipio: 'Centro', lat: 17.9867, lng: -92.9356, radioKm: RADIO_COLONIA_KM },
   { key: 'col-del-parque', label: 'Col. del Parque', municipio: 'Centro', lat: 17.9734, lng: -92.9267, radioKm: RADIO_COLONIA_KM },
@@ -176,7 +186,10 @@ export const COLONIAS_COORDS: ColoniaCoord[] = [
   { key: 'francisco-villa', label: 'Francisco Villa', municipio: 'Centro', lat: 18.0281, lng: -92.8897, radioKm: RADIO_COLONIA_KM },
   { key: 'galaxia', label: 'Galaxia', municipio: 'Centro', lat: 18.0001, lng: -92.9505, radioKm: RADIO_COLONIA_KM },
   { key: 'guadalupe', label: 'Guadalupe', municipio: 'Centro', lat: 17.9769, lng: -92.9634, radioKm: RADIO_COLONIA_KM },
-  { key: 'guadalupe-borja', label: 'Guadalupe Borja', municipio: 'Centro', lat: 17.9769, lng: -92.9634, radioKm: RADIO_COLONIA_KM },
+  // Corregida 2026-09-29: compartía coordenada con 'guadalupe' (import INEGI sin
+  // geocodificar cada colonia por separado — ver auditoría, catalogosGeograficos.test.ts).
+  // Punto real dado por el usuario, ya no un duplicado.
+  { key: 'guadalupe-borja', label: 'Guadalupe Borja', municipio: 'Centro', lat: 17.97734021637034, lng: -92.96162463993383, radioKm: RADIO_COLONIA_KM },
   // Alias "Petrolera" — pedido explícito 2026-09-04, reporte real: buscar
   // "colonia petrolera" no encontraba esta colonia. Investigado a fondo: SÍ
   // existe una "Colonia Petrolera" real y distinta en Cárdenas (INEGI, CP
@@ -466,10 +479,15 @@ export const COLONIAS_COORDS: ColoniaCoord[] = [
   { key: '2-montes', label: '2 Montes', municipio: 'Centro', lat: 17.986577990167955, lng: -92.82877008566028, radioKm: RADIO_COLONIA_KM }, // 2 Montes
   { key: 'acachapan-y-colmena-2a', label: 'Acachapan y Colmena 2a', municipio: 'Centro', lat: 18.0655797558823, lng: -92.80838766038335, radioKm: RADIO_COLONIA_KM }, // Acachapan y Colmena 2a (El Maluco)
   { key: 'barranca-y-guanal-seccion', label: 'Barranca y Guanal Sección', municipio: 'Centro', lat: 18.01570386229353, lng: -92.80822424002746, radioKm: RADIO_COLONIA_KM }, // Barranca y Guanal Sección (López Portillo)
-  { key: 'coronel-traconis-2a', label: 'Coronel Traconis 2a', municipio: 'Centro', lat: 17.943376288856253, lng: -92.80197895758863, radioKm: RADIO_COLONIA_KM }, // Coronel Traconis 2a (El Zapote)
-  { key: 'coronel-traconis-3a', label: 'Coronel Traconis 3a', municipio: 'Centro', lat: 17.943376288856253, lng: -92.80197895758863, radioKm: RADIO_COLONIA_KM }, // Coronel Traconis 3a (Guerrero)
-  { key: 'coronel-traconis-4a', label: 'Coronel Traconis 4a', municipio: 'Centro', lat: 17.943376288856253, lng: -92.80197895758863, radioKm: RADIO_COLONIA_KM }, // Coronel Traconis 4a (San Francisco)
-  { key: 'coronel-traconis-5a', label: 'Coronel Traconis 5a', municipio: 'Centro', lat: 17.943376288856253, lng: -92.80197895758863, radioKm: RADIO_COLONIA_KM }, // Coronel Traconis 5a (San Rafael y San Diego)
+  // Corregidas 2026-09-29: compartían coordenada entre sí (import INEGI sin
+  // geocodificar cada sección por separado — ver auditoría, catalogosGeograficos.test.ts).
+  // El usuario solo tiene UN punto real para el área de Coronel Traconis (no uno por
+  // sección) — se aplica a las 4, sigue siendo compartido entre ellas pero ya no es
+  // el centroide reusado de la colonia madre, es un punto verificado de la zona real.
+  { key: 'coronel-traconis-2a', label: 'Coronel Traconis 2a', municipio: 'Centro', lat: 17.943835592702552, lng: -92.79967357779715, radioKm: RADIO_COLONIA_KM }, // Coronel Traconis 2a (El Zapote)
+  { key: 'coronel-traconis-3a', label: 'Coronel Traconis 3a', municipio: 'Centro', lat: 17.943835592702552, lng: -92.79967357779715, radioKm: RADIO_COLONIA_KM }, // Coronel Traconis 3a (Guerrero)
+  { key: 'coronel-traconis-4a', label: 'Coronel Traconis 4a', municipio: 'Centro', lat: 17.943835592702552, lng: -92.79967357779715, radioKm: RADIO_COLONIA_KM }, // Coronel Traconis 4a (San Francisco)
+  { key: 'coronel-traconis-5a', label: 'Coronel Traconis 5a', municipio: 'Centro', lat: 17.943835592702552, lng: -92.79967357779715, radioKm: RADIO_COLONIA_KM }, // Coronel Traconis 5a (San Rafael y San Diego)
   { key: 'ismate-y-chilpilla-1a', label: 'Ismate y Chilpilla 1a', municipio: 'Centro', lat: 17.965185718171355, lng: -92.64071875162514, radioKm: RADIO_COLONIA_KM }, // Ismate y Chilpilla 1a (San Antonio)
   { key: 'isset', label: 'Isset', municipio: 'Centro', lat: 17.990301590005533, lng: -92.92156864336371, radioKm: RADIO_COLONIA_KM }, // Isset
   { key: 'miraflores-1a', label: 'Miraflores 1a', municipio: 'Centro', lat: 17.91721255239231, lng: -92.77860674432856, radioKm: RADIO_COLONIA_KM }, // Miraflores 1a (Arroyo Grande)

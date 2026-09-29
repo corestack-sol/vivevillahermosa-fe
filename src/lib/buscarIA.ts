@@ -45,6 +45,30 @@ export interface ResultadoBusquedaIA {
   /** Grupo secundario ("todo lo demás") — lo que no quedó ya incluido en `propiedades`. */
   todoLoDemas: Property[];
   fueraDeCobertura: boolean;
+  /**
+   * `municipio`/`colonia` que extrajo el backend, si son texto (nunca se asume su forma:
+   * `filtros` es `Record<string, unknown>`). Quien llama los usa para un plan B cuando
+   * `propiedades`/`todoLoDemas` vienen vacíos pero la colonia SÍ es una zona catalogada
+   * (ver PropertiesClient.tsx, aplicarBusquedaIA) — el backend empareja `colonia` por
+   * igualdad de texto exacta contra el campo de cada propiedad, no por proximidad real,
+   * así que "Centro Histórico" o "Zona Deportiva" (zonas que abarcan varias colonias,
+   * ninguna con ese nombre literal) siempre dan cero ahí aunque sí haya propiedades
+   * dentro de esa zona.
+   *
+   * Investigado 2026-09-29 si `landmark`/`categoriaLandmark`/`zonaDestacada` tenían el
+   * mismo problema (probado en vivo, no solo supuesto): NO — esos ya vienen con
+   * `proximidad.puntos` (lat/lng/radio reales) resueltos del lado del backend, no
+   * comparación de texto, y `/ia/buscar` los usa bien. La única excepción es una
+   * `zonaDestacada` cuya fuente es una COLONIA (ej. "club-campestre" → manda también
+   * `colonia: "Fraccionamiento Club Campestre"`, confirmado con el mismo bug) — ese
+   * caso ya cae en este mismo plan B porque solo depende de que `colonia` venga, sin
+   * importar si `zonaDestacada` también vino.
+   */
+  filtros: { municipio?: string; colonia?: string };
+}
+
+function comoTexto(v: unknown): string | undefined {
+  return typeof v === 'string' && v.trim() ? v : undefined;
 }
 
 // Mismo margen que interpretarBusqueda.ts (backend responde vía OpenRouter,
@@ -103,6 +127,7 @@ export async function buscarIA(query: string): Promise<ResultadoBusquedaIA> {
       propiedades: principal.map((r) => mapBackendProperty(r.propiedad)),
       todoLoDemas: secundario.map((r) => mapBackendProperty(r.propiedad)),
       fueraDeCobertura: data.fueraDeCobertura,
+      filtros: { municipio: comoTexto(data.filtros?.municipio), colonia: comoTexto(data.filtros?.colonia) },
     };
   } finally {
     clearTimeout(timer);

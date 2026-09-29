@@ -39,6 +39,18 @@ describe('matchColonia', () => {
     expect(matchColonia('campestre')?.key).toBe('club-campestre');
     expect(matchColonia('T2000')?.key).toBe('tabasco-2000');
     expect(matchColonia('Zona Luz')?.key).toBe('centro-historico');
+    expect(matchColonia('Ciudad Deportiva')?.key).toBe('zona-deportiva');
+  });
+  it('matches "Zona Deportiva" por label exacto', () => {
+    expect(matchColonia('Zona Deportiva', 'Centro')?.key).toBe('zona-deportiva');
+  });
+  // Auditoría 2026-09-29, en vivo contra /ia/busqueda-inteligente: "casas en club
+  // campestre" devuelve colonia: "Fraccionamiento Club Campestre" (el label completo,
+  // no el alias corto) — confirma que el plan B de buscarIA.ts (que depende de
+  // matchColonia resolviendo exactamente esta cadena) sí dispara para ese caso real,
+  // sin necesitar código nuevo aparte del ya existente para Centro Histórico.
+  it('resuelve el label completo que manda el backend para zonaDestacada de tipo colonia', () => {
+    expect(matchColonia('Fraccionamiento Club Campestre', 'Centro')?.key).toBe('club-campestre');
   });
   it('resolves "Petrolera" to Heriberto Kehoe Vicent (Centro) by default, and to the real Cárdenas one with municipioHint — caso real reportado 2026-09-04', () => {
     // "Petrolera" es un nombre real compartido por dos colonias distintas:
