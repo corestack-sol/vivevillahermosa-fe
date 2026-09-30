@@ -19,6 +19,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { FavoriteButton } from '@/components/property/FavoriteButton';
 import { ReportButton } from '@/components/property/ReportButton';
 import { AdSlot } from '@/components/ads/AdSlot';
+import { esDescripcionDemo } from '@/lib/ads';
 import { RecentlyViewedTracker } from '@/components/property/RecentlyViewedTracker';
 import { VistaTracker } from '@/components/property/VistaTracker';
 import { OwnerActionsBar } from '@/components/property/OwnerActionsBar';
@@ -438,8 +439,13 @@ export async function PropertyDetailView({ property, extras }: { property: Prope
               {/* Anuncio — pedido explícito 2026-09-08. Debajo de todas las
                   acciones reales (contactar/compartir/reportar), nunca
                   entre ellas — no debe competir con la decisión de
-                  contactar al dueño. */}
-              <AdSlot slot="propiedadSidebar" minHeight={250} />
+                  contactar al dueño. Auditoría 2026-09-29: nunca al lado de
+                  una propiedad de demostración (AdSense marcó el sitio por
+                  esto). `property.esDemo` es el campo real del backend
+                  (confirmado en vivo 30/09/2026, nunca fijable por un
+                  usuario real) — esDescripcionDemo() se mantiene como red
+                  de seguridad extra por si acaso, no porque haga falta hoy. */}
+              {!property.esDemo && !esDescripcionDemo(property.descripcion) && <AdSlot slot="propiedadSidebar" minHeight={250} />}
 
             </div>
           </div>

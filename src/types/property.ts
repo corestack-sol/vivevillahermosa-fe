@@ -105,6 +105,14 @@ export interface Property {
   featured: boolean;
   /** ISO date o null — vencimiento real de `featured`, confirmado en vivo 17/09/2026. Ver api.ts. */
   featuredHasta: string | null;
+  /**
+   * true = propiedad del catálogo semilla de demostración (nunca un valor que un
+   * usuario real pueda fijar al publicar/editar). Confirmado en vivo 30/09/2026 —
+   * ver docs/BACKEND-ADSENSE-CONTENIDO-DEMO-29092026.md. Reemplaza la detección
+   * por texto (`esDescripcionDemo()` en ads.ts) para decidir dónde no mostrar
+   * anuncios de AdSense.
+   */
+  esDemo: boolean;
   alertaFraude?: AlertaFraude;
   agente: PropertyAgent;
   /**

@@ -41,6 +41,7 @@ function propiedad(id: string, overrides: Partial<BackendPublicProperty> = {}): 
     cercaDosoBocas: false,
     featured: false,
     featuredHasta: null,
+    esDemo: false,
     estado: 'activa',
     activa: true,
     agente: { nombre: 'Agente', foto: null, verificado: false, enRevision: false },

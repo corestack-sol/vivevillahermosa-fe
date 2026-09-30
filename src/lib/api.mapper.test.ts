@@ -11,7 +11,7 @@ function base(over: Partial<BackendPublicProperty> = {}): BackendPublicProperty 
     municipio: 'Centro', colonia: 'Tabasco 2000', direccion: 'Calle 1',
     latPublico: 17.99, lngPublico: -92.93,
     riesgoInundacion: 'bajo', zonaEcologica: false, cercaDosoBocas: false,
-    featured: false, featuredHasta: null, estado: 'activa', activa: true,
+    featured: false, featuredHasta: null, esDemo: false, estado: 'activa', activa: true,
     agente: { nombre: 'Ana', foto: null, verificado: true, enRevision: false },
     createdAt: '2026-09-01T00:00:00.000Z', updatedAt: '2026-09-02T00:00:00.000Z',
     ...over,

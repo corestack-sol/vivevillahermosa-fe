@@ -55,6 +55,9 @@ export interface BackendPublicProperty {
   // ya viene correcto en cada respuesta. Solo se usa para mostrar
   // "vence en N días" en la UI.
   featuredHasta: string | null;
+  // true = catálogo semilla de demostración, nunca fijable por un usuario real.
+  // Confirmado en vivo 30/09/2026 — ver docs/BACKEND-ADSENSE-CONTENIDO-DEMO-29092026.md.
+  esDemo: boolean;
   estado: string;
   activa: boolean;
   agente: { nombre: string; foto: string | null; verificado: boolean; enRevision: boolean };
@@ -119,6 +122,7 @@ export function mapBackendProperty(bp: BackendPublicProperty): Property {
     cercaDosoBocas: bp.cercaDosoBocas,
     featured: bp.featured,
     featuredHasta: bp.featuredHasta,
+    esDemo: bp.esDemo,
     alertaFraude: bp.alertaFraude ?? undefined,
     agente: {
       nombre: bp.agente.nombre,
